@@ -351,6 +351,7 @@
       </div>
     </div>
     <div class="right-controls">
+      <button class="add-btn" id="orderBtn" title="팀원 표시 순서를 변경합니다">↕️ 팀원 순서</button>
       <button class="add-btn" id="dutyViewBtn" title="석/야간·석간·주말당직·전화당직만 표시">🌙 당직만 보기</button>
       <button class="add-btn" id="testConnBtn" title="공유 저장소 연결 상태를 진단합니다">🔧 연결 테스트</button>
       <button class="add-btn" id="exportXlsxBtn" title="현재 팀 · 월 통계와 상세 일정을 엑셀로 내보내기">📊 Excel 내보내기</button>
@@ -390,7 +391,7 @@ const TEAMS = {
   east: { key:'east', label:'FS EAST', hex:'#E8871E', members:[
     {name:'김병우', role:'팀장'}, {name:'유용선', role:'T4'},
     {name:'이준호', role:'T2'}, {name:'손지원', role:'T2'},
-    {name:'김규민', role:'T1'}, {name:'김세진', role:'T1'}, {name:'서윤걸', role:'T1'},
+    {name:'김규민', role:'T1'}, {name:'서윤걸', role:'T1'}, {name:'김세진', role:'T1'},
     {name:'윤병지', role:'T1'}, {name:'박재우', role:'T1'}, {name:'서재훈', role:'T1'}, {name:'김회창', role:'T1'},
   ]},
   central: { key:'central', label:'FS CENTRAL', hex:'#7A5CC4', members:[
@@ -411,6 +412,23 @@ TEAMS.all = {
 };
 const TAB_ORDER = ['all','west','east','central','south'];
 
+function rebuildAllTeam(){
+  TEAMS.all.members = TEAM_ORDER.reduce((acc, tk)=> acc.concat(TEAMS[tk].members.map(m=>Object.assign({}, m, {team:tk}))), []);
+}
+function applyMemberOrder(){
+  const order = scheduleData.memberOrder || {};
+  TEAM_ORDER.forEach(tk=>{
+    const names = order[tk];
+    if(!names || !names.length) return;
+    const byName = {};
+    TEAMS[tk].members.forEach(m=> byName[m.name]=m);
+    const ordered = names.map(n=>byName[n]).filter(Boolean);
+    const remaining = TEAMS[tk].members.filter(m=> !names.includes(m.name));
+    TEAMS[tk].members = ordered.concat(remaining);
+  });
+  rebuildAllTeam();
+}
+
 // ============================================================
 // 상태 옵션 — 오전1·오전2·오후1·오후2 는 아래 중에서 선택
 // fillGroup: 'all'이면 전체 4칸, 'am'이면 오전1·2, 'pm'이면 오후1·2 자동 채움
@@ -418,12 +436,14 @@ const TAB_ORDER = ['all','west','east','central','south'];
 // ============================================================
 const HALF_STATUS = [
   {key:'', label:'-'},
-  {key:'ON', label:'ON', short:'ON', color:'#15803D', bg:'#D1FAE5', fillGroup:'all'},
-  {key:'OFF', label:'OFF', short:'OF', color:'#475569', bg:'#E2E8F0', fillGroup:'all'},
+  {key:'ON', label:'ON', short:'ON', color:'#15803D', bg:'#D1FAE5'},
+  {key:'OFF', label:'OFF', short:'OF', color:'#6B7280', bg:'#F3F4F6', fillGroup:'all'},
   {key:'휴가', label:'휴가(전일)', short:'휴', color:'#DC2626', bg:'#FEE2E2', fillGroup:'all'},
   {key:'오전휴가', label:'오전 휴가', short:'전휴', color:'#EA580C', bg:'#FFEDD5', fillGroup:'am'},
   {key:'오후휴가', label:'오후 휴가', short:'후휴', color:'#DB2777', bg:'#FCE7F3', fillGroup:'pm'},
   {key:'당직', label:'당직', short:'당', color:'#7C3AED', bg:'#EDE9FE', fillGroup:'all'},
+  {key:'내근', label:'내근', short:'내', color:'#CA8A04', bg:'#FEF9C3'},
+  {key:'DP', label:'DP', short:'DP', color:'#0EA5E9', bg:'#E0F2FE', fillGroup:'all'},
   {key:'교육', label:'교육', short:'교', color:'#0D9488', bg:'#CCFBF1', hasDetail:true},
   {key:'회의', label:'회의', short:'회', color:'#2563EB', bg:'#DBEAFE', hasDetail:true},
 ];
@@ -431,8 +451,8 @@ const HALF_STATUS = [
 const NIGHT_STATUS = [
   {key:'', label:'-'},
   {key:'석간', label:'석/야간', short:'야', color:'#0891B2', bg:'#CFFAFE', weekdayOnly:true},
-  {key:'철야', label:'석간', short:'석', color:'#312E81', bg:'#E0E7FF', weekdayOnly:true},
-  {key:'OFF', label:'OFF', short:'OF', color:'#475569', bg:'#E2E8F0', weekdayOnly:true},
+  {key:'철야', label:'석간', short:'석', color:'#4F46E5', bg:'#E0E7FF', weekdayOnly:true},
+  {key:'OFF', label:'OFF', short:'OF', color:'#6B7280', bg:'#F3F4F6', weekdayOnly:true},
   {key:'잔업', label:'잔업', short:'잔', color:'#B45309', bg:'#FEF3C7', weekdayOnly:true},
 ];
 const WEEKEND_STATUS = [
@@ -507,7 +527,7 @@ const HOLIDAYS_KR = {
 // ============================================================
 // 상태
 // ============================================================
-let scheduleData = { west:{}, east:{}, central:{}, south:{} }; // scheduleData[team][date][name] = entry
+let scheduleData = { west:{}, east:{}, central:{}, south:{}, memberOrder:{} }; // scheduleData[team][date][name] = entry
 let currentTeam = 'west';
 let viewMode = 'week'; // 'month' | 'week'
 let _today = new Date();
@@ -547,6 +567,8 @@ async function loadStorage(){
     const data = await res.json();
     if(data){
       TEAM_ORDER.forEach(tk=>{ scheduleData[tk] = data[tk] || {}; });
+      scheduleData.memberOrder = data.memberOrder || {};
+      applyMemberOrder();
     }
   }catch(err){
     console.error('loadStorage network error', err);
@@ -811,10 +833,10 @@ function renderLegend(){
 // ============================================================
 const GUIDE_ITEMS = [
   {icon:'👆', h:'일정 입력', d:'달력 칸(이름 × 날짜) 클릭 → 편집창이 열립니다. 평일은 오전1·오전2·오후1·오후2·야간을, 주말·공휴일은 주말/휴일 구분(전화대기·당직·추가편성·기타)만 입력합니다. (당직은 주말·공휴일에만 선택 가능)'},
-  {icon:'⚡', h:'자동 채움', d:'평일에 ON·OFF·휴가(전일)을 선택하면 오전1~오후2 전체가 자동으로 채워집니다. 야간에 "석/야간"을 선택하면 다음 근무일들도 자동으로 이어서 채워집니다.'},
+  {icon:'⚡', h:'자동 채움', d:'OFF·휴가(전일)·당직·DP를 선택하면 오전1~오후2 전체가 자동으로 채워집니다. ON·내근은 오전1~오후2를 각각 따로 선택합니다. 야간에 "석/야간"을 선택하면 다음 근무일들도 자동으로 이어서 채워집니다.'},
   {icon:'🔎', h:'범례 필터', d:'상단 범례 클릭 → 해당 상태만 강조, 나머지는 흐리게 표시됩니다. "🌙 당직만 보기"를 누르면 야간·당직 관련 항목만 따로 볼 수 있습니다.'},
   {icon:'🗂️', h:'팀 전환 · 오늘 현황', d:'상단 팀 탭(East·West·Central·South·전체)으로 전환합니다. 배너에는 오늘 야간 근무자, 휴가자, 주말·공휴일 당직자가 바로 표시됩니다.'},
-  {icon:'✍️', h:'직접 입력', d:'오전1·오전2·오후1·오후2는 목록에서 고르거나 원하는 내용을 직접 입력할 수 있습니다. 회의·교육은 콜론(:) 뒤에 세부 내용을 이어 쓸 수 있습니다.'},
+  {icon:'✍️', h:'직접 입력', d:'오전1·오전2·오후1·오후2는 목록에서 고르거나 원하는 내용을 직접 입력할 수 있습니다. 회의·교육·병원명은 선택 후 콜론(:) 뒤에 세부 내용을 이어 쓸 수 있습니다.'},
   {icon:'📊', h:'Excel 내보내기', d:'개인별 요약·팀별 비교·형평성(당직·야간 색상 표시)·통계·상세, 5개 시트로 한번에 다운로드됩니다.'},
 ];
 function renderGuide(){
@@ -1212,6 +1234,49 @@ function render(){
 // ============================================================
 // 편집 패널
 // ============================================================
+function openMemberOrderPanel(){
+  const panel = document.getElementById('panel');
+
+  function renderList(){
+    const tk = currentTeam === 'all' ? TEAM_ORDER[0] : currentTeam;
+    const members = TEAMS[tk].members;
+    const teamLabel = TEAMS[tk].label;
+    panel.innerHTML =
+      '<button class="close" onclick="closePanel()">✕</button>' +
+      '<h3>팀원 순서 변경</h3>' +
+      '<div class="sub">' + teamLabel + (currentTeam==='all' ? ' (팀별로 각각 순서를 정할 수 있어요 · 상단 팀 탭에서 다른 팀 선택 후 다시 열어주세요)' : '') + '</div>' +
+      '<div id="orderList"></div>';
+    const listEl = panel.querySelector('#orderList');
+    members.forEach((m, i)=>{
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px;background:var(--paper);';
+      row.innerHTML =
+        '<span style="flex:1;font-size:13px;font-weight:700;color:var(--ink);">' + m.name + ' <span style="font-size:11px;font-weight:600;color:var(--ink-soft);">' + m.role + '</span></span>' +
+        '<button data-dir="up" style="width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:white;cursor:pointer;font-size:13px;" ' + (i===0?'disabled':'') + '>▲</button>' +
+        '<button data-dir="down" style="width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:white;cursor:pointer;font-size:13px;" ' + (i===members.length-1?'disabled':'') + '>▼</button>';
+      row.querySelector('[data-dir="up"]').onclick = ()=> moveMember(tk, i, -1);
+      row.querySelector('[data-dir="down"]').onclick = ()=> moveMember(tk, i, 1);
+      listEl.appendChild(row);
+    });
+  }
+
+  async function moveMember(tk, idx, dir){
+    const members = TEAMS[tk].members;
+    const j = idx + dir;
+    if(j < 0 || j >= members.length) return;
+    const tmp = members[idx]; members[idx] = members[j]; members[j] = tmp;
+    scheduleData.memberOrder = scheduleData.memberOrder || {};
+    scheduleData.memberOrder[tk] = members.map(m=>m.name);
+    rebuildAllTeam();
+    renderList();
+    render();
+    await saveStorage();
+  }
+
+  renderList();
+  document.getElementById('overlay').classList.add('show');
+}
+
 function openEditor(team, date, name){
   const panel = document.getElementById('panel');
   const entry = Object.assign(blankEntry(), getEntry(team,date,name));
@@ -1326,7 +1391,8 @@ function openEditor(team, date, name){
       e.preventDefault();
       const val = item.dataset.val;
       const st = HALF_MAP[val];
-      if(st && st.hasDetail){
+      const isInstitution = !st && INSTITUTION_LIST.includes(val);
+      if((st && st.hasDetail) || isInstitution){
         input.value = val + ': ';
         list.classList.remove('show');
         input.focus();
@@ -1693,6 +1759,7 @@ document.getElementById('viewWeekBtn').onclick = ()=>{
   document.getElementById('viewMonthBtn').classList.remove('active');
   render();
 };
+document.getElementById('orderBtn').onclick = openMemberOrderPanel;
 document.getElementById('dutyViewBtn').onclick = ()=>{
   dutyOnlyView = !dutyOnlyView;
   document.getElementById('dutyViewBtn').classList.toggle('active', dutyOnlyView);
