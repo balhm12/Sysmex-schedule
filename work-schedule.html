@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>FSG 근무일정표</title>
+<style>
+
+  :root{
+    --navy:#003087;
+    --navy-deep:#001C55;
+    --blue:#009EE0;
+    --blue-soft:#E4F5FC;
+    --paper:#F6F8FB;
+    --ink:#16233F;
+    --ink-soft:#5A6B8C;
+    --line:#DFE6F2;
+    --white:#FFFFFF;
+
+    --t-west:#009EE0;
+    --t-east:#E8871E;
+    --t-central:#7A5CC4;
+    --t-south:#1FA85C;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",-apple-system,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .app{max-width:1320px;margin:0 auto;padding:28px 20px 60px;}
+
+  .header{
+    background:linear-gradient(120deg,var(--navy) 0%, var(--navy-deep) 100%);
+    border-radius:14px;padding:14px 22px;color:white;
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;
+    box-shadow:0 6px 18px -10px rgba(0,48,135,0.4);
+  }
+  .header .eyebrow{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:700;margin-bottom:2px;}
+  .header h1{margin:0;font-size:18px;font-weight:800;letter-spacing:-0.01em;}
+  .header p{margin:2px 0 0;color:#C9D8F5;font-size:11.5px;}
+  .header-stats{display:flex;gap:16px;}
+  .stat{text-align:right;}
+  .stat .num{font-size:17px;font-weight:800;color:white;}
+  .stat .lbl{font-size:10px;color:#AFC3EF;}
+
+  /* team tabs */
+  .team-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:18px;}
+  .team-tab{
+    min-width:0;background:white;border:1.5px solid var(--line);border-radius:12px;
+    padding:10px 14px;cursor:pointer;transition:.15s;text-align:left;
+  }
+  .team-tab .tt-name{font-size:13.5px;font-weight:800;color:var(--ink);}
+  .team-tab .tt-count{font-size:10.5px;color:var(--ink-soft);margin-top:1px;}
+  .team-tab.active{border-color:var(--tc);box-shadow:0 0 0 2px var(--tc) inset;}
+  .team-tab.active .tt-name{color:var(--tc);}
+  .team-tab:hover{border-color:var(--tc);}
+
+  .night-band{
+    margin-top:10px;background:white;border:1px solid var(--line);border-radius:12px;
+    padding:10px 14px;font-size:12.5px;color:var(--ink);line-height:1.6;
+  }
+  .night-band-label{font-size:11px;font-weight:800;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
+  .night-band-sep{color:var(--ink-soft);margin:0 6px;}
+  .night-band-empty{color:var(--ink-soft);}
+
+  .controls{display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:14px;}
+  .nav-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .month-nav{display:flex;align-items:center;gap:14px;background:white;border:1px solid var(--line);
+    border-radius:12px;padding:8px 10px;box-shadow:0 2px 8px rgba(20,40,90,0.04);}
+  .month-nav button{
+    width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--paper);
+    color:var(--navy);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;
+  }
+  .month-nav button:hover{background:var(--blue-soft);border-color:var(--blue);}
+  .month-nav .label{font-size:15.5px;font-weight:800;color:var(--navy);min-width:150px;text-align:center;}
+  .month-nav .today-btn{
+    margin-left:2px;font-size:12px;font-weight:700;color:var(--blue);background:var(--blue-soft);
+    border:1px solid var(--blue);border-radius:8px;padding:6px 10px;cursor:pointer;width:auto;height:auto;
+  }
+  .view-toggle{display:flex;background:white;border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px;}
+  .view-toggle button{
+    border:none;background:transparent;color:var(--ink-soft);font-size:12.5px;font-weight:700;
+    padding:7px 14px;border-radius:8px;cursor:pointer;transition:.15s;
+  }
+  .view-toggle button.active{background:var(--navy);color:white;}
+
+  .right-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .add-btn{
+    display:flex;align-items:center;gap:6px;background:white;color:var(--navy);border:1.5px solid var(--line);
+    border-radius:10px;padding:9px 14px;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s;
+  }
+  .add-btn:hover{background:var(--blue-soft);border-color:var(--blue);}
+  .add-btn.active{background:var(--navy);color:white;border-color:var(--navy);}
+
+  .legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;align-items:center;}
+  .legend .chip{
+    display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+    padding:5px 10px;border-radius:20px;background:white;border:1px solid var(--line);color:var(--ink-soft);
+    cursor:pointer;transition:.15s;
+  }
+  .legend .chip:hover{border-color:var(--blue);}
+  .legend .chip .dot{width:8px;height:8px;border-radius:50%;}
+  .legend .chip-clear{background:var(--paper);color:var(--ink-soft);font-weight:700;}
+
+  .cal-card{
+    background:white;border:1px solid var(--line);border-radius:16px;margin-top:16px;
+    box-shadow:0 6px 24px -14px rgba(20,40,90,0.15);overflow:hidden;
+  }
+  .grid-scroll{overflow-x:auto;overflow-y:hidden;max-width:100%;-webkit-overflow-scrolling:touch;}
+  .scroll-hint{display:none;text-align:center;font-size:11.5px;font-weight:600;color:var(--ink-soft);padding:8px 0 2px;background:white;}
+  button{touch-action:manipulation;}
+  table.sched td.daycell, table.weeksched td.wcell{touch-action:manipulation;}
+  table.sched, table.weeksched{border-collapse:collapse;table-layout:auto;}
+  table.sched th, table.sched td, table.weeksched th, table.weeksched td{border:1px solid var(--line);}
+  table.sched thead th{
+    background:var(--navy);color:#CFE0FF;font-size:11px;font-weight:700;padding:8px 6px;text-align:center;
+    position:sticky;top:0;z-index:5;white-space:nowrap;
+  }
+  table.sched thead th.namecol{position:sticky;left:0;z-index:8;background:var(--navy-deep);min-width:118px;text-align:left;padding-left:12px;}
+  table.sched thead th.sun{color:#FFB4B4;}
+  table.sched thead th.sat{color:#AFD8FF;}
+  table.sched thead th.holi{background:#7A1E1E;}
+  table.sched thead th .wk{display:block;font-size:9.5px;font-weight:600;opacity:.85;}
+
+  table.sched td.namecell{
+    position:sticky;left:0;background:white;z-index:3;min-width:118px;padding:6px 12px;white-space:nowrap;
+  }
+  table.sched td.namecell .nm{font-size:12.5px;font-weight:800;color:var(--ink);white-space:nowrap;}
+  table.sched td.namecell .rl{font-size:10px;color:var(--ink-soft);margin-left:4px;white-space:nowrap;}
+
+  table.sched td.daycell{
+    min-width:40px;height:42px;padding:2px;cursor:pointer;position:relative;transition:.1s;text-align:center;vertical-align:middle;
+  }
+  table.sched td.daycell:hover{outline:2px solid var(--blue);outline-offset:-2px;}
+  table.sched td.daycell.weekend-col{background:#DCE7FB;}
+  table.sched td.daycell.holiday-col{background:#FAD8D8;}
+  table.sched td.daycell.today{background:var(--blue-soft);}
+  table.sched td.daycell.cell-dim{opacity:.15;}
+  .quad{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;height:100%;}
+  .qcell{font-size:7px;font-weight:800;border-radius:2px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .duty-chips{display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;height:100%;padding:2px;}
+  .duty-chip{font-size:8px;font-weight:800;border-radius:3px;padding:1px 4px;min-width:22px;text-align:center;line-height:1.4;}
+  .duty-chips .duty-empty{color:#C6CEDD;font-size:11px;}
+  .qcell.q-empty{background:transparent;}
+  .qcell.q-text{font-size:9px;}
+  .night-badge{
+    position:absolute;top:2px;right:2px;min-width:14px;height:14px;padding:0 3px;border-radius:4px;
+    font-size:8px;font-weight:800;color:white;display:flex;align-items:center;justify-content:center;line-height:1;
+  }
+
+  /* week view */
+  table.weeksched thead th{
+    background:var(--navy);color:#CFE0FF;font-size:11.5px;font-weight:700;padding:9px 8px;text-align:center;
+    position:sticky;top:0;z-index:5;white-space:nowrap;
+  }
+  table.weeksched thead th.datecol{position:sticky;left:0;z-index:9;background:var(--navy-deep);width:76px;min-width:76px;max-width:76px;}
+  table.weeksched thead th.labelcol{position:sticky;left:76px;z-index:8;background:var(--navy-deep);width:84px;min-width:84px;max-width:84px;}
+  table.weeksched td.datecell{
+    position:sticky;left:0;background:var(--paper);z-index:4;width:76px;min-width:76px;max-width:76px;
+    padding:6px 6px;font-size:12px;font-weight:800;color:var(--navy);text-align:center;vertical-align:middle;white-space:normal;line-height:1.2;
+  }
+  table.weeksched td.labelcell{
+    position:sticky;left:76px;background:var(--paper);z-index:3;width:84px;min-width:84px;max-width:84px;padding:6px 10px;font-size:11px;font-weight:700;color:var(--ink-soft);white-space:nowrap;
+  }
+  table.weeksched td.datecell .dlabel{font-size:12px;font-weight:800;color:var(--navy);display:block;}
+  table.weeksched tr.daygroup-start td{border-top:2px solid var(--navy);}
+  table.weeksched tr.weekend-row td.datecell{background:#DCE7FB;}
+  table.weeksched tr.weekend-row td.labelcell{background:#DCE7FB;}
+  table.weeksched tr.weekend-row td.wcell{background:#DCE7FB;}
+  table.weeksched tr.holiday-row td.datecell{background:#FAD8D8;}
+  table.weeksched tr.holiday-row td.labelcell{background:#FAD8D8;}
+  table.weeksched tr.holiday-row td.wcell{background:#FAD8D8;}
+  table.weeksched tr.today-row td.datecell{background:var(--blue-soft);}
+  table.weeksched tr.today-row td.labelcell{background:var(--blue-soft);}
+  table.weeksched tr.today-row td.wcell{background:var(--blue-soft);}
+  table.weeksched td.wcell{
+    min-width:78px;min-height:30px;padding:4px 6px;cursor:pointer;text-align:center;vertical-align:middle;transition:.1s;
+    font-size:11px;color:var(--ink);word-break:break-word;
+  }
+  table.weeksched td.wcell:hover{outline:2px solid var(--blue);outline-offset:-2px;}
+  table.weeksched td.wcell.empty{color:#C6CEDD;}
+  table.weeksched td.wcell.wcell-dim{opacity:.15;}
+  .wbadge{display:inline-block;font-size:10px;font-weight:800;border-radius:5px;padding:2px 6px;margin:1px;}
+
+  .overlay{position:fixed;inset:0;background:rgba(10,20,45,0.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .overlay.show{display:flex;}
+  .panel{
+    background:white;border-radius:16px;max-width:440px;width:100%;max-height:88vh;overflow:auto;
+    padding:22px 24px;box-shadow:0 24px 60px -20px rgba(0,20,60,0.5);
+  }
+  .panel h3{margin:0 0 2px;color:var(--navy);font-size:17px;}
+  .panel .sub{color:var(--ink-soft);font-size:12px;margin-bottom:16px;}
+  .panel .close{float:right;border:none;background:var(--paper);width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px;color:var(--ink-soft);}
+
+  .form-row{margin-bottom:12px;}
+  .form-row label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-soft);margin-bottom:5px;}
+  .form-row input[type=text], .form-row select{
+    width:100%;padding:9px 10px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;
+    font-family:inherit;color:var(--ink);background:white;
+  }
+  .form-row input:focus, .form-row select:focus{outline:none;border-color:var(--blue);}
+  .form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .field-hint{font-size:11px;color:var(--ink-soft);margin:-4px 0 12px;line-height:1.5;}
+  .combo{position:relative;}
+  .combo-input{padding-right:32px !important;}
+  .combo-toggle{
+    position:absolute;right:4px;top:50%;transform:translateY(-50%);width:26px;height:26px;
+    border:none;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:11px;
+    display:flex;align-items:center;justify-content:center;border-radius:6px;
+  }
+  .combo-toggle:hover{background:var(--paper);color:var(--blue);}
+  .combo-list{
+    position:absolute;top:calc(100% + 4px);left:0;right:0;background:white;border:1.5px solid var(--line);
+    border-radius:8px;box-shadow:0 10px 24px -10px rgba(20,40,90,0.3);z-index:20;max-height:220px;overflow-y:auto;display:none;
+  }
+  .combo-list.show{display:block;}
+  .combo-item{padding:9px 12px;font-size:13px;cursor:pointer;color:var(--ink);}
+  .combo-item:hover{background:var(--blue-soft);}
+  .combo-item .ci-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle;}
+  .form-actions{display:flex;gap:8px;margin-top:16px;}
+  .form-actions button{flex:1;padding:11px;border-radius:9px;border:none;font-size:13.5px;font-weight:700;cursor:pointer;}
+  .btn-save{background:var(--navy);color:white;}
+  .btn-save:hover{background:var(--navy-deep);}
+  .btn-cancel{background:var(--paper);color:var(--ink-soft);border:1.5px solid var(--line) !important;}
+  .btn-clear{background:#FCE6E6;color:#A21E1E;border:1.5px solid #F5C2C2 !important;}
+
+  .save-toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--navy);color:white;
+    padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 10px 30px -10px rgba(0,0,0,0.4);
+    z-index:60;opacity:0;pointer-events:none;transition:opacity .25s;
+  }
+  .save-toast.show{opacity:1;}
+
+  footer{margin-top:22px;text-align:center;color:var(--ink-soft);font-size:11.5px;}
+
+  .guide{
+    background:white;border:1px solid var(--line);border-radius:18px;margin-top:20px;
+    padding:24px 26px 22px;box-shadow:0 6px 24px -14px rgba(20,40,90,0.1);
+  }
+  .guide-title{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .guide-title::before{content:"";width:4px;height:16px;background:var(--blue);border-radius:2px;}
+  .guide-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .guide-item{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 15px;}
+  .guide-icon{font-size:18px;margin-bottom:6px;}
+  .guide-h{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:5px;}
+  .guide-d{font-size:11.8px;line-height:1.55;color:var(--ink-soft);}
+  @media(max-width:820px){.guide-grid{grid-template-columns:1fr 1fr;}}
+  @media(max-width:520px){.guide-grid{grid-template-columns:1fr;}}
+
+  @media(max-width:900px){
+    .app{padding:16px 12px 40px;}
+    .header{padding:12px 16px;}
+    .right-controls{width:100%;}
+  }
+  @media(max-width:600px){
+    .app{padding:6px 6px 24px;}
+    .header{padding:8px 12px;border-radius:12px;}
+    .header .eyebrow{font-size:8.5px;margin-bottom:0;}
+    .header h1{font-size:15px;}
+    .header p[style]{display:none;}
+    .header-stats{gap:10px;width:100%;justify-content:space-between;margin-top:4px;}
+    .team-tabs{margin-top:8px;gap:6px;grid-template-columns:repeat(3,1fr);}
+    .night-band{margin-top:6px;font-size:11.5px;padding:6px 10px;line-height:1.4;}
+    .controls{margin-top:8px;gap:6px;}
+    .month-nav{width:100%;justify-content:space-between;padding:5px 8px;}
+    .month-nav .label{font-size:13px;min-width:auto;}
+    .month-nav button{width:32px;height:32px;font-size:16px;}
+    .view-toggle{width:100%;justify-content:center;padding:3px;}
+    .view-toggle button{flex:1;padding:7px 12px;font-size:13px;}
+    .right-controls .add-btn{font-size:12px;padding:7px 10px;flex:1 1 44%;justify-content:center;}
+    .team-tab{min-width:0;padding:7px 10px;}
+    .team-tab .tt-name{font-size:13px;}
+    .team-tab .tt-count{font-size:9.5px;}
+    .legend{margin-top:8px;gap:5px;}
+    .legend .chip{font-size:11px;padding:4px 9px;}
+    .cal-card{margin-top:8px;}
+    .scroll-hint{padding:5px 0 1px;font-size:10.5px;}
+    .panel{padding:18px 16px;border-radius:14px;}
+    .form-row input[type=text], .form-row select{font-size:16px;padding:12px 10px;}
+    .form-grid2{grid-template-columns:1fr 1fr;}
+    .guide{padding:18px 16px;margin-top:12px;}
+
+    .scroll-hint{display:block;}
+
+    /* 월간 뷰: 칸 크기 및 글자 확대 */
+    table.sched thead th{font-size:11.5px;padding:10px 5px;}
+    table.sched thead th .wk{font-size:10px;}
+    table.sched td.namecell{min-width:92px;padding:9px 10px;}
+    table.sched td.namecell .nm{font-size:13px;}
+    table.sched td.namecell .rl{font-size:10.5px;}
+    table.sched td.daycell{min-width:48px;height:50px;}
+    .qcell{font-size:9.5px;}
+    .duty-chip{font-size:9.5px;padding:2px 5px;min-width:26px;}
+    .night-badge{min-width:17px;height:17px;font-size:9.5px;}
+
+    /* 주간 뷰: 칸 크기 및 글자 확대, 위아래 폭은 압축 */
+    table.weeksched thead th{font-size:12.5px;padding:7px 8px;}
+    table.weeksched thead th.datecol{width:50px;min-width:50px;max-width:50px;font-size:10px;padding:7px 3px;white-space:normal;line-height:1.1;}
+    table.weeksched thead th.labelcol{left:50px;width:44px;min-width:44px;max-width:44px;font-size:9.5px;padding:7px 3px;white-space:normal;line-height:1.1;}
+    table.weeksched td.datecell{width:50px;min-width:50px;max-width:50px;padding:3px 3px;font-size:10.5px;font-weight:800;color:var(--navy);white-space:normal;line-height:1.1;}
+    table.weeksched td.labelcell{left:50px;width:44px;min-width:44px;max-width:44px;padding:3px 3px;font-size:9px;white-space:normal;line-height:1.1;}
+    table.weeksched td.datecell .dlabel{font-size:11px;font-weight:800;color:var(--navy);white-space:normal;line-height:1.05;}
+    table.weeksched td.wcell{font-size:13px;padding:4px 8px;min-height:24px;min-width:86px;}
+    .wbadge{font-size:11.5px;padding:2px 6px;}
+  }
+
+  .app-nav{display:flex;gap:8px;margin-bottom:14px;}
+  .app-nav a{
+    flex:0 0 auto;padding:8px 16px;border-radius:10px;font-size:12.5px;font-weight:700;
+    text-decoration:none;border:1.5px solid var(--line);color:var(--ink-soft);background:white;transition:.15s;
+  }
+  .app-nav a:hover{border-color:var(--blue);color:var(--blue);}
+  .app-nav a.active{background:var(--navy);color:white;border-color:var(--navy);}
+</style>
+</head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<body>
+<div class="app">
+  <div class="app-nav">
+    <a href="index.html">🏥 설치일정</a>
+    <a href="work-schedule.html" class="active">📅 근무일정</a>
+  </div>
+
+  <div class="header">
+    <div>
+      <div class="eyebrow">Sysmex Korea · FS Group</div>
+      <h1>FSG 근무일정표</h1>
+      <p style="margin-top:6px;font-size:10px;color:#8FA6D9;">만든이: FSS Team Jun</p>
+    </div>
+    <div class="header-stats" id="headerStats"></div>
+  </div>
+
+  <div class="team-tabs" id="teamTabs"></div>
+  <div class="night-band" id="nightBanner"></div>
+
+  <div class="controls">
+    <div class="nav-wrap">
+      <div class="month-nav">
+        <button id="prevBtn">‹</button>
+        <div class="label" id="navLabel"></div>
+        <button id="nextBtn">›</button>
+        <button class="today-btn" id="todayBtn">오늘</button>
+      </div>
+      <div class="view-toggle">
+        <button id="viewMonthBtn">월간</button>
+        <button id="viewWeekBtn" class="active">주간</button>
+      </div>
+    </div>
+    <div class="right-controls">
+      <button class="add-btn" id="dutyViewBtn" title="석/야간·석간·주말당직·전화당직만 표시">🌙 당직만 보기</button>
+      <button class="add-btn" id="testConnBtn" title="공유 저장소 연결 상태를 진단합니다">🔧 연결 테스트</button>
+      <button class="add-btn" id="exportXlsxBtn" title="현재 팀 · 월 통계와 상세 일정을 엑셀로 내보내기">📊 Excel 내보내기</button>
+      <button class="add-btn" id="refreshBtn" title="다른 팀원의 변경사항 불러오기">⟳ 새로고침</button>
+    </div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="cal-card">
+    <div class="scroll-hint">↔ 좌우로 스크롤하세요</div>
+    <div class="grid-scroll" id="gridScroll"></div>
+  </div>
+
+  <div class="guide">
+    <div class="guide-title">사용법</div>
+    <div class="guide-grid" id="guideGrid"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="panel" id="panel"></div>
+</div>
+<div class="save-toast" id="toast">저장되었습니다</div>
+
+<script>
+// ============================================================
+// 팀 · 인원 구성
+// ============================================================
+const TEAMS = {
+  west: { key:'west', label:'FS WEST', hex:'#009EE0', members:[
+    {name:'허석', role:'팀장'}, {name:'채대석', role:'T3'}, {name:'전우상', role:'T3'},
+    {name:'김보석', role:'T2'}, {name:'이인구', role:'T2'},
+    {name:'김태윤', role:'T1'}, {name:'현준', role:'T1'}, {name:'김동찬', role:'T1'},
+    {name:'안성무', role:'T1'}, {name:'이경민', role:'T1'}, {name:'백원욱', role:'T1'}, {name:'심구', role:'T1'},
+  ]},
+  east: { key:'east', label:'FS EAST', hex:'#E8871E', members:[
+    {name:'김병우', role:'팀장'}, {name:'유용선', role:'T4'},
+    {name:'이준호', role:'T2'}, {name:'손지원', role:'T2'},
+    {name:'김규민', role:'T1'}, {name:'김세진', role:'T1'}, {name:'서윤걸', role:'T1'},
+    {name:'윤병지', role:'T1'}, {name:'박재우', role:'T1'}, {name:'서재훈', role:'T1'}, {name:'김회창', role:'T1'},
+  ]},
+  central: { key:'central', label:'FS CENTRAL', hex:'#7A5CC4', members:[
+    {name:'정근하', role:'팀장'}, {name:'이만식', role:'T3'}, {name:'문유진', role:'T3'},
+    {name:'이건석', role:'T2'}, {name:'김재모', role:'T2'},
+    {name:'한승호', role:'T1'}, {name:'유재혁', role:'T1'}, {name:'강태은', role:'T1'}, {name:'손혜린', role:'T1'}, {name:'이건우', role:'T1'},
+  ]},
+  south: { key:'south', label:'FS SOUTH', hex:'#1FA85C', members:[
+    {name:'성기홍', role:'팀장'}, {name:'문창수', role:'T3'}, {name:'박석영', role:'T3'}, {name:'박동민', role:'T3'},
+    {name:'이승직', role:'T2'}, {name:'이준민', role:'T2'}, {name:'이도협', role:'T2'},
+    {name:'김태현', role:'T1'}, {name:'윤진성', role:'T1'}, {name:'조수호', role:'T1'}, {name:'김성학', role:'T1'},
+  ]},
+};
+const TEAM_ORDER = ['west','east','central','south'];
+TEAMS.all = {
+  key:'all', label:'전체', hex:'#16233F',
+  members: TEAM_ORDER.reduce((acc, tk)=> acc.concat(TEAMS[tk].members.map(m=>Object.assign({}, m, {team:tk}))), [])
+};
+const TAB_ORDER = ['all','west','east','central','south'];
+
+// ============================================================
+// 상태 옵션 — 오전1·오전2·오후1·오후2 는 아래 중에서 선택
+// fillGroup: 'all'이면 전체 4칸, 'am'이면 오전1·2, 'pm'이면 오후1·2 자동 채움
+// hasDetail: true면 콜론(:) 뒤에 세부 내용을 이어서 입력 가능
+// ============================================================
+const HALF_STATUS = [
+  {key:'', label:'-'},
+  {key:'ON', label:'ON', short:'ON', color:'#15803D', bg:'#D1FAE5', fillGroup:'all'},
+  {key:'OFF', label:'OFF', short:'OF', color:'#475569', bg:'#E2E8F0', fillGroup:'all'},
+  {key:'휴가', label:'휴가(전일)', short:'휴', color:'#DC2626', bg:'#FEE2E2', fillGroup:'all'},
+  {key:'오전휴가', label:'오전 휴가', short:'전휴', color:'#EA580C', bg:'#FFEDD5', fillGroup:'am'},
+  {key:'오후휴가', label:'오후 휴가', short:'후휴', color:'#DB2777', bg:'#FCE7F3', fillGroup:'pm'},
+  {key:'당직', label:'당직', short:'당', color:'#7C3AED', bg:'#EDE9FE', fillGroup:'all'},
+  {key:'교육', label:'교육', short:'교', color:'#0D9488', bg:'#CCFBF1', hasDetail:true},
+  {key:'회의', label:'회의', short:'회', color:'#2563EB', bg:'#DBEAFE', hasDetail:true},
+];
+// 야간은 하나만 선택
+const NIGHT_STATUS = [
+  {key:'', label:'-'},
+  {key:'석간', label:'석/야간', short:'야', color:'#0891B2', bg:'#CFFAFE', weekdayOnly:true},
+  {key:'철야', label:'석간', short:'석', color:'#312E81', bg:'#E0E7FF', weekdayOnly:true},
+  {key:'OFF', label:'OFF', short:'OF', color:'#475569', bg:'#E2E8F0', weekdayOnly:true},
+  {key:'잔업', label:'잔업', short:'잔', color:'#B45309', bg:'#FEF3C7', weekdayOnly:true},
+];
+const WEEKEND_STATUS = [
+  {key:'', label:'-'},
+  {key:'전화', label:'전화대기', short:'전', color:'#0369A1', bg:'#E0F2FE'},
+  {key:'당직', label:'당직', short:'당', color:'#7C3AED', bg:'#EDE9FE'},
+  {key:'추가편성', label:'추가편성', short:'추가', color:'#CA8A04', bg:'#FEF9C3'},
+  {key:'기타', label:'기타', short:'기타', color:'#57534E', bg:'#F5F5F4'},
+];
+const mapOf = list => Object.fromEntries(list.map(s=>[s.key,s]));
+const HALF_MAP = mapOf(HALF_STATUS), NIGHT_MAP = mapOf(NIGHT_STATUS), WEEKEND_MAP = mapOf(WEEKEND_STATUS);
+const SLOT_KEYS = ['am1','am2','pm1','pm2'];
+const SLOT_GROUP = {am1:'am', am2:'am', pm1:'pm', pm2:'pm'};
+const SLOT_LABELS = {am1:'오전1', am2:'오전2', pm1:'오후1', pm2:'오후2'};
+function blankEntry(){ return {night:'', weekend:'', am1:'', am2:'', pm1:'', pm2:''}; }
+
+// 값(val)이 어떤 상태와 일치하는지 판단 (교육/회의는 "교육: 내용" 형태의 접두 일치도 인정)
+function matchStatus(val){
+  if(!val) return null;
+  if(HALF_MAP[val]) return HALF_MAP[val];
+  if(WEEKEND_MAP[val]) return WEEKEND_MAP[val];
+  for(const s of HALF_STATUS){
+    if(s.hasDetail && val.indexOf(s.key + ':') === 0) return s;
+  }
+  return null;
+}
+
+// 거래처(병원) 자동완성 목록 — FSR 거래처 리스트에서 추출 (907개)
+const INSTITUTION_LIST = ["(사)부산의료선교회세계로병원", "(사)한국건강관리협회 강원지부", "(사)한국건강관리협회 경기지부", "(사)한국건강관리협회 경남지부", "(사)한국건강관리협회 경북지부", "(사)한국건강관리협회 대구지부", "(사)한국건강관리협회 부산서부지부", "(사)한국건강관리협회 부산지부", "(사)한국건강관리협회 서울강남지부", "(사)한국건강관리협회 서울서부지부 (본부)", "(사)한국건강관리협회 인천지부", "(사)한국건강관리협회 중앙검사의원", "(사)한국건강관리협회_서울동부", "(사)한국건강관리협회_울산", "(사)한국의약품수출입협회", "(의)근원의료재단경산중앙병원", "(의)신의료재단김해삼승병원", "(의)우리의료재단김포우리병원", "(의)정선의료재단온종합병원", "(의)한국필의료재단 한국의원", "(재)대성재단 부천대성병원", "(재)미리내천주성삼성직수도회 천주성삼병원", "(주)대한항공 부속의원", "(주)우정바이오", "(주)켐온", "(주)타스컴", "(주)티움바이오", "21세기병원_서울서초", "365플러스내과(하남시)", "3군단사령부통합의무대", "CHA의과학대학교 분당차병원", "CHA의과학대학교 분당차여성병원", "IFC종합검진센터", "K-BIO", "KMI 광화문센터", "KMI 메디컬허브", "KMI_부산", "KT&G", "NK세종병원", "PMC박병원", "SCL 대구의원", "SD의학연구소", "SG삼성조은병원", "SK하이닉스 부속의원", "S서울병원", "가톨릭관동대학교 국제성모병원", "가톨릭대학교 부천성모병원", "가톨릭대학교 서울성모병원", "가톨릭대학교 성빈센트병원", "가톨릭대학교 여의도성모병원", "가톨릭대학교 은평성모병원", "가톨릭대학교 의정부성모병원", "가톨릭대학교 인천성모병원", "강남고려병원", "강남구보건소", "강남권산부인과", "강남메이저의원", "강남병원_대구", "강남병원_용인", "강남지인병원", "강남차 여성병원", "강동경희대병원", "강릉아산병원", "강병원_고성", "강병원_포천", "강북삼성병원 서울종합건진센터", "강북삼성병원 수원종합검진센터", "강북연세병원", "강서미즈메디병원", "강서송도병원", "강원대학교병원", "강원도 삼척의료원", "강원도 속초의료원", "강원도 영월의료원", "강원도 원주의료원", "강진의료원", "거제터의원", "거창적십자병원", "건국대학교병원", "건양대학교병원", "건양대학교부여병원", "검단탑병원", "경기도 광주시보건소", "경기도의료원 안성병원", "경기도의료원 의정부병원", "경기도의료원 이천병원", "경기도의료원 파주병원", "경기도의료원 포천병원", "경기도의료원수원병원", "경남정보대학교 K메디컬센터", "경북대학교병원", "경상남도 마산의료원", "경상대학교병원", "경상대학교병원_창원", "경상북도 김천의료원", "경상북도 안동의료원", "경상북도 포항의료원", "경인의료재활센터병원", "경주동산병원", "경희의료원", "계룡대지구병원", "계명대동산병원", "계명대학교성서캠퍼스 동산의료원", "고려대의과대학부속 구로병원", "고려대의과대학부속병원_안암", "고려대학교 안산병원", "고성군보건소_경남", "고신대학교 복음병원", "고창군보건소", "고창베리엔바이오식품연구소", "고창석정웰파크병원", "고창종합병원", "고흥군보건소", "고흥종합병원", "곡성군보건의료원", "곡성사랑병원", "공군 제8전투비행단", "공도건강생활지원센터", "공우의료재단 진헬스검진센터", "공주대 헌혈의집", "공주의료원", "공주치료감호소", "광명21세기병원", "광산구보건소", "광양사랑병원", "광양제철부속의원", "광양중마보건지소", "광주123내과의원", "광주KMI", "광주KS병원", "광주SCL", "광주건강관리협회", "광주과학기술원", "광주굿모닝병원", "광주기독병원", "광주남구보건소", "광주녹십자검사센타", "광주더스마트병원", "광주동림병원", "광주동명병원", "광주동아병원", "광주미래로21병원", "광주미즈피아아동병원", "광주병원", "광주보건대학교", "광주보훈병원", "광주빛고을생생병원", "광주산업보건협회", "광주상무병원", "광주서광병원", "광주선한병원", "광주세계로병원", "광주센트럴병원", "광주속편한내과", "광주송정사랑병원", "광주수완병원", "광주신가병원", "광주씨젠", "광주씨티병원", "광주운암한국병원", "광주은병원", "광주인구보건복지협회", "광주일곡병원", "광주전남혈액원", "광주천주의성요한병원", "광주첨단메디케어의원", "광주첨단병원", "광주하남성심병원", "광주한국병원", "광주한사랑병원", "광주해피뷰병원", "광주현대병원", "광주희망병원", "광진구보건소", "광혜병원", "광혜원보건소", "광혜의료재단 광혜병원", "구례보건의료원", "구로성심병원", "구미강남병원", "구미강동병원", "구포성심병원", "국군강릉병원", "국군고양병원", "국군구리병원", "국군대구병원", "국군대전병원", "국군수도병원", "국군양주병원", "국군춘천병원", "국군포천병원", "국군함평병원", "국군홍천병원", "국립경찰병원", "국립공주병원", "국립교통재활병원", "국립마산병원", "국립목포병원", "국립보건연구원", "국립소록도병원", "국립소방병원", "국립암센터병원", "국립재활원재활병원", "국립정신건강센터", "국립중앙의료원", "국민건강보험 일산병원", "군산에어베이스", "군산의료원", "군산천상열내과", "굿모닝내과병원", "굿모닝병원_경기평택", "굿모닝병원_경주", "굿모닝병원_대구", "근로복지공단 동해병원", "근로복지공단 안산병원", "근로복지공단 인천병원", "근로복지공단 창원병원", "근로복지공단 태백병원", "근로복지공단대구병원", "금강아산병원", "기쁨병원", "김광석외과", "김숙자소아과", "김용기내과의원", "김원묵기념봉생병원", "김제시보건소", "김제신경과의원", "김포시보건소", "김해강일병원", "김해굿모닝병원", "나사렛종합병원", "나은필병원", "나주빛가람병원", "나주시보건소", "나주종합병원", "나주한국한의학연구소", "남부통합보건지소", "남양주백병원", "남양주보건소", "남양주풍양보건소", "남양주현대병원", "남원시보건소", "남원의료원", "남해군보건소", "노보스병원(도봉구)", "노을주식회사", "녹십자아이메드 (강남)", "녹십자아이메드 (강북)", "논산백제병원", "논산시보건소", "다나힐병원", "다보스병원", "다온헬스케어의원", "닥터케이메디케어의원", "단국대학교병원", "단국대학교의학관", "달려라병원", "담소유병원", "담양군보건소", "담양사랑병원", "당진9988병원", "당진시보건소", "당진종합병원", "대구가톨릭대학교 GLP센터", "대구가톨릭대학교 칠곡가톨릭병원", "대구가톨릭대학교병원", "대구가톨릭산업보건센터", "대구보건대학교", "대구의료원", "대구파티마병원", "대구한의대학교", "대덕구보건소", "대림성모병원", "대명앰알씨티의원", "대아의료재단 한도병원_분관", "대전 CMI", "대전 화병원", "대전건강관리협회", "대전과학기술대학교", "대전보훈병원", "대전산업보건협회", "대전삼광의료재단", "대전선병원", "대전성모병원", "대전센트럴비뇨기과", "대전씨젠의료재단", "대전우리병원", "대전웰니스병원", "대전이손내과", "대전인구보건복지협회", "대전중앙병원", "대전혈액원", "대청병원", "대한산업보건협회_경기북부", "대한산업보건협회_경기서부", "대한산업보건협회_경북", "대한산업보건협회_대구", "대한산업보건협회_부산남부", "대한산업보건협회_서울", "대한산업보건협회_울산", "대한산업보건협회_한마음혈액원", "대한적십자사 경기혈액원", "대한적십자사 남부혈액검사센터 (부산)", "대한적십자사 대구경북혈액원", "대한적십자사 부산혈액원", "대한적십자사 서울남부혈액원", "대한적십자사 서울동부혈액원", "대한적십자사 서울중앙혈액원", "대한적십자사 인천혈액원", "대한적십자사_강원혈액원", "대한적십자사_경남혈액원", "대한적십자사_울산혈액원", "대한적십자사혈장분획센터", "대한항공김해부속의원", "대항병원", "더블유병원", "더블유여성병원 (인천)", "더웰병원", "더큰병원_김해", "더큰병원_창원", "동강병원", "동구보건소", "동국대학교 일산병원", "동국대학교의과대학 경주병원", "동군산병원", "동남권원자력의학원", "동대문구보건소", "동래봉생병원", "동마산병원", "동아대학교병원", "동안산병원", "동양굿모닝영상의학과", "동의의료원", "동탄제일병원", "둔산속편한외과", "드림병원", "든든한병원", "디티앤씨알오", "딕스젠", "랩지노믹스", "류마플러스내과의원", "리더스내과영상의학과", "마포구보건소", "맑은샘내과", "맑은샘병원", "메디인병원", "메디피움의원 동탄점", "메디피움의원 분당점", "메디피움의원 판교점", "메디필드한강병원", "메디힐병원", "메리놀병원", "메트로병원", "명지성모병원", "모태안여성병원", "목동힘찬병원", "목포기독병원", "목포박일종내과", "목포세안종합병원", "목포솔튼병원", "목포시의료원", "목포중앙병원", "목포한국병원", "목포현대병원", "무안종합병원", "미래병원_부산", "미래여성병원_부산진구", "미래와희망산부인과의원", "미래의료재단", "바로병원", "바로선병원", "바른세상병원", "바른유병원", "바이오오케스트라", "바이오톡스텍", "백신안전기술지원센터", "베데스다병원", "베스트내과의원", "베스티안오송병원", "보령아산병원", "보성아산병원", "부민병원", "부산가톨릭대학교", "부산광역시해운대구보건소", "부산대학교병원", "부산미래IFC의원", "부산베스티안병원", "부산성모병원", "부산성소병원", "부산센텀병원", "부산의료원", "부안성모병원", "부여군보건소", "부천바로비뇨기과", "부천우리병원", "분당구보건소", "분당서울대학교병원", "분당제일여성병원", "분당척병원", "불당내과", "비에스종합병원", "빌리브세웅병원", "빛고을선병원", "빛고을전남대병원", "사단법인인구보건복지협회 서울지회", "사단법인인구보건복지협회인천지회", "사랑의병원_서울", "사회복지법인한국혈우재단의원", "삼광의료재단", "삼광의료재단 부산센터", "삼성바이오로직스 주식회사", "삼성본병원", "삼성서울병원", "삼성연합의원", "삼성의료재단 강북삼성병원", "삼육부산병원", "삼육서울병원", "삼일병원", "삼척시보건소", "삼천포제일병원", "상남 한마음병원", "상당구보건소", "상주시보건소", "상주적십자병원", "새통영병원", "새힘병원", "서구보건소", "서산시보건소", "서산의료원", "서산중앙병원", "서울나우병원", "서울대학교 보건진료소", "서울대학교 어린이병원", "서울대학교 치과병원", "서울대학교병원", "서울대학교병원 강남센터", "서울대학교병원_암병원", "서울바른병원", "서울바른척도병원", "서울병원_송파", "서울본내과", "서울삼성내과의원", "서울센트럴메디케어의원", "서울송도병원", "서울아산병원", "서울의과학연구소", "서울적십자병원", "서울지구병원", "서울척병원", "서울특별시 보라매병원", "서울특별시 서남병원", "서울특별시 서북병원", "서울특별시 서울의료원", "서울특별시 송파구보건소", "서울특별시 제대혈은행(보라매병원)", "서울특별시 중랑구보건소", "서울특별시동부병원", "서울특별시북부병원", "서울특별시어린이병원", "서울특별시은평병원", "서울현대병원", "서원구보건소", "서천군보건소", "서초구보건소", "성광의료재단 차병원", "성균관대학교 삼성창원병원", "성남시의료원", "성남중앙병원", "성동군자의원", "세강병원", "세란병원", "세명대학교부속한방병원", "세브란스헬스체크업", "세종 헌혈의집", "세종병원", "세종충북대동물병원", "세준검진의원", "세흥병원", "센트럴바이오", "센트럴병원(시흥)", "소나무병원", "소중한메디케어의원", "속초보광병원", "속편한내과의원(용두동)", "송정역헌혈의집", "수원시 팔달구보건소", "수지미래의원", "순여성병원", "순천병원", "순천성가롤로병원", "순천의료원", "순천의료재단 정병원", "순천제일병원", "순천중앙병원", "순천평화병원", "순천한국병원", "순천향대학교 부천병원", "순천향대학교 서울병원", "순천향대학교구미병원", "시온내과의원", "시화병원", "식품의약품안전처", "식품의약품안전평가원 실험동물자원은행", "신세계외과의원", "신안군보건소", "신촌연세병원", "신한대학교", "신한대학교 임상병리학과", "심혈관유효성평가센터", "쌍용메디칼의원", "씨엠병원(충무병원)", "씨젠의료재단 (대구)", "씨젠의료재단 (서울)", "씨티재활의학과요양병원", "아름제일여성병원", "아산 헌혈의집", "아산삼성부속의원", "아산시보건소", "아산시보건소 배방지소", "아산충무병원", "아산현대병원", "아이디병원", "아이디성형외과병원", "아폴로헬스케어의원", "안동병원", "안동성소병원", "안산21세기병원", "안산대학교 산학협력단", "안산시단원보건소", "안산튼튼병원", "안산한도병원", "안성성모병원", "안성시보건소", "안중보건지소", "양산부산대학교병원", "양주예쓰병원", "양주한국병원", "양진의료재단 평택성모병원", "에디스여성병원", "에스케이케미컬(주)", "에스포항병원", "에이치큐브병원", "에이치플러스양지병원", "엠디그린의원", "여수GS칼텍스", "여수전남병원", "여수중앙병원", "여천전남병원", "연세나무병원", "연세대학교의과대학 강남세브란스병원", "연세대학교의과대학 세브란스병원", "연세대학교의과대학 세브란스병원_암병원", "연세대학교의대부속 용인세브란스병원", "연세본사랑병원", "연세에스병원", "연세프라임병원", "연제일신병원", "영광기독병원", "영광종합병원", "영남대학교의과대학부속영천병원", "영남대학교의료원", "영덕아산병원", "영도병원", "영동군보건소", "영등포병원", "영주적십자병원", "예손병원", "예천권병원", "오산한국병원", "오성병원", "오송첨단의료재단", "옥천성모병원", "온누리병원_인천", "옵티바이오", "옵티팜", "완도군보건의료원", "용인시 기흥구보건소", "용인제일메디병원", "우리들병원_강남", "우리들병원_강서", "우리들병원_대구", "우리들병원_온천동", "우리원헬스케어영상의학과의원", "운경의료재단곽병원", "울릉군보건의료원", "울산대학교병원", "울산터의원", "울진군의료원", "원광대학교병원", "원광대학교의과대학 산본병원", "원광대한방병원", "원자력방사선비임상센터", "원자력병원", "윌스기념병원_수원", "유성구보건소", "유성선병원", "유성하나로검진센터", "유앤미병원", "유투바이오", "유한양행중앙연구소", "육군훈련소지구병원", "윤병원_밀양", "은계하나내과의원", "은성의료재단좋은선린병원", "은평구보건소", "은평연세병원", "의료법인 광명성애병원", "의료법인 성애병원", "의료법인 소화병원", "의료법인 신원의료재단", "의료법인 희명병원", "의료법인갑을의료재단 갑을장유병원", "의료법인갑을의료재단갑을구미병원", "의료법인강릉동인병원", "의료법인거붕의료재단거제백병원", "의료법인건양의료재단 김안과병원", "의료법인경동의료재단 효성병원", "의료법인고려의료재단 부산고려병원", "의료법인구의료재단 구병원", "의료법인길의료재단 길병원", "의료법인나사렛의료재단 나사렛국제병원", "의료법인녹산의료재단 동수원병원", "의료법인녹십자의료재단 (용인)", "의료법인녹십자의료재단 영남분원", "의료법인대우의료재단대우병원", "의료법인대인의료재단 다니엘종합병원", "의료법인덕산의료재단김천제일병원", "의료법인동신의료재단 동신병원", "의료법인동춘의료재단 문경제일병원", "의료법인동해동인병원", "의료법인루가의료재단 나은병원", "의료법인명경의료재단 꽃마을한방병원", "의료법인명지의료재단 명지병원", "의료법인박애의료재단박애병원", "의료법인삼백의료재단상주성모병원", "의료법인상원의료재단 강북힘찬병원", "의료법인상원의료재단 부산힘찬병원", "의료법인상원의료재단 부평힘찬병원", "의료법인상원의료재단 인천힘찬병원", "의료법인서명의료재단 세명병원", "의료법인서일의료재단기장병원", "의료법인석영의료재단 창원제일종합병원", "의료법인선우의료재단비에이치에스한서병원", "의료법인성광의료재단 일산차병원", "의료법인성세의료재단 성민병원", "의료법인성화의료재단 대한병원", "의료법인송은의료재단 울산시티병원", "의료법인승연의료재단 삼천포서울병원", "의료법인아림의료재단서경병원", "의료법인아인의료재단 아인병원", "의료법인안은의료재단부평세림병원", "의료법인양진의료재단 성세아이들병원", "의료법인양평병원", "의료법인은성의료재단 좋은강안병원", "의료법인은성의료재단 좋은삼선병원", "의료법인은성의료재단 좋은삼정병원", "의료법인은혜와감사의료재단화성중앙종합병원", "의료법인이도의료재단남해병원", "의료법인인당의료재단 부민병원", "의료법인인봉의료재단뉴고려병원", "의료법인인성의료재단한림병원", "의료법인일심의료재단 우리병원", "의료법인자인의료재단자인메디병원", "의료법인장산의료재단 이춘택병원", "의료법인창덕의료재단 필립의원", "의료법인철원병원", "의료법인청구성심병원", "의료법인청아의료재단청아병원", "의료법인칠석의료재단사랑의병원", "의료법인토마스의료재단 안양윌스기념병원", "의료법인플러스의료재단 단원병원", "의료법인하나로의료재단부속하나로의원", "의료법인한길의료재단한길안과병원", "의료법인한성재단 포항세명기독병원", "의료법인한양의료재단남양주한양병원", "의료법인한전의료재단 한일병원", "의료법인현암의료재단우리들병원", "의료법인효산의료재단 안양샘병원", "의료법인희경의료재단성베드로병원", "의왕시티병원", "의정부 서울척병원", "의정부백병원", "의정부시보건소", "의정부시보건소 동부보건과", "이기은진단검사의학과", "이샘병원", "이원의료재단", "이천엘리야병원", "이화여자대학교의료원", "이화의대부속서울병원", "익산 나디안바이오", "익산나은병원", "익산병원", "익산시보건소", "인구보건복지협회 부산지부", "인구보건복지협회경기도지회", "인성병원_춘천", "인제군보건소", "인제대학교 상계백병원", "인제대학교 일산백병원", "인제대학교 해운대백병원", "인제대학교부산광역시백병원", "인천광역시 중구보건소", "인천광역시의료원", "인천광역시의료원 백령병원", "인천기독병원", "인천사랑병원", "인천세종병원", "인천적십자병원", "인천힘찬종합병원", "인터케어내과의원", "인하대학교의과대학부속병원", "일산21세기병원", "일산복음병원", "일신기독병원", "임실군보건의료원", "장성군보건소", "장안구보건소", "장튼위튼병원", "장흥병원", "장흥우리병원", "장흥천연자원연구센터", "장흥한의학진흥원", "재단법인씨젠의료재단 씨젠부산광역시의원", "재단법인원불교 원광종합병원", "전남대 생체개발연구원", "전남대병원", "전북건강관리협회", "전북대산학협력단", "전북대학교 KIMET", "전북대학교병원", "전북산업보건협회", "전북인구보건복지협회", "전북혈액원", "전주 복십자의원", "전주고려병원", "전주대자인병원", "전주병원", "전주열린병원", "전주예수병원", "전주온누리안과", "정관일신기독병원", "정선군립병원", "정선군보건소", "정선군보건소 고한사북지소", "정애의료재단 초이스병원", "정읍시보건소", "정읍아산병원", "정읍한국병원", "제넨바이오", "제니아", "제이씨빛소망안과의원", "제일병원_진주", "제일정형외과병원", "제천명지병원", "제천서울병원", "제천시보건소", "제천하나요양병원", "조선대학교부속병원", "조은오산병원", "조치원백내과", "좋은문화병원", "주생명내과", "주식회사 에이비솔루션", "중구보건소", "중구보건소 국제도시보건과", "중앙대학교광명병원", "중앙대학교병원", "중앙제일병원", "중원대학교", "지샘병원", "지안국제건강증진센터", "진도군보건소", "진안군의료원", "진접한양병원", "진주공군교육사령부", "진주반도병원", "진주세란병원", "진주한일병원", "진천군보건소", "차 여성의학연구소 서울역난임센터", "차의과학대학교부속 구미차병원", "참조은병원", "참튼튼병원_구로", "창원시 마산보건소", "창원시 진해보건소", "창원파티마병원", "창원힘찬병원", "처인구보건소", "척탑병원", "천안 아이본병원", "천안순천향대학교병원", "천안우리병원", "천안의료원", "천안이수병원", "천안이화병원", "천안충무병원", "천안하나메디칼의원", "천안헌혈의집 시청점", "첨단박유환내과", "첨단헌혈의집", "청송군보건의료원", "청양군보건의료원", "청양군의료원 보건지소", "청주 마이크로병원", "청주 탑병원", "청주동물원", "청주뿌리병원", "청주서울우리병원", "청주성모병원", "청주의료원", "청주하나병원", "청주효성병원", "최원호병원", "추병원", "춘해병원", "충남대학교병원", "충남대학교병원(세종)", "충북건강관리협회", "충북대 실험동물센터", "충북대 헌혈의집", "충북대학교병원", "충북야생동물센터", "충북인구보건복지협회", "충북혈액원", "충장로헌혈의집", "충주건국대학교병원", "충주김앤권 병원", "충주의료원", "카이스트클리닉", "케어포유", "케이피앤티", "큐병원", "크로엔리서치-HLB바이오코드로 바뀜", "키즈드림병원", "킴벨피부과", "탄탄병원", "태안군보건의료원", "터직업환경의학과", "통영적십자병원", "티씨엠랩의원", "파주시보건소", "평촌서울나우병원", "평택21세기병원", "평택시 송탄보건소", "평택시보건소", "포스코부속의원", "포항성모병원", "포항시티병원", "포항여성아이병원", "필립메디컬 영등포", "하나로내과의원", "하나로리더스헬스케어", "하나로의료재단 강남1센터", "하나은행 의무실", "하남S병원", "하남시 미사보건센터", "하남시보건소", "한국건설생활환경시험연구원", "한국과학기술연구원(KIST)", "한국보훈복지공단 대구보훈병원", "한국보훈복지공단부산광역시보훈병원", "한국보훈복지의료공단 인천보훈병원", "한국보훈복지의료공단 중앙보훈병원", "한국생명공학연구원", "한국의학연구소 강남검진센터", "한국의학연구소 수원검진센터", "한국의학연구소 여의도검진센터", "한국의학연구소대구검진센터", "한국의학연구소부산광역시검진센터", "한국환경공단", "한림대부속 한강성심병원", "한림대학교 강동성심병원", "한림대학교 동탄성심병원", "한림대학교 평촌성심병원", "한림대학교부속 춘천성심병원", "한마음병원_창원", "한사랑내과병원", "한솔병원_서울", "함양군보건소", "항공우주의료원", "해군포항한의원", "해군해양의료원", "해남우리병원", "해남종합병원", "해동병원", "해운대나눔과행복병원", "해운대부민병원", "현대유비스병원", "현대자동차", "혜명심의료재단울산병원", "혜민병원", "홍성군보건소", "홍성의료원", "홍익병원", "홍천아산병원", "화성디에스병원", "화순성심병원", "화순전남대노인병원", "화순전남대병원", "화순첨단정밀의료지원센터", "화인메트로병원", "화홍병원", "효성시티병원", "휴병원", "휴사이언스", "히즈메디병원"];
+
+// FY2026 3분기(6/29~10/11) 당직 로테이션 엑셀에서 추출한 석/야간·석간·주말당직·전화당직 데이터
+const SEED_KEYS_TO_REMOVE_FY2026Q3 = [["central","2026-08-08","한승호"],["central","2026-08-10","한승호"],["east","2026-06-29","박재우"],["east","2026-06-30","김세진"],["east","2026-06-30","박재우"],["east","2026-07-01","김세진"],["east","2026-07-02","김세진"],["east","2026-07-02","김회창"],["east","2026-07-03","김회창"],["east","2026-07-04","서윤걸"],["east","2026-07-05","서윤걸"],["east","2026-07-06","김회창"],["east","2026-07-06","서윤걸"],["east","2026-07-06","윤병지"],["east","2026-07-07","윤병지"],["east","2026-07-08","윤병지"],["east","2026-07-08","이준호"],["east","2026-07-09","이준호"],["east","2026-07-10","손지원"],["east","2026-07-10","이준호"],["east","2026-07-11","김병우"],["east","2026-07-11","윤병지"],["east","2026-07-12","윤병지"],["east","2026-07-13","김병우"],["east","2026-07-13","손지원"],["east","2026-07-13","윤병지"],["east","2026-07-14","서재훈"],["east","2026-07-14","손지원"],["east","2026-07-15","서재훈"],["east","2026-07-16","김규민"],["east","2026-07-16","서재훈"],["east","2026-07-18","서재훈"],["east","2026-07-18","손지원"],["east","2026-07-19","서재훈"],["east","2026-07-19","손지원"],["east","2026-07-20","김규민"],["east","2026-07-20","서재훈"],["east","2026-07-20","손지원"],["east","2026-07-21","김규민"],["east","2026-07-21","유용선"],["east","2026-07-22","유용선"],["east","2026-07-23","서윤걸"],["east","2026-07-23","유용선"],["east","2026-07-24","서윤걸"],["east","2026-07-25","김세진"],["east","2026-07-26","김세진"],["east","2026-07-27","김세진"],["east","2026-07-27","박재우"],["east","2026-07-27","서윤걸"],["east","2026-07-28","박재우"],["east","2026-07-29","김세진"],["east","2026-07-29","박재우"],["east","2026-07-30","김세진"],["east","2026-07-31","김세진"],["east","2026-07-31","김회창"],["east","2026-08-01","김규민"],["east","2026-08-01","박재우"],["east","2026-08-02","김규민"],["east","2026-08-02","박재우"],["east","2026-08-03","김규민"],["east","2026-08-03","김회창"],["east","2026-08-03","박재우"],["east","2026-08-04","김회창"],["east","2026-08-04","윤병지"],["east","2026-08-05","윤병지"],["east","2026-08-06","윤병지"],["east","2026-08-06","이준호"],["east","2026-08-07","이준호"],["east","2026-08-08","김회창"],["east","2026-08-09","김회창"],["east","2026-08-10","김회창"],["east","2026-08-10","손지원"],["east","2026-08-10","이준호"],["east","2026-08-11","손지원"],["east","2026-08-12","서재훈"],["east","2026-08-12","손지원"],["east","2026-08-13","서재훈"],["east","2026-08-14","서재훈"],["east","2026-08-15","김병우"],["east","2026-08-15","서윤걸"],["east","2026-08-16","서윤걸"],["east","2026-08-18","김병우"],["east","2026-08-18","서윤걸"],["east","2026-08-19","유용선"],["east","2026-08-20","유용선"],["east","2026-08-21","서윤걸"],["east","2026-08-21","유용선"],["east","2026-08-22","윤병지"],["east","2026-08-23","윤병지"],["east","2026-08-24","서윤걸"],["east","2026-08-24","윤병지"],["east","2026-08-25","박재우"],["east","2026-08-25","서윤걸"],["east","2026-08-26","박재우"],["east","2026-08-27","김세진"],["east","2026-08-27","박재우"],["east","2026-08-28","김규민"],["east","2026-08-28","김세진"],["east","2026-08-29","손지원"],["east","2026-08-30","손지원"],["east","2026-08-31","김규민"],["east","2026-08-31","김세진"],["east","2026-08-31","김회창"],["east","2026-08-31","손지원"],["east","2026-09-01","김규민"],["east","2026-09-01","김회창"],["east","2026-09-02","김회창"],["east","2026-09-02","윤병지"],["east","2026-09-03","윤병지"],["east","2026-09-04","윤병지"],["east","2026-09-04","이준호"],["east","2026-09-05","김세진"],["east","2026-09-05","서재훈"],["east","2026-09-06","김세진"],["east","2026-09-06","서재훈"],["east","2026-09-07","김세진"],["east","2026-09-07","서재훈"],["east","2026-09-07","이준호"],["east","2026-09-08","손지원"],["east","2026-09-08","이준호"],["east","2026-09-09","손지원"],["east","2026-09-10","서재훈"],["east","2026-09-10","손지원"],["east","2026-09-11","서재훈"],["east","2026-09-12","김규민"],["east","2026-09-13","김규민"],["east","2026-09-14","김규민"],["east","2026-09-14","서재훈"],["east","2026-09-15","김규민"],["east","2026-09-16","김규민"],["east","2026-09-16","유용선"],["east","2026-09-17","유용선"],["east","2026-09-18","서윤걸"],["east","2026-09-18","유용선"],["east","2026-09-19","박재우"],["east","2026-09-19","손지원"],["east","2026-09-20","박재우"],["east","2026-09-21","박재우"],["east","2026-09-21","서윤걸"],["east","2026-09-21","손지원"],["east","2026-09-22","박재우"],["east","2026-09-22","서윤걸"],["east","2026-09-23","박재우"],["east","2026-09-28","김세진"],["east","2026-09-28","박재우"],["east","2026-09-29","김세진"],["east","2026-09-30","김세진"],["east","2026-09-30","김회창"],["east","2026-10-01","김회창"],["east","2026-10-02","김회창"],["east","2026-10-02","윤병지"],["east","2026-10-03","김세진"],["east","2026-10-03","김회창"],["east","2026-10-03","서윤걸"],["east","2026-10-04","김회창"],["east","2026-10-04","서윤걸"],["east","2026-10-06","김세진"],["east","2026-10-06","김회창"],["east","2026-10-06","서윤걸"],["east","2026-10-06","윤병지"],["east","2026-10-07","윤병지"],["east","2026-10-07","이준호"],["east","2026-10-08","이준호"],["east","2026-10-10","손지원"],["east","2026-10-10","윤병지"],["east","2026-10-10","이준호"],["east","2026-10-11","손지원"],["east","2026-10-11","윤병지"],["east","2026-10-12","손지원"],["east","2026-10-12","윤병지"],["east","2026-10-12","이준호"],["south","2026-07-18","이승직"],["south","2026-07-20","이승직"],["south","2026-07-25","이도협"],["south","2026-07-27","이도협"],["south","2026-08-22","이준민"],["south","2026-08-24","이준민"],["south","2026-09-12","윤진성"],["south","2026-09-14","윤진성"],["west","2026-06-29","이인구"],["west","2026-06-30","이인구"],["west","2026-07-01","김보석"],["west","2026-07-01","이인구"],["west","2026-07-02","김보석"],["west","2026-07-03","김보석"],["west","2026-07-03","안성무"],["west","2026-07-04","김동찬"],["west","2026-07-05","김동찬"],["west","2026-07-06","김동찬"],["west","2026-07-06","안성무"],["west","2026-07-07","김태윤"],["west","2026-07-07","안성무"],["west","2026-07-08","김태윤"],["west","2026-07-09","김태윤"],["west","2026-07-09","백원욱"],["west","2026-07-10","백원욱"],["west","2026-07-11","이인구"],["west","2026-07-12","이인구"],["west","2026-07-13","백원욱"],["west","2026-07-13","이인구"],["west","2026-07-14","이인구"],["west","2026-07-15","이인구"],["west","2026-07-15","전우상"],["west","2026-07-16","전우상"],["west","2026-07-17","안성무"],["west","2026-07-17","현준"],["west","2026-07-20","안성무"],["west","2026-07-20","이경민"],["west","2026-07-20","전우상"],["west","2026-07-20","현준"],["west","2026-07-21","이경민"],["west","2026-07-22","김동찬"],["west","2026-07-22","이경민"],["west","2026-07-23","김동찬"],["west","2026-07-24","김동찬"],["west","2026-07-24","채대석"],["west","2026-07-25","백원욱"],["west","2026-07-26","백원욱"],["west","2026-07-27","백원욱"],["west","2026-07-27","채대석"],["west","2026-07-28","채대석"],["west","2026-07-28","현준"],["west","2026-07-29","현준"],["west","2026-07-30","김보석"],["west","2026-07-30","현준"],["west","2026-07-31","김보석"],["west","2026-08-01","전우상"],["west","2026-08-03","김보석"],["west","2026-08-03","안성무"],["west","2026-08-03","전우상"],["west","2026-08-04","안성무"],["west","2026-08-05","김태윤"],["west","2026-08-05","안성무"],["west","2026-08-06","김태윤"],["west","2026-08-07","김태윤"],["west","2026-08-07","백원욱"],["west","2026-08-08","김태윤"],["west","2026-08-09","김태윤"],["west","2026-08-10","김태윤"],["west","2026-08-10","백원욱"],["west","2026-08-11","백원욱"],["west","2026-08-11","이인구"],["west","2026-08-12","이인구"],["west","2026-08-13","이인구"],["west","2026-08-13","전우상"],["west","2026-08-14","김보석"],["west","2026-08-14","전우상"],["west","2026-08-15","이경민"],["west","2026-08-16","이경민"],["west","2026-08-17","김동찬"],["west","2026-08-17","이인구"],["west","2026-08-18","김동찬"],["west","2026-08-18","김보석"],["west","2026-08-18","이경민"],["west","2026-08-18","이인구"],["west","2026-08-18","전우상"],["west","2026-08-19","김보석"],["west","2026-08-19","이경민"],["west","2026-08-20","김동찬"],["west","2026-08-20","이경민"],["west","2026-08-21","김동찬"],["west","2026-08-22","안성무"],["west","2026-08-23","안성무"],["west","2026-08-24","김동찬"],["west","2026-08-24","안성무"],["west","2026-08-24","채대석"],["west","2026-08-25","채대석"],["west","2026-08-26","채대석"],["west","2026-08-26","현준"],["west","2026-08-27","현준"],["west","2026-08-28","현준"],["west","2026-08-29","김태윤"],["west","2026-08-29","현준"],["west","2026-08-30","현준"],["west","2026-08-31","김태윤"],["west","2026-08-31","현준"],["west","2026-09-01","안성무"],["west","2026-09-02","안성무"],["west","2026-09-03","김태윤"],["west","2026-09-03","안성무"],["west","2026-09-04","김태윤"],["west","2026-09-05","김보석"],["west","2026-09-07","김보석"],["west","2026-09-07","김태윤"],["west","2026-09-07","백원욱"],["west","2026-09-08","백원욱"],["west","2026-09-09","백원욱"],["west","2026-09-09","이인구"],["west","2026-09-10","이인구"],["west","2026-09-11","이인구"],["west","2026-09-11","전우상"],["west","2026-09-12","백원욱"],["west","2026-09-13","백원욱"],["west","2026-09-14","백원욱"],["west","2026-09-14","전우상"],["west","2026-09-15","이경민"],["west","2026-09-15","전우상"],["west","2026-09-16","이경민"],["west","2026-09-17","김동찬"],["west","2026-09-17","이경민"],["west","2026-09-18","김동찬"],["west","2026-09-19","김태윤"],["west","2026-09-20","김태윤"],["west","2026-09-21","김동찬"],["west","2026-09-21","김태윤"],["west","2026-09-21","채대석"],["west","2026-09-22","채대석"],["west","2026-09-23","채대석"],["west","2026-09-23","현준"],["west","2026-09-28","현준"],["west","2026-09-29","김보석"],["west","2026-09-29","현준"],["west","2026-09-30","김보석"],["west","2026-10-01","김보석"],["west","2026-10-01","안성무"],["west","2026-10-02","안성무"],["west","2026-10-05","이경민"],["west","2026-10-05","이인구"],["west","2026-10-06","김태윤"],["west","2026-10-06","안성무"],["west","2026-10-06","이경민"],["west","2026-10-06","이인구"],["west","2026-10-07","김태윤"],["west","2026-10-08","김태윤"],["west","2026-10-08","백원욱"],["west","2026-10-09","김동찬"],["west","2026-10-09","안성무"],["west","2026-10-12","김동찬"],["west","2026-10-12","백원욱"],["west","2026-10-12","안성무"]];
+const SEED_SCHEDULE_FY2026Q3_V3 = {"west":{"2026-06-29":{"이인구":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-06-30":{"이인구":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-01":{"김보석":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-02":{"김보석":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-03":{"안성무":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-04":{"김동찬":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-05":{"김동찬":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-06":{"안성무":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-07":{"김태윤":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-08":{"김태윤":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-09":{"백원욱":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-10":{"백원욱":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-11":{"이인구":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-12":{"이인구":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-13":{"이인구":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-14":{"이인구":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-15":{"전우상":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-16":{"전우상":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-17":{"안성무":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"현준":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"채대석":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-18":{"김보석":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-19":{"김보석":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-20":{"이경민":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-21":{"이경민":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-22":{"김동찬":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-23":{"김동찬":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-24":{"채대석":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-25":{"백원욱":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"전우상":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-26":{"백원욱":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"전우상":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-27":{"채대석":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-28":{"현준":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-29":{"현준":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-30":{"김보석":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-31":{"김보석":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-01":{"전우상":{"night":"철야","weekend":"전화","am1":"전화","am2":"전화","pm1":"","pm2":""}},"2026-08-03":{"안성무":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-04":{"안성무":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-05":{"김태윤":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-06":{"김태윤":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-07":{"백원욱":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-08":{"김태윤":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-09":{"김태윤":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-10":{"백원욱":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-11":{"이인구":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-12":{"이인구":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-13":{"전우상":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-14":{"전우상":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"김보석":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-15":{"이경민":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-16":{"이경민":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-17":{"이인구":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"김동찬":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-18":{"김보석":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"이경민":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-19":{"이경민":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-20":{"김동찬":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-21":{"김동찬":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-22":{"안성무":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"채대석":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-23":{"안성무":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"채대석":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-24":{"채대석":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-25":{"채대석":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-26":{"현준":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-27":{"현준":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-29":{"현준":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"김태윤":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"김보석":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-30":{"현준":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"김보석":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-01":{"안성무":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-02":{"안성무":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-03":{"김태윤":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-04":{"김태윤":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-05":{"김보석":{"night":"철야","weekend":"전화","am1":"전화","am2":"전화","pm1":"","pm2":""},"전우상":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-06":{"전우상":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-07":{"백원욱":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-08":{"백원욱":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-09":{"이인구":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-10":{"이인구":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-11":{"전우상":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-12":{"백원욱":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-13":{"백원욱":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-14":{"전우상":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-15":{"이경민":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-16":{"이경민":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-17":{"김동찬":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-18":{"김동찬":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-19":{"김태윤":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-20":{"김태윤":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-21":{"채대석":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-22":{"채대석":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-23":{"현준":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-28":{"현준":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-29":{"김보석":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-30":{"김보석":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-01":{"안성무":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-02":{"안성무":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-05":{"이인구":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"이경민":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-06":{"김태윤":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-07":{"김태윤":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-08":{"백원욱":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-09":{"안성무":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"김동찬":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"채대석":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-10":{"김보석":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-11":{"김보석":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}}},"east":{"2026-06-29":{"박재우":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-06-30":{"김세진":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-01":{"김세진":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-02":{"김회창":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-03":{"김회창":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-04":{"서윤걸":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-05":{"서윤걸":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-06":{"윤병지":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-07":{"윤병지":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-08":{"이준호":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-09":{"이준호":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-10":{"손지원":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-11":{"윤병지":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"김병우":{"night":"철야","weekend":"전화","am1":"전화","am2":"전화","pm1":"","pm2":""},"이준호":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-12":{"윤병지":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"이준호":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-13":{"손지원":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-14":{"서재훈":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-15":{"서재훈":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-16":{"김규민":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-18":{"손지원":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"서재훈":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-19":{"손지원":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"서재훈":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-20":{"김규민":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-21":{"유용선":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-22":{"유용선":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-23":{"서윤걸":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-24":{"서윤걸":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-25":{"김세진":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-26":{"김세진":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-27":{"박재우":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-28":{"박재우":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-29":{"김세진":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-30":{"김세진":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-07-31":{"김회창":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-01":{"김규민":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"박재우":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-02":{"김규민":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"박재우":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-03":{"김회창":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-04":{"윤병지":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-05":{"윤병지":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-06":{"이준호":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-07":{"이준호":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-08":{"김회창":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"유용선":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-09":{"김회창":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"유용선":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-10":{"손지원":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-11":{"손지원":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-12":{"서재훈":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-13":{"서재훈":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-15":{"서윤걸":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"김병우":{"night":"철야","weekend":"전화","am1":"전화","am2":"전화","pm1":"","pm2":""}},"2026-08-16":{"서윤걸":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-17":{"이준호":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-19":{"유용선":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-20":{"유용선":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-21":{"서윤걸":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-22":{"윤병지":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-23":{"윤병지":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-24":{"서윤걸":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-25":{"박재우":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-26":{"박재우":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-27":{"김세진":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-28":{"김세진":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"김규민":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-29":{"손지원":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-30":{"손지원":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-08-31":{"김규민":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"김회창":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-01":{"김회창":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-02":{"윤병지":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-03":{"윤병지":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-04":{"이준호":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-05":{"김세진":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"서재훈":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-06":{"김세진":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"서재훈":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-07":{"이준호":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-08":{"손지원":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-09":{"손지원":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-10":{"서재훈":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-11":{"서재훈":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-12":{"김규민":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-13":{"김규민":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-14":{"김규민":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-15":{"김규민":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-16":{"유용선":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-17":{"유용선":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-18":{"서윤걸":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-19":{"박재우":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"손지원":{"night":"철야","weekend":"전화","am1":"전화","am2":"전화","pm1":"","pm2":""},"유용선":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-20":{"박재우":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"유용선":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-21":{"서윤걸":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-22":{"박재우":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-23":{"박재우":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-28":{"김세진":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-29":{"김세진":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-09-30":{"김회창":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-01":{"김회창":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-02":{"윤병지":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-03":{"서윤걸":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"김회창":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"김세진":{"night":"철야","weekend":"전화","am1":"전화","am2":"전화","pm1":"","pm2":""}},"2026-10-04":{"서윤걸":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"김회창":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-05":{"이준호":{"night":"","weekend":"당직1","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-06":{"윤병지":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-07":{"이준호":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-08":{"이준호":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}},"2026-10-10":{"손지원":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"윤병지":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"이준호":{"night":"철야","weekend":"전화","am1":"전화","am2":"전화","pm1":"","pm2":""}},"2026-10-11":{"손지원":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""},"윤병지":{"night":"석간","weekend":"","am1":"","am2":"","pm1":"","pm2":""}}},"central":{"2026-08-08":{"한승호":{"night":"철야","weekend":"전화","am1":"전화","am2":"전화","pm1":"","pm2":""}}},"south":{"2026-07-18":{"이승직":{"night":"철야","weekend":"전화","am1":"전화","am2":"전화","pm1":"","pm2":""}},"2026-07-25":{"이도협":{"night":"철야","weekend":"전화","am1":"전화","am2":"전화","pm1":"","pm2":""}},"2026-08-22":{"이준민":{"night":"철야","weekend":"전화","am1":"전화","am2":"전화","pm1":"","pm2":""}},"2026-09-12":{"윤진성":{"night":"철야","weekend":"","am1":"","am2":"","pm1":"","pm2":""}}}};
+
+// ============================================================
+// 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
+// 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
+// ============================================================
+const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
+const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
+  ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
+  : null;
+const META_ENDPOINT = FIREBASE_URL.startsWith('http')
+  ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule-meta.json'
+  : null;
+
+// 대한민국 법정 공휴일 (2026~2027, 대체공휴일 포함)
+const HOLIDAYS_KR = {
+  '2026-01-01':'신정',
+  '2026-02-16':'설날 연휴','2026-02-17':'설날','2026-02-18':'설날 연휴',
+  '2026-03-01':'삼일절','2026-03-02':'대체공휴일',
+  '2026-05-01':'노동절','2026-05-05':'어린이날',
+  '2026-05-24':'부처님오신날','2026-05-25':'대체공휴일',
+  '2026-06-06':'현충일',
+  '2026-07-17':'제헌절',
+  '2026-08-15':'광복절','2026-08-17':'대체공휴일',
+  '2026-09-24':'추석 연휴','2026-09-25':'추석','2026-09-26':'추석 연휴',
+  '2026-10-03':'개천절','2026-10-05':'대체공휴일','2026-10-09':'한글날',
+  '2026-12-25':'크리스마스',
+  '2027-01-01':'신정',
+  '2027-02-06':'설날 연휴','2027-02-07':'설날','2027-02-08':'설날 연휴','2027-02-09':'대체공휴일',
+  '2027-03-01':'삼일절',
+  '2027-05-01':'노동절','2027-05-05':'어린이날','2027-05-13':'부처님오신날',
+  '2027-06-06':'현충일',
+  '2027-07-17':'제헌절',
+  '2027-08-15':'광복절','2027-08-16':'대체공휴일',
+  '2027-09-14':'추석 연휴','2027-09-15':'추석','2027-09-16':'추석 연휴',
+  '2027-10-03':'개천절','2027-10-04':'대체공휴일','2027-10-09':'한글날',
+  '2027-12-25':'크리스마스','2027-12-27':'대체공휴일',
+};
+
+// ============================================================
+// 상태
+// ============================================================
+let scheduleData = { west:{}, east:{}, central:{}, south:{} }; // scheduleData[team][date][name] = entry
+let currentTeam = 'west';
+let viewMode = 'week'; // 'month' | 'week'
+let _today = new Date();
+let viewYear = _today.getFullYear(), viewMonth = _today.getMonth()+1;
+let weekAnchor = todayISO();
+let activeFilter = null; // 범례에서 선택한 필터 상태 키 (없으면 null)
+let dutyOnlyView = false; // true면 석/야간·석간·주말당직·전화당직만 표시
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg || '저장되었습니다';
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 1700);
+}
+
+// ============================================================
+// Firebase 연동 (postMessage 클론 오류를 피하기 위해 AbortController 대신
+// Promise.race 기반 타임아웃을 사용합니다)
+// ============================================================
+function fetchWithTimeout(url, options, timeoutMs){
+  return Promise.race([
+    fetch(url, options),
+    new Promise((_, reject)=> setTimeout(()=>reject(new Error('TIMEOUT')), timeoutMs))
+  ]);
+}
+
+async function loadStorage(){
+  if(!STORAGE_ENDPOINT) return;
+  try{
+    const res = await fetchWithTimeout(STORAGE_ENDPOINT, {cache:'no-store'}, 8000);
+    if(!res.ok){
+      console.error('loadStorage HTTP error', res.status, res.statusText);
+      if(res.status===401 || res.status===403) showToast('⚠ 접근 거부됨 — Firebase 데이터베이스 규칙을 확인해주세요');
+      return;
+    }
+    const data = await res.json();
+    if(data){
+      TEAM_ORDER.forEach(tk=>{ scheduleData[tk] = data[tk] || {}; });
+    }
+  }catch(err){
+    console.error('loadStorage network error', err);
+    showToast(err.message==='TIMEOUT' ? '⚠ 서버 응답이 없습니다 (네트워크가 느리거나 차단됨)' : '⚠ 서버에 연결할 수 없습니다 (네트워크/방화벽 확인)');
+  }
+}
+
+async function saveStorage(){
+  if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 설정되지 않았습니다'); return; }
+  try{
+    const res = await fetchWithTimeout(STORAGE_ENDPOINT, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(scheduleData)
+    }, 8000);
+    if(res.ok){ showToast('저장되었습니다 (팀 전체 공유)'); }
+    else{
+      console.error('saveStorage HTTP error', res.status, res.statusText);
+      showToast(res.status===401||res.status===403 ? '⚠ 접근 거부됨 — Firebase 규칙을 확인해주세요' : ('⚠ 저장 실패 (' + res.status + ')'));
+    }
+  }catch(err){
+    console.error('saveStorage network error', err);
+    showToast(err.message==='TIMEOUT' ? '⚠ 서버 응답이 없습니다 (네트워크가 느리거나 차단됨)' : '⚠ 서버에 연결할 수 없습니다 (네트워크/방화벽 확인)');
+  }
+}
+
+// 예전 당직1·당직2·당직3 값을 단일 "당직"으로 통일 (매 접속시 확인, 변경 있을 때만 저장)
+function normalizeWeekendKeys(){
+  let changed = false;
+  TEAM_ORDER.forEach(tk=>{
+    Object.keys(scheduleData[tk]||{}).forEach(dstr=>{
+      Object.keys(scheduleData[tk][dstr]).forEach(nm=>{
+        const e = scheduleData[tk][dstr][nm];
+        if(e.weekend === '당직1' || e.weekend === '당직2' || e.weekend === '당직3'){
+          e.weekend = '당직';
+          changed = true;
+        }
+      });
+    });
+  });
+  return changed;
+}
+
+// 주말·공휴일에 남아있는 석/야간(석간)·석간(철야) 값을 당직으로 통일
+// 주말·공휴일에는 야간 필드를 쓰지 않고 주말/휴일 구분(당직)으로 통일합니다.
+function normalizeWeekendNight(){
+  let changed = false;
+  TEAM_ORDER.forEach(tk=>{
+    Object.keys(scheduleData[tk]||{}).forEach(dstr=>{
+      const isOff = isWeekendDate(dstr) || !!HOLIDAYS_KR[dstr];
+      if(!isOff) return;
+      Object.keys(scheduleData[tk][dstr]).forEach(nm=>{
+        const e = scheduleData[tk][dstr][nm];
+        if(e.night === '석간' || e.night === '철야' || e.night === '당직'){
+          if(!e.weekend) e.weekend = '당직';
+          e.night = '';
+          changed = true;
+        }
+      });
+    });
+  });
+  return changed;
+}
+
+// ============================================================
+// FY2026 3분기 당직 로테이션 엑셀 데이터 1회성 제거
+// (사람이 그 사이에 값을 바꿨는지와 상관없이, 엑셀에서 들여왔던 날짜/사람 칸을 모두 비웁니다)
+// 별도의 meta 경로에 완료 플래그를 저장해 다음 접속부터는 다시 실행되지 않습니다.
+// ============================================================
+function removeSeedSchedule(){
+  SEED_KEYS_TO_REMOVE_FY2026Q3.forEach(function(k){
+    const tk = k[0], dstr = k[1], nm = k[2];
+    if(scheduleData[tk] && scheduleData[tk][dstr] && scheduleData[tk][dstr][nm]){
+      delete scheduleData[tk][dstr][nm];
+      if(Object.keys(scheduleData[tk][dstr]).length===0) delete scheduleData[tk][dstr];
+    }
+  });
+}
+
+async function updateMeta(fields){
+  if(!META_ENDPOINT) return;
+  try{
+    let current = {};
+    try{
+      const res = await fetchWithTimeout(META_ENDPOINT, {cache:'no-store'}, 8000);
+      if(res.ok){ current = (await res.json()) || {}; }
+    }catch(e){ /* ignore, proceed with empty current */ }
+    const merged = Object.assign({}, current, fields);
+    await fetchWithTimeout(META_ENDPOINT, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(merged)
+    }, 8000);
+  }catch(err){
+    console.error('updateMeta error', err);
+  }
+}
+async function checkSeedRemoved(){
+  if(!META_ENDPOINT) return true;
+  try{
+    const res = await fetchWithTimeout(META_ENDPOINT, {cache:'no-store'}, 8000);
+    if(res.ok){
+      const data = await res.json();
+      return !!(data && data.seedRemoved_fy2026q3);
+    }
+  }catch(err){
+    console.error('checkSeedRemoved error', err);
+  }
+  return false;
+}
+async function markSeedRemoved(){
+  await updateMeta({seedRemoved_fy2026q3:true, removedAt:new Date().toISOString()});
+}
+
+// ============================================================
+// FY2026 3분기 당직 로테이션 1회성 반영 (v3: 석/야간·석간·주말당직·전화당직만)
+// (이미 값이 있는 날짜/사람은 절대 덮어쓰지 않고, 빈 곳만 채웁니다)
+// ============================================================
+function applySeedScheduleV3(){
+  TEAM_ORDER.forEach(tk=>{
+    const seedTeam = SEED_SCHEDULE_FY2026Q3_V3[tk] || {};
+    Object.keys(seedTeam).forEach(dstr=>{
+      Object.keys(seedTeam[dstr]).forEach(nm=>{
+        if(!scheduleData[tk][dstr]) scheduleData[tk][dstr] = {};
+        if(!scheduleData[tk][dstr][nm]){
+          scheduleData[tk][dstr][nm] = seedTeam[dstr][nm];
+        }
+      });
+    });
+  });
+}
+async function checkSeedV3Applied(){
+  if(!META_ENDPOINT) return true;
+  try{
+    const res = await fetchWithTimeout(META_ENDPOINT, {cache:'no-store'}, 8000);
+    if(res.ok){
+      const data = await res.json();
+      return !!(data && data.seedApplied_fy2026q3_v3);
+    }
+  }catch(err){
+    console.error('checkSeedV3Applied error', err);
+  }
+  return false;
+}
+async function markSeedV3Applied(){
+  await updateMeta({seedApplied_fy2026q3_v3:true, appliedAtV3:new Date().toISOString()});
+}
+
+async function testConnection(){
+  let msg = '연결 대상:\n' + STORAGE_ENDPOINT + '\n\n';
+  try{
+    const start = Date.now();
+    const res = await fetchWithTimeout(STORAGE_ENDPOINT, {cache:'no-store'}, 8000);
+    const ms = Date.now()-start;
+    if(res.ok){
+      const data = await res.json().catch(()=>null);
+      msg += '✅ 연결 성공 (' + ms + 'ms)\n상태 코드: ' + res.status + '\n';
+      msg += data ? '저장된 데이터: 있음' : '저장된 데이터: 없음 (아직 아무도 저장한 적 없음 — 정상)';
+    } else if(res.status===401 || res.status===403){
+      msg += '❌ 접근 거부됨 (상태 코드 ' + res.status + ')\n\nFirebase 콘솔 → Realtime Database → 규칙 탭에서 read/write를 true로 설정해주세요.';
+    } else {
+      msg += '❌ 서버 응답 오류 (상태 코드 ' + res.status + ' ' + res.statusText + ')';
+    }
+  }catch(err){
+    msg += '❌ 서버에 연결할 수 없습니다.\n(' + err.message + ')\n\n가능한 원인:\n- 인터넷 연결 문제\n- 회사 방화벽/프록시가 *.firebasedatabase.app 도메인을 차단\n\n이 URL을 새 브라우저 탭에 직접 붙여넣어 열어보세요:\n' + STORAGE_ENDPOINT;
+  }
+  alert(msg);
+}
+
+// ============================================================
+// 날짜 유틸
+// ============================================================
+function fmtDate(y,m,d){ return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0'); }
+function weekdayKr(y,m,d){ return ['일','월','화','수','목','금','토'][new Date(y,m-1,d).getDay()]; }
+function todayISO(){ const t=new Date(); return fmtDate(t.getFullYear(), t.getMonth()+1, t.getDate()); }
+function isWeekendDate(dstr){ const d=new Date(dstr+'T00:00:00').getDay(); return d===0||d===6; }
+function addDaysStr(dstr, n){ const d=new Date(dstr+'T00:00:00'); d.setDate(d.getDate()+n); return fmtDate(d.getFullYear(), d.getMonth()+1, d.getDate()); }
+function getMonday(dstr){ const d=new Date(dstr+'T00:00:00'); const day=d.getDay(); const diff = day===0 ? -6 : 1-day; d.setDate(d.getDate()+diff); return fmtDate(d.getFullYear(), d.getMonth()+1, d.getDate()); }
+function nextWorkday(dstr){
+  let nd = addDaysStr(dstr, 1);
+  while(isWeekendDate(nd) || HOLIDAYS_KR[nd]){ nd = addDaysStr(nd, 1); }
+  return nd;
+}
+function daysInMonth(y,m){ return new Date(y,m,0).getDate(); }
+
+function getEntry(team, date, name){
+  return (scheduleData[team] && scheduleData[team][date] && scheduleData[team][date][name]) || {};
+}
+function memberTeam(m){ return m.team || currentTeam; }
+function setEntry(team, date, name, entry){
+  if(!scheduleData[team][date]) scheduleData[team][date] = {};
+  const isEmpty = !entry.night && !entry.weekend && !entry.am1 && !entry.am2 && !entry.pm1 && !entry.pm2;
+  if(isEmpty){
+    delete scheduleData[team][date][name];
+    if(Object.keys(scheduleData[team][date]).length===0) delete scheduleData[team][date];
+  } else {
+    scheduleData[team][date][name] = entry;
+  }
+}
+
+// ============================================================
+// 필터 매칭 헬퍼 (범례 클릭 시 해당 상태만 강조)
+// ============================================================
+function slotMatchesFilter(val){
+  if(!activeFilter) return true;
+  const st = matchStatus(val);
+  return !!(st && st.key === activeFilter);
+}
+function nightMatchesFilter(nightVal){
+  if(!activeFilter) return true;
+  return nightVal === activeFilter;
+}
+function entryMatchesFilter(entry){
+  if(!activeFilter) return true;
+  if(NIGHT_MAP[activeFilter]) return entry.night === activeFilter;
+  return SLOT_KEYS.some(k=>{ const st = matchStatus(entry[k]); return st && st.key===activeFilter; });
+}
+
+// ============================================================
+// 팀 탭
+// ============================================================
+function renderTeamTabs(){
+  const wrap = document.getElementById('teamTabs');
+  wrap.innerHTML = '';
+  TAB_ORDER.forEach(tk=>{
+    const t = TEAMS[tk];
+    const tab = document.createElement('div');
+    tab.className = 'team-tab' + (currentTeam===tk ? ' active' : '');
+    tab.style.setProperty('--tc', t.hex);
+    tab.innerHTML = '<div class="tt-name">' + t.label + '</div><div class="tt-count">' + t.members.length + '명</div>';
+    tab.onclick = ()=>{ currentTeam = tk; renderTeamTabs(); render(); };
+    wrap.appendChild(tab);
+  });
+}
+
+// ============================================================
+// 범례 (클릭하면 해당 상태만 필터링해서 보여줍니다)
+// ============================================================
+function renderLegend(){
+  const el = document.getElementById('legend');
+  const items = HALF_STATUS.filter(s=>s.key).concat(NIGHT_STATUS.filter(s=>s.key));
+  let html = items.map(s=>{
+    const active = activeFilter === s.key;
+    const style = active ? (' style="background:' + s.color + ';color:white;border-color:' + s.color + ';"') : '';
+    const dotStyle = 'background:' + (active ? 'white' : s.color) + ';';
+    return '<div class="chip' + (active?' active':'') + '" data-filter="' + s.key + '"' + style + '><span class="dot" style="' + dotStyle + '"></span>' + s.label + '</div>';
+  }).join('');
+  if(activeFilter) html += '<div class="chip chip-clear" id="clearFilterChip">✕ 필터 해제</div>';
+  el.innerHTML = html;
+  el.querySelectorAll('.chip[data-filter]').forEach(chip=>{
+    chip.onclick = ()=>{
+      const key = chip.dataset.filter;
+      activeFilter = (activeFilter === key) ? null : key;
+      renderLegend();
+      render();
+    };
+  });
+  const clearChip = document.getElementById('clearFilterChip');
+  if(clearChip) clearChip.onclick = ()=>{ activeFilter = null; renderLegend(); render(); };
+}
+
+// ============================================================
+// 안내 가이드
+// ============================================================
+const GUIDE_ITEMS = [
+  {icon:'🌙', h:'당직만 보기', d:'"🌙 당직만 보기"를 누르면 석/야간·석간·잔업·주말당직·전화당직만 달력에 표시되고, 나머지 근무 내용은 숨겨집니다. 다시 누르면 원래대로 돌아옵니다.'},
+  {icon:'👆', h:'클릭으로 입력', d:'달력의 칸(이름 × 날짜)을 클릭하면 편집창이 열립니다. 평일은 오전1·오전2·오후1·오후2·야간을, 주말·공휴일은 주말/휴일 구분(전화대기·당직·추가편성·기타)만 입력합니다.'},
+  {icon:'🎨', h:'상태 선택', d:'평일 오전1·오전2·오후1·오후2는 ON·OFF·휴가(전일)·오전휴가·오후휴가·교육·회의 중에서 선택하면 자동으로 색상 배지로 표시됩니다.'},
+  {icon:'🌙', h:'야간 순환 자동 처리', d:'평일은 야간을 석/야간·석간·OFF·잔업 중에서 선택합니다. "석/야간"을 선택하면 다음 근무일은 자동으로 "석간"+OFF, 그다음 근무일은 OFF로 이어지고, "석간"만 선택하면 다음 근무일만 OFF로 채워집니다. (주말·공휴일은 건너뛰고 다음 평일에 적용) 주말·공휴일은 야간 항목이 없어지고, 대신 주말/휴일 구분에서 "당직"을 선택합니다.'},
+  {icon:'⚡', h:'자동 종일 채움', d:'ON·OFF·휴가(전일)을 선택하면 오전1~오후2 전체가, 오전휴가/오후휴가는 해당 반나절이 자동으로 채워집니다. (평일에만 해당 — 주말·공휴일은 오전/오후 입력이 없습니다)'},
+  {icon:'📝', h:'회의·교육 세부내용', d:'회의 또는 교육을 선택하면 콜론(:) 뒤에 이어서 세부 내용(예: 회의: 팀 미팅)을 직접 입력할 수 있습니다.'},
+  {icon:'🔎', h:'범례로 필터링', d:'상단 범례의 항목을 클릭하면 해당 상태만 강조되고 나머지는 흐리게 표시됩니다. 다시 클릭하면 해제됩니다.'},
+  {icon:'📣', h:'야간·휴가 배너', d:'상단에 오늘 야간 근무자와 오늘 휴가자를 이름으로 바로 보여줍니다.'},
+  {icon:'🗂️', h:'팀 전환', d:'상단 팀 탭(East · West · Central · South)을 눌러 팀별 일정을 전환합니다.'},
+  {icon:'✍️', h:'직접 입력 가능', d:'오전1·오전2·오후1·오후2는 목록에서 고르거나, 병원명 등 원하는 내용을 직접 입력할 수도 있습니다.'},
+  {icon:'📊', h:'Excel로 내보내기', d:'현재 팀 · 현재 월의 근무 통계(통계 시트)와 상세 일정(상세 시트)을 엑셀 파일로 다운로드합니다.'},
+];
+function renderGuide(){
+  const el = document.getElementById('guideGrid');
+  el.innerHTML = GUIDE_ITEMS.map(g=>
+    '<div class="guide-item"><div class="guide-icon">' + g.icon + '</div><div class="guide-h">' + g.h + '</div><div class="guide-d">' + g.d + '</div></div>'
+  ).join('');
+}
+
+// ============================================================
+// 상단 통계 (오늘 기준, 현재 팀)
+// ============================================================
+function renderStats(){
+  const el = document.getElementById('headerStats');
+  const team = TEAMS[currentTeam];
+  const t = todayISO();
+  let leave=0;
+  team.members.forEach(m=>{
+    const e = getEntry(memberTeam(m), t, m.name);
+    const isLeave = SLOT_KEYS.some(k=>{
+      const st = matchStatus(e[k]);
+      return st && (st.key==='휴가' || st.key==='오전휴가' || st.key==='오후휴가');
+    });
+    if(isLeave) leave++;
+  });
+  el.innerHTML =
+    '<div class="stat"><div class="num">' + team.members.length + '</div><div class="lbl">팀 인원</div></div>' +
+    '<div class="stat"><div class="num">' + leave + '</div><div class="lbl">오늘 휴가</div></div>';
+}
+
+// ============================================================
+// 오늘 야간 근무자 배너 (이름으로 표시)
+// ============================================================
+function renderNightBanner(){
+  const el = document.getElementById('nightBanner');
+  const team = TEAMS[currentTeam];
+  const t = todayISO();
+  const todayIsOffDay = isWeekendDate(t) || !!HOLIDAYS_KR[t];
+
+  function tag(m){ return currentTeam==='all' ? (' [' + TEAMS[memberTeam(m)].label.replace('FS ','') + ']') : ''; }
+
+  // 1) 오늘 야간
+  const nightGroups = {};
+  NIGHT_STATUS.filter(s=>s.key).forEach(s=> nightGroups[s.key] = []);
+  team.members.forEach(m=>{
+    const e = getEntry(memberTeam(m), t, m.name);
+    if(e.night && nightGroups[e.night]) nightGroups[e.night].push(m.name + tag(m));
+  });
+  const nightParts = NIGHT_STATUS.filter(s=>s.key).map(s=> nightGroups[s.key].length ? (s.label + ': ' + nightGroups[s.key].join(', ')) : null).filter(Boolean);
+
+  // 2) 오늘 휴가자
+  const leaveNames = [];
+  team.members.forEach(m=>{
+    const e = getEntry(memberTeam(m), t, m.name);
+    const isLeave = SLOT_KEYS.some(k=>{
+      const st = matchStatus(e[k]);
+      return st && (st.key==='휴가' || st.key==='오전휴가' || st.key==='오후휴가');
+    });
+    if(isLeave) leaveNames.push(m.name + tag(m));
+  });
+
+  let html =
+    '<div><span class="night-band-label">오늘 야간</span><span class="night-band-sep">—</span>' +
+      (nightParts.length ? nightParts.join(', ') : '<span class="night-band-empty">없음</span>') + '</div>' +
+    '<div style="margin-top:4px;"><span class="night-band-label">오늘 휴가자</span><span class="night-band-sep">—</span>' +
+      (leaveNames.length ? leaveNames.join(', ') : '<span class="night-band-empty">없음</span>') + '</div>';
+
+  // 3) 오늘 주말·공휴일 당직자 — 팀 구분 없이 전체 팀에서 항상 표시 (오늘이 주말·공휴일일 때만)
+  if(todayIsOffDay){
+    const dutyGroups = {};
+    WEEKEND_STATUS.filter(s=>s.key).forEach(s=> dutyGroups[s.label] = []);
+    TEAMS.all.members.forEach(m=>{
+      const e = getEntry(m.team, t, m.name);
+      if(e.weekend && WEEKEND_MAP[e.weekend]){
+        dutyGroups[WEEKEND_MAP[e.weekend].label].push(m.name + '(' + TEAMS[m.team].label + ')');
+      }
+    });
+    const dutyParts = WEEKEND_STATUS.filter(s=>s.key).map(s=> dutyGroups[s.label].length ? (s.label + ': ' + dutyGroups[s.label].join(', ')) : null).filter(Boolean);
+    html += '<div style="margin-top:4px;"><span class="night-band-label">오늘 주말·공휴일 당직 (전체 팀)</span><span class="night-band-sep">—</span>' +
+      (dutyParts.length ? dutyParts.join(', ') : '<span class="night-band-empty">없음</span>') + '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+// ============================================================
+// 네비게이션 라벨
+// ============================================================
+function renderNavLabel(){
+  const label = document.getElementById('navLabel');
+  if(viewMode==='month'){
+    label.textContent = viewYear + '년 ' + viewMonth + '월';
+  } else {
+    const monday = getMonday(weekAnchor);
+    const sunday = addDaysStr(monday, 6);
+    const p1 = monday.split('-').map(Number);
+    const p2 = sunday.split('-').map(Number);
+    label.textContent = p1[0]===p2[0] ? (p1[0] + '년 ' + p1[1] + '/' + p1[2] + ' - ' + p2[1] + '/' + p2[2]) : (p1[0]+'.'+p1[1]+'.'+p1[2] + ' - ' + p2[0]+'.'+p2[1]+'.'+p2[2]);
+  }
+}
+
+// ============================================================
+// 월간 뷰 — 각 칸을 오전1/오전2/오후1/오후2 4분할로 표시
+// ============================================================
+function fillDayCell(td, entry){
+  td.querySelectorAll('.quad, .night-badge').forEach(n=>n.remove());
+  td.title = '';
+  td.style.borderLeft = '';
+  td.classList.remove('cell-dim');
+
+  const quad = document.createElement('div');
+  quad.className = 'quad';
+  const titleParts = [];
+  SLOT_KEYS.forEach(slot=>{
+    const val = entry[slot];
+    const div = document.createElement('div');
+    const st = matchStatus(val);
+    if(val && st){
+      div.className = 'qcell';
+      div.style.color = st.color;
+      div.style.background = st.bg;
+      div.textContent = st.short;
+    } else if(val){
+      div.className = 'qcell q-text';
+      div.style.color = '#8C4E0C';
+      div.style.background = '#FDEEDC';
+      div.textContent = '·';
+    } else {
+      div.className = 'qcell q-empty';
+    }
+    if(val) titleParts.push(SLOT_LABELS[slot] + ': ' + val);
+    quad.appendChild(div);
+  });
+  td.appendChild(quad);
+
+  if(entry.night && NIGHT_MAP[entry.night]){
+    const st = NIGHT_MAP[entry.night];
+    const badge = document.createElement('span');
+    badge.className = 'night-badge';
+    badge.style.background = st.color;
+    badge.textContent = st.short;
+    td.appendChild(badge);
+    titleParts.push('야간: ' + st.label);
+  }
+  if(entry.weekend && WEEKEND_MAP[entry.weekend]){
+    const st = WEEKEND_MAP[entry.weekend];
+    td.style.borderLeft = '3px solid ' + st.color;
+    const badge = document.createElement('span');
+    badge.className = 'night-badge';
+    badge.style.background = st.color;
+    badge.textContent = st.short;
+    td.appendChild(badge);
+    titleParts.push('주말/휴일 구분: ' + st.label);
+  }
+  if(titleParts.length) td.title = titleParts.join('\n');
+  if(!entryMatchesFilter(entry)) td.classList.add('cell-dim');
+}
+
+// 당직만 보기: 석/야간·석간·잔업(야간 필드) + 당직·전화당직(주말/휴일 구분 필드)만 표시
+function fillDayCellDutyOnly(td, entry){
+  td.querySelectorAll('.duty-chips').forEach(n=>n.remove());
+  td.title = '';
+  td.style.borderLeft = '';
+  td.classList.remove('cell-dim');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'duty-chips';
+  const titleParts = [];
+
+  if(entry.night && NIGHT_MAP[entry.night]){
+    const st = NIGHT_MAP[entry.night];
+    const chip = document.createElement('div');
+    chip.className = 'duty-chip';
+    chip.style.color = st.color; chip.style.background = st.bg;
+    chip.textContent = st.short;
+    wrap.appendChild(chip);
+    titleParts.push('야간: ' + st.label);
+  }
+  if(entry.weekend && WEEKEND_MAP[entry.weekend]){
+    const st = WEEKEND_MAP[entry.weekend];
+    const chip = document.createElement('div');
+    chip.className = 'duty-chip';
+    chip.style.color = st.color; chip.style.background = st.bg;
+    chip.textContent = st.short;
+    wrap.appendChild(chip);
+    titleParts.push('주말/휴일 구분: ' + st.label);
+  }
+  if(!wrap.children.length){
+    const dash = document.createElement('div');
+    dash.className = 'duty-empty';
+    dash.textContent = '·';
+    wrap.appendChild(dash);
+  }
+  td.appendChild(wrap);
+  if(titleParts.length) td.title = titleParts.join('\n');
+  if(!entryMatchesFilter(entry)) td.classList.add('cell-dim');
+}
+
+function renderMonthGrid(){
+  const container = document.getElementById('gridScroll');
+  container.innerHTML = '';
+  const team = TEAMS[currentTeam];
+  const nDays = daysInMonth(viewYear, viewMonth);
+  const todayStr = todayISO();
+
+  const table = document.createElement('table');
+  table.className = 'sched';
+
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  trh.innerHTML = '<th class="namecol">팀원</th>';
+  for(let d=1; d<=nDays; d++){
+    const dstr = fmtDate(viewYear, viewMonth, d);
+    const wk = weekdayKr(viewYear, viewMonth, d);
+    const holi = HOLIDAYS_KR[dstr];
+    const th = document.createElement('th');
+    th.className = (wk==='일'?'sun ':'') + (wk==='토'?'sat ':'') + (holi?'holi':'');
+    th.title = holi || '';
+    th.innerHTML = d + '<span class="wk">' + wk + '</span>';
+    trh.appendChild(th);
+  }
+  thead.appendChild(trh);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  team.members.forEach(m=>{
+    const tr = document.createElement('tr');
+    const mTeam = memberTeam(m);
+    const nameTd = document.createElement('td');
+    nameTd.className = 'namecell';
+    const teamTag = currentTeam==='all' ? (' · ' + TEAMS[mTeam].label.replace('FS ','')) : '';
+    nameTd.innerHTML = '<span class="nm">' + m.name + '</span><span class="rl">' + m.role + teamTag + '</span>';
+    tr.appendChild(nameTd);
+
+    for(let d=1; d<=nDays; d++){
+      const dstr = fmtDate(viewYear, viewMonth, d);
+      const wk = weekdayKr(viewYear, viewMonth, d);
+      const weekend = (wk==='일'||wk==='토');
+      const holi = HOLIDAYS_KR[dstr];
+      const entry = Object.assign(blankEntry(), getEntry(mTeam, dstr, m.name));
+      const td = document.createElement('td');
+      td.className = 'daycell' + (dstr===todayStr?' today':'') + (holi?' holiday-col':(weekend?' weekend-col':''));
+      if(dutyOnlyView) fillDayCellDutyOnly(td, entry); else fillDayCell(td, entry);
+      td.onclick = ()=>openEditor(mTeam, dstr, m.name);
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
+// ============================================================
+// 주간 뷰
+// ============================================================
+function renderWeekGrid(){
+  const container = document.getElementById('gridScroll');
+  container.innerHTML = '';
+  const team = TEAMS[currentTeam];
+  const monday = getMonday(weekAnchor);
+  const weekDates = Array.from({length:7}, (_,i)=>addDaysStr(monday, i));
+  const todayStr = todayISO();
+
+  const table = document.createElement('table');
+  table.className = 'weeksched';
+
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  trh.innerHTML = '<th class="datecol">날짜</th><th class="labelcol">구분</th>';
+  team.members.forEach(m=>{
+    const th = document.createElement('th');
+    const teamTag = currentTeam==='all' ? (' · ' + TEAMS[memberTeam(m)].label.replace('FS ','')) : '';
+    th.innerHTML = m.name + '<span style="display:block;font-size:9.5px;font-weight:600;opacity:.85;">' + m.role + teamTag + '</span>';
+    trh.appendChild(th);
+  });
+  thead.appendChild(trh);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+
+  function addRow(dstr, rowLabel, cellFn, opts){
+    opts = opts || {};
+    const tr = document.createElement('tr');
+    if(opts.groupStart) tr.classList.add('daygroup-start');
+    if(dstr===todayStr) tr.classList.add('today-row');
+    if(HOLIDAYS_KR[dstr]) tr.classList.add('holiday-row');
+    else if(isWeekendDate(dstr)) tr.classList.add('weekend-row');
+    if(opts.dateLabel){
+      const dateTd = document.createElement('td');
+      dateTd.className = 'datecell';
+      if(opts.rowSpan && opts.rowSpan > 1) dateTd.rowSpan = opts.rowSpan;
+      dateTd.innerHTML = '<span class="dlabel">' + opts.dateLabel + '</span>';
+      tr.appendChild(dateTd);
+    }
+    const labelTd = document.createElement('td');
+    labelTd.className = 'labelcell';
+    labelTd.innerHTML = rowLabel;
+    tr.appendChild(labelTd);
+    team.members.forEach(m=>{
+      const td = document.createElement('td');
+      td.className = 'wcell';
+      cellFn(td, m);
+      td.onclick = ()=>openEditor(memberTeam(m), dstr, m.name);
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  }
+
+  function slotCell(td, mTeam, dstr, name, slot){
+    const e = getEntry(mTeam, dstr, name);
+    const val = e[slot];
+    const st = matchStatus(val);
+    if(st){
+      td.innerHTML = '<span class="wbadge" style="color:' + st.color + ';background:' + st.bg + '">' + val + '</span>';
+    } else if(val){
+      td.textContent = val;
+    } else {
+      td.classList.add('empty'); td.textContent='';
+    }
+    if(!slotMatchesFilter(val)) td.classList.add('wcell-dim');
+  }
+  function badgeHtml(map, key){
+    const st = key ? map[key] : null;
+    return st ? ('<span class="wbadge" style="color:' + st.color + ';background:' + st.bg + '">' + st.label + '</span>') : null;
+  }
+
+  weekDates.forEach(dstr=>{
+    const parts = dstr.split('-').map(Number);
+    const y=parts[0], mo=parts[1], da=parts[2];
+    const wk = weekdayKr(y,mo,da);
+    const dateLabel = mo + '/' + da + ' (' + wk + ')';
+    const holi = HOLIDAYS_KR[dstr];
+
+    if(!isWeekendDate(dstr) && !holi){
+      if(!dutyOnlyView){
+        addRow(dstr, SLOT_LABELS.am1,
+          (td,m)=>slotCell(td, memberTeam(m), dstr, m.name, 'am1'), {groupStart:true, dateLabel, rowSpan:5});
+        addRow(dstr, SLOT_LABELS.am2, (td,m)=>slotCell(td, memberTeam(m), dstr, m.name, 'am2'));
+        addRow(dstr, SLOT_LABELS.pm1, (td,m)=>slotCell(td, memberTeam(m), dstr, m.name, 'pm1'));
+        addRow(dstr, SLOT_LABELS.pm2, (td,m)=>slotCell(td, memberTeam(m), dstr, m.name, 'pm2'));
+        addRow(dstr, '야간', (td,m)=>{
+          const e = getEntry(memberTeam(m),dstr,m.name);
+          const html = badgeHtml(NIGHT_MAP, e.night);
+          if(html){
+            td.innerHTML = html;
+          } else { td.classList.add('empty'); td.textContent='-'; }
+          if(!nightMatchesFilter(e.night)) td.classList.add('wcell-dim');
+        });
+      } else {
+        addRow(dstr, '야간', (td,m)=>{
+          const e = getEntry(memberTeam(m),dstr,m.name);
+          const html = badgeHtml(NIGHT_MAP, e.night);
+          if(html){
+            td.innerHTML = html;
+          } else { td.classList.add('empty'); td.textContent='-'; }
+          if(!nightMatchesFilter(e.night)) td.classList.add('wcell-dim');
+        }, {groupStart:true, dateLabel, rowSpan:1});
+      }
+    } else {
+      const rowLabel = holi ? ('휴일 <span style="color:#A21E1E;">· ' + holi + '</span>') : '주말 · 구분';
+      addRow(dstr, rowLabel, (td,m)=>{
+        const e = getEntry(memberTeam(m),dstr,m.name);
+        let html = badgeHtml(WEEKEND_MAP, e.weekend);
+        if(!html){
+          const parts2 = SLOT_KEYS.map(k=>{
+            const st = matchStatus(e[k]);
+            if(st) return '<span class="wbadge" style="color:' + st.color + ';background:' + st.bg + '">' + e[k] + '</span>';
+            return e[k] ? ('<span class="wbadge" style="background:var(--paper);color:var(--ink-soft);">'+e[k]+'</span>') : '';
+          }).filter(Boolean);
+          const nightBadge = badgeHtml(NIGHT_MAP, e.night);
+          if(nightBadge) parts2.push(nightBadge);
+          if(parts2.length) html = parts2.join(' ');
+        }
+        if(html) td.innerHTML = html; else { td.classList.add('empty'); td.textContent='-'; }
+        const matches = !activeFilter || e.weekend===activeFilter || entryMatchesFilter(e);
+        if(!matches) td.classList.add('wcell-dim');
+      }, {groupStart:true, dateLabel, rowSpan:1});
+    }
+  });
+
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
+// ============================================================
+// 렌더 총괄
+// ============================================================
+function render(){
+  renderNavLabel();
+  renderStats();
+  renderNightBanner();
+  if(viewMode==='month') renderMonthGrid(); else renderWeekGrid();
+}
+
+// ============================================================
+// 편집 패널
+// ============================================================
+function openEditor(team, date, name){
+  const panel = document.getElementById('panel');
+  const entry = Object.assign(blankEntry(), getEntry(team,date,name));
+  const parts = date.split('-').map(Number);
+  const y=parts[0], m=parts[1], d=parts[2];
+  const wk = weekdayKr(y,m,d);
+  const weekend = isWeekendDate(date);
+  const isOffDay = weekend || !!HOLIDAYS_KR[date];
+  const member = TEAMS[team].members.find(mm=>mm.name===name);
+
+  function slotInput(id, val){
+    return '<div class="combo" id="wrap-' + id + '">' +
+      '<input type="text" id="' + id + '" class="combo-input" value="' + (val||'').replace(/"/g,'&quot;') + '" placeholder="" autocomplete="off">' +
+      '<button type="button" class="combo-toggle" tabindex="-1">▾</button>' +
+      '<div class="combo-list"></div>' +
+    '</div>';
+  }
+
+  const nightOptions = NIGHT_STATUS.filter(s=> !s.key || s.weekdayOnly || s.key === entry.night);
+
+  panel.innerHTML =
+    '<button class="close" onclick="closePanel()">✕</button>' +
+    '<h3>' + name + ' <span style="font-size:12px;color:var(--ink-soft);font-weight:600;">' + (member?member.role:'') + '</span></h3>' +
+    '<div class="sub">' + y + '년 ' + m + '월 ' + d + '일 (' + wk + ') · ' + TEAMS[team].label + '</div>' +
+
+    '<div id="ampmRows" style="' + (isOffDay?'display:none;':'') + '">' +
+      '<div class="form-row form-grid2">' +
+        '<div><label>오전1</label>' + slotInput('f-am1', entry.am1) + '</div>' +
+        '<div><label>오전2</label>' + slotInput('f-am2', entry.am2) + '</div>' +
+      '</div>' +
+      '<div class="form-row form-grid2">' +
+        '<div><label>오후1</label>' + slotInput('f-pm1', entry.pm1) + '</div>' +
+        '<div><label>오후2</label>' + slotInput('f-pm2', entry.pm2) + '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="form-row" id="nightRow" style="' + (isOffDay?'display:none;':'') + '">' +
+      '<label>야간</label>' +
+      '<select id="f-night">' + nightOptions.map(s=>'<option value="' + s.key + '" ' + (entry.night===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
+    '</div>' +
+
+    '<div class="form-row" id="weekendRow" style="' + (isOffDay?'':'display:none;') + '">' +
+      '<label>주말/휴일 구분</label><select id="f-weekend">' + WEEKEND_STATUS.map(s=>'<option value="' + s.key + '" ' + (entry.weekend===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
+    '</div>' +
+
+    '<div class="form-actions">' +
+      '<button class="btn-clear" id="f-clear">비우기</button>' +
+      '<button class="btn-cancel" id="f-cancel">취소</button>' +
+      '<button class="btn-save" id="f-save">저장</button>' +
+    '</div>';
+
+  const slotIds = ['f-am1','f-am2','f-pm1','f-pm2'];
+
+  function applyCascade(triggerId, val){
+    const st = HALF_MAP[val];
+    if(!st || !st.fillGroup) return;
+    let targets;
+    if(st.fillGroup === 'all') targets = slotIds;
+    else if(st.fillGroup === 'am') targets = ['f-am1','f-am2'];
+    else targets = ['f-pm1','f-pm2'];
+    targets.forEach(oid=>{ panel.querySelector('#'+oid).value = val; });
+  }
+
+  function renderComboList(listEl, filterText){
+    const q = (filterText||'').trim().toLowerCase();
+    let statusItems = HALF_STATUS.filter(s=>s.key);
+    if(!isOffDay) statusItems = statusItems.filter(s=> s.key !== '당직'); // 당직은 주말·공휴일에만 선택 가능
+    const instItems = q ? INSTITUTION_LIST.filter(n=> n.toLowerCase().includes(q)).slice(0,8) : [];
+    let html = '';
+    const matchedStatus = q ? statusItems.filter(s=> s.label.toLowerCase().includes(q) || s.key.toLowerCase().includes(q)) : statusItems;
+    matchedStatus.forEach(s=>{
+      html += '<div class="combo-item" data-val="' + s.key + '"><span class="ci-dot" style="background:' + s.color + '"></span>' + s.label + '</div>';
+    });
+    if(instItems.length){
+      instItems.forEach(n=>{
+        html += '<div class="combo-item" data-val="' + n.replace(/"/g,'&quot;') + '"><span class="ci-dot" style="background:#C6CEDD"></span>' + n + '</div>';
+      });
+    }
+    if(!html) html = '<div class="combo-item" style="color:var(--ink-soft);cursor:default;">일치하는 항목 없음</div>';
+    listEl.innerHTML = html;
+  }
+
+  function closeAllCombos(){
+    panel.querySelectorAll('.combo-list.show').forEach(l=>l.classList.remove('show'));
+  }
+
+  slotIds.forEach(id=>{
+    const wrap = panel.querySelector('#wrap-'+id);
+    const input = wrap.querySelector('.combo-input');
+    const toggle = wrap.querySelector('.combo-toggle');
+    const list = wrap.querySelector('.combo-list');
+
+    toggle.onclick = (e)=>{
+      e.stopPropagation();
+      const willOpen = !list.classList.contains('show');
+      closeAllCombos();
+      if(willOpen){ renderComboList(list, ''); list.classList.add('show'); }
+    };
+    input.addEventListener('focus', ()=>{
+      closeAllCombos();
+      renderComboList(list, '');
+      list.classList.add('show');
+    });
+    input.addEventListener('input', function(){
+      renderComboList(list, this.value);
+      list.classList.add('show');
+      applyCascade(id, this.value.trim());
+    });
+    list.addEventListener('mousedown', (e)=>{
+      const item = e.target.closest('.combo-item');
+      if(!item || item.dataset.val === undefined) return;
+      e.preventDefault();
+      const val = item.dataset.val;
+      const st = HALF_MAP[val];
+      if(st && st.hasDetail){
+        input.value = val + ': ';
+        list.classList.remove('show');
+        input.focus();
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
+      } else {
+        input.value = val;
+        list.classList.remove('show');
+        applyCascade(id, val);
+      }
+    });
+  });
+  panel.addEventListener('click', (e)=>{
+    if(!e.target.closest('.combo')) closeAllCombos();
+  });
+
+  const nightSel = panel.querySelector('#f-night');
+  if(nightSel){
+    nightSel.addEventListener('change', function(){
+      if(this.value === '석간' || this.value === '철야'){
+        slotIds.forEach(oid=>{ panel.querySelector('#'+oid).value = 'OFF'; });
+      }
+    });
+  }
+
+  panel.querySelector('#f-cancel').onclick = closePanel;
+  panel.querySelector('#f-clear').onclick = async ()=>{
+    setEntry(team, date, name, blankEntry());
+    closePanel(); render(); await saveStorage();
+  };
+  panel.querySelector('#f-save').onclick = async ()=>{
+    function cleanSlot(v){
+      v = (v||'').trim();
+      const mm = v.match(/^(회의|교육):\s*$/);
+      return mm ? mm[1] : v;
+    }
+    const updated = {
+      night: panel.querySelector('#f-night').value,
+      weekend: isOffDay ? panel.querySelector('#f-weekend').value : '',
+      am1: isOffDay ? '' : cleanSlot(panel.querySelector('#f-am1').value),
+      am2: isOffDay ? '' : cleanSlot(panel.querySelector('#f-am2').value),
+      pm1: isOffDay ? '' : cleanSlot(panel.querySelector('#f-pm1').value),
+      pm2: isOffDay ? '' : cleanSlot(panel.querySelector('#f-pm2').value),
+    };
+    setEntry(team, date, name, updated);
+    const nightLabel = (updated.night && NIGHT_MAP[updated.night]) ? NIGHT_MAP[updated.night].label : '';
+    if(nightLabel === '석/야간'){
+      // 석간/야간 선택 시: 다음 근무일 = 석간, 그다음 근무일 = OFF (주말·공휴일은 건너뜀)
+      const day1 = nextWorkday(date);
+      const e1 = Object.assign(blankEntry(), getEntry(team, day1, name));
+      e1.night = '철야';
+      e1.am1 = e1.am2 = e1.pm1 = e1.pm2 = 'OFF';
+      setEntry(team, day1, name, e1);
+
+      const day2 = nextWorkday(day1);
+      const e2 = Object.assign(blankEntry(), getEntry(team, day2, name));
+      e2.am1 = e2.am2 = e2.pm1 = e2.pm2 = 'OFF';
+      setEntry(team, day2, name, e2);
+    } else if(nightLabel === '석간'){
+      // 석간 단독 선택 시: 다음 근무일 = OFF (주말·공휴일은 건너뜀)
+      const nd = nextWorkday(date);
+      const otherEntry = Object.assign(blankEntry(), getEntry(team, nd, name));
+      otherEntry.am1 = otherEntry.am2 = otherEntry.pm1 = otherEntry.pm2 = 'OFF';
+      setEntry(team, nd, name, otherEntry);
+    }
+    closePanel(); render(); await saveStorage();
+  };
+
+  document.getElementById('overlay').classList.add('show');
+}
+function closePanel(){ document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('overlay').onclick = (ev)=>{ if(ev.target.id==='overlay') closePanel(); };
+
+// ============================================================
+// Excel 내보내기 (현재 팀 · 현재 월) — 통계 시트 + 상세 시트
+// ============================================================
+async function exportExcel(){
+  const wb = new ExcelJS.Workbook();
+  const team = TEAMS[currentTeam];
+  const nDays = daysInMonth(viewYear, viewMonth);
+  const statDefs = HALF_STATUS.filter(s=>s.key);
+  const nightDefs = NIGHT_STATUS.filter(s=>s.key);
+  const weekendDefs = WEEKEND_STATUS.filter(s=>s.key);
+  const NAVY = 'FF003087', WHITE = 'FFFFFFFF', LIGHTBLUE = 'FFE4F5FC', LINE = 'FFDFE6F2';
+
+  function getMonthsWithData(tk){
+    const months = new Set();
+    const teamsToCheck = tk === 'all' ? TEAM_ORDER : [tk];
+    teamsToCheck.forEach(t=>{
+      Object.keys(scheduleData[t]||{}).forEach(dstr=>{ months.add(dstr.slice(0,7)); });
+    });
+    months.add(viewYear + '-' + String(viewMonth).padStart(2,'0'));
+    return Array.from(months).sort();
+  }
+
+  function toArgb(hex){ return hex ? ('FF' + hex.replace('#','').toUpperCase()) : null; }
+
+  // 값(am1~pm2/night/weekend) → 해당 상태 정의(HALF_STATUS/NIGHT_STATUS/WEEKEND_STATUS) 찾기 (색상 입히기용)
+  function statusOf(val){
+    if(!val) return null;
+    if(HALF_MAP[val]) return HALF_MAP[val];
+    if(NIGHT_MAP[val]) return NIGHT_MAP[val];
+    if(WEEKEND_MAP[val]) return WEEKEND_MAP[val];
+    for(const s of HALF_STATUS){ if(s.hasDetail && val.indexOf(s.key + ':') === 0) return s; }
+    return null;
+  }
+  function colorCell(cell, val){
+    const st = statusOf(val);
+    if(st && st.color){
+      cell.font = {color:{argb: toArgb(st.color)}, bold:true};
+      if(st.bg) cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb: toArgb(st.bg)}};
+    }
+  }
+
+  // 팀·이름 기준 한 달 통계 집계 (오전/오후 상태 + 야간 + 주말/휴일구분 모두 포함)
+  function computePersonStats(teamKey, name, y, mo){
+    const nDaysM = daysInMonth(y, mo);
+    const stats = {};
+    statDefs.forEach(s=> stats['s_'+s.key]=0);
+    nightDefs.forEach(s=> stats['n_'+s.key]=0);
+    weekendDefs.forEach(s=> stats['w_'+s.key]=0);
+    for(let d=1; d<=nDaysM; d++){
+      const dstr = fmtDate(y, mo, d);
+      const e = getEntry(teamKey, dstr, name);
+      const foundToday = new Set();
+      SLOT_KEYS.forEach(k=>{ const st = matchStatus(e[k]); if(st) foundToday.add(st.key); });
+      foundToday.forEach(k=>{ if(stats['s_'+k]!==undefined) stats['s_'+k]++; });
+      if(e.night && stats['n_'+e.night]!==undefined) stats['n_'+e.night]++;
+      if(e.weekend && stats['w_'+e.weekend]!==undefined) stats['w_'+e.weekend]++;
+    }
+    return stats;
+  }
+  function summarize(stats){
+    return {
+      workDays: stats['s_ON']||0,
+      leaveDays: (stats['s_휴가']||0) + 0.5*(stats['s_오전휴가']||0) + 0.5*(stats['s_오후휴가']||0),
+      duty: stats['w_당직']||0,
+      phone: stats['w_전화']||0,
+      extra: stats['w_추가편성']||0,
+      etc: stats['w_기타']||0,
+      nightTotal: (stats['n_석간']||0) + (stats['n_철야']||0) + (stats['n_잔업']||0),
+      edu: stats['s_교육']||0,
+      meet: stats['s_회의']||0,
+    };
+  }
+  function styleHeaderRow(row){
+    row.eachCell(c=>{ c.font = {bold:true, color:{argb:WHITE}}; c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:NAVY}}; c.alignment = {horizontal:'center', vertical:'middle'}; });
+  }
+  function borderAll(ws){
+    ws.eachRow(row=> row.eachCell(c=>{
+      c.border = {top:{style:'thin',color:{argb:LINE}}, bottom:{style:'thin',color:{argb:LINE}}, left:{style:'thin',color:{argb:LINE}}, right:{style:'thin',color:{argb:LINE}}};
+    }));
+  }
+
+  const ym = viewYear + '-' + String(viewMonth).padStart(2,'0');
+  const ymLabel = viewYear + '년 ' + viewMonth + '월';
+
+  // ================= 개인별 요약 (전체 팀, 이번 달) =================
+  const summaryWs = wb.addWorksheet('개인별 요약');
+  const summaryRows = [];
+  TEAM_ORDER.forEach(tk=>{
+    TEAMS[tk].members.forEach(m=>{
+      const s = summarize(computePersonStats(tk, m.name, viewYear, viewMonth));
+      summaryRows.push([TEAMS[tk].label, m.name, m.role, s.workDays, s.leaveDays, s.duty, s.phone, s.nightTotal, s.edu, s.meet]);
+    });
+  });
+  summaryWs.addTable({
+    name: 'PersonSummary', ref: 'A1', headerRow: true, totalsRow: false,
+    style: {theme:'TableStyleMedium9', showRowStripes:true},
+    columns: [
+      {name:'팀', filterButton:true}, {name:'이름', filterButton:true}, {name:'직급', filterButton:true},
+      {name:'근무일', filterButton:false}, {name:'휴가일수', filterButton:false}, {name:'당직', filterButton:false},
+      {name:'전화대기', filterButton:false}, {name:'야간계', filterButton:false}, {name:'교육', filterButton:false}, {name:'회의', filterButton:false},
+    ],
+    rows: summaryRows
+  });
+  [12,10,8,9,10,8,10,9,8,8].forEach((w,i)=> summaryWs.getColumn(i+1).width = w);
+  styleHeaderRow(summaryWs.getRow(1));
+  summaryWs.views = [{state:'frozen', ySplit:1}];
+  summaryWs.getCell('A' + (summaryRows.length+3)).value = ymLabel + ' 기준';
+  summaryWs.getCell('A' + (summaryRows.length+3)).font = {italic:true, color:{argb:'FF5A6B8C'}, size:10};
+
+  // ================= 팀별 비교 (이번 달) =================
+  const teamWs = wb.addWorksheet('팀별 비교');
+  const teamRows = [];
+  const grandTotal = {workDays:0, leaveDays:0, duty:0, phone:0, extra:0, etc:0, nightTotal:0, edu:0, meet:0};
+  let grandCount = 0;
+  TEAM_ORDER.forEach(tk=>{
+    const totals = {workDays:0, leaveDays:0, duty:0, phone:0, extra:0, etc:0, nightTotal:0, edu:0, meet:0};
+    TEAMS[tk].members.forEach(m=>{
+      const s = summarize(computePersonStats(tk, m.name, viewYear, viewMonth));
+      Object.keys(totals).forEach(k=> totals[k]+=s[k]);
+    });
+    Object.keys(grandTotal).forEach(k=> grandTotal[k]+=totals[k]);
+    grandCount += TEAMS[tk].members.length;
+    teamRows.push([TEAMS[tk].label, TEAMS[tk].members.length, totals.workDays, totals.leaveDays, totals.duty, totals.phone, totals.extra, totals.etc, totals.nightTotal, totals.edu, totals.meet]);
+  });
+  teamRows.push(['전체 합계', grandCount, grandTotal.workDays, grandTotal.leaveDays, grandTotal.duty, grandTotal.phone, grandTotal.extra, grandTotal.etc, grandTotal.nightTotal, grandTotal.edu, grandTotal.meet]);
+  teamWs.addTable({
+    name: 'TeamCompare', ref: 'A1', headerRow: true, totalsRow: false,
+    style: {theme:'TableStyleMedium9', showRowStripes:true},
+    columns: [
+      {name:'팀', filterButton:false}, {name:'인원수', filterButton:false}, {name:'총근무일', filterButton:false},
+      {name:'총휴가일수', filterButton:false}, {name:'총당직', filterButton:false}, {name:'총전화대기', filterButton:false},
+      {name:'총추가편성', filterButton:false}, {name:'총기타', filterButton:false}, {name:'총야간계', filterButton:false},
+      {name:'총교육', filterButton:false}, {name:'총회의', filterButton:false},
+    ],
+    rows: teamRows
+  });
+  [13,9,10,11,9,11,11,9,10,9,9].forEach((w,i)=> teamWs.getColumn(i+1).width = w);
+  styleHeaderRow(teamWs.getRow(1));
+  const teamTotalRowIdx = 1 + teamRows.length;
+  teamWs.getRow(teamTotalRowIdx).eachCell(c=>{ c.font = {bold:true}; c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:LIGHTBLUE}}; });
+  teamWs.views = [{state:'frozen', ySplit:1}];
+
+  // ================= 당직·야간 형평성 (팀별로 당직 많은 순 정렬 + 색상 스케일) =================
+  const equityWs = wb.addWorksheet('형평성');
+  const equityRows = [];
+  TEAM_ORDER.forEach(tk=>{
+    const rows = TEAMS[tk].members.map(m=>{
+      const s = summarize(computePersonStats(tk, m.name, viewYear, viewMonth));
+      return [TEAMS[tk].label, m.name, m.role, s.duty, s.nightTotal];
+    });
+    rows.sort((a,b)=> b[3]-a[3] || b[4]-a[4]);
+    rows.forEach(r=> equityRows.push(r));
+  });
+  equityWs.addTable({
+    name: 'Equity', ref: 'A1', headerRow: true, totalsRow: false,
+    style: {theme:'TableStyleMedium9', showRowStripes:true},
+    columns: [
+      {name:'팀', filterButton:true}, {name:'이름', filterButton:true}, {name:'직급', filterButton:true},
+      {name:'당직', filterButton:false}, {name:'야간계', filterButton:false},
+    ],
+    rows: equityRows
+  });
+  [12,10,8,8,9].forEach((w,i)=> equityWs.getColumn(i+1).width = w);
+  styleHeaderRow(equityWs.getRow(1));
+  equityWs.views = [{state:'frozen', ySplit:1}];
+  if(equityRows.length > 0){
+    const lastRow = equityRows.length + 1;
+    // 당직(D열), 야간계(E열) — 많을수록 진한 빨강, 적을수록 연한 초록 (부담 쏠림 한눈에 확인)
+    equityWs.addConditionalFormatting({
+      ref: 'D2:D' + lastRow,
+      rules: [{type:'colorScale', cfvo:[{type:'min'},{type:'percentile', value:50},{type:'max'}],
+        color:[{argb:'FFD1FAE5'},{argb:'FFFEF9C3'},{argb:'FFFEE2E2'}]}]
+    });
+    equityWs.addConditionalFormatting({
+      ref: 'E2:E' + lastRow,
+      rules: [{type:'colorScale', cfvo:[{type:'min'},{type:'percentile', value:50},{type:'max'}],
+        color:[{argb:'FFD1FAE5'},{argb:'FFFEF9C3'},{argb:'FFFEE2E2'}]}]
+    });
+  }
+  equityWs.getCell('A' + (equityRows.length+3)).value = '색이 진할수록(빨강) 부담이 많고, 연할수록(초록) 적음 · ' + ymLabel + ' 기준';
+  equityWs.getCell('A' + (equityRows.length+3)).font = {italic:true, color:{argb:'FF5A6B8C'}, size:10};
+
+  // ---- 통계 시트 (월별, 현재 팀) ----
+  const statsWs = wb.addWorksheet('통계');
+  const statsHeaders = ['월','이름','직급'].concat(statDefs.map(s=>s.label)).concat(nightDefs.map(s=>s.label)).concat(weekendDefs.map(s=>s.label));
+  const statsRows = [];
+  getMonthsWithData(currentTeam).forEach(monthYm=>{
+    const parts = monthYm.split('-').map(Number);
+    const y = parts[0], mo = parts[1];
+    const monthTotals = {};
+    statDefs.forEach(s=>monthTotals['s_'+s.key]=0);
+    nightDefs.forEach(s=>monthTotals['n_'+s.key]=0);
+    weekendDefs.forEach(s=>monthTotals['w_'+s.key]=0);
+
+    team.members.forEach(m=>{
+      const stats = computePersonStats(memberTeam(m), m.name, y, mo);
+      Object.keys(stats).forEach(k=> monthTotals[k] = (monthTotals[k]||0) + stats[k]);
+      statsRows.push([monthYm, m.name, m.role]
+        .concat(statDefs.map(s=>stats['s_'+s.key]||0))
+        .concat(nightDefs.map(s=>stats['n_'+s.key]||0))
+        .concat(weekendDefs.map(s=>stats['w_'+s.key]||0)));
+    });
+    statsRows.push([monthYm, '월 합계', '']
+      .concat(statDefs.map(s=>monthTotals['s_'+s.key]||0))
+      .concat(nightDefs.map(s=>monthTotals['n_'+s.key]||0))
+      .concat(weekendDefs.map(s=>monthTotals['w_'+s.key]||0)));
+  });
+  statsWs.addTable({
+    name: 'Stats', ref: 'A1', headerRow: true, totalsRow: false,
+    style: {theme:'TableStyleMedium9', showRowStripes:true},
+    columns: statsHeaders.map((h,i)=>({name:h, filterButton: i<3})),
+    rows: statsRows
+  });
+  statsHeaders.forEach((h,i)=>{ statsWs.getColumn(i+1).width = i<3 ? 10 : 9; });
+  styleHeaderRow(statsWs.getRow(1));
+  statsWs.views = [{state:'frozen', ySplit:1}];
+  statsRows.forEach((r,i)=>{
+    if(r[1] === '월 합계'){
+      const row = statsWs.getRow(i+2);
+      row.eachCell(c=>{ c.font = {bold:true}; c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:LIGHTBLUE}}; });
+    }
+  });
+
+  // ---- 상세 시트 (일자별, 현재 팀 · 이번 달) — 상태별 색상 적용 ----
+  const detailWs = wb.addWorksheet('상세');
+  const detailRows = [];
+  for(let d=1; d<=nDays; d++){
+    const dstr = fmtDate(viewYear, viewMonth, d);
+    const wk = weekdayKr(viewYear, viewMonth, d);
+    team.members.forEach(m=>{
+      const e = getEntry(memberTeam(m), dstr, m.name);
+      detailRows.push([dstr, wk, m.name, m.role, e.am1||'', e.am2||'', e.pm1||'', e.pm2||'', e.night||'', e.weekend||'']);
+    });
+  }
+  detailWs.addTable({
+    name: 'Detail', ref: 'A1', headerRow: true, totalsRow: false,
+    style: {theme:'TableStyleMedium9', showRowStripes:true},
+    columns: [
+      {name:'날짜', filterButton:true}, {name:'요일', filterButton:true}, {name:'이름', filterButton:true}, {name:'직급', filterButton:true},
+      {name:'오전1', filterButton:false}, {name:'오전2', filterButton:false}, {name:'오후1', filterButton:false}, {name:'오후2', filterButton:false},
+      {name:'야간', filterButton:false}, {name:'주말/휴일 구분', filterButton:false},
+    ],
+    rows: detailRows
+  });
+  [12,6,10,8,20,20,20,20,14,14].forEach((w,i)=> detailWs.getColumn(i+1).width = w);
+  styleHeaderRow(detailWs.getRow(1));
+  detailWs.views = [{state:'frozen', ySplit:1}];
+  detailRows.forEach((r,i)=>{
+    const row = detailWs.getRow(i+2);
+    [5,6,7,8,9,10].forEach(colIdx=> colorCell(row.getCell(colIdx), r[colIdx-1]));
+  });
+
+  [summaryWs, teamWs, equityWs, statsWs, detailWs].forEach(borderAll);
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {type:'application/octet-stream'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = team.label + '_근무일정_' + viewYear + String(viewMonth).padStart(2,'0') + '.xlsx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Excel로 내보내기 완료 (개인별요약·팀별비교·형평성·통계·상세)');
+}
+
+// ============================================================
+// 이벤트 바인딩
+// ============================================================
+document.getElementById('prevBtn').onclick = ()=>{
+  if(viewMode==='month'){ viewMonth--; if(viewMonth===0){viewMonth=12; viewYear--;} }
+  else { weekAnchor = addDaysStr(weekAnchor, -7); }
+  render();
+};
+document.getElementById('nextBtn').onclick = ()=>{
+  if(viewMode==='month'){ viewMonth++; if(viewMonth===13){viewMonth=1; viewYear++;} }
+  else { weekAnchor = addDaysStr(weekAnchor, 7); }
+  render();
+};
+document.getElementById('todayBtn').onclick = ()=>{
+  const t = new Date(); viewYear=t.getFullYear(); viewMonth=t.getMonth()+1; weekAnchor = todayISO(); render();
+};
+document.getElementById('viewMonthBtn').onclick = ()=>{
+  viewMode='month';
+  document.getElementById('viewMonthBtn').classList.add('active');
+  document.getElementById('viewWeekBtn').classList.remove('active');
+  render();
+};
+document.getElementById('viewWeekBtn').onclick = ()=>{
+  viewMode='week';
+  document.getElementById('viewWeekBtn').classList.add('active');
+  document.getElementById('viewMonthBtn').classList.remove('active');
+  render();
+};
+document.getElementById('dutyViewBtn').onclick = ()=>{
+  dutyOnlyView = !dutyOnlyView;
+  document.getElementById('dutyViewBtn').classList.toggle('active', dutyOnlyView);
+  render();
+};
+document.getElementById('testConnBtn').onclick = testConnection;
+document.getElementById('exportXlsxBtn').onclick = exportExcel;
+document.getElementById('refreshBtn').onclick = async ()=>{
+  await loadStorage(); render(); showToast('최신 일정을 불러왔습니다');
+};
+
+// ============================================================
+// 초기화
+// ============================================================
+(async function init(){
+  renderTeamTabs();
+  renderLegend();
+  renderGuide();
+  render();
+  await loadStorage();
+  const removedAlready = await checkSeedRemoved();
+  if(!removedAlready){
+    removeSeedSchedule();
+    render();
+    await saveStorage();
+    await markSeedRemoved();
+    showToast('엑셀에서 가져온 당직 로테이션 데이터를 모두 삭제했습니다');
+  }
+  const v3Already = await checkSeedV3Applied();
+  if(!v3Already){
+    applySeedScheduleV3();
+    render();
+    await saveStorage();
+    await markSeedV3Applied();
+    showToast('석/야간·석간·주말당직·전화당직 데이터를 반영했습니다');
+  }
+  if(normalizeWeekendKeys()){
+    render();
+    await saveStorage();
+  }
+  if(normalizeWeekendNight()){
+    render();
+    await saveStorage();
+  }
+  render();
+  setInterval(async ()=>{
+    if(document.getElementById('overlay').classList.contains('show')) return;
+    await loadStorage();
+    render();
+  }, 20000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>시스템 설치 공유 캘린더 | FY26</title>
+<style>
+  :root{
+    --navy:#003087;
+    --navy-deep:#001C55;
+    --blue:#009EE0;
+    --blue-soft:#E4F5FC;
+    --paper:#F6F8FB;
+    --ink:#16233F;
+    --ink-soft:#5A6B8C;
+    --line:#DFE6F2;
+    --white:#FFFFFF;
+
+    --c-install:#009EE0;
+    --c-install-bg:#E4F5FC;
+    --c-relocation:#E8871E;
+    --c-relocation-bg:#FDEEDC;
+    --c-eval:#7A5CC4;
+    --c-eval-bg:#EFEAFA;
+    --c-holiday:#D93B3B;
+    --c-holiday-bg:#FCE6E6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",-apple-system,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .app{max-width:1180px;margin:0 auto;padding:28px 20px 60px;}
+
+  .header{
+    background:linear-gradient(120deg,var(--navy) 0%, var(--navy-deep) 100%);
+    border-radius:14px;padding:14px 22px;color:white;
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;
+    box-shadow:0 6px 18px -10px rgba(0,48,135,0.4);
+  }
+  .header .eyebrow{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:700;margin-bottom:2px;}
+  .header h1{margin:0;font-size:18px;font-weight:800;letter-spacing:-0.01em;}
+  .header p{margin:2px 0 0;color:#C9D8F5;font-size:11.5px;}
+  .header-stats{display:flex;gap:16px;}
+  .stat{text-align:right;}
+  .stat .num{font-size:17px;font-weight:800;color:white;}
+  .stat .lbl{font-size:10px;color:#AFC3EF;}
+
+  .controls{display:flex;justify-content:space-between;align-items:center;margin-top:22px;flex-wrap:wrap;gap:14px;}
+  .month-nav{display:flex;align-items:center;gap:14px;background:white;border:1px solid var(--line);
+    border-radius:12px;padding:8px 10px;box-shadow:0 2px 8px rgba(20,40,90,0.04);}
+  .month-nav button{
+    width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--paper);
+    color:var(--navy);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;
+  }
+  .month-nav button:hover{background:var(--blue-soft);border-color:var(--blue);}
+  .month-nav .label{font-size:17px;font-weight:800;color:var(--navy);min-width:130px;text-align:center;}
+  .month-nav .today-btn{
+    margin-left:6px;font-size:12px;font-weight:700;color:var(--blue);background:var(--blue-soft);
+    border:1px solid var(--blue);border-radius:8px;padding:6px 10px;cursor:pointer;width:auto;height:auto;
+  }
+  .right-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+
+  .search-wrap{position:relative;flex:1 1 220px;min-width:180px;max-width:320px;}
+  .search-input{
+    width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;
+    font-size:13px;font-family:inherit;color:var(--ink);background:white;
+  }
+  .search-input:focus{outline:none;border-color:var(--blue);}
+  .search-results{
+    position:absolute;top:calc(100% + 6px);left:0;right:0;background:white;
+    border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px -10px rgba(20,40,90,0.25);
+    max-height:320px;overflow-y:auto;z-index:40;display:none;
+  }
+  .search-results.show{display:block;}
+  .search-result-item{
+    padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line);font-size:12.5px;
+  }
+  .search-result-item:last-child{border-bottom:none;}
+  .search-result-item:hover{background:var(--paper);}
+  .search-result-item .sr-title{font-weight:700;color:var(--ink);}
+  .search-result-item .sr-meta{color:var(--ink-soft);font-size:11px;margin-top:2px;}
+  .search-empty{padding:14px 12px;color:var(--ink-soft);font-size:12.5px;text-align:center;}
+
+  .client-suggest{
+    position:absolute;top:100%;left:0;right:0;background:white;
+    border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px -10px rgba(20,40,90,0.25);
+    max-height:220px;overflow-y:auto;z-index:70;display:none;margin-top:4px;
+  }
+  .client-suggest.show{display:block;}
+  .client-suggest-item{padding:8px 12px;cursor:pointer;font-size:12.5px;border-bottom:1px solid var(--line);}
+  .client-suggest-item:last-child{border-bottom:none;}
+  .client-suggest-item:hover{background:var(--paper);}
+  .client-suggest-item b{color:var(--navy);}
+  .client-suggest-item .cs-meta{color:var(--ink-soft);font-size:11px;}
+  .new-client-tag{
+    display:inline-block;margin-top:6px;font-size:11px;color:var(--blue);font-weight:700;
+  }
+  .legend{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{
+    display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;
+    padding:7px 12px;border-radius:20px;border:1.5px solid var(--line);cursor:pointer;user-select:none;
+    background:var(--white);color:var(--ink-soft);transition:.15s;
+  }
+  .chip .dot{width:8px;height:8px;border-radius:50%;}
+  .chip.active{color:white;border-color:transparent;}
+  .chip[data-cat="install"].active{background:var(--c-install);}
+  .chip[data-cat="relocation"].active{background:var(--c-relocation);}
+  .chip[data-cat="evaluation"].active{background:var(--c-eval);}
+  .chip[data-cat="holiday"].active{background:var(--c-holiday);}
+  .chip[data-cat="install"] .dot{background:var(--c-install);}
+  .chip[data-cat="relocation"] .dot{background:var(--c-relocation);}
+  .chip[data-cat="evaluation"] .dot{background:var(--c-eval);}
+  .chip[data-cat="holiday"] .dot{background:var(--c-holiday);}
+
+  .add-btn{
+    display:flex;align-items:center;gap:6px;background:var(--navy);color:white;border:none;
+    border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;
+    box-shadow:0 4px 14px -6px rgba(0,48,135,0.5);transition:.15s;
+  }
+  .add-btn:hover{background:var(--navy-deep);}
+
+  .cal-card{
+    background:white;border:1px solid var(--line);border-radius:18px;margin-top:18px;
+    overflow:hidden;box-shadow:0 6px 24px -14px rgba(20,40,90,0.15);
+  }
+  .weekday-row{display:grid;grid-template-columns:repeat(7,1fr);background:var(--navy);}
+  .weekday-row div{padding:11px 0;text-align:center;font-size:12.5px;font-weight:700;color:#CFE0FF;letter-spacing:.03em;}
+  .weekday-row div:first-child{color:#FFB4B4;}
+  .weekday-row div:last-child{color:#AFD8FF;}
+
+  .week-row{position:relative;border-bottom:1px solid var(--line);}
+  .week-row:last-child{border-bottom:none;}
+  .daybg{display:grid;grid-template-columns:repeat(7,1fr);}
+  .daybg .cell{border-right:1px solid var(--line);min-height:34px;padding:8px 7px 4px;background:white;position:relative;min-width:0;overflow:hidden;}
+  .daybg .cell:last-child{border-right:none;}
+  .daybg .cell.pad{background:#FBFCFE;}
+  .daybg .cell.today{box-shadow:inset 0 0 0 2px var(--blue);}
+  .daynum-row{display:flex;align-items:center;justify-content:space-between;}
+  .daynum{font-size:13px;font-weight:700;color:var(--ink);}
+  .daybg .cell.pad .daynum{color:#C6CEDD;}
+  .daybg .cell.sun .daynum{color:#D93B3B;}
+  .daybg .cell.sat .daynum{color:#0A6BC7;}
+  .daybg .cell.holiday-cell .daynum{color:#D93B3B;}
+  .holiday-tag{
+    font-size:8.5px;font-weight:700;color:#D93B3B;background:#FCE6E6;border-radius:4px;
+    padding:1px 4px;margin-left:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70px;
+  }
+  .add-day-btn{
+    width:20px;height:20px;border-radius:6px;border:none;background:var(--paper);color:var(--ink-soft);
+    font-size:13px;line-height:1;cursor:pointer;opacity:.5;transition:.12s;display:flex;align-items:center;justify-content:center;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .daybg .cell:hover .add-day-btn{opacity:1;}
+  .add-day-btn:hover, .add-day-btn:active{background:var(--blue-soft);color:var(--blue);opacity:1;}
+
+  .bars-layer{position:absolute;left:0;right:0;pointer-events:none;}
+  .bar{
+    position:absolute;height:18px;border-radius:6px;font-size:10.5px;font-weight:700;line-height:18px;padding:0 8px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:auto;cursor:pointer;color:white;
+    box-shadow:0 1px 3px rgba(0,0,0,0.15);
+  }
+  .bar.install{background:var(--c-install);}
+  .bar.relocation{background:var(--c-relocation);}
+  .bar.evaluation{background:var(--c-eval);}
+  .bar.holiday{background:var(--c-holiday);}
+
+  .chips-layer{display:grid;grid-template-columns:repeat(7,1fr);}
+  .chips-layer .cell{border-right:1px solid var(--line);padding:2px 6px 8px;display:flex;flex-direction:column;gap:3px;background:transparent;min-width:0;overflow:hidden;}
+  .chips-layer .cell:last-child{border-right:none;}
+  .chip-ev{
+    font-size:10.5px;line-height:1.3;padding:3px 6px;border-radius:6px;font-weight:600;
+    white-space:normal;word-break:break-word;overflow-wrap:break-word;border-left:3px solid;cursor:pointer;max-width:100%;
+  }
+  .chip-ev.evaluation{background:var(--c-eval-bg);color:#4B3585;border-color:var(--c-eval);}
+  .chip-ev.holiday{background:var(--c-holiday-bg);color:#A21E1E;border-color:var(--c-holiday);}
+  .chip-ev.install{background:var(--c-install-bg);color:#00537E;border-color:var(--c-install);}
+  .chip-ev.relocation{background:var(--c-relocation-bg);color:#8C4E0C;border-color:var(--c-relocation);}
+
+  .overlay{position:fixed;inset:0;background:rgba(10,20,45,0.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .overlay.show{display:flex;}
+  .panel{
+    background:white;border-radius:16px;max-width:460px;width:100%;max-height:85vh;overflow:auto;
+    padding:22px 24px;box-shadow:0 24px 60px -20px rgba(0,20,60,0.5);
+  }
+  .panel h3{margin:0 0 4px;color:var(--navy);font-size:18px;}
+  .panel .sub{color:var(--ink-soft);font-size:12.5px;margin-bottom:16px;}
+  .panel .close{float:right;border:none;background:var(--paper);width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px;color:var(--ink-soft);}
+  .detail-ev{border-radius:10px;padding:10px 12px;margin-bottom:10px;border-left:4px solid;}
+  .detail-ev .cat-label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;opacity:.85;}
+  .detail-ev .txt{font-size:13.5px;font-weight:600;margin-top:3px;line-height:1.4;}
+  .detail-ev .meta{font-size:11px;margin-top:4px;opacity:.75;}
+  .detail-ev.install{background:var(--c-install-bg);border-color:var(--c-install);color:#00537E;}
+  .detail-ev.relocation{background:var(--c-relocation-bg);border-color:var(--c-relocation);color:#8C4E0C;}
+  .detail-ev.evaluation{background:var(--c-eval-bg);border-color:var(--c-eval);color:#4B3585;}
+  .detail-ev.holiday{background:var(--c-holiday-bg);border-color:var(--c-holiday);color:#A21E1E;}
+  .detail-actions{display:flex;gap:6px;margin-top:8px;}
+  .detail-actions button{
+    font-size:11px;font-weight:700;border:none;border-radius:7px;padding:5px 10px;cursor:pointer;
+  }
+  .btn-edit{background:rgba(255,255,255,0.7);color:inherit;}
+  .btn-delete{background:rgba(217,59,59,0.15);color:#A21E1E;}
+
+  .panel-add-btn{
+    display:block;width:100%;margin-top:4px;padding:10px;border-radius:10px;border:1.5px dashed var(--line);
+    background:var(--paper);color:var(--ink-soft);font-size:12.5px;font-weight:700;cursor:pointer;
+  }
+  .panel-add-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-soft);}
+
+  /* form */
+  .form-row{margin-bottom:12px;}
+  .form-row label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-soft);margin-bottom:5px;}
+  .ts-info{margin-top:6px;font-size:11px;color:var(--ink-soft);line-height:1.5;}
+  .form-row input[type=text], .form-row input[type=date], .form-row select{
+    width:100%;padding:9px 10px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;
+    font-family:inherit;color:var(--ink);background:white;
+  }
+  .form-row input:focus, .form-row select:focus{outline:none;border-color:var(--blue);}
+  .form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .cat-select{display:flex;gap:6px;flex-wrap:wrap;}
+  .cat-opt{
+    flex:1;min-width:70px;text-align:center;padding:8px 6px;border-radius:8px;border:1.5px solid var(--line);
+    font-size:12px;font-weight:700;cursor:pointer;color:var(--ink-soft);background:white;
+  }
+  .cat-opt.sel[data-cat="install"]{background:var(--c-install);border-color:var(--c-install);color:white;}
+  .cat-opt.sel[data-cat="relocation"]{background:var(--c-relocation);border-color:var(--c-relocation);color:white;}
+  .cat-opt.sel[data-cat="evaluation"]{background:var(--c-eval);border-color:var(--c-eval);color:white;}
+  .cat-opt.sel[data-cat="holiday"]{background:var(--c-holiday);border-color:var(--c-holiday);color:white;}
+  .form-actions{display:flex;gap:8px;margin-top:18px;}
+  .form-actions button{flex:1;padding:11px;border-radius:9px;border:none;font-size:13.5px;font-weight:700;cursor:pointer;}
+  .btn-save{background:var(--navy);color:white;}
+  .btn-save:hover{background:var(--navy-deep);}
+  .btn-cancel{background:var(--paper);color:var(--ink-soft);border:1.5px solid var(--line) !important;}
+  .save-toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--navy);color:white;
+    padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 10px 30px -10px rgba(0,0,0,0.4);
+    z-index:60;opacity:0;pointer-events:none;transition:opacity .25s;
+  }
+  .save-toast.show{opacity:1;}
+
+  footer{margin-top:22px;text-align:center;color:var(--ink-soft);font-size:11.5px;}
+
+  .guide{
+    background:white;border:1px solid var(--line);border-radius:18px;margin-top:20px;
+    padding:24px 26px 22px;box-shadow:0 6px 24px -14px rgba(20,40,90,0.1);
+  }
+  .guide-title{
+    font-size:15px;font-weight:800;color:var(--navy);margin-bottom:16px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .guide-title::before{content:"";width:4px;height:16px;background:var(--blue);border-radius:2px;}
+  .guide-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .guide-item{
+    background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 15px;
+  }
+  .guide-icon{font-size:18px;margin-bottom:6px;}
+  .guide-h{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:5px;}
+  .guide-d{font-size:11.8px;line-height:1.55;color:var(--ink-soft);}
+  .guide-item.warn{background:var(--c-relocation-bg);border-color:var(--c-relocation);}
+  .guide-item.warn .guide-h{color:#8C4E0C;}
+  .guide-item.warn .guide-d{color:#8C4E0C;}
+  .guide-item.warn .guide-d b{color:#A21E1E;}
+  .guide-footnote{
+    margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
+    font-size:11.5px;color:var(--ink-soft);text-align:center;
+    display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;
+  }
+  .guide-footnote .legend-dot{
+    display:inline-flex;align-items:center;gap:5px;
+  }
+  .guide-footnote .legend-dot::before{
+    content:"";width:9px;height:9px;border-radius:50%;background:var(--dot-color);
+  }
+  @media(max-width:820px){
+    .guide-grid{grid-template-columns:1fr 1fr;}
+  }
+  @media(max-width:520px){
+    .guide-grid{grid-template-columns:1fr;}
+  }
+
+  /* ---------- Tablet (iPad) ---------- */
+  @media(max-width:900px){
+    .app{padding:16px 12px 40px;}
+    .header{padding:12px 16px;}
+    .header-stats{gap:16px;}
+    .right-controls{width:100%;}
+    .right-controls .add-btn{flex:1 1 auto;justify-content:center;font-size:12px;padding:9px 10px;}
+    .legend{width:100%;order:3;}
+  }
+
+  /* ---------- Phone (iPhone) ---------- */
+  @media(max-width:600px){
+    body{-webkit-tap-highlight-color:transparent;}
+    .app{padding:10px 6px 32px;}
+    .header{padding:12px 14px;border-radius:12px;}
+    .header h1{font-size:16px;}
+    .header p{font-size:12px;}
+    .header-stats{gap:10px;width:100%;justify-content:space-between;margin-top:10px;}
+    .stat .num{font-size:18px;}
+    .stat .lbl{font-size:10px;}
+
+    .controls{margin-top:14px;gap:10px;}
+    .month-nav{width:100%;justify-content:space-between;}
+    .month-nav .label{font-size:15px;min-width:auto;}
+    .right-controls{gap:6px;}
+    .right-controls .add-btn{font-size:11.5px;padding:9px 8px;flex:1 1 44%;}
+    #openAddBtn{flex:1 1 100%;order:-1;padding:12px;font-size:14px;}
+    .legend{gap:6px;}
+    .chip{font-size:11px;padding:6px 9px;}
+
+    .cal-card{border-radius:12px;margin-top:14px;}
+    .weekday-row div{font-size:10.5px;padding:8px 0;}
+    .daybg .cell{padding:6px 4px 3px;min-height:28px;}
+    .daynum{font-size:11px;}
+    .add-day-btn{width:20px;height:20px;opacity:.6;}
+    .holiday-tag{display:none;}
+    .bar{font-size:8.5px;height:16px;line-height:16px;padding:0 5px;}
+    .chip-ev{font-size:9px;padding:2px 4px;}
+    .chips-layer .cell{padding:1px 3px 6px;}
+
+    .panel{padding:18px 16px;border-radius:14px;}
+    .panel h3{font-size:16px;}
+    .form-row input[type=text], .form-row input[type=date], .form-row select{
+      font-size:16px; /* prevents iOS Safari auto-zoom on focus */
+      padding:11px 10px;
+    }
+    .form-actions button{padding:13px;font-size:14px;}
+    .cat-opt{padding:10px 6px;font-size:12px;}
+    .form-grid2{grid-template-columns:1fr;}
+
+    .guide{padding:18px 16px;}
+  }
+
+  /* Devices with no real hover (touch) — keep add-day-btn visibly tappable */
+  @media(hover:none){
+    .add-day-btn{opacity:.6;}
+  }
+
+  .app-nav{display:flex;gap:8px;margin-bottom:14px;}
+  .app-nav a{
+    flex:0 0 auto;padding:8px 16px;border-radius:10px;font-size:12.5px;font-weight:700;
+    text-decoration:none;border:1.5px solid var(--line);color:var(--ink-soft);background:white;transition:.15s;
+  }
+  .app-nav a:hover{border-color:var(--blue);color:var(--blue);}
+  .app-nav a.active{background:var(--navy);color:white;border-color:var(--navy);}
+</style>
+</head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<body>
+<div class="app">
+  <div class="app-nav">
+    <a href="index.html" class="active">🏥 설치일정</a>
+    <a href="work-schedule.html">📅 근무일정</a>
+  </div>
+
+  <div class="header">
+    <div>
+      <div class="eyebrow">Sysmex Korea · FSS Team</div>
+      <h1>시스템 설치 공유 캘린더</h1>
+      <p>FY26 (2026년 4월 – 2027년 3월) · 공유 캘린더</p>
+      <p style="margin-top:2px;font-size:10px;color:#8FA6D9;">만든이: FSS Team · Jun</p>
+    </div>
+    <div class="header-stats" id="headerStats"></div>
+  </div>
+
+  <div class="config-banner" id="configBanner" style="display:none;background:#FFF4E5;border:1.5px solid #E8871E;border-radius:12px;padding:12px 16px;margin-top:16px;font-size:12.5px;color:#8C4E0C;line-height:1.6;">
+    ⚠ <b>공유 저장소가 아직 연결되지 않았습니다.</b> 지금은 일정을 추가/수정해도 이 브라우저를 벗어나면 사라집니다.
+    함께 안내드린 설정 가이드를 따라 <code>FIREBASE_URL</code> 값을 채워 넣으면 팀 전체가 실시간으로 공유할 수 있습니다.
+  </div>
+
+  <div class="controls">
+    <div class="month-nav">
+      <button id="prevBtn">‹</button>
+      <div class="label" id="monthLabel"></div>
+      <button id="nextBtn">›</button>
+      <button class="today-btn" id="todayBtn">오늘</button>
+    </div>
+    <div class="search-wrap" id="searchWrap">
+      <input type="text" id="searchInput" class="search-input" placeholder="🔍 병원명, 담당자, 담당팀 검색">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+    <div class="right-controls">
+      <div class="legend" id="legend"></div>
+      <button class="add-btn" id="managerSearchBtn" title="병원명으로 담당자를 찾습니다" style="background:white;color:var(--navy);border:1.5px solid var(--line);box-shadow:none;">👤 담당자 찾기</button>
+      <button class="add-btn" id="testConnBtn" title="공유 저장소 연결 상태를 진단합니다" style="background:white;color:var(--navy);border:1.5px solid var(--line);box-shadow:none;">🔧 연결 테스트</button>
+      <button class="add-btn" id="exportXlsxBtn" title="현재 일정을 엑셀 파일로 내보내기 (SharePoint 리스트 등에 업로드 가능)" style="background:white;color:var(--navy);border:1.5px solid var(--line);box-shadow:none;">📊 Excel 내보내기</button>
+      <button class="add-btn" id="exportBtn" title="Outlook 등 캘린더 앱에서 열 수 있는 .ics 파일로 내보내기" style="background:white;color:var(--navy);border:1.5px solid var(--line);box-shadow:none;">📅 ICS 내보내기</button>
+      <button class="add-btn" id="refreshBtn" title="다른 팀원의 변경사항 불러오기" style="background:white;color:var(--navy);border:1.5px solid var(--line);box-shadow:none;">⟳ 새로고침</button>
+      <button class="add-btn" id="openAddBtn">+ 일정 추가</button>
+    </div>
+  </div>
+
+  <div class="cal-card">
+    <div class="weekday-row">
+      <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
+    </div>
+    <div id="weeksContainer"></div>
+  </div>
+
+  <div class="guide">
+    <div class="guide-title">사용법</div>
+    <div class="guide-grid">
+      <div class="guide-item">
+        <div class="guide-icon">➕</div>
+        <div class="guide-h">일정 추가</div>
+        <div class="guide-d">"+ 일정 추가" 또는 날짜 칸의 <b>+</b> 클릭 → 구분·병원·기간·담당팀 입력 후 저장.</div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-icon">✏️</div>
+        <div class="guide-h">수정 · 삭제</div>
+        <div class="guide-d">일정(막대·칩) 클릭 → 상세창에서 "수정" 또는 "삭제".</div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-icon">📆</div>
+        <div class="guide-h">기간 일정</div>
+        <div class="guide-d">종료일을 다르게 입력하면 여러 날짜에 걸친 막대로 자동 표시됩니다.</div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-icon">🎯</div>
+        <div class="guide-h">필터 · 월 이동</div>
+        <div class="guide-d">상단 범례 클릭으로 항목 켜기/끄기, ‹ › 로 월 이동.</div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-icon">📊</div>
+        <div class="guide-h">Excel로 내보내기</div>
+        <div class="guide-d">"📊 Excel 내보내기" → SharePoint·Teams 등에 바로 업로드 가능한 서식으로 다운로드.</div>
+      </div>
+      <div class="guide-item warn">
+        <div class="guide-icon">📤</div>
+        <div class="guide-h">Outlook으로 내보내기</div>
+        <div class="guide-d">"📅 ICS 내보내기" → Outlook [파일 → 열기 및 내보내기 → 가져오기/내보내기]로 불러올 때 <b>반드시 "새 캘린더로 가져오기"를 선택</b>하세요. <b>다시 내보낼 때는 먼저 기존에 만든 캘린더를 삭제한 뒤 새로 가져오세요</b> (안 지우면 일정이 중복됩니다).</div>
+      </div>
+    </div>
+    <div class="guide-footnote">
+      <span>색상 안내</span>
+      <span class="legend-dot" style="--dot-color:#009EE0;">설치</span>
+      <span class="legend-dot" style="--dot-color:#E8871E;">이전설치</span>
+      <span class="legend-dot" style="--dot-color:#7A5CC4;">평가</span>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="panel" id="panel"></div>
+</div>
+<div class="save-toast" id="toast">저장되었습니다</div>
+
+<script>
+const BASE_EVENTS = [{"id": "base-0", "category": "holiday", "start": "2026-02-16", "end": "2026-02-16", "title": "설날", "device": null, "team": null, "assignee": null}, {"id": "base-1", "category": "evaluation", "start": "2026-02-25", "end": "2026-02-25", "title": "대구가톨릭", "device": "XR Demo", "team": null, "assignee": "Mia"}, {"id": "base-2", "category": "evaluation", "start": "2026-02-26", "end": "2026-02-26", "title": "Hema", "device": "CAL", "team": null, "assignee": null}, {"id": "base-3", "category": "holiday", "start": "2026-03-02", "end": "2026-03-02", "title": "휴일", "device": null, "team": null, "assignee": null}, {"id": "base-4", "category": "evaluation", "start": "2026-03-03", "end": "2026-03-03", "title": "Hema", "device": "CAL", "team": null, "assignee": null}, {"id": "base-5", "category": "evaluation", "start": "2026-07-01", "end": "2026-07-01", "title": "신원의료재단", "device": "XN 설치평가", "team": null, "assignee": "Judy"}, {"id": "base-6", "category": "install", "start": "2026-07-08", "end": "2026-07-10", "title": "강남차병원", "device": "XR-9100", "team": "FS East", "assignee": null}, {"id": "base-7", "category": "install", "start": "2026-07-14", "end": "2026-07-16", "title": "SD의학연구소", "device": "XN 2EA 추가 (System 연결)", "team": "FS East", "assignee": null}, {"id": "base-8", "category": "evaluation", "start": "2026-07-20", "end": "2026-07-20", "title": "SD의학연구소", "device": "XN 설치평가", "team": null, "assignee": "Jinny"}, {"id": "base-9", "category": "evaluation", "start": "2026-07-20", "end": "2026-07-20", "title": "대구파티마병원", "device": "XN-350 BF 설치평가", "team": null, "assignee": "Carson, Sea"}, {"id": "base-10", "category": "evaluation", "start": "2026-07-29", "end": "2026-07-29", "title": "녹십자", "device": "CN 설치평가", "team": null, "assignee": "Yusuf"}, {"id": "base-11", "category": "install", "start": "2026-08-03", "end": "2026-08-07", "title": "대구가톨릭병원", "device": "XR-9100", "team": "FS South", "assignee": null}, {"id": "base-12", "category": "relocation", "start": "2026-08-20", "end": "2026-08-20", "title": "대구카톨릭병원", "device": "XR 이전설치", "team": "FS South", "assignee": null}, {"id": "base-13", "category": "install", "start": "2026-08-24", "end": "2026-08-24", "title": "남양주현대병원", "device": "UN 설치", "team": null, "assignee": null}, {"id": "base-14", "category": "install", "start": "2026-08-25", "end": "2026-08-28", "title": "광주씨젠", "device": "XR-9100 / UN-2000", "team": "FS Central", "assignee": null}, {"id": "base-15", "category": "install", "start": "2026-08-25", "end": "2026-08-28", "title": "대구씨젠", "device": "XR-9100", "team": "FS South", "assignee": null}, {"id": "base-16", "category": "install", "start": "2026-08-25", "end": "2026-08-25", "title": "대구가톨릭대학교병원", "device": "- XR > Judy 8월 초 설치", "team": "FS South", "assignee": null}, {"id": "base-17", "category": "evaluation", "start": "2026-08-26", "end": "2026-08-26", "title": "남양주현대병원", "device": "UN 평가", "team": null, "assignee": null}, {"id": "base-18", "category": "install", "start": "2026-08-31", "end": "2026-09-04", "title": "한양대병원", "device": "XR-9100", "team": "FS East", "assignee": null}, {"id": "base-19", "category": "install", "start": "2026-09-07", "end": "2026-09-11", "title": "강릉아산병원", "device": "XR-9100", "team": "FS East", "assignee": null}, {"id": "base-20", "category": "install", "start": "2026-09-07", "end": "2026-09-11", "title": "대구파티마병원", "device": "XR-9100", "team": "FS South", "assignee": null}, {"id": "base-21", "category": "evaluation", "start": "2026-09-07", "end": "2026-09-07", "title": "한양대병원", "device": "XR 설치평가", "team": null, "assignee": "Sea, Jinny"}, {"id": "base-22", "category": "relocation", "start": "2026-09-12", "end": "2026-09-12", "title": "대구씨젠", "device": "XR 이전설치", "team": "FS South", "assignee": null}, {"id": "base-23", "category": "relocation", "start": "2026-09-12", "end": "2026-09-12", "title": "광주씨젠", "device": "XR/UN 이전설치", "team": "FS Central", "assignee": null}, {"id": "base-24", "category": "install", "start": "2026-09-14", "end": "2026-09-18", "title": "삼성서울병원", "device": "XR-9100", "team": "FS East", "assignee": null}, {"id": "base-25", "category": "evaluation", "start": "2026-09-14", "end": "2026-09-14", "title": "강릉아산병원", "device": "XR 설치평가", "team": null, "assignee": "Judy"}, {"id": "base-26", "category": "relocation", "start": "2026-09-17", "end": "2026-09-17", "title": "한양대병원", "device": "XR 이전설치", "team": "FS East", "assignee": null}, {"id": "base-27", "category": "relocation", "start": "2026-09-21", "end": "2026-09-21", "title": "강릉아산", "device": "XR 이전설치", "team": "FS East", "assignee": null}, {"id": "base-28", "category": "evaluation", "start": "2026-09-21", "end": "2026-09-21", "title": "삼성서울", "device": "XR (~30일까지 평가 완료 필)", "team": null, "assignee": null}, {"id": "base-29", "category": "install", "start": "2026-09-28", "end": "2026-10-01", "title": "국립암센터", "device": "XR-9100", "team": "FS West", "assignee": null}, {"id": "base-30", "category": "relocation", "start": "2026-10-02", "end": "2026-10-02", "title": "삼성서울병원", "device": "XR 이전설치 (야간)", "team": "FS East", "assignee": null}];
+
+// 거래처(병원) - 담당자 - 팀 매핑 (FSR 팀별 담당자 거래처 리스트 기준)
+const CLIENT_DIRECTORY_BASE = [{"client": "강릉아산병원", "manager": "김규민", "team": "FS East"}, {"client": "국군강릉병원", "manager": "김규민", "team": "FS East"}, {"client": "인제군보건소", "manager": "김규민", "team": "FS East"}, {"client": "의료법인철원병원", "manager": "김규민", "team": "FS East"}, {"client": "국군양주병원", "manager": "김규민", "team": "FS East"}, {"client": "서울의과학연구소", "manager": "김규민", "team": "FS East"}, {"client": "경기도의료원 포천병원", "manager": "김규민", "team": "FS East"}, {"client": "의료법인일심의료재단 우리병원", "manager": "김규민", "team": "FS East"}, {"client": "하남S병원", "manager": "김규민", "team": "FS East"}, {"client": "하남시 미사보건센터", "manager": "김규민", "team": "FS East"}, {"client": "하남시보건소", "manager": "김규민", "team": "FS East"}, {"client": "경희의료원", "manager": "김규민", "team": "FS East"}, {"client": "서울특별시 서울의료원", "manager": "김규민", "team": "FS East"}, {"client": "국군수도병원", "manager": "김병우", "team": "FS East"}, {"client": "분당서울대학교병원", "manager": "김병우", "team": "FS East"}, {"client": "다보스병원", "manager": "김병우", "team": "FS East"}, {"client": "한국보훈복지의료공단 중앙보훈병원", "manager": "김병우", "team": "FS East"}, {"client": "가톨릭대학교 서울성모병원", "manager": "김병우", "team": "FS East"}, {"client": "(사)한국건강관리협회 강원지부", "manager": "김세진", "team": "FS East"}, {"client": "강원대학교병원", "manager": "김세진", "team": "FS East"}, {"client": "국군춘천병원", "manager": "김세진", "team": "FS East"}, {"client": "대한적십자사_강원혈액원", "manager": "김세진", "team": "FS East"}, {"client": "인성병원_춘천", "manager": "김세진", "team": "FS East"}, {"client": "한림대학교부속 춘천성심병원", "manager": "김세진", "team": "FS East"}, {"client": "제니아", "manager": "김세진", "team": "FS East"}, {"client": "대한산업보건협회_경기북부", "manager": "김세진", "team": "FS East"}, {"client": "365플러스내과(하남시)", "manager": "김세진", "team": "FS East"}, {"client": "대한적십자사 서울남부혈액원", "manager": "김세진", "team": "FS East"}, {"client": "미래의료재단", "manager": "김세진", "team": "FS East"}, {"client": "새힘병원", "manager": "김세진", "team": "FS East"}, {"client": "(사)한국건강관리협회 서울강남지부", "manager": "김세진", "team": "FS East"}, {"client": "서울병원_송파", "manager": "김세진", "team": "FS East"}, {"client": "정애의료재단 초이스병원", "manager": "김세진", "team": "FS East"}, {"client": "국군구리병원", "manager": "김회창", "team": "FS East"}, {"client": "남양주풍양보건소", "manager": "김회창", "team": "FS East"}, {"client": "메디피움의원 분당점", "manager": "김회창", "team": "FS East"}, {"client": "메디피움의원 판교점", "manager": "김회창", "team": "FS East"}, {"client": "분당구보건소", "manager": "김회창", "team": "FS East"}, {"client": "분당제일여성병원", "manager": "김회창", "team": "FS East"}, {"client": "분당척병원", "manager": "김회창", "team": "FS East"}, {"client": "성남중앙병원", "manager": "김회창", "team": "FS East"}, {"client": "순천의료재단 정병원", "manager": "김회창", "team": "FS East"}, {"client": "엠디그린의원", "manager": "김회창", "team": "FS East"}, {"client": "티씨엠랩의원", "manager": "김회창", "team": "FS East"}, {"client": "강남병원_용인", "manager": "김회창", "team": "FS East"}, {"client": "강북삼성병원 수원종합검진센터", "manager": "김회창", "team": "FS East"}, {"client": "노을주식회사", "manager": "김회창", "team": "FS East"}, {"client": "디티앤씨알오", "manager": "김회창", "team": "FS East"}, {"client": "처인구보건소", "manager": "김회창", "team": "FS East"}, {"client": "국군포천병원", "manager": "김회창", "team": "FS East"}, {"client": "강남지인병원", "manager": "김회창", "team": "FS East"}, {"client": "미래와희망산부인과의원", "manager": "김회창", "team": "FS East"}, {"client": "광진구보건소", "manager": "김회창", "team": "FS East"}, {"client": "강원도 원주의료원", "manager": "박재우", "team": "FS East"}, {"client": "공군 제8전투비행단", "manager": "박재우", "team": "FS East"}, {"client": "3군단사령부통합의무대", "manager": "박재우", "team": "FS East"}, {"client": "참조은병원(경기)", "manager": "박재우", "team": "FS East"}, {"client": "참조은병원(대구)", "manager": "윤진성", "team": "FS South"}, {"client": "랩지노믹스", "manager": "박재우", "team": "FS East"}, {"client": "SD의학연구소", "manager": "박재우", "team": "FS East"}, {"client": "경기도의료원 이천병원", "manager": "박재우", "team": "FS East"}, {"client": "강남차 여성병원", "manager": "박재우", "team": "FS East"}, {"client": "성광의료재단 차병원", "manager": "박재우", "team": "FS East"}, {"client": "아이디병원", "manager": "박재우", "team": "FS East"}, {"client": "아이디성형외과병원", "manager": "박재우", "team": "FS East"}, {"client": "우리들병원_강남", "manager": "박재우", "team": "FS East"}, {"client": "인터케어내과의원", "manager": "박재우", "team": "FS East"}, {"client": "제일정형외과병원", "manager": "박재우", "team": "FS East"}, {"client": "한국의학연구소 강남검진센터", "manager": "박재우", "team": "FS East"}, {"client": "국립재활원재활병원", "manager": "박재우", "team": "FS East"}, {"client": "의료법인한전의료재단 한일병원", "manager": "박재우", "team": "FS East"}, {"client": "삼육서울병원", "manager": "박재우", "team": "FS East"}, {"client": "의료법인명경의료재단 꽃마을한방병원", "manager": "박재우", "team": "FS East"}, {"client": "성동군자의원", "manager": "박재우", "team": "FS East"}, {"client": "서울특별시북부병원", "manager": "박재우", "team": "FS East"}, {"client": "강원도 속초의료원", "manager": "서윤걸", "team": "FS East"}, {"client": "속초보광병원", "manager": "서윤걸", "team": "FS East"}, {"client": "CHA의과학대학교 분당차여성병원", "manager": "서윤걸", "team": "FS East"}, {"client": "의료법인창덕의료재단 필립의원", "manager": "서윤걸", "team": "FS East"}, {"client": "오산한국병원", "manager": "서윤걸", "team": "FS East"}, {"client": "CHA의과학대학교 분당차병원", "manager": "서윤걸", "team": "FS East"}, {"client": "(의)한국필의료재단 한국의원", "manager": "서윤걸", "team": "FS East"}, {"client": "인제대학교 상계백병원", "manager": "서윤걸", "team": "FS East"}, {"client": "씨젠의료재단 (서울)", "manager": "서윤걸", "team": "FS East"}, {"client": "다온헬스케어의원", "manager": "서윤걸", "team": "FS East"}, {"client": "의료법인강릉동인병원", "manager": "서재훈", "team": "FS East"}, {"client": "국군홍천병원", "manager": "서재훈", "team": "FS East"}, {"client": "홍천아산병원", "manager": "서재훈", "team": "FS East"}, {"client": "경기도 광주시보건소", "manager": "서재훈", "team": "FS East"}, {"client": "남양주백병원", "manager": "서재훈", "team": "FS East"}, {"client": "남양주보건소", "manager": "서재훈", "team": "FS East"}, {"client": "의료법인양평병원", "manager": "서재훈", "team": "FS East"}, {"client": "삼성본병원", "manager": "서재훈", "team": "FS East"}, {"client": "조은오산병원", "manager": "서재훈", "team": "FS East"}, {"client": "메디필드한강병원", "manager": "서재훈", "team": "FS East"}, {"client": "서울삼성내과의원", "manager": "서재훈", "team": "FS East"}, {"client": "수지미래의원", "manager": "서재훈", "team": "FS East"}, {"client": "연세프라임병원", "manager": "서재훈", "team": "FS East"}, {"client": "용인시 기흥구보건소", "manager": "서재훈", "team": "FS East"}, {"client": "용인제일메디병원", "manager": "서재훈", "team": "FS East"}, {"client": "유한양행중앙연구소", "manager": "서재훈", "team": "FS East"}, {"client": "강남구보건소", "manager": "서재훈", "team": "FS East"}, {"client": "강남메이저의원", "manager": "서재훈", "team": "FS East"}, {"client": "광혜병원", "manager": "서재훈", "team": "FS East"}, {"client": "하나로리더스헬스케어", "manager": "서재훈", "team": "FS East"}, {"client": "하나로의료재단 강남1센터", "manager": "서재훈", "team": "FS East"}, {"client": "서울특별시어린이병원", "manager": "서재훈", "team": "FS East"}, {"client": "서초구보건소", "manager": "서재훈", "team": "FS East"}, {"client": "정선군립병원", "manager": "손지원", "team": "FS East"}, {"client": "정선군보건소", "manager": "손지원", "team": "FS East"}, {"client": "정선군보건소 고한사북지소", "manager": "손지원", "team": "FS East"}, {"client": "근로복지공단 태백병원", "manager": "손지원", "team": "FS East"}, {"client": "서울나우병원", "manager": "손지원", "team": "FS East"}, {"client": "아폴로헬스케어의원", "manager": "손지원", "team": "FS East"}, {"client": "에스케이케미컬(주)", "manager": "손지원", "team": "FS East"}, {"client": "삼성서울병원", "manager": "손지원", "team": "FS East"}, {"client": "21세기병원_서울서초", "manager": "손지원", "team": "FS East"}, {"client": "기쁨병원", "manager": "손지원", "team": "FS East"}, {"client": "녹십자아이메드 (강남)", "manager": "손지원", "team": "FS East"}, {"client": "대항병원", "manager": "손지원", "team": "FS East"}, {"client": "사회복지법인한국혈우재단의원", "manager": "손지원", "team": "FS East"}, {"client": "삼광의료재단", "manager": "손지원", "team": "FS East"}, {"client": "서울특별시 송파구보건소", "manager": "손지원", "team": "FS East"}, {"client": "한솔병원_서울", "manager": "손지원", "team": "FS East"}, {"client": "남양주현대병원", "manager": "유용선", "team": "FS East"}, {"client": "의료법인한양의료재단남양주한양병원", "manager": "유용선", "team": "FS East"}, {"client": "진접한양병원", "manager": "유용선", "team": "FS East"}, {"client": "가톨릭대학교 의정부성모병원", "manager": "유용선", "team": "FS East"}, {"client": "경기도의료원 의정부병원", "manager": "유용선", "team": "FS East"}, {"client": "추병원", "manager": "유용선", "team": "FS East"}, {"client": "강병원_포천", "manager": "유용선", "team": "FS East"}, {"client": "건국대학교병원", "manager": "유용선", "team": "FS East"}, {"client": "서울아산병원", "manager": "유용선", "team": "FS East"}, {"client": "근로복지공단 동해병원", "manager": "윤병지", "team": "FS East"}, {"client": "의료법인동해동인병원", "manager": "윤병지", "team": "FS East"}, {"client": "강원도 삼척의료원", "manager": "윤병지", "team": "FS East"}, {"client": "삼척시보건소", "manager": "윤병지", "team": "FS East"}, {"client": "의료법인희경의료재단성베드로병원", "manager": "윤병지", "team": "FS East"}, {"client": "의정부 서울척병원", "manager": "윤병지", "team": "FS East"}, {"client": "서울대학교병원 강남센터", "manager": "윤병지", "team": "FS East"}, {"client": "한림대학교 강동성심병원", "manager": "윤병지", "team": "FS East"}, {"client": "서울현대병원", "manager": "윤병지", "team": "FS East"}, {"client": "의료법인성화의료재단 대한병원", "manager": "윤병지", "team": "FS East"}, {"client": "사단법인인구보건복지협회 서울지회", "manager": "윤병지", "team": "FS East"}, {"client": "강북연세병원", "manager": "윤병지", "team": "FS East"}, {"client": "대한적십자사 서울동부혈액원", "manager": "윤병지", "team": "FS East"}, {"client": "원자력방사선비임상센터", "manager": "윤병지", "team": "FS East"}, {"client": "원자력병원", "manager": "윤병지", "team": "FS East"}, {"client": "노보스병원(도봉구)", "manager": "윤병지", "team": "FS East"}, {"client": "바로선병원", "manager": "윤병지", "team": "FS East"}, {"client": "에이치큐브병원", "manager": "윤병지", "team": "FS East"}, {"client": "의료법인상원의료재단 강북힘찬병원", "manager": "윤병지", "team": "FS East"}, {"client": "(사)한국건강관리협회_서울동부", "manager": "윤병지", "team": "FS East"}, {"client": "동대문구보건소", "manager": "윤병지", "team": "FS East"}, {"client": "서울특별시동부병원", "manager": "윤병지", "team": "FS East"}, {"client": "속편한내과의원(용두동)", "manager": "윤병지", "team": "FS East"}, {"client": "고려대의과대학부속병원_안암", "manager": "윤병지", "team": "FS East"}, {"client": "서울척병원", "manager": "윤병지", "team": "FS East"}, {"client": "한국과학기술연구원(KIST)", "manager": "윤병지", "team": "FS East"}, {"client": "유투바이오", "manager": "윤병지", "team": "FS East"}, {"client": "서울특별시 중랑구보건소", "manager": "윤병지", "team": "FS East"}, {"client": "강원도 영월의료원", "manager": "이준호", "team": "FS East"}, {"client": "(주)티움바이오", "manager": "이준호", "team": "FS East"}, {"client": "바른세상병원", "manager": "이준호", "team": "FS East"}, {"client": "성남시의료원", "manager": "이준호", "team": "FS East"}, {"client": "양주예쓰병원", "manager": "이준호", "team": "FS East"}, {"client": "양주한국병원", "manager": "이준호", "team": "FS East"}, {"client": "국립교통재활병원", "manager": "이준호", "team": "FS East"}, {"client": "(주)켐온", "manager": "이준호", "team": "FS East"}, {"client": "연세대학교의대부속 용인세브란스병원", "manager": "이준호", "team": "FS East"}, {"client": "신한대학교", "manager": "이준호", "team": "FS East"}, {"client": "신한대학교 임상병리학과", "manager": "이준호", "team": "FS East"}, {"client": "의정부백병원", "manager": "이준호", "team": "FS East"}, {"client": "의정부시보건소", "manager": "이준호", "team": "FS East"}, {"client": "의정부시보건소 동부보건과", "manager": "이준호", "team": "FS East"}, {"client": "담소유병원", "manager": "이준호", "team": "FS East"}, {"client": "연세대학교의과대학 강남세브란스병원", "manager": "이준호", "team": "FS East"}, {"client": "강동경희대병원", "manager": "이준호", "team": "FS East"}, {"client": "달려라병원", "manager": "이준호", "team": "FS East"}, {"client": "국립정신건강센터", "manager": "이준호", "team": "FS East"}, {"client": "혜민병원", "manager": "이준호", "team": "FS East"}, {"client": "강남권산부인과", "manager": "이준호", "team": "FS East"}, {"client": "국립경찰병원", "manager": "이준호", "team": "FS East"}, {"client": "중앙대학교광명병원", "manager": "김동찬", "team": "FS West"}, {"client": "원광대학교의과대학 산본병원", "manager": "김동찬", "team": "FS West"}, {"client": "부천바로비뇨기과", "manager": "김동찬", "team": "FS West"}, {"client": "부천우리병원", "manager": "김동찬", "team": "FS West"}, {"client": "의료법인대인의료재단 다니엘종합병원", "manager": "김동찬", "team": "FS West"}, {"client": "대아의료재단 한도병원_분관", "manager": "김동찬", "team": "FS West"}, {"client": "시화병원", "manager": "김동찬", "team": "FS West"}, {"client": "경기도의료원 안성병원", "manager": "김동찬", "team": "FS West"}, {"client": "공도건강생활지원센터", "manager": "김동찬", "team": "FS West"}, {"client": "안성성모병원", "manager": "김동찬", "team": "FS West"}, {"client": "의료법인효산의료재단 안양샘병원", "manager": "김동찬", "team": "FS West"}, {"client": "양진의료재단 평택성모병원", "manager": "김동찬", "team": "FS West"}, {"client": "구로성심병원", "manager": "김동찬", "team": "FS West"}, {"client": "베스트내과의원", "manager": "김동찬", "team": "FS West"}, {"client": "대한산업보건협회_서울", "manager": "김동찬", "team": "FS West"}, {"client": "IFC종합검진센터", "manager": "김동찬", "team": "FS West"}, {"client": "의료법인 성애병원", "manager": "김동찬", "team": "FS West"}, {"client": "의료법인건양의료재단 김안과병원", "manager": "김동찬", "team": "FS West"}, {"client": "한국의학연구소 여의도검진센터", "manager": "김동찬", "team": "FS West"}, {"client": "한림대부속 한강성심병원", "manager": "김동찬", "team": "FS West"}, {"client": "KMI 메디컬허브", "manager": "김동찬", "team": "FS West"}, {"client": "삼성의료재단 강북삼성병원", "manager": "김동찬", "team": "FS West"}, {"client": "서울적십자병원", "manager": "김동찬", "team": "FS West"}, {"client": "서울지구병원", "manager": "김동찬", "team": "FS West"}, {"client": "세란병원", "manager": "김동찬", "team": "FS West"}, {"client": "KMI 광화문센터", "manager": "김동찬", "team": "FS West"}, {"client": "강북삼성병원 서울종합건진센터", "manager": "김동찬", "team": "FS West"}, {"client": "국립중앙의료원", "manager": "김동찬", "team": "FS West"}, {"client": "동국대학교 일산병원", "manager": "김보석", "team": "FS West"}, {"client": "비에스종합병원", "manager": "김보석", "team": "FS West"}, {"client": "의료법인인성의료재단한림병원", "manager": "김보석", "team": "FS West"}, {"client": "더블유여성병원 (인천)", "manager": "김보석", "team": "FS West"}, {"client": "바로병원", "manager": "김보석", "team": "FS West"}, {"client": "사단법인인구보건복지협회인천지회", "manager": "김보석", "team": "FS West"}, {"client": "의료법인길의료재단 길병원", "manager": "김보석", "team": "FS West"}, {"client": "인천광역시의료원", "manager": "김보석", "team": "FS West"}, {"client": "(사)한국건강관리협회 인천지부", "manager": "김보석", "team": "FS West"}, {"client": "한국보훈복지의료공단 인천보훈병원", "manager": "김보석", "team": "FS West"}, {"client": "가톨릭대학교 인천성모병원", "manager": "김보석", "team": "FS West"}, {"client": "근로복지공단 인천병원", "manager": "김보석", "team": "FS West"}, {"client": "의료법인상원의료재단 부평힘찬병원", "manager": "김보석", "team": "FS West"}, {"client": "의료법인한길의료재단한길안과병원", "manager": "김보석", "team": "FS West"}, {"client": "가톨릭관동대학교 국제성모병원", "manager": "김보석", "team": "FS West"}, {"client": "의료법인루가의료재단 나은병원", "manager": "김보석", "team": "FS West"}, {"client": "의료법인성세의료재단 성민병원", "manager": "김보석", "team": "FS West"}, {"client": "한국환경공단", "manager": "김보석", "team": "FS West"}, {"client": "경인의료재활센터병원", "manager": "김보석", "team": "FS West"}, {"client": "공우의료재단 진헬스검진센터", "manager": "김보석", "team": "FS West"}, {"client": "삼성바이오로직스 주식회사", "manager": "김보석", "team": "FS West"}, {"client": "의료법인나사렛의료재단 나사렛국제병원", "manager": "김보석", "team": "FS West"}, {"client": "의료법인상원의료재단 인천힘찬병원", "manager": "김보석", "team": "FS West"}, {"client": "지안국제건강증진센터", "manager": "김보석", "team": "FS West"}, {"client": "센트럴바이오", "manager": "김보석", "team": "FS West"}, {"client": "인하대학교의과대학부속병원", "manager": "김보석", "team": "FS West"}, {"client": "중구보건소 국제도시보건과", "manager": "김보석", "team": "FS West"}, {"client": "국군고양병원", "manager": "김태윤", "team": "FS West"}, {"client": "국립암센터병원", "manager": "김태윤", "team": "FS West"}, {"client": "국민건강보험 일산병원", "manager": "김태윤", "team": "FS West"}, {"client": "의료법인명지의료재단 명지병원", "manager": "김태윤", "team": "FS West"}, {"client": "의료법인성광의료재단 일산차병원", "manager": "김태윤", "team": "FS West"}, {"client": "의료법인자인의료재단자인메디병원", "manager": "김태윤", "team": "FS West"}, {"client": "인제대학교 일산백병원", "manager": "김태윤", "team": "FS West"}, {"client": "일산21세기병원", "manager": "김태윤", "team": "FS West"}, {"client": "일산복음병원", "manager": "김태윤", "team": "FS West"}, {"client": "의료법인 광명성애병원", "manager": "김태윤", "team": "FS West"}, {"client": "의료법인 신원의료재단", "manager": "김태윤", "team": "FS West"}, {"client": "(의)우리의료재단김포우리병원", "manager": "김태윤", "team": "FS West"}, {"client": "김포시보건소", "manager": "김태윤", "team": "FS West"}, {"client": "(재)대성재단 부천대성병원", "manager": "김태윤", "team": "FS West"}, {"client": "경기도의료원 파주병원", "manager": "김태윤", "team": "FS West"}, {"client": "메디인병원", "manager": "김태윤", "team": "FS West"}, {"client": "파주시보건소", "manager": "김태윤", "team": "FS West"}, {"client": "홍익병원", "manager": "김태윤", "team": "FS West"}, {"client": "지샘병원", "manager": "백원욱", "team": "FS West"}, {"client": "의료법인인봉의료재단뉴고려병원", "manager": "백원욱", "team": "FS West"}, {"client": "연세본사랑병원", "manager": "백원욱", "team": "FS West"}, {"client": "대한산업보건협회_경기서부", "manager": "백원욱", "team": "FS West"}, {"client": "의료법인토마스의료재단 안양윌스기념병원", "manager": "백원욱", "team": "FS West"}, {"client": "케어포유", "manager": "백원욱", "team": "FS West"}, {"client": "평촌서울나우병원", "manager": "백원욱", "team": "FS West"}, {"client": "제넨바이오", "manager": "백원욱", "team": "FS West"}, {"client": "우리들병원_강서", "manager": "백원욱", "team": "FS West"}, {"client": "장튼위튼병원", "manager": "백원욱", "team": "FS West"}, {"client": "서울송도병원", "manager": "백원욱", "team": "FS West"}, {"client": "세브란스헬스체크업", "manager": "백원욱", "team": "FS West"}, {"client": "차 여성의학연구소 서울역난임센터", "manager": "백원욱", "team": "FS West"}, {"client": "인천세종병원", "manager": "백원욱", "team": "FS West"}, {"client": "인천사랑병원", "manager": "백원욱", "team": "FS West"}, {"client": "서울바른척도병원", "manager": "백원욱", "team": "FS West"}, {"client": "인천힘찬종합병원", "manager": "백원욱", "team": "FS West"}, {"client": "의료법인아인의료재단 아인병원", "manager": "백원욱", "team": "FS West"}, {"client": "현대유비스병원", "manager": "백원욱", "team": "FS West"}, {"client": "인천적십자병원", "manager": "백원욱", "team": "FS West"}, {"client": "인천광역시 중구보건소", "manager": "백원욱", "team": "FS West"}, {"client": "인천기독병원", "manager": "백원욱", "team": "FS West"}, {"client": "안산대학교 산학협력단", "manager": "심구", "team": "FS West"}, {"client": "안산시단원보건소", "manager": "심구", "team": "FS West"}, {"client": "안산튼튼병원", "manager": "심구", "team": "FS West"}, {"client": "안산한도병원", "manager": "심구", "team": "FS West"}, {"client": "광명21세기병원", "manager": "안성무", "team": "FS West"}, {"client": "동안산병원", "manager": "안성무", "team": "FS West"}, {"client": "(사)한국건강관리협회 서울서부지부 (본부)", "manager": "안성무", "team": "FS West"}, {"client": "부민병원", "manager": "안성무", "team": "FS West"}, {"client": "이화의대부속서울병원", "manager": "안성무", "team": "FS West"}, {"client": "소중한메디케어의원", "manager": "안성무", "team": "FS West"}, {"client": "의료법인 희명병원", "manager": "안성무", "team": "FS West"}, {"client": "메디힐병원", "manager": "안성무", "team": "FS West"}, {"client": "서울특별시 서남병원", "manager": "안성무", "team": "FS West"}, {"client": "이화여자대학교의료원", "manager": "안성무", "team": "FS West"}, {"client": "대림성모병원", "manager": "안성무", "team": "FS West"}, {"client": "대명앰알씨티의원", "manager": "안성무", "team": "FS West"}, {"client": "명지성모병원", "manager": "안성무", "team": "FS West"}, {"client": "의료법인하나로의료재단부속하나로의원", "manager": "안성무", "team": "FS West"}, {"client": "의료법인안은의료재단부평세림병원", "manager": "안성무", "team": "FS West"}, {"client": "이원의료재단(인천)", "manager": "안성무", "team": "FS West"}, {"client": "이원의료재단(대전)", "manager": "유재혁", "team": "FS Central"}, {"client": "인천광역시의료원 백령병원", "manager": "안성무", "team": "FS West"}, {"client": "히즈메디병원", "manager": "이경민", "team": "FS West"}, {"client": "예손병원", "manager": "이경민", "team": "FS West"}, {"client": "(주)타스컴", "manager": "이경민", "team": "FS West"}, {"client": "(사)한국의약품수출입협회", "manager": "이경민", "team": "FS West"}, {"client": "(주)대한항공 부속의원", "manager": "이경민", "team": "FS West"}, {"client": "강서미즈메디병원", "manager": "이경민", "team": "FS West"}, {"client": "강서송도병원", "manager": "이경민", "team": "FS West"}, {"client": "대한적십자사 서울중앙혈액원", "manager": "이경민", "team": "FS West"}, {"client": "서울센트럴메디케어의원", "manager": "이경민", "team": "FS West"}, {"client": "마포구보건소", "manager": "이경민", "team": "FS West"}, {"client": "서울본내과", "manager": "이경민", "team": "FS West"}, {"client": "서울바른병원", "manager": "이경민", "team": "FS West"}, {"client": "씨엠병원(충무병원)", "manager": "이경민", "team": "FS West"}, {"client": "영등포병원", "manager": "이경민", "team": "FS West"}, {"client": "제이씨빛소망안과의원", "manager": "이경민", "team": "FS West"}, {"client": "필립메디컬 영등포", "manager": "이경민", "team": "FS West"}, {"client": "의료법인 소화병원", "manager": "이경민", "team": "FS West"}, {"client": "녹십자아이메드 (강북)", "manager": "이경민", "team": "FS West"}, {"client": "하나은행 의무실", "manager": "이경민", "team": "FS West"}, {"client": "검단탑병원", "manager": "이경민", "team": "FS West"}, {"client": "온누리병원_인천", "manager": "이경민", "team": "FS West"}, {"client": "대한적십자사 인천혈액원", "manager": "이경민", "team": "FS West"}, {"client": "한국건설생활환경시험연구원", "manager": "이경민", "team": "FS West"}, {"client": "(사)한국건강관리협회 경기지부", "manager": "이인구", "team": "FS West"}, {"client": "S서울병원", "manager": "이인구", "team": "FS West"}, {"client": "가톨릭대학교 성빈센트병원", "manager": "이인구", "team": "FS West"}, {"client": "경기도의료원수원병원", "manager": "이인구", "team": "FS West"}, {"client": "대한적십자사 경기혈액원", "manager": "이인구", "team": "FS West"}, {"client": "더웰병원", "manager": "이인구", "team": "FS West"}, {"client": "수원시 팔달구보건소", "manager": "이인구", "team": "FS West"}, {"client": "신세계외과의원", "manager": "이인구", "team": "FS West"}, {"client": "인구보건복지협회경기도지회", "manager": "이인구", "team": "FS West"}, {"client": "장안구보건소", "manager": "이인구", "team": "FS West"}, {"client": "화홍병원", "manager": "이인구", "team": "FS West"}, {"client": "은계하나내과의원", "manager": "이인구", "team": "FS West"}, {"client": "고려대학교 안산병원", "manager": "이인구", "team": "FS West"}, {"client": "근로복지공단 안산병원", "manager": "이인구", "team": "FS West"}, {"client": "안산21세기병원", "manager": "이인구", "team": "FS West"}, {"client": "의료법인칠석의료재단사랑의병원", "manager": "이인구", "team": "FS West"}, {"client": "의료법인플러스의료재단 단원병원", "manager": "이인구", "team": "FS West"}, {"client": "안성시보건소", "manager": "이인구", "team": "FS West"}, {"client": "한림대학교 평촌성심병원", "manager": "이인구", "team": "FS West"}, {"client": "PMC박병원", "manager": "이인구", "team": "FS West"}, {"client": "굿모닝병원_경기평택", "manager": "이인구", "team": "FS West"}, {"client": "의료법인박애의료재단박애병원", "manager": "이인구", "team": "FS West"}, {"client": "의료법인양진의료재단 성세아이들병원", "manager": "이인구", "team": "FS West"}, {"client": "(주)우정바이오", "manager": "이인구", "team": "FS West"}, {"client": "동탄제일병원", "manager": "이인구", "team": "FS West"}, {"client": "메디피움의원 동탄점", "manager": "이인구", "team": "FS West"}, {"client": "재단법인원불교 원광종합병원", "manager": "이인구", "team": "FS West"}, {"client": "한림대학교 동탄성심병원", "manager": "이인구", "team": "FS West"}, {"client": "화성디에스병원", "manager": "이인구", "team": "FS West"}, {"client": "대한산업보건협회_한마음혈액원", "manager": "전우상", "team": "FS West"}, {"client": "가톨릭대학교 부천성모병원", "manager": "전우상", "team": "FS West"}, {"client": "세종병원", "manager": "전우상", "team": "FS West"}, {"client": "순천향대학교 부천병원", "manager": "전우상", "team": "FS West"}, {"client": "강남고려병원", "manager": "전우상", "team": "FS West"}, {"client": "사랑의병원_서울", "manager": "전우상", "team": "FS West"}, {"client": "서울대학교 보건진료소", "manager": "전우상", "team": "FS West"}, {"client": "에이치플러스양지병원", "manager": "전우상", "team": "FS West"}, {"client": "고려대의과대학부속 구로병원", "manager": "전우상", "team": "FS West"}, {"client": "참튼튼병원_구로", "manager": "전우상", "team": "FS West"}, {"client": "서울특별시 보라매병원", "manager": "전우상", "team": "FS West"}, {"client": "서울특별시 제대혈은행(보라매병원)", "manager": "전우상", "team": "FS West"}, {"client": "중앙대학교병원", "manager": "전우상", "team": "FS West"}, {"client": "가톨릭대학교 여의도성모병원", "manager": "전우상", "team": "FS West"}, {"client": "신촌연세병원", "manager": "채대석", "team": "FS West"}, {"client": "연세대학교의과대학 세브란스병원", "manager": "채대석", "team": "FS West"}, {"client": "연세대학교의과대학 세브란스병원_암병원", "manager": "채대석", "team": "FS West"}, {"client": "의료법인동신의료재단 동신병원", "manager": "채대석", "team": "FS West"}, {"client": "가톨릭대학교 은평성모병원", "manager": "채대석", "team": "FS West"}, {"client": "서울특별시 서북병원", "manager": "채대석", "team": "FS West"}, {"client": "서울특별시은평병원", "manager": "채대석", "team": "FS West"}, {"client": "은평구보건소", "manager": "채대석", "team": "FS West"}, {"client": "은평연세병원", "manager": "채대석", "team": "FS West"}, {"client": "의료법인청구성심병원", "manager": "채대석", "team": "FS West"}, {"client": "최원호병원", "manager": "채대석", "team": "FS West"}, {"client": "우리원헬스케어영상의학과의원", "manager": "채대석", "team": "FS West"}, {"client": "서울대학교 어린이병원", "manager": "허석", "team": "FS West"}, {"client": "서울대학교 치과병원", "manager": "허석", "team": "FS West"}, {"client": "서울대학교병원", "manager": "허석", "team": "FS West"}, {"client": "서울대학교병원_암병원", "manager": "허석", "team": "FS West"}, {"client": "휴사이언스", "manager": "현준", "team": "FS West"}, {"client": "딕스젠", "manager": "현준", "team": "FS West"}, {"client": "윌스기념병원_수원", "manager": "현준", "team": "FS West"}, {"client": "의료법인녹산의료재단 동수원병원", "manager": "현준", "team": "FS West"}, {"client": "의료법인장산의료재단 이춘택병원", "manager": "현준", "team": "FS West"}, {"client": "크로엔리서치-HLB바이오코드로 바뀜", "manager": "현준", "team": "FS West"}, {"client": "한국의학연구소 수원검진센터", "manager": "현준", "team": "FS West"}, {"client": "센트럴병원(시흥)", "manager": "현준", "team": "FS West"}, {"client": "의료법인녹십자의료재단 (용인)", "manager": "현준", "team": "FS West"}, {"client": "의왕시티병원", "manager": "현준", "team": "FS West"}, {"client": "닥터케이메디케어의원", "manager": "현준", "team": "FS West"}, {"client": "안중보건지소", "manager": "현준", "team": "FS West"}, {"client": "평택21세기병원", "manager": "현준", "team": "FS West"}, {"client": "평택시 송탄보건소", "manager": "현준", "team": "FS West"}, {"client": "평택시보건소", "manager": "현준", "team": "FS West"}, {"client": "의료법인은혜와감사의료재단화성중앙종합병원", "manager": "현준", "team": "FS West"}, {"client": "주식회사 에이비솔루션", "manager": "현준", "team": "FS West"}, {"client": "(사)한국건강관리협회 중앙검사의원", "manager": "현준", "team": "FS West"}, {"client": "아름제일여성병원", "manager": "현준", "team": "FS West"}, {"client": "목동힘찬병원", "manager": "현준", "team": "FS West"}, {"client": "금강아산병원", "manager": "현준", "team": "FS West"}, {"client": "순천향대학교 서울병원", "manager": "현준", "team": "FS West"}, {"client": "광주보건대학교", "manager": "손혜린", "team": "FS Central"}, {"client": "광주KMI", "manager": "손혜린", "team": "FS Central"}, {"client": "광주SCL", "manager": "손혜린", "team": "FS Central"}, {"client": "광주더스마트병원", "manager": "손혜린", "team": "FS Central"}, {"client": "광주산업보건협회", "manager": "손혜린", "team": "FS Central"}, {"client": "광주한사랑병원", "manager": "손혜린", "team": "FS Central"}, {"client": "빛고을선병원", "manager": "손혜린", "team": "FS Central"}, {"client": "충장로헌혈의집", "manager": "손혜린", "team": "FS Central"}, {"client": "광주첨단메디케어의원", "manager": "손혜린", "team": "FS Central"}, {"client": "광주하남성심병원", "manager": "손혜린", "team": "FS Central"}, {"client": "첨단박유환내과", "manager": "손혜린", "team": "FS Central"}, {"client": "광주전남혈액원", "manager": "손혜린", "team": "FS Central"}, {"client": "광주동명병원", "manager": "손혜린", "team": "FS Central"}, {"client": "광주천주의성요한병원", "manager": "손혜린", "team": "FS Central"}, {"client": "광주해피뷰병원", "manager": "손혜린", "team": "FS Central"}, {"client": "광주상무병원", "manager": "손혜린", "team": "FS Central"}, {"client": "광주서광병원", "manager": "손혜린", "team": "FS Central"}, {"client": "강진의료원", "manager": "손혜린", "team": "FS Central"}, {"client": "곡성군보건의료원", "manager": "손혜린", "team": "FS Central"}, {"client": "광양중마보건지소", "manager": "손혜린", "team": "FS Central"}, {"client": "나주시보건소", "manager": "손혜린", "team": "FS Central"}, {"client": "나주종합병원", "manager": "손혜린", "team": "FS Central"}, {"client": "목포박일종내과", "manager": "손혜린", "team": "FS Central"}, {"client": "보성아산병원", "manager": "손혜린", "team": "FS Central"}, {"client": "장흥병원", "manager": "손혜린", "team": "FS Central"}, {"client": "장흥우리병원", "manager": "손혜린", "team": "FS Central"}, {"client": "장흥천연자원연구센터", "manager": "손혜린", "team": "FS Central"}, {"client": "진도군보건소", "manager": "손혜린", "team": "FS Central"}, {"client": "화순성심병원", "manager": "손혜린", "team": "FS Central"}, {"client": "고창군보건소", "manager": "손혜린", "team": "FS Central"}, {"client": "남원의료원", "manager": "손혜린", "team": "FS Central"}, {"client": "신안군보건소", "manager": "손혜린", "team": "FS Central"}, {"client": "임실군보건의료원", "manager": "손혜린", "team": "FS Central"}, {"client": "정읍한국병원", "manager": "손혜린", "team": "FS Central"}, {"client": "고창석정웰파크병원", "manager": "손혜린", "team": "FS Central"}, {"client": "고창종합병원", "manager": "손혜린", "team": "FS Central"}, {"client": "광주남구보건소", "manager": "이건석", "team": "FS Central"}, {"client": "광주녹십자검사센타", "manager": "이건석", "team": "FS Central"}, {"client": "광주씨젠", "manager": "이건석", "team": "FS Central"}, {"client": "광주KS병원", "manager": "이건석", "team": "FS Central"}, {"client": "광주세계로병원", "manager": "이건석", "team": "FS Central"}, {"client": "광주송정사랑병원", "manager": "이건석", "team": "FS Central"}, {"client": "광주기독병원", "manager": "이건석", "team": "FS Central"}, {"client": "광주과학기술원", "manager": "이건석", "team": "FS Central"}, {"client": "광주병원", "manager": "이건석", "team": "FS Central"}, {"client": "광주은병원", "manager": "이건석", "team": "FS Central"}, {"client": "광주현대병원", "manager": "이건석", "team": "FS Central"}, {"client": "광주선한병원", "manager": "이건석", "team": "FS Central"}, {"client": "광주한국병원", "manager": "이건석", "team": "FS Central"}, {"client": "전남대 생체개발연구원", "manager": "이건석", "team": "FS Central"}, {"client": "고흥종합병원", "manager": "이건석", "team": "FS Central"}, {"client": "국립소록도병원", "manager": "이건석", "team": "FS Central"}, {"client": "곡성사랑병원", "manager": "이건석", "team": "FS Central"}, {"client": "광양사랑병원", "manager": "이건석", "team": "FS Central"}, {"client": "광양제철부속의원", "manager": "이건석", "team": "FS Central"}, {"client": "나주빛가람병원", "manager": "이건석", "team": "FS Central"}, {"client": "나주한국한의학연구소", "manager": "이건석", "team": "FS Central"}, {"client": "담양군보건소", "manager": "이건석", "team": "FS Central"}, {"client": "담양사랑병원", "manager": "이건석", "team": "FS Central"}, {"client": "목포솔튼병원", "manager": "이건석", "team": "FS Central"}, {"client": "목포현대병원", "manager": "이건석", "team": "FS Central"}, {"client": "순천병원", "manager": "이건석", "team": "FS Central"}, {"client": "순천성가롤로병원", "manager": "이건석", "team": "FS Central"}, {"client": "순천의료원", "manager": "이건석", "team": "FS Central"}, {"client": "순천제일병원", "manager": "이건석", "team": "FS Central"}, {"client": "순천중앙병원", "manager": "이건석", "team": "FS Central"}, {"client": "순천평화병원", "manager": "이건석", "team": "FS Central"}, {"client": "순천한국병원", "manager": "이건석", "team": "FS Central"}, {"client": "여수GS칼텍스", "manager": "이건석", "team": "FS Central"}, {"client": "여수전남병원", "manager": "이건석", "team": "FS Central"}, {"client": "여수중앙병원", "manager": "이건석", "team": "FS Central"}, {"client": "여천전남병원", "manager": "이건석", "team": "FS Central"}, {"client": "장흥한의학진흥원", "manager": "이건석", "team": "FS Central"}, {"client": "국군함평병원", "manager": "이건석", "team": "FS Central"}, {"client": "백신안전기술지원센터", "manager": "이건석", "team": "FS Central"}, {"client": "화순전남대노인병원", "manager": "이건석", "team": "FS Central"}, {"client": "화순첨단정밀의료지원센터", "manager": "이건석", "team": "FS Central"}, {"client": "부안성모병원", "manager": "이건석", "team": "FS Central"}, {"client": "정읍아산병원", "manager": "이건석", "team": "FS Central"}, {"client": "고창베리엔바이오식품연구소", "manager": "이건석", "team": "FS Central"}, {"client": "광주123내과의원", "manager": "이건우", "team": "FS Central"}, {"client": "광주미즈피아아동병원", "manager": "이건우", "team": "FS Central"}, {"client": "광주속편한내과", "manager": "이건우", "team": "FS Central"}, {"client": "송정역헌혈의집", "manager": "이건우", "team": "FS Central"}, {"client": "첨단헌혈의집", "manager": "이건우", "team": "FS Central"}, {"client": "광산구보건소", "manager": "이건우", "team": "FS Central"}, {"client": "광주빛고을생생병원", "manager": "이건우", "team": "FS Central"}, {"client": "광주동림병원", "manager": "이건우", "team": "FS Central"}, {"client": "원광대한방병원", "manager": "이건우", "team": "FS Central"}, {"client": "고흥군보건소", "manager": "이건우", "team": "FS Central"}, {"client": "구례보건의료원", "manager": "이건우", "team": "FS Central"}, {"client": "완도군보건의료원", "manager": "이건우", "team": "FS Central"}, {"client": "장성군보건소", "manager": "이건우", "team": "FS Central"}, {"client": "남원시보건소", "manager": "이건우", "team": "FS Central"}, {"client": "정읍시보건소", "manager": "이건우", "team": "FS Central"}, {"client": "김제시보건소", "manager": "이건우", "team": "FS Central"}, {"client": "광주인구보건복지협회", "manager": "이건우", "team": "FS Central"}, {"client": "광주건강관리협회", "manager": "이만식", "team": "FS Central"}, {"client": "광주동아병원", "manager": "이만식", "team": "FS Central"}, {"client": "씨티재활의학과요양병원", "manager": "이만식", "team": "FS Central"}, {"client": "조선대학교부속병원", "manager": "이만식", "team": "FS Central"}, {"client": "광주보훈병원", "manager": "이만식", "team": "FS Central"}, {"client": "광주센트럴병원", "manager": "이만식", "team": "FS Central"}, {"client": "광주수완병원", "manager": "이만식", "team": "FS Central"}, {"client": "광주신가병원", "manager": "이만식", "team": "FS Central"}, {"client": "광주첨단병원", "manager": "이만식", "team": "FS Central"}, {"client": "광주씨티병원", "manager": "이만식", "team": "FS Central"}, {"client": "광주굿모닝병원", "manager": "이만식", "team": "FS Central"}, {"client": "광주운암한국병원", "manager": "이만식", "team": "FS Central"}, {"client": "광주일곡병원", "manager": "이만식", "team": "FS Central"}, {"client": "광주희망병원", "manager": "이만식", "team": "FS Central"}, {"client": "광주미래로21병원", "manager": "이만식", "team": "FS Central"}, {"client": "빛고을전남대병원", "manager": "이만식", "team": "FS Central"}, {"client": "전남대병원", "manager": "이만식", "team": "FS Central"}, {"client": "국립목포병원", "manager": "이만식", "team": "FS Central"}, {"client": "목포기독병원", "manager": "이만식", "team": "FS Central"}, {"client": "목포세안종합병원", "manager": "이만식", "team": "FS Central"}, {"client": "목포시의료원", "manager": "이만식", "team": "FS Central"}, {"client": "목포중앙병원", "manager": "이만식", "team": "FS Central"}, {"client": "목포한국병원", "manager": "이만식", "team": "FS Central"}, {"client": "무안종합병원", "manager": "이만식", "team": "FS Central"}, {"client": "영광기독병원", "manager": "이만식", "team": "FS Central"}, {"client": "영광종합병원", "manager": "이만식", "team": "FS Central"}, {"client": "해남우리병원", "manager": "이만식", "team": "FS Central"}, {"client": "해남종합병원", "manager": "이만식", "team": "FS Central"}, {"client": "화순전남대병원", "manager": "이만식", "team": "FS Central"}, {"client": "서산시보건소", "manager": "강태은", "team": "FS Central"}, {"client": "대전 화병원", "manager": "강태은", "team": "FS Central"}, {"client": "아산 헌혈의집", "manager": "강태은", "team": "FS Central"}, {"client": "유성구보건소", "manager": "강태은", "team": "FS Central"}, {"client": "한국생명공학연구원", "manager": "강태은", "team": "FS Central"}, {"client": "남부통합보건지소", "manager": "강태은", "team": "FS Central"}, {"client": "조치원백내과", "manager": "강태은", "team": "FS Central"}, {"client": "이천엘리야병원", "manager": "강태은", "team": "FS Central"}, {"client": "중앙제일병원", "manager": "강태은", "team": "FS Central"}, {"client": "당진시보건소", "manager": "강태은", "team": "FS Central"}, {"client": "보령아산병원", "manager": "강태은", "team": "FS Central"}, {"client": "건양대학교부여병원", "manager": "강태은", "team": "FS Central"}, {"client": "부여군보건소", "manager": "강태은", "team": "FS Central"}, {"client": "서천군보건소", "manager": "강태은", "team": "FS Central"}, {"client": "아산시보건소", "manager": "강태은", "team": "FS Central"}, {"client": "아산시보건소 배방지소", "manager": "강태은", "team": "FS Central"}, {"client": "아산현대병원", "manager": "강태은", "team": "FS Central"}, {"client": "천안이수병원", "manager": "강태은", "team": "FS Central"}, {"client": "나은필병원", "manager": "강태은", "team": "FS Central"}, {"client": "다나힐병원", "manager": "강태은", "team": "FS Central"}, {"client": "단국대학교의학관", "manager": "강태은", "team": "FS Central"}, {"client": "불당내과", "manager": "강태은", "team": "FS Central"}, {"client": "쌍용메디칼의원", "manager": "강태은", "team": "FS Central"}, {"client": "연세나무병원", "manager": "강태은", "team": "FS Central"}, {"client": "천안우리병원", "manager": "강태은", "team": "FS Central"}, {"client": "천안이화병원", "manager": "강태은", "team": "FS Central"}, {"client": "천안헌혈의집 시청점", "manager": "강태은", "team": "FS Central"}, {"client": "화인메트로병원", "manager": "강태은", "team": "FS Central"}, {"client": "청양군보건의료원", "manager": "강태은", "team": "FS Central"}, {"client": "청양군의료원 보건지소", "manager": "강태은", "team": "FS Central"}, {"client": "태안군보건의료원", "manager": "강태은", "team": "FS Central"}, {"client": "홍성군보건소", "manager": "강태은", "team": "FS Central"}, {"client": "충북야생동물센터", "manager": "강태은", "team": "FS Central"}, {"client": "진천군보건소", "manager": "강태은", "team": "FS Central"}, {"client": "류마플러스내과의원", "manager": "강태은", "team": "FS Central"}, {"client": "모태안여성병원", "manager": "강태은", "team": "FS Central"}, {"client": "바이오톡스텍", "manager": "강태은", "team": "FS Central"}, {"client": "베스티안오송병원", "manager": "강태은", "team": "FS Central"}, {"client": "오송첨단의료재단", "manager": "강태은", "team": "FS Central"}, {"client": "옵티팜", "manager": "강태은", "team": "FS Central"}, {"client": "청주 마이크로병원", "manager": "강태은", "team": "FS Central"}, {"client": "청주동물원", "manager": "강태은", "team": "FS Central"}, {"client": "청주뿌리병원", "manager": "강태은", "team": "FS Central"}, {"client": "청주효성병원", "manager": "강태은", "team": "FS Central"}, {"client": "충북인구보건복지협회", "manager": "강태은", "team": "FS Central"}, {"client": "충주김앤권 병원", "manager": "강태은", "team": "FS Central"}, {"client": "충주의료원", "manager": "강태은", "team": "FS Central"}, {"client": "전북대학교 KIMET", "manager": "김재모", "team": "FS Central"}, {"client": "NK세종병원", "manager": "김재모", "team": "FS Central"}, {"client": "건양대학교병원", "manager": "김재모", "team": "FS Central"}, {"client": "유성선병원", "manager": "김재모", "team": "FS Central"}, {"client": "대전선병원", "manager": "김재모", "team": "FS Central"}, {"client": "맑은샘내과", "manager": "김재모", "team": "FS Central"}, {"client": "원광대학교병원", "manager": "김재모", "team": "FS Central"}, {"client": "익산병원", "manager": "김재모", "team": "FS Central"}, {"client": "전북대학교병원", "manager": "김재모", "team": "FS Central"}, {"client": "전주병원", "manager": "김재모", "team": "FS Central"}, {"client": "전주예수병원", "manager": "김재모", "team": "FS Central"}, {"client": "진안군의료원", "manager": "김재모", "team": "FS Central"}, {"client": "전북대산학협력단", "manager": "김재모", "team": "FS Central"}, {"client": "전북혈액원", "manager": "김재모", "team": "FS Central"}, {"client": "익산나은병원", "manager": "김재모", "team": "FS Central"}, {"client": "공주의료원", "manager": "김재모", "team": "FS Central"}, {"client": "대전과학기술대학교", "manager": "문유진", "team": "FS Central"}, {"client": "국군대전병원", "manager": "문유진", "team": "FS Central"}, {"client": "충주건국대학교병원", "manager": "문유진", "team": "FS Central"}, {"client": "대전삼광의료재단", "manager": "문유진", "team": "FS Central"}, {"client": "충남대학교병원", "manager": "문유진", "team": "FS Central"}, {"client": "아산충무병원", "manager": "문유진", "team": "FS Central"}, {"client": "천안 아이본병원", "manager": "문유진", "team": "FS Central"}, {"client": "천안순천향대학교병원", "manager": "문유진", "team": "FS Central"}, {"client": "천안충무병원", "manager": "문유진", "team": "FS Central"}, {"client": "충북건강관리협회", "manager": "문유진", "team": "FS Central"}, {"client": "중원대학교", "manager": "문유진", "team": "FS Central"}, {"client": "옥천성모병원", "manager": "문유진", "team": "FS Central"}, {"client": "대한적십자사혈장분획센터", "manager": "문유진", "team": "FS Central"}, {"client": "K-BIO", "manager": "문유진", "team": "FS Central"}, {"client": "SK하이닉스 부속의원", "manager": "문유진", "team": "FS Central"}, {"client": "청주서울우리병원", "manager": "문유진", "team": "FS Central"}, {"client": "충북혈액원", "manager": "문유진", "team": "FS Central"}, {"client": "대전이손내과", "manager": "유재혁", "team": "FS Central"}, {"client": "청주 탑병원", "manager": "유재혁", "team": "FS Central"}, {"client": "키즈드림병원", "manager": "유재혁", "team": "FS Central"}, {"client": "동구보건소", "manager": "유재혁", "team": "FS Central"}, {"client": "서구보건소", "manager": "유재혁", "team": "FS Central"}, {"client": "대전 CMI", "manager": "유재혁", "team": "FS Central"}, {"client": "대전웰니스병원", "manager": "유재혁", "team": "FS Central"}, {"client": "대덕구보건소", "manager": "유재혁", "team": "FS Central"}, {"client": "하나로내과의원", "manager": "유재혁", "team": "FS Central"}, {"client": "동양굿모닝영상의학과", "manager": "유재혁", "team": "FS Central"}, {"client": "리더스내과영상의학과", "manager": "유재혁", "team": "FS Central"}, {"client": "킴벨피부과", "manager": "유재혁", "team": "FS Central"}, {"client": "유성하나로검진센터", "manager": "유재혁", "team": "FS Central"}, {"client": "주생명내과", "manager": "유재혁", "team": "FS Central"}, {"client": "대전센트럴비뇨기과", "manager": "유재혁", "team": "FS Central"}, {"client": "세종 헌혈의집", "manager": "유재혁", "team": "FS Central"}, {"client": "세종충북대동물병원", "manager": "유재혁", "team": "FS Central"}, {"client": "유앤미병원", "manager": "유재혁", "team": "FS Central"}, {"client": "군산에어베이스", "manager": "유재혁", "team": "FS Central"}, {"client": "군산의료원", "manager": "유재혁", "team": "FS Central"}, {"client": "동군산병원", "manager": "유재혁", "team": "FS Central"}, {"client": "익산 나디안바이오", "manager": "유재혁", "team": "FS Central"}, {"client": "익산시보건소", "manager": "유재혁", "team": "FS Central"}, {"client": "이기은진단검사의학과", "manager": "유재혁", "team": "FS Central"}, {"client": "전주고려병원", "manager": "유재혁", "team": "FS Central"}, {"client": "전주대자인병원", "manager": "유재혁", "team": "FS Central"}, {"client": "전주열린병원", "manager": "유재혁", "team": "FS Central"}, {"client": "전북건강관리협회", "manager": "유재혁", "team": "FS Central"}, {"client": "전북산업보건협회", "manager": "유재혁", "team": "FS Central"}, {"client": "군산천상열내과", "manager": "유재혁", "team": "FS Central"}, {"client": "김제신경과의원", "manager": "유재혁", "team": "FS Central"}, {"client": "전주 복십자의원", "manager": "유재혁", "team": "FS Central"}, {"client": "전주온누리안과", "manager": "유재혁", "team": "FS Central"}, {"client": "시온내과의원", "manager": "유재혁", "team": "FS Central"}, {"client": "중구보건소", "manager": "유재혁", "team": "FS Central"}, {"client": "탄탄병원", "manager": "유재혁", "team": "FS Central"}, {"client": "계룡대지구병원", "manager": "유재혁", "team": "FS Central"}, {"client": "공주대 헌혈의집", "manager": "유재혁", "team": "FS Central"}, {"client": "국립공주병원", "manager": "유재혁", "team": "FS Central"}, {"client": "논산시보건소", "manager": "유재혁", "team": "FS Central"}, {"client": "아산삼성부속의원", "manager": "유재혁", "team": "FS Central"}, {"client": "충북대 실험동물센터", "manager": "유재혁", "team": "FS Central"}, {"client": "충북대 헌혈의집", "manager": "유재혁", "team": "FS Central"}, {"client": "영동군보건소", "manager": "유재혁", "team": "FS Central"}, {"client": "광혜원보건소", "manager": "유재혁", "team": "FS Central"}, {"client": "김숙자소아과", "manager": "유재혁", "team": "FS Central"}, {"client": "서원구보건소", "manager": "유재혁", "team": "FS Central"}, {"client": "전북인구보건복지협회", "manager": "유재혁", "team": "FS Central"}, {"client": "대전씨젠의료재단", "manager": "정근하", "team": "FS Central"}, {"client": "대전중앙병원", "manager": "정근하", "team": "FS Central"}, {"client": "대전보훈병원", "manager": "정근하", "team": "FS Central"}, {"client": "대전성모병원", "manager": "정근하", "team": "FS Central"}, {"client": "단국대학교병원", "manager": "정근하", "team": "FS Central"}, {"client": "충북대학교병원", "manager": "정근하", "team": "FS Central"}, {"client": "세명대학교부속한방병원", "manager": "한승호", "team": "FS Central"}, {"client": "KT&G", "manager": "한승호", "team": "FS Central"}, {"client": "천안하나메디칼의원", "manager": "한승호", "team": "FS Central"}, {"client": "김광석외과", "manager": "한승호", "team": "FS Central"}, {"client": "대전건강관리협회", "manager": "한승호", "team": "FS Central"}, {"client": "대전산업보건협회", "manager": "한승호", "team": "FS Central"}, {"client": "대전혈액원", "manager": "한승호", "team": "FS Central"}, {"client": "대전우리병원", "manager": "한승호", "team": "FS Central"}, {"client": "대청병원", "manager": "한승호", "team": "FS Central"}, {"client": "둔산속편한외과", "manager": "한승호", "team": "FS Central"}, {"client": "바이오오케스트라", "manager": "한승호", "team": "FS Central"}, {"client": "카이스트클리닉", "manager": "한승호", "team": "FS Central"}, {"client": "국립소방병원", "manager": "한승호", "team": "FS Central"}, {"client": "충남대학교병원(세종)", "manager": "한승호", "team": "FS Central"}, {"client": "심혈관유효성평가센터", "manager": "한승호", "team": "FS Central"}, {"client": "공주치료감호소", "manager": "한승호", "team": "FS Central"}, {"client": "논산백제병원", "manager": "한승호", "team": "FS Central"}, {"client": "육군훈련소지구병원", "manager": "한승호", "team": "FS Central"}, {"client": "당진9988병원", "manager": "한승호", "team": "FS Central"}, {"client": "당진종합병원", "manager": "한승호", "team": "FS Central"}, {"client": "서산의료원", "manager": "한승호", "team": "FS Central"}, {"client": "서산중앙병원", "manager": "한승호", "team": "FS Central"}, {"client": "SG삼성조은병원", "manager": "한승호", "team": "FS Central"}, {"client": "천안의료원", "manager": "한승호", "team": "FS Central"}, {"client": "홍성의료원", "manager": "한승호", "team": "FS Central"}, {"client": "제천명지병원", "manager": "한승호", "team": "FS Central"}, {"client": "제천서울병원", "manager": "한승호", "team": "FS Central"}, {"client": "제천시보건소", "manager": "한승호", "team": "FS Central"}, {"client": "제천하나요양병원", "manager": "한승호", "team": "FS Central"}, {"client": "항공우주의료원", "manager": "한승호", "team": "FS Central"}, {"client": "국립보건연구원", "manager": "한승호", "team": "FS Central"}, {"client": "대전인구보건복지협회", "manager": "한승호", "team": "FS Central"}, {"client": "상당구보건소", "manager": "한승호", "team": "FS Central"}, {"client": "식품의약품안전처", "manager": "한승호", "team": "FS Central"}, {"client": "옵티바이오", "manager": "한승호", "team": "FS Central"}, {"client": "청주성모병원", "manager": "한승호", "team": "FS Central"}, {"client": "청주의료원", "manager": "한승호", "team": "FS Central"}, {"client": "청주하나병원", "manager": "한승호", "team": "FS Central"}, {"client": "케이피앤티", "manager": "한승호", "team": "FS Central"}, {"client": "거창적십자병원", "manager": "김성학", "team": "FS South"}, {"client": "의료법인아림의료재단서경병원", "manager": "김성학", "team": "FS South"}, {"client": "대구한의대학교", "manager": "김성학", "team": "FS South"}, {"client": "대구가톨릭산업보건센터", "manager": "김성학", "team": "FS South"}, {"client": "삼일병원", "manager": "김성학", "team": "FS South"}, {"client": "순천향대학교구미병원", "manager": "문창수", "team": "FS South"}, {"client": "영남대학교의료원", "manager": "문창수", "team": "FS South"}, {"client": "한국보훈복지공단 대구보훈병원", "manager": "문창수", "team": "FS South"}, {"client": "경북대학교병원", "manager": "문창수", "team": "FS South"}, {"client": "계명대동산병원", "manager": "문창수", "team": "FS South"}, {"client": "경주동산병원", "manager": "윤진성", "team": "FS South"}, {"client": "굿모닝병원_경주", "manager": "윤진성", "team": "FS South"}, {"client": "동국대학교의과대학 경주병원", "manager": "윤진성", "team": "FS South"}, {"client": "바른유병원", "manager": "윤진성", "team": "FS South"}, {"client": "삼성연합의원", "manager": "윤진성", "team": "FS South"}, {"client": "경상북도 김천의료원", "manager": "윤진성", "team": "FS South"}, {"client": "상주시보건소", "manager": "윤진성", "team": "FS South"}, {"client": "경상북도 안동의료원", "manager": "윤진성", "team": "FS South"}, {"client": "안동성소병원", "manager": "윤진성", "team": "FS South"}, {"client": "영덕아산병원", "manager": "윤진성", "team": "FS South"}, {"client": "예천권병원", "manager": "윤진성", "team": "FS South"}, {"client": "울릉군보건의료원", "manager": "윤진성", "team": "FS South"}, {"client": "청송군보건의료원", "manager": "윤진성", "team": "FS South"}, {"client": "은성의료재단좋은선린병원", "manager": "윤진성", "team": "FS South"}, {"client": "의료법인현암의료재단우리들병원", "manager": "윤진성", "team": "FS South"}, {"client": "포스코부속의원", "manager": "윤진성", "team": "FS South"}, {"client": "포항시티병원", "manager": "윤진성", "team": "FS South"}, {"client": "해군포항한의원", "manager": "윤진성", "team": "FS South"}, {"client": "세강병원", "manager": "윤진성", "team": "FS South"}, {"client": "SCL 대구의원", "manager": "윤진성", "team": "FS South"}, {"client": "든든한병원", "manager": "윤진성", "team": "FS South"}, {"client": "근로복지공단대구병원", "manager": "윤진성", "team": "FS South"}, {"client": "대구보건대학교", "manager": "윤진성", "team": "FS South"}, {"client": "(재)미리내천주성삼성직수도회 천주성삼병원", "manager": "윤진성", "team": "FS South"}, {"client": "의료법인경동의료재단 효성병원", "manager": "윤진성", "team": "FS South"}, {"client": "대한적십자사 대구경북혈액원", "manager": "윤진성", "team": "FS South"}, {"client": "운경의료재단곽병원", "manager": "윤진성", "team": "FS South"}, {"client": "척탑병원", "manager": "윤진성", "team": "FS South"}, {"client": "(의)근원의료재단경산중앙병원", "manager": "이도협", "team": "FS South"}, {"client": "국군대구병원", "manager": "이도협", "team": "FS South"}, {"client": "대구가톨릭대학교 GLP센터", "manager": "이도협", "team": "FS South"}, {"client": "대한산업보건협회_경북", "manager": "이도협", "team": "FS South"}, {"client": "의료법인서명의료재단 세명병원", "manager": "이도협", "team": "FS South"}, {"client": "구미강남병원", "manager": "이도협", "team": "FS South"}, {"client": "구미강동병원", "manager": "이도협", "team": "FS South"}, {"client": "의료법인갑을의료재단갑을구미병원", "manager": "이도협", "team": "FS South"}, {"client": "차의과학대학교부속 구미차병원", "manager": "이도협", "team": "FS South"}, {"client": "의료법인덕산의료재단김천제일병원", "manager": "이도협", "team": "FS South"}, {"client": "의료법인동춘의료재단 문경제일병원", "manager": "이도협", "team": "FS South"}, {"client": "영주적십자병원", "manager": "이도협", "team": "FS South"}, {"client": "영남대학교의과대학부속영천병원", "manager": "이도협", "team": "FS South"}, {"client": "울진군의료원", "manager": "이도협", "team": "FS South"}, {"client": "에스포항병원", "manager": "이도협", "team": "FS South"}, {"client": "포항성모병원", "manager": "이도협", "team": "FS South"}, {"client": "굿모닝병원_대구", "manager": "이도협", "team": "FS South"}, {"client": "대한산업보건협회_대구", "manager": "이도협", "team": "FS South"}, {"client": "(사)한국건강관리협회 대구지부", "manager": "이도협", "team": "FS South"}, {"client": "강남병원_대구", "manager": "이도협", "team": "FS South"}, {"client": "대구파티마병원", "manager": "이도협", "team": "FS South"}, {"client": "식품의약품안전평가원 실험동물자원은행", "manager": "이도협", "team": "FS South"}, {"client": "(사)한국건강관리협회 경북지부", "manager": "이도협", "team": "FS South"}, {"client": "씨젠의료재단 (대구)", "manager": "이도협", "team": "FS South"}, {"client": "우리들병원_대구", "manager": "이도협", "team": "FS South"}, {"client": "한국의학연구소대구검진센터", "manager": "이도협", "team": "FS South"}, {"client": "상주적십자병원", "manager": "이승직", "team": "FS South"}, {"client": "의료법인삼백의료재단상주성모병원", "manager": "이승직", "team": "FS South"}, {"client": "안동병원", "manager": "이승직", "team": "FS South"}, {"client": "경상북도 포항의료원", "manager": "이승직", "team": "FS South"}, {"client": "의료법인한성재단 포항세명기독병원", "manager": "이승직", "team": "FS South"}, {"client": "포항여성아이병원", "manager": "이승직", "team": "FS South"}, {"client": "대구가톨릭대학교병원", "manager": "이승직", "team": "FS South"}, {"client": "드림병원", "manager": "이승직", "team": "FS South"}, {"client": "계명대학교성서캠퍼스 동산의료원", "manager": "이승직", "team": "FS South"}, {"client": "나사렛종합병원", "manager": "이승직", "team": "FS South"}, {"client": "더블유병원", "manager": "이승직", "team": "FS South"}, {"client": "의료법인구의료재단 구병원", "manager": "이승직", "team": "FS South"}, {"client": "대구가톨릭대학교 칠곡가톨릭병원", "manager": "이승직", "team": "FS South"}, {"client": "대구의료원", "manager": "이승직", "team": "FS South"}, {"client": "더큰병원_김해", "manager": "김태현", "team": "FS South"}, {"client": "베데스다병원", "manager": "김태현", "team": "FS South"}, {"client": "세준검진의원", "manager": "김태현", "team": "FS South"}, {"client": "대한산업보건협회_부산남부", "manager": "김태현", "team": "FS South"}, {"client": "대한항공김해부속의원", "manager": "김태현", "team": "FS South"}, {"client": "정관일신기독병원", "manager": "김태현", "team": "FS South"}, {"client": "좋은문화병원", "manager": "김태현", "team": "FS South"}, {"client": "(사)부산의료선교회세계로병원", "manager": "김태현", "team": "FS South"}, {"client": "광혜의료재단 광혜병원", "manager": "김태현", "team": "FS South"}, {"client": "우리들병원_온천동", "manager": "김태현", "team": "FS South"}, {"client": "삼광의료재단 부산센터", "manager": "김태현", "team": "FS South"}, {"client": "구포성심병원", "manager": "김태현", "team": "FS South"}, {"client": "(사)한국건강관리협회 부산서부지부", "manager": "김태현", "team": "FS South"}, {"client": "의료법인은성의료재단 좋은삼선병원", "manager": "김태현", "team": "FS South"}, {"client": "에디스여성병원", "manager": "김태현", "team": "FS South"}, {"client": "김용기내과의원", "manager": "김태현", "team": "FS South"}, {"client": "의료법인선우의료재단비에이치에스한서병원", "manager": "김태현", "team": "FS South"}, {"client": "부산의료원", "manager": "김태현", "team": "FS South"}, {"client": "연제일신병원", "manager": "김태현", "team": "FS South"}, {"client": "해동병원", "manager": "김태현", "team": "FS South"}, {"client": "메리놀병원", "manager": "김태현", "team": "FS South"}, {"client": "해운대나눔과행복병원", "manager": "김태현", "team": "FS South"}, {"client": "효성시티병원", "manager": "김태현", "team": "FS South"}, {"client": "대한산업보건협회_울산", "manager": "김태현", "team": "FS South"}, {"client": "의료법인은성의료재단 좋은삼정병원", "manager": "김태현", "team": "FS South"}, {"client": "혜명심의료재단울산병원", "manager": "김태현", "team": "FS South"}, {"client": "현대자동차", "manager": "김태현", "team": "FS South"}, {"client": "(사)한국건강관리협회_울산", "manager": "김태현", "team": "FS South"}, {"client": "대한적십자사_울산혈액원", "manager": "김태현", "team": "FS South"}, {"client": "양산부산대학교병원", "manager": "박동민", "team": "FS South"}, {"client": "의료법인녹십자의료재단 영남분원", "manager": "박동민", "team": "FS South"}, {"client": "동남권원자력의학원", "manager": "박동민", "team": "FS South"}, {"client": "김원묵기념봉생병원", "manager": "박동민", "team": "FS South"}, {"client": "한국보훈복지공단부산광역시보훈병원", "manager": "박동민", "team": "FS South"}, {"client": "해운대부민병원", "manager": "박동민", "team": "FS South"}, {"client": "울산대학교병원", "manager": "박동민", "team": "FS South"}, {"client": "의료법인송은의료재단 울산시티병원", "manager": "박동민", "team": "FS South"}, {"client": "동강병원", "manager": "박동민", "team": "FS South"}, {"client": "경상대학교병원_창원", "manager": "박석영", "team": "FS South"}, {"client": "성균관대학교 삼성창원병원", "manager": "박석영", "team": "FS South"}, {"client": "창원파티마병원", "manager": "박석영", "team": "FS South"}, {"client": "인제대학교부산광역시백병원", "manager": "박석영", "team": "FS South"}, {"client": "춘해병원", "manager": "박석영", "team": "FS South"}, {"client": "동아대학교병원", "manager": "박석영", "team": "FS South"}, {"client": "의료법인은성의료재단 좋은강안병원", "manager": "박석영", "team": "FS South"}, {"client": "재단법인씨젠의료재단 씨젠부산광역시의원", "manager": "성기홍", "team": "FS South"}, {"client": "부산대학교병원", "manager": "성기홍", "team": "FS South"}, {"client": "인제대학교 해운대백병원", "manager": "성기홍", "team": "FS South"}, {"client": "의료법인대우의료재단대우병원", "manager": "이준민", "team": "FS South"}, {"client": "(의)신의료재단김해삼승병원", "manager": "이준민", "team": "FS South"}, {"client": "경상대학교병원", "manager": "이준민", "team": "FS South"}, {"client": "제일병원_진주", "manager": "이준민", "team": "FS South"}, {"client": "진주공군교육사령부", "manager": "이준민", "team": "FS South"}, {"client": "진주반도병원", "manager": "이준민", "team": "FS South"}, {"client": "진주세란병원", "manager": "이준민", "team": "FS South"}, {"client": "진주한일병원", "manager": "이준민", "team": "FS South"}, {"client": "(사)한국건강관리협회 경남지부", "manager": "이준민", "team": "FS South"}, {"client": "경상남도 마산의료원", "manager": "이준민", "team": "FS South"}, {"client": "국립마산병원", "manager": "이준민", "team": "FS South"}, {"client": "굿모닝내과병원", "manager": "이준민", "team": "FS South"}, {"client": "근로복지공단 창원병원", "manager": "이준민", "team": "FS South"}, {"client": "대한적십자사_경남혈액원", "manager": "이준민", "team": "FS South"}, {"client": "더큰병원_창원", "manager": "이준민", "team": "FS South"}, {"client": "연세에스병원", "manager": "이준민", "team": "FS South"}, {"client": "의료법인청아의료재단청아병원", "manager": "이준민", "team": "FS South"}, {"client": "한마음병원_창원", "manager": "이준민", "team": "FS South"}, {"client": "해군해양의료원", "manager": "이준민", "team": "FS South"}, {"client": "통영적십자병원", "manager": "이준민", "team": "FS South"}, {"client": "부산성모병원", "manager": "이준민", "team": "FS South"}, {"client": "(사)한국건강관리협회 부산지부", "manager": "이준민", "team": "FS South"}, {"client": "동래봉생병원", "manager": "이준민", "team": "FS South"}, {"client": "빌리브세웅병원", "manager": "이준민", "team": "FS South"}, {"client": "의료법인상원의료재단 부산힘찬병원", "manager": "이준민", "team": "FS South"}, {"client": "(의)정선의료재단온종합병원", "manager": "이준민", "team": "FS South"}, {"client": "동의의료원", "manager": "이준민", "team": "FS South"}, {"client": "부산베스티안병원", "manager": "이준민", "team": "FS South"}, {"client": "의료법인인당의료재단 부민병원", "manager": "이준민", "team": "FS South"}, {"client": "거제터의원", "manager": "조수호", "team": "FS South"}, {"client": "맑은샘병원", "manager": "조수호", "team": "FS South"}, {"client": "의료법인거붕의료재단거제백병원", "manager": "조수호", "team": "FS South"}, {"client": "강병원_고성", "manager": "조수호", "team": "FS South"}, {"client": "고성군보건소_경남", "manager": "조수호", "team": "FS South"}, {"client": "김해강일병원", "manager": "조수호", "team": "FS South"}, {"client": "김해굿모닝병원", "manager": "조수호", "team": "FS South"}, {"client": "의료법인갑을의료재단 갑을장유병원", "manager": "조수호", "team": "FS South"}, {"client": "남해군보건소", "manager": "조수호", "team": "FS South"}, {"client": "의료법인이도의료재단남해병원", "manager": "조수호", "team": "FS South"}, {"client": "윤병원_밀양", "manager": "조수호", "team": "FS South"}, {"client": "삼천포제일병원", "manager": "조수호", "team": "FS South"}, {"client": "의료법인승연의료재단 삼천포서울병원", "manager": "조수호", "team": "FS South"}, {"client": "동마산병원", "manager": "조수호", "team": "FS South"}, {"client": "메트로병원", "manager": "조수호", "team": "FS South"}, {"client": "상남 한마음병원", "manager": "조수호", "team": "FS South"}, {"client": "의료법인석영의료재단 창원제일종합병원", "manager": "조수호", "team": "FS South"}, {"client": "창원시 마산보건소", "manager": "조수호", "team": "FS South"}, {"client": "창원시 진해보건소", "manager": "조수호", "team": "FS South"}, {"client": "창원힘찬병원", "manager": "조수호", "team": "FS South"}, {"client": "터직업환경의학과", "manager": "조수호", "team": "FS South"}, {"client": "새통영병원", "manager": "조수호", "team": "FS South"}, {"client": "함양군보건소", "manager": "조수호", "team": "FS South"}, {"client": "부산가톨릭대학교", "manager": "조수호", "team": "FS South"}, {"client": "순여성병원", "manager": "조수호", "team": "FS South"}, {"client": "의료법인서일의료재단기장병원", "manager": "조수호", "team": "FS South"}, {"client": "부산미래IFC의원", "manager": "조수호", "team": "FS South"}, {"client": "부산성소병원", "manager": "조수호", "team": "FS South"}, {"client": "의료법인고려의료재단 부산고려병원", "manager": "조수호", "team": "FS South"}, {"client": "KMI_부산", "manager": "조수호", "team": "FS South"}, {"client": "일신기독병원", "manager": "조수호", "team": "FS South"}, {"client": "미래병원_부산", "manager": "조수호", "team": "FS South"}, {"client": "대한적십자사 남부혈액검사센터 (부산)", "manager": "조수호", "team": "FS South"}, {"client": "대한적십자사 부산혈액원", "manager": "조수호", "team": "FS South"}, {"client": "미래여성병원_부산진구", "manager": "조수호", "team": "FS South"}, {"client": "세흥병원", "manager": "조수호", "team": "FS South"}, {"client": "오성병원", "manager": "조수호", "team": "FS South"}, {"client": "이샘병원", "manager": "조수호", "team": "FS South"}, {"client": "한국의학연구소부산광역시검진센터", "manager": "조수호", "team": "FS South"}, {"client": "휴병원", "manager": "조수호", "team": "FS South"}, {"client": "한사랑내과병원", "manager": "조수호", "team": "FS South"}, {"client": "경남정보대학교 K메디컬센터", "manager": "조수호", "team": "FS South"}, {"client": "소나무병원", "manager": "조수호", "team": "FS South"}, {"client": "큐병원", "manager": "조수호", "team": "FS South"}, {"client": "고신대학교 복음병원", "manager": "조수호", "team": "FS South"}, {"client": "삼육부산병원", "manager": "조수호", "team": "FS South"}, {"client": "부산센텀병원", "manager": "조수호", "team": "FS South"}, {"client": "인구보건복지협회 부산지부", "manager": "조수호", "team": "FS South"}, {"client": "영도병원", "manager": "조수호", "team": "FS South"}, {"client": "부산광역시해운대구보건소", "manager": "조수호", "team": "FS South"}, {"client": "울산터의원", "manager": "조수호", "team": "FS South"}];
+
+// ============================================================
+// 백엔드 설정 (클로드 없이 독립 운영하기 위한 무료 공유 저장소)
+// 아래 FIREBASE_URL 값을 본인의 Firebase Realtime Database 주소로
+// 교체하세요. 설정 방법은 파일과 함께 전달된 안내를 참고하세요.
+// 예: "https://fs-schedule-xxxxx-default-rtdb.asia-southeast1.firebasedatabase.app"
+// ============================================================
+const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
+const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
+  ? FIREBASE_URL.replace(/\/$/,'') + '/schedule-overrides.json'
+  : null;
+
+const CATS = {
+  install:    {label:'설치',    order:1},
+  relocation: {label:'이전설치', order:2},
+  evaluation: {label:'평가',    order:3},
+};
+const TEAM_OPTIONS = ['FS East','FS South','FS Central','FS West','SA'];
+
+// 대한민국 법정 공휴일 (2026~2027, 대체공휴일 포함)
+const HOLIDAYS_KR = {
+  '2026-01-01':'신정',
+  '2026-02-16':'설날 연휴','2026-02-17':'설날','2026-02-18':'설날 연휴',
+  '2026-03-01':'삼일절','2026-03-02':'대체공휴일',
+  '2026-05-01':'노동절','2026-05-05':'어린이날',
+  '2026-05-24':'부처님오신날','2026-05-25':'대체공휴일',
+  '2026-06-06':'현충일',
+  '2026-07-17':'제헌절',
+  '2026-08-15':'광복절','2026-08-17':'대체공휴일',
+  '2026-09-24':'추석 연휴','2026-09-25':'추석','2026-09-26':'추석 연휴',
+  '2026-10-03':'개천절','2026-10-05':'대체공휴일','2026-10-09':'한글날',
+  '2026-12-25':'크리스마스',
+  '2027-01-01':'신정',
+  '2027-02-06':'설날 연휴','2027-02-07':'설날','2027-02-08':'설날 연휴','2027-02-09':'대체공휴일',
+  '2027-03-01':'삼일절',
+  '2027-05-01':'노동절','2027-05-05':'어린이날','2027-05-13':'부처님오신날',
+  '2027-06-06':'현충일',
+  '2027-07-17':'제헌절',
+  '2027-08-15':'광복절','2027-08-16':'대체공휴일',
+  '2027-09-14':'추석 연휴','2027-09-15':'추석','2027-09-16':'추석 연휴',
+  '2027-10-03':'개천절','2027-10-04':'대체공휴일','2027-10-09':'한글날',
+  '2027-12-25':'크리스마스','2027-12-27':'대체공휴일',
+};
+
+let customEvents = [];      // user-added events
+let editedMap = {};         // id -> overridden event object
+let deletedIds = new Set(); // ids removed (baseline or custom)
+let customClients = [];     // 사용자가 새로 등록한 거래처-담당자 매핑 (팀원 전체 공유)
+
+function getAllClients(){
+  // 이름이 같으면 사용자 추가분(customClients)이 기본 리스트를 덮어씀
+  const map = new Map();
+  CLIENT_DIRECTORY_BASE.forEach(c=> map.set(c.client, c));
+  customClients.forEach(c=> map.set(c.client, c));
+  return Array.from(map.values());
+}
+
+const activeCats = new Set(Object.keys(CATS));
+let searchQuery = '';
+
+function matchEvent(e, q){
+  if(!q) return true;
+  const hay = [e.title, e.device, e.team, e.assignee].filter(Boolean).join(' ').toLowerCase();
+  return hay.includes(q);
+}
+let _today = new Date();
+let viewYear = _today.getFullYear(), viewMonth = _today.getMonth()+1;
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg || '저장되었습니다';
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+async function loadStorage(){
+  if(!STORAGE_ENDPOINT){
+    showToast('⚠ 공유 저장소가 아직 설정되지 않았습니다 (하단 설정 안내 참고)');
+    return;
+  }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(()=>controller.abort(), 8000);
+  try{
+    const res = await fetch(STORAGE_ENDPOINT, {cache:'no-store', signal: controller.signal});
+    clearTimeout(timeoutId);
+    if(!res.ok){
+      console.error('loadStorage HTTP error', res.status, res.statusText);
+      if(res.status===401 || res.status===403){
+        showToast('⚠ 접근 거부됨 — Firebase 데이터베이스 규칙을 확인해주세요');
+      }
+      return;
+    }
+    const data = await res.json();
+    if(data){
+      customEvents = data.custom || [];
+      editedMap = data.edited || {};
+      deletedIds = new Set(data.deleted || []);
+      customClients = data.clients || [];
+    }
+  }catch(err){
+    clearTimeout(timeoutId);
+    console.error('loadStorage network error', err);
+    if(err.name === 'AbortError'){
+      showToast('⚠ 서버 응답이 없습니다 (네트워크가 느리거나 차단됨)');
+    } else {
+      showToast('⚠ 서버에 연결할 수 없습니다 (네트워크/방화벽 확인)');
+    }
+  }
+}
+
+async function saveStorage(){
+  if(!STORAGE_ENDPOINT){
+    showToast('⚠ 공유 저장소가 아직 설정되지 않았습니다 (하단 설정 안내 참고)');
+    return;
+  }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(()=>controller.abort(), 8000);
+  try{
+    const res = await fetch(STORAGE_ENDPOINT, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        custom: customEvents, edited: editedMap, deleted: Array.from(deletedIds), clients: customClients
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if(res.ok){
+      showToast('저장되었습니다 (팀 전체 공유)');
+    } else {
+      console.error('saveStorage HTTP error', res.status, res.statusText);
+      if(res.status===401 || res.status===403){
+        showToast('⚠ 접근 거부됨 — Firebase 데이터베이스 규칙(테스트 모드 만료 등)을 확인해주세요');
+      } else {
+        showToast(`⚠ 저장 실패 (서버 응답 오류: ${res.status})`);
+      }
+    }
+  }catch(err){
+    clearTimeout(timeoutId);
+    console.error('saveStorage network error', err);
+    if(err.name === 'AbortError'){
+      showToast('⚠ 서버 응답이 없습니다 (네트워크가 느리거나 차단됨)');
+    } else {
+      showToast('⚠ 서버에 연결할 수 없습니다 (네트워크/방화벽 확인)');
+    }
+  }
+}
+
+function getAllEvents(){
+  const base = BASE_EVENTS
+    .filter(e=>!deletedIds.has(e.id))
+    .map(e=> editedMap[e.id] ? editedMap[e.id] : e);
+  const custom = customEvents.filter(e=>!deletedIds.has(e.id));
+  return base.concat(custom);
+}
+
+function fmtDate(y,m,d){ return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function dateNum(s){ return new Date(s+'T00:00:00').getTime(); }
+function weekdayKr(y,m,d){ return ['일','월','화','수','목','금','토'][new Date(y,m-1,d).getDay()]; }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+
+const legendEl = document.getElementById('legend');
+Object.entries(CATS).forEach(([key,c])=>{
+  const chip = document.createElement('div');
+  chip.className = 'chip active';
+  chip.dataset.cat = key;
+  chip.innerHTML = `<span class="dot"></span>${c.label}`;
+  chip.onclick = ()=>{
+    if(activeCats.has(key)){ activeCats.delete(key); chip.classList.remove('active'); }
+    else { activeCats.add(key); chip.classList.add('active'); }
+    render();
+  };
+  legendEl.appendChild(chip);
+});
+
+function buildWeeks(){
+  const firstOfMonth = new Date(viewYear, viewMonth-1, 1);
+  const startWeekday = firstOfMonth.getDay();
+  const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
+  const daysInPrevMonth = new Date(viewYear, viewMonth-1, 0).getDate();
+  const cells = [];
+  for(let i=startWeekday-1;i>=0;i--) cells.push({day:daysInPrevMonth-i, monthOffset:-1});
+  for(let d=1; d<=daysInMonth; d++) cells.push({day:d, monthOffset:0});
+  let nextDay = 1;
+  while(cells.length % 7 !== 0){ cells.push({day:nextDay, monthOffset:1}); nextDay++; }
+  cells.forEach(c=>{
+    let y=viewYear,m=viewMonth;
+    if(c.monthOffset===-1){ m-=1; if(m===0){m=12;y-=1;} }
+    if(c.monthOffset===1){ m+=1; if(m===13){m=1;y+=1;} }
+    c.y=y; c.m=m; c.date = fmtDate(y,m,c.day);
+  });
+  const weeks = [];
+  for(let i=0;i<cells.length;i+=7) weeks.push(cells.slice(i,i+7));
+  return weeks;
+}
+
+function render(){
+  const EVENTS = getAllEvents();
+  const ranges = EVENTS.filter(e=>e.start !== e.end);
+  const singles = EVENTS.filter(e=>e.start === e.end);
+  const byDate = {};
+  singles.forEach(e=>{ (byDate[e.start]=byDate[e.start]||[]).push(e); });
+
+  document.getElementById('monthLabel').textContent = `${viewYear}년 ${viewMonth}월`;
+  const container = document.getElementById('weeksContainer');
+  container.innerHTML = '';
+  const todayStr = todayISO();
+  const weeks = buildWeeks();
+
+  weeks.forEach(week=>{
+    const weekStart = dateNum(week[0].date);
+    const weekEnd = dateNum(week[6].date);
+
+    const weekRanges = ranges.filter(r=>activeCats.has(r.category) && matchEvent(r, searchQuery) && dateNum(r.start)<=weekEnd && dateNum(r.end)>=weekStart)
+      .map(r=>{
+        const colStart = Math.max(0, Math.round((dateNum(r.start)-weekStart)/86400000));
+        const colEnd = Math.min(6, Math.round((dateNum(r.end)-weekStart)/86400000));
+        return {...r, colStart, colSpan: colEnd-colStart+1};
+      }).sort((a,b)=>a.colStart-b.colStart);
+
+    const lanes = [];
+    weekRanges.forEach(r=>{
+      let lane = lanes.findIndex(endCol=>endCol < r.colStart);
+      if(lane===-1){ lane = lanes.length; lanes.push(r.colStart+r.colSpan-1); }
+      else lanes[lane] = r.colStart+r.colSpan-1;
+      r.lane = lane;
+    });
+    const laneCount = lanes.length;
+    const barsHeight = laneCount>0 ? laneCount*21 + 4 : 0;
+
+    const weekRow = document.createElement('div');
+    weekRow.className = 'week-row';
+
+    const daybg = document.createElement('div');
+    daybg.className = 'daybg';
+    week.forEach((c,ci)=>{
+      const cell = document.createElement('div');
+      const holidayName = HOLIDAYS_KR[c.date];
+      cell.className = 'cell' + (c.monthOffset!==0?' pad':'') + (ci===0?' sun':'') + (ci===6?' sat':'') + (c.date===todayStr?' today':'') + (holidayName?' holiday-cell':'');
+      cell.style.paddingTop = '8px';
+      cell.style.paddingBottom = (4+barsHeight) + 'px';
+      const row = document.createElement('div');
+      row.className = 'daynum-row';
+      row.innerHTML = `<span class="daynum">${c.day}</span>`;
+      if(holidayName){
+        const hTag = document.createElement('span');
+        hTag.className = 'holiday-tag';
+        hTag.textContent = holidayName;
+        hTag.title = holidayName;
+        row.appendChild(hTag);
+      }
+      const addBtn = document.createElement('button');
+      addBtn.className = 'add-day-btn';
+      addBtn.textContent = '+';
+      addBtn.title = '일정 추가';
+      addBtn.onclick = (ev)=>{ ev.stopPropagation(); openForm(null, c.date); };
+      row.appendChild(addBtn);
+      cell.appendChild(row);
+      daybg.appendChild(cell);
+    });
+    weekRow.appendChild(daybg);
+
+    if(laneCount>0){
+      const barsLayer = document.createElement('div');
+      barsLayer.className = 'bars-layer';
+      barsLayer.style.top = '30px';
+      barsLayer.style.height = barsHeight+'px';
+      weekRanges.forEach(r=>{
+        const bar = document.createElement('div');
+        bar.className = 'bar ' + r.category;
+        bar.style.left = `calc(${(r.colStart/7)*100}% + 3px)`;
+        bar.style.width = `calc(${(r.colSpan/7)*100}% - 6px)`;
+        bar.style.top = (r.lane*21) + 'px';
+        bar.textContent = r.title + (r.device? ' '+r.device:'') + (r.team? ' · '+r.team:'');
+        bar.onclick = ()=>openDetail(r);
+        barsLayer.appendChild(bar);
+      });
+      weekRow.appendChild(barsLayer);
+    }
+
+    const chipsLayer = document.createElement('div');
+    chipsLayer.className = 'chips-layer';
+    week.forEach(c=>{
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const dayEvents = (byDate[c.date]||[]).filter(e=>activeCats.has(e.category) && matchEvent(e, searchQuery))
+        .sort((a,b)=>CATS[a.category].order-CATS[b.category].order);
+      dayEvents.forEach(e=>{
+        const chip = document.createElement('div');
+        chip.className = 'chip-ev ' + e.category;
+        chip.textContent = e.title + (e.device? ' '+e.device:'') + (e.team ? ` [${e.team}]` : '');
+        chip.onclick = ()=>openDetail(e);
+        cell.appendChild(chip);
+      });
+      chipsLayer.appendChild(cell);
+    });
+    weekRow.appendChild(chipsLayer);
+
+    container.appendChild(weekRow);
+  });
+
+  renderStats(EVENTS);
+}
+
+function renderStats(EVENTS){
+  const statsEl = document.getElementById('headerStats');
+  const mm = String(viewMonth).padStart(2,'0');
+  const prefix = `${viewYear}-${mm}`;
+  const monthEvents = EVENTS.filter(e=> e.start.startsWith(prefix) || e.end.startsWith(prefix));
+  const count = cat => monthEvents.filter(e=>e.category===cat).length;
+  statsEl.innerHTML = `
+    <div class="stat"><div class="num">${count('install')}</div><div class="lbl">설치</div></div>
+    <div class="stat"><div class="num">${count('relocation')}</div><div class="lbl">이전설치</div></div>
+    <div class="stat"><div class="num">${count('evaluation')}</div><div class="lbl">평가</div></div>
+  `;
+}
+
+function openDetail(e){
+  const panel = document.getElementById('panel');
+  const isRange = e.start !== e.end;
+  let meta = '';
+  if(e.team) meta += `<div class="meta">담당팀: ${e.team}</div>`;
+  if(e.assignee) meta += `<div class="meta">담당: ${e.assignee}</div>`;
+  if(e.createdAt) meta += `<div class="meta">등록: ${fmtTimestamp(e.createdAt)}${e.creator? ' · '+e.creator : ''}</div>`;
+  if(e.updatedAt && e.updatedAt !== e.createdAt) meta += `<div class="meta">최근 수정: ${fmtTimestamp(e.updatedAt)}</div>`;
+  panel.innerHTML = `<button class="close" onclick="closePanel()">✕</button>
+    <h3>${e.title}</h3>
+    <div class="sub">${isRange ? e.start+' ~ '+e.end : e.start}</div>
+    <div class="detail-ev ${e.category}">
+      <div class="cat-label">${CATS[e.category].label}</div>
+      <div class="txt">${e.device || e.title}</div>
+      ${meta}
+      <div class="detail-actions">
+        <button class="btn-edit">수정</button>
+        <button class="btn-delete">삭제</button>
+      </div>
+    </div>`;
+  panel.querySelector('.btn-edit').onclick = ()=>openForm(e);
+  panel.querySelector('.btn-delete').onclick = ()=>deleteEvent(e);
+  document.getElementById('overlay').classList.add('show');
+}
+
+async function deleteEvent(e){
+  if(!confirm(`"${e.title}" 일정을 삭제할까요?`)) return;
+  deletedIds.add(e.id);
+  customEvents = customEvents.filter(c=>c.id!==e.id);
+  closePanel();
+  render();
+  await saveStorage();
+}
+
+function closePanel(){ document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('overlay').onclick = (ev)=>{ if(ev.target.id==='overlay') closePanel(); };
+
+function openForm(existing, presetDate){
+  const panel = document.getElementById('panel');
+  const isEdit = !!existing;
+  const data = existing || {
+    id: null, category: 'install', start: presetDate || todayISO(), end: presetDate || todayISO(),
+    title: '', device: '', team: '', assignee: ''
+  };
+  panel.innerHTML = `
+    <button class="close" onclick="closePanel()">✕</button>
+    <h3>${isEdit ? '일정 수정' : '새 일정 추가'}</h3>
+    <div class="sub">${isEdit ? data.id : '필요한 정보를 입력하세요'}</div>
+
+    <div class="form-row">
+      <label>구분</label>
+      <div class="cat-select" id="catSelect">
+        ${Object.entries(CATS).map(([k,c])=>`<div class="cat-opt ${data.category===k?'sel':''}" data-cat="${k}">${c.label}</div>`).join('')}
+      </div>
+    </div>
+
+    <div class="form-row" style="position:relative;">
+      <label>병원</label>
+      <input type="text" id="f-title" autocomplete="off" value="${(data.title||'').replace(/"/g,'&quot;')}" placeholder="예: OO병원">
+      <div class="client-suggest" id="clientSuggest"></div>
+    </div>
+
+    <div class="form-row">
+      <label>장비 / 상세내용 (선택)</label>
+      <input type="text" id="f-device" value="${(data.device||'').replace(/"/g,'&quot;')}" placeholder="예: XR-9100">
+    </div>
+
+    <div class="form-row form-grid2">
+      <div>
+        <label>시작일</label>
+        <input type="date" id="f-start" value="${data.start}">
+      </div>
+      <div>
+        <label>종료일 (여러 날일 경우)</label>
+        <input type="date" id="f-end" value="${data.end}">
+      </div>
+    </div>
+
+    <div class="form-row form-grid2">
+      <div>
+        <label>담당팀 (선택)</label>
+        <select id="f-team">
+          <option value="">-</option>
+          ${TEAM_OPTIONS.map(t=>`<option value="${t}" ${data.team===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label>담당자 (선택)</label>
+        <input type="text" id="f-assignee" value="${(data.assignee||'').replace(/"/g,'&quot;')}" placeholder="예: Jinny">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>만든이 (선택)</label>
+      <input type="text" id="f-creator" value="${(data.creator||'').replace(/"/g,'&quot;')}" placeholder="예: Jun">
+      ${(data.createdAt || data.updatedAt) ? `<div class="ts-info">
+        ${data.createdAt ? `등록: ${fmtTimestamp(data.createdAt)}${data.creator? ' · '+data.creator : ''}` : ''}
+        ${data.updatedAt && data.updatedAt!==data.createdAt ? `<br>최근 수정: ${fmtTimestamp(data.updatedAt)}` : ''}
+      </div>` : ''}
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-cancel" id="f-cancel">취소</button>
+      <button class="btn-save" id="f-save">${isEdit?'저장':'추가'}</button>
+    </div>
+  `;
+
+  let selectedCat = data.category;
+  panel.querySelectorAll('.cat-opt').forEach(opt=>{
+    opt.onclick = ()=>{
+      selectedCat = opt.dataset.cat;
+      panel.querySelectorAll('.cat-opt').forEach(o=>o.classList.remove('sel'));
+      opt.classList.add('sel');
+    };
+  });
+
+  // ---- 거래처(병원) 자동완성: 입력 시 담당자/담당팀 자동 추천 ----
+  const titleInput = panel.querySelector('#f-title');
+  const suggestBox = panel.querySelector('#clientSuggest');
+  titleInput.addEventListener('input', ()=>{
+    const q = titleInput.value.trim().toLowerCase();
+    if(!q){ suggestBox.classList.remove('show'); suggestBox.innerHTML=''; return; }
+    const matches = getAllClients().filter(c=> c.client.toLowerCase().includes(q)).slice(0, 8);
+    if(matches.length===0){ suggestBox.classList.remove('show'); suggestBox.innerHTML=''; return; }
+    suggestBox.innerHTML = matches.map(c=>
+      `<div class="client-suggest-item" data-client="${c.client.replace(/"/g,'&quot;')}" data-manager="${(c.manager||'').replace(/"/g,'&quot;')}" data-team="${c.team||''}">
+        <b>${c.client}</b> <span class="cs-meta">· ${c.manager||'담당자 미상'}${c.team? ' · '+c.team : ''}</span>
+      </div>`
+    ).join('');
+    suggestBox.classList.add('show');
+    suggestBox.querySelectorAll('.client-suggest-item').forEach(item=>{
+      item.onclick = ()=>{
+        titleInput.value = item.dataset.client;
+        if(item.dataset.manager) panel.querySelector('#f-assignee').value = item.dataset.manager;
+        if(item.dataset.team) panel.querySelector('#f-team').value = item.dataset.team;
+        suggestBox.classList.remove('show');
+      };
+    });
+  });
+  titleInput.addEventListener('blur', ()=>{
+    setTimeout(()=> suggestBox.classList.remove('show'), 150); // 클릭 이벤트가 먼저 처리되도록 지연
+  });
+
+  panel.querySelector('#f-cancel').onclick = closePanel;
+  panel.querySelector('#f-save').onclick = async ()=>{
+    const title = panel.querySelector('#f-title').value.trim();
+    const start = panel.querySelector('#f-start').value;
+    let end = panel.querySelector('#f-end').value || start;
+    if(!title || !start){ alert('병원/제목과 시작일은 필수입니다.'); return; }
+    if(end < start) end = start;
+    const device = panel.querySelector('#f-device').value.trim();
+    const team = panel.querySelector('#f-team').value;
+    const assignee = panel.querySelector('#f-assignee').value.trim();
+    const creator = panel.querySelector('#f-creator').value.trim();
+    const nowISO = new Date().toISOString();
+
+    const newEvent = {
+      id: isEdit ? data.id : 'user-' + Date.now(),
+      category: selectedCat, start, end, title,
+      device: device || null, team: team || null, assignee: assignee || null,
+      creator: creator || (isEdit ? (data.creator || null) : null),
+      createdAt: isEdit ? (data.createdAt || nowISO) : nowISO,
+      updatedAt: nowISO
+    };
+
+    // 신규 거래처면 거래처 리스트에 자동 등록 (담당자를 적었을 때만)
+    const existingClient = getAllClients().find(c=> c.client === title);
+    if(!existingClient && assignee){
+      customClients.push({ client: title, manager: assignee, team: team || '' });
+    }
+
+    if(isEdit){
+      if(String(data.id).startsWith('user-')){
+        const idx = customEvents.findIndex(c=>c.id===data.id);
+        if(idx>-1) customEvents[idx] = newEvent; else customEvents.push(newEvent);
+      } else {
+        editedMap[data.id] = newEvent;
+      }
+    } else {
+      customEvents.push(newEvent);
+    }
+
+    const saveBtn = panel.querySelector('#f-save');
+    saveBtn.disabled = true;
+    saveBtn.textContent = '저장 중...';
+    render(); // reflect change on the calendar immediately
+
+    await saveStorage(); // persist to shared storage right away
+
+
+    closePanel();
+  };
+
+  document.getElementById('overlay').classList.add('show');
+}
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+function isoToICSDate(iso){
+  return iso.replace(/-/g,'');
+}
+
+function addDaysISO(iso, days){
+  const d = new Date(iso+'T00:00:00');
+  d.setDate(d.getDate()+days);
+  return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}`;
+}
+
+function icsEscape(s){
+  return String(s||'')
+    .replace(/\\/g,'\\\\')
+    .replace(/;/g,'\\;')
+    .replace(/,/g,'\\,')
+    .replace(/\n/g,'\\n');
+}
+
+function nowStampUTC(){
+  const d = new Date();
+  return `${d.getUTCFullYear()}${pad2(d.getUTCMonth()+1)}${pad2(d.getUTCDate())}T${pad2(d.getUTCHours())}${pad2(d.getUTCMinutes())}${pad2(d.getUTCSeconds())}Z`;
+}
+
+function buildICS(events){
+  const ICS_COLOR = {
+    install: 'dodgerblue',
+    relocation: 'darkorange',
+    evaluation: 'mediumpurple',
+  };
+
+  const lines = [];
+  lines.push('BEGIN:VCALENDAR');
+  lines.push('VERSION:2.0');
+  lines.push('PRODID:-//Sysmex Korea FS Group//Install Schedule//KO');
+  lines.push('CALSCALE:GREGORIAN');
+  lines.push('METHOD:PUBLISH');
+  lines.push('X-WR-CALNAME:시스템 설치 공유 캘린더 (FY26)');
+  lines.push('X-WR-TIMEZONE:Asia/Seoul');
+
+  const stamp = nowStampUTC();
+  events.filter(e=>CATS[e.category]).forEach(e=>{
+    const summaryParts = [CATS[e.category].label, e.title];
+    if(e.device) summaryParts.push(e.device);
+    if(e.team) summaryParts.push(`(${e.team})`);
+    const summary = summaryParts.join(' ');
+    const descParts = [];
+    if(e.assignee) descParts.push(`담당: ${e.assignee}`);
+    if(e.team) descParts.push(`담당팀: ${e.team}`);
+    descParts.push(`구분: ${CATS[e.category].label}`);
+
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:' + e.id + '@sysmex-fs-schedule');
+    lines.push('DTSTAMP:' + stamp);
+    lines.push('DTSTART;VALUE=DATE:' + isoToICSDate(e.start));
+    lines.push('DTEND;VALUE=DATE:' + addDaysISO(e.end, 1)); // exclusive end for all-day events
+    lines.push('SUMMARY:' + icsEscape(summary));
+    lines.push('DESCRIPTION:' + icsEscape(descParts.join('\n')));
+    lines.push('CATEGORIES:' + icsEscape(CATS[e.category].label));
+    lines.push('COLOR:' + (ICS_COLOR[e.category] || 'gray')); // RFC 7986 — Google/Apple Calendar, 새 Outlook(웹)에서 자동 색상 반영
+    lines.push('TRANSP:TRANSPARENT');
+    lines.push('END:VEVENT');
+  });
+
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+
+function exportICS(){
+  const events = getAllEvents().filter(e=>CATS[e.category]);
+  if(events.length===0){ alert('내보낼 일정이 없습니다.'); return; }
+  const ics = buildICS(events);
+  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '시스템설치_공유캘린더_FY26.ics';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`${events.length}건 내보내기 완료`);
+}
+
+async function exportExcel(){
+  const events = getAllEvents()
+    .filter(e=>e.category!=='holiday')
+    .slice()
+    .sort((a,b)=> a.start < b.start ? -1 : a.start > b.start ? 1 : 0);
+  if(events.length===0){ alert('내보낼 일정이 없습니다.'); return; }
+  if(typeof ExcelJS === 'undefined'){ alert('엑셀 내보내기 모듈을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'); return; }
+
+  const durationDays = (start, end)=> Math.round((new Date(end+'T00:00:00') - new Date(start+'T00:00:00'))/86400000) + 1;
+
+  const colDefs = [
+    {name:'구분',     width:12},
+    {name:'병원',     width:24},
+    {name:'장비',     width:26},
+    {name:'시작일',   width:12},
+    {name:'종료일',   width:12},
+    {name:'기간(일)', width:10},
+    {name:'담당팀',   width:12},
+    {name:'담당자',   width:14},
+  ];
+
+  const rows = events.map(e=>[
+    CATS[e.category] ? CATS[e.category].label : e.category,
+    e.title,
+    e.device || '',
+    e.start,
+    e.end,
+    durationDays(e.start, e.end),
+    e.team || '',
+    e.assignee || ''
+  ]);
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Sysmex Korea FSS Team';
+  const ws = wb.addWorksheet('설치일정');
+
+  ws.addTable({
+    name: 'InstallSchedule',
+    ref: 'A1',
+    headerRow: true,
+    totalsRow: false,
+    style: { theme: 'TableStyleMedium9', showRowStripes: true },
+    columns: colDefs.map(c=>({name:c.name, filterButton:true})),
+    rows: rows
+  });
+
+  colDefs.forEach((c,i)=>{ ws.getColumn(i+1).width = c.width; });
+
+  // 브랜드 색상(Sysmex navy)으로 헤더 강조
+  const headerRow = ws.getRow(1);
+  headerRow.eachCell(cell=>{
+    cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF003087'}};
+    cell.font = {color:{argb:'FFFFFFFF'}, bold:true, size:11};
+    cell.alignment = {vertical:'middle', horizontal:'center'};
+  });
+  headerRow.height = 20;
+
+  // ---- 우측 월별 요약 (전체 / 팀별) ----
+  const monthKey = d => d.slice(0,7);
+  const monthLabel = m => { const [y,mo]=m.split('-'); return `${y}년 ${parseInt(mo)}월`; };
+  const emptyCounts = ()=>({install:0, relocation:0, evaluation:0});
+
+  // FY26 고정 범위: 2026년 4월 ~ 2027년 3월
+  const FY_MONTHS = [];
+  { let y=2026, m=4; for(let i=0;i<12;i++){ FY_MONTHS.push(`${y}-${String(m).padStart(2,'0')}`); m++; if(m>12){m=1;y++;} } }
+
+  const totalByMonth = {};
+  FY_MONTHS.forEach(m=> totalByMonth[m] = emptyCounts());
+  events.forEach(e=>{
+    const m = monthKey(e.start);
+    if(totalByMonth[m] && totalByMonth[m][e.category] !== undefined) totalByMonth[m][e.category]++;
+  });
+
+  const teams = Array.from(new Set(events.map(e=>e.team).filter(Boolean))).sort();
+  const teamByMonth = {};
+  teams.forEach(t=>{ teamByMonth[t] = {}; FY_MONTHS.forEach(m=> teamByMonth[t][m] = emptyCounts()); });
+  events.forEach(e=>{
+    if(!e.team) return;
+    const m = monthKey(e.start);
+    if(teamByMonth[e.team] && teamByMonth[e.team][m]) teamByMonth[e.team][m][e.category]++;
+  });
+
+  // 전체 설치 현황 테이블 (FY26 전체 월 고정 표기)
+  ws.getCell('J1').value = '■ 전체 설치 현황';
+  ws.getCell('J1').font = {bold:true, size:12, color:{argb:'FF003087'}};
+  ws.mergeCells('J1:N1');
+
+  const summaryRowsAll = FY_MONTHS.map(m=>{
+    const c = totalByMonth[m];
+    return [monthLabel(m), c.install, c.relocation, c.evaluation, c.install+c.relocation+c.evaluation];
+  });
+  const totalAll = FY_MONTHS.reduce((acc,m)=>{
+    const c = totalByMonth[m];
+    acc.install += c.install; acc.relocation += c.relocation; acc.evaluation += c.evaluation;
+    return acc;
+  }, {install:0, relocation:0, evaluation:0});
+  summaryRowsAll.push(['합계', totalAll.install, totalAll.relocation, totalAll.evaluation, totalAll.install+totalAll.relocation+totalAll.evaluation]);
+
+  ws.addTable({
+    name: 'MonthlySummaryAll', ref: 'J2', headerRow: true, totalsRow: false,
+    style: { theme: 'TableStyleMedium9', showRowStripes: true },
+    columns: [
+      {name:'월', filterButton:false},
+      {name:'설치', filterButton:false},
+      {name:'이전설치', filterButton:false},
+      {name:'평가', filterButton:false},
+      {name:'합계', filterButton:false},
+    ],
+    rows: summaryRowsAll
+  });
+  ['J','K','L','M','N'].forEach((col,i)=>{ ws.getColumn(col).width = i===0?12:10; });
+  const headerAllRow = ws.getRow(2);
+  ['J','K','L','M','N'].forEach(col=>{
+    const cell = headerAllRow.getCell(col);
+    cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF003087'}};
+    cell.font = {color:{argb:'FFFFFFFF'}, bold:true, size:11};
+  });
+  const totalAllRowIndex = 2 + summaryRowsAll.length;
+  const totalAllRow = ws.getRow(totalAllRowIndex);
+  ['J','K','L','M','N'].forEach(col=>{
+    const cell = totalAllRow.getCell(col);
+    cell.font = {bold:true};
+    cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFE4F5FC'}};
+  });
+
+  // ---- 팀별 설치 현황: 별도 시트에 좌우로 긴(가로) 피벗 형태로 작성 ----
+  const ws2 = wb.addWorksheet('팀별 설치 현황');
+  const monthShortLabel = m => `${parseInt(m.split('-')[1])}월`;
+  const pivotHeaders = ['담당팀', ...FY_MONTHS.map(monthShortLabel), '합계'];
+  ws2.getColumn(1).width = 12;
+  for(let i=2;i<=13;i++){ ws2.getColumn(i).width = 7; }
+  ws2.getColumn(14).width = 8;
+
+  function addTeamPivot(startRow, title, catKey){
+    ws2.getCell(startRow, 1).value = title;
+    ws2.getCell(startRow, 1).font = {bold:true, size:12, color:{argb:'FF003087'}};
+    ws2.mergeCells(startRow, 1, startRow, 14);
+
+    const headerRow = startRow + 1;
+    pivotHeaders.forEach((h,i)=>{
+      const cell = ws2.getCell(headerRow, i+1);
+      cell.value = h;
+      cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF003087'}};
+      cell.font = {color:{argb:'FFFFFFFF'}, bold:true, size:11};
+      cell.alignment = {horizontal:'center'};
+    });
+
+    let r = headerRow + 1;
+    const monthTotals = new Array(FY_MONTHS.length).fill(0);
+    let grandTotal = 0;
+    teams.forEach(t=>{
+      let rowTotal = 0;
+      ws2.getCell(r, 1).value = t;
+      ws2.getCell(r, 1).font = {bold:true};
+      FY_MONTHS.forEach((m,i)=>{
+        const v = teamByMonth[t][m][catKey];
+        ws2.getCell(r, i+2).value = v;
+        ws2.getCell(r, i+2).alignment = {horizontal:'center'};
+        monthTotals[i] += v; rowTotal += v;
+      });
+      ws2.getCell(r, 14).value = rowTotal;
+      ws2.getCell(r, 14).font = {bold:true};
+      ws2.getCell(r, 14).alignment = {horizontal:'center'};
+      grandTotal += rowTotal;
+      r++;
+    });
+
+    ws2.getCell(r, 1).value = '합계';
+    ws2.getCell(r, 1).font = {bold:true};
+    FY_MONTHS.forEach((m,i)=>{
+      ws2.getCell(r, i+2).value = monthTotals[i];
+      ws2.getCell(r, i+2).alignment = {horizontal:'center'};
+    });
+    ws2.getCell(r, 14).value = grandTotal;
+    ws2.getCell(r, 14).alignment = {horizontal:'center'};
+    for(let c=1;c<=14;c++){
+      const cell = ws2.getCell(r, c);
+      cell.font = {bold:true};
+      cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFE4F5FC'}};
+    }
+
+    // 테두리
+    for(let rr=headerRow; rr<=r; rr++){
+      for(let c=1;c<=14;c++){
+        ws2.getCell(rr,c).border = {
+          top:{style:'thin', color:{argb:'FFDFE6F2'}}, bottom:{style:'thin', color:{argb:'FFDFE6F2'}},
+          left:{style:'thin', color:{argb:'FFDFE6F2'}}, right:{style:'thin', color:{argb:'FFDFE6F2'}},
+        };
+      }
+    }
+
+    return r + 2; // 다음 표 시작행 (여백 1행 포함)
+  }
+
+  if(teams.length > 0){
+    let cursor = 1;
+    cursor = addTeamPivot(cursor, '■ 설치 현황 (팀별 × 월별)', 'install');
+    cursor = addTeamPivot(cursor, '■ 이전설치 현황 (팀별 × 월별)', 'relocation');
+    cursor = addTeamPivot(cursor, '■ 평가 현황 (팀별 × 월별)', 'evaluation');
+  }
+
+  ws.views = [{state:'frozen', ySplit:1}];
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {type:'application/octet-stream'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  a.href = url;
+  a.download = `시스템설치_공유캘린더_${today}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`${events.length}건 Excel로 내보내기 완료`);
+}
+
+async function testConnection(){
+  if(!STORAGE_ENDPOINT){
+    alert('❌ FIREBASE_URL이 설정되지 않았습니다.\n\nHTML 파일에서 다음 줄을 찾아 본인의 Firebase 주소로 바꿔주세요:\nconst FIREBASE_URL = "__FIREBASE_URL__";');
+    return;
+  }
+  let msg = `연결 대상:\n${STORAGE_ENDPOINT}\n\n`;
+  try{
+    const start = Date.now();
+    const res = await fetch(STORAGE_ENDPOINT, {cache:'no-store'});
+    const ms = Date.now()-start;
+    if(res.ok){
+      const data = await res.json().catch(()=>null);
+      msg += `✅ 연결 성공 (${ms}ms)\n상태 코드: ${res.status}\n`;
+      msg += data ? `저장된 데이터: 있음 (일정 ${((data.custom||[]).length)}건 등록됨)` : '저장된 데이터: 없음 (아직 아무도 저장한 적 없음 — 정상)';
+    } else if(res.status===401 || res.status===403){
+      msg += `❌ 접근 거부됨 (상태 코드 ${res.status})\n\n원인: Firebase Realtime Database 규칙이 "테스트 모드"가 아니거나 만료되었습니다.\nFirebase 콘솔 → Realtime Database → 규칙 탭에서 read/write를 true로 설정해주세요.`;
+    } else {
+      msg += `❌ 서버 응답 오류 (상태 코드 ${res.status} ${res.statusText})\n\nFIREBASE_URL 주소가 정확한지 다시 확인해주세요.`;
+    }
+  }catch(err){
+    msg += `❌ 서버에 연결할 수 없습니다.\n(${err.message})\n\n가능한 원인:\n- 인터넷 연결 문제\n- 회사 방화벽/프록시가 *.firebasedatabase.app 또는 *.firebaseio.com 도메인을 차단\n- FIREBASE_URL 주소 오타\n\n회사 네트워크가 원인인지 확인하려면, 이 URL을 새 브라우저 탭에 직접 붙여넣어 열어보세요:\n${STORAGE_ENDPOINT}`;
+  }
+  alert(msg);
+}
+
+function openManagerSearch(){
+  const panel = document.getElementById('panel');
+  panel.innerHTML = `
+    <button class="close" onclick="closePanel()">✕</button>
+    <h3>담당자 찾기</h3>
+    <div class="sub">병원명(거래처명)을 입력하면 담당자를 확인할 수 있습니다.</div>
+    <div class="form-row">
+      <input type="text" id="mgr-search-input" autocomplete="off" placeholder="예: 강남차병원">
+    </div>
+    <div id="mgr-search-results"></div>
+  `;
+  const input = panel.querySelector('#mgr-search-input');
+  const resultsBox = panel.querySelector('#mgr-search-results');
+
+  function renderResults(){
+    const q = input.value.trim().toLowerCase();
+    if(!q){
+      resultsBox.innerHTML = `<div class="search-empty">병원명을 입력해주세요</div>`;
+      return;
+    }
+    const matches = getAllClients().filter(c=> c.client.toLowerCase().includes(q))
+      .sort((a,b)=> a.client.localeCompare(b.client, 'ko'));
+    if(matches.length===0){
+      resultsBox.innerHTML = `<div class="search-empty">일치하는 거래처가 없습니다</div>`;
+      return;
+    }
+    resultsBox.innerHTML = matches.slice(0, 30).map(c=>
+      `<div class="detail-ev install" style="margin-bottom:8px;">
+        <div class="txt">${c.client}</div>
+        <div class="meta">담당자: ${c.manager || '미상'}${c.team? ' · 담당팀: '+c.team : ''}</div>
+      </div>`
+    ).join('') + (matches.length>30 ? `<div class="search-empty">외 ${matches.length-30}건 더 있음 (검색어를 구체적으로 입력해주세요)</div>` : '');
+  }
+
+  input.addEventListener('input', renderResults);
+  renderResults();
+  document.getElementById('overlay').classList.add('show');
+  setTimeout(()=> input.focus(), 50);
+}
+
+document.getElementById('managerSearchBtn').onclick = openManagerSearch;
+document.getElementById('testConnBtn').onclick = testConnection;
+document.getElementById('openAddBtn').onclick = ()=>openForm(null, fmtDate(viewYear, viewMonth, Math.min(new Date().getDate(),28)));
+document.getElementById('exportXlsxBtn').onclick = exportExcel;
+document.getElementById('exportBtn').onclick = exportICS;
+document.getElementById('refreshBtn').onclick = async ()=>{
+  searchQuery = '';
+  searchInputEl.value = '';
+  document.getElementById('searchResults').classList.remove('show');
+  await loadStorage();
+  render();
+  showToast('최신 일정을 불러왔습니다');
+};
+document.getElementById('prevBtn').onclick = ()=>{ viewMonth--; if(viewMonth===0){viewMonth=12;viewYear--;} render(); };
+document.getElementById('nextBtn').onclick = ()=>{ viewMonth++; if(viewMonth===13){viewMonth=1;viewYear++;} render(); };
+document.getElementById('todayBtn').onclick = ()=>{ const t=new Date(); viewYear=t.getFullYear(); viewMonth=t.getMonth()+1; render(); };
+
+function fmtDateLabel(dstr){
+  const [y,m,d] = dstr.split('-').map(Number);
+  return `${y}년 ${m}월 ${d}일`;
+}
+
+function fmtTimestamp(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function renderSearchResults(){
+  const box = document.getElementById('searchResults');
+  const q = searchQuery;
+  if(!q){ box.classList.remove('show'); box.innerHTML=''; return; }
+
+  const all = getAllEvents().filter(e=>matchEvent(e, q));
+  all.sort((a,b)=> a.start < b.start ? -1 : a.start > b.start ? 1 : 0);
+
+  if(all.length===0){
+    box.innerHTML = `<div class="search-empty">검색 결과가 없습니다</div>`;
+    box.classList.add('show');
+    return;
+  }
+
+  box.innerHTML = '';
+  all.slice(0, 15).forEach(e=>{
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+    const dateTxt = (e.start!==e.end ? `${e.start} ~ ${e.end}` : fmtDateLabel(e.start));
+    const catLabel = CATS[e.category] ? CATS[e.category].label : e.category;
+    item.innerHTML = `<div class="sr-title">${e.title}${e.device? ' · '+e.device : ''}</div>
+      <div class="sr-meta">${catLabel} · ${dateTxt}${e.team? ' · '+e.team : ''}</div>`;
+    item.onclick = ()=>{
+      const [y,m] = e.start.split('-').map(Number);
+      viewYear = y; viewMonth = m;
+      render();
+      document.getElementById('searchResults').classList.remove('show');
+      setTimeout(()=> openDetail(e), 150);
+    };
+    box.appendChild(item);
+  });
+  box.classList.add('show');
+}
+
+const searchInputEl = document.getElementById('searchInput');
+searchInputEl.addEventListener('input', ()=>{
+  searchQuery = searchInputEl.value.trim().toLowerCase();
+  renderSearchResults();
+  render();
+});
+searchInputEl.addEventListener('focus', ()=>{ if(searchQuery) renderSearchResults(); });
+document.addEventListener('click', (ev)=>{
+  const wrap = document.getElementById('searchWrap');
+  if(!wrap.contains(ev.target)){
+    document.getElementById('searchResults').classList.remove('show');
+  }
+});
+
+(async function init(){
+  render(); // 네트워크 응답을 기다리지 않고 먼저 화면을 그림 (느리거나 막힌 네트워크에서도 캘린더가 비어보이지 않도록)
+  if(!STORAGE_ENDPOINT){
+    document.getElementById('configBanner').style.display = 'block';
+  }
+  await loadStorage();
+  render(); // 공유 데이터가 도착하면 다시 그려서 반영
+  setInterval(async ()=>{
+    if(document.getElementById('overlay').classList.contains('show')) return; // don't disrupt active edits
+    await loadStorage();
+    render();
+  }, 20000);
+})();
+</script>
+</body>
+</html>
