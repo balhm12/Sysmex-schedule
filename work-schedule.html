@@ -110,7 +110,7 @@
     background:white;border:1px solid var(--line);border-radius:16px;margin-top:16px;
     box-shadow:0 6px 24px -14px rgba(20,40,90,0.15);
   }
-  .grid-scroll{overflow-x:auto;overflow-y:auto;max-height:70vh;max-width:100%;-webkit-overflow-scrolling:touch;border-radius:16px;scrollbar-width:thin;scrollbar-color:var(--navy) var(--paper);}
+  .grid-scroll{overflow-x:auto;overflow-y:auto;max-height:85vh;max-width:100%;-webkit-overflow-scrolling:touch;border-radius:16px;scrollbar-width:thin;scrollbar-color:var(--navy) var(--paper);}
   .grid-scroll::-webkit-scrollbar{width:8px;height:10px;}
   .grid-scroll::-webkit-scrollbar-track{background:var(--paper);}
   .grid-scroll::-webkit-scrollbar-thumb{background:var(--navy);border-radius:8px;}
@@ -455,8 +455,8 @@ const HALF_STATUS = [
 // 야간은 하나만 선택
 const NIGHT_STATUS = [
   {key:'', label:'-'},
-  {key:'석간', label:'석/야간', short:'야', color:'#0891B2', bg:'#CFFAFE', weekdayOnly:true, hasDetail:true},
-  {key:'철야', label:'석간', short:'석', color:'#4F46E5', bg:'#E0E7FF', weekdayOnly:true, hasDetail:true},
+  {key:'석/야', label:'석/야', short:'야', color:'#0891B2', bg:'#CFFAFE', weekdayOnly:true, hasDetail:true},
+  {key:'석간', label:'석간', short:'석', color:'#4F46E5', bg:'#E0E7FF', weekdayOnly:true, hasDetail:true},
   {key:'OFF', label:'OFF', short:'OF', color:'#6B7280', bg:'#F3F4F6', weekdayOnly:true, hasDetail:true},
   {key:'잔업', label:'잔업', short:'잔', color:'#B45309', bg:'#FEF3C7', weekdayOnly:true, hasDetail:true},
 ];
@@ -645,6 +645,54 @@ function normalizeWeekendKeys(){
   return changed;
 }
 
+// 예전 야간 키 이름(석간→석야, 철야→석간) 변경 반영 — "키: 세부내용" 형태도 함께 처리
+function migrateNightKeyNames(){
+  let changed = false;
+  const remap = {'석간':'석야', '철야':'석간'};
+  TEAM_ORDER.forEach(tk=>{
+    Object.keys(scheduleData[tk]||{}).forEach(dstr=>{
+      Object.keys(scheduleData[tk][dstr]).forEach(nm=>{
+        const e = scheduleData[tk][dstr][nm];
+        if(!e.night) return;
+        for(const oldKey in remap){
+          if(e.night === oldKey){
+            e.night = remap[oldKey];
+            changed = true;
+            break;
+          } else if(e.night.indexOf(oldKey + ':') === 0){
+            e.night = remap[oldKey] + e.night.slice(oldKey.length);
+            changed = true;
+            break;
+          }
+        }
+      });
+    });
+  });
+  return changed;
+}
+
+// 2차 수정: "석야" 표기를 "석/야"로 통일 (요청 정정 반영)
+function migrateNightKeyNamesV2(){
+  let changed = false;
+  const oldKey = '석야', newKey = '석/야';
+  TEAM_ORDER.forEach(tk=>{
+    Object.keys(scheduleData[tk]||{}).forEach(dstr=>{
+      Object.keys(scheduleData[tk][dstr]).forEach(nm=>{
+        const e = scheduleData[tk][dstr][nm];
+        if(!e.night) return;
+        if(e.night === oldKey){
+          e.night = newKey;
+          changed = true;
+        } else if(e.night.indexOf(oldKey + ':') === 0){
+          e.night = newKey + e.night.slice(oldKey.length);
+          changed = true;
+        }
+      });
+    });
+  });
+  return changed;
+}
+
 // 주말·공휴일에 남아있는 석/야간(석간)·석간(철야) 값을 당직으로 통일
 // 주말·공휴일에는 야간 필드를 쓰지 않고 주말/휴일 구분(당직)으로 통일합니다.
 function normalizeWeekendNight(){
@@ -655,7 +703,7 @@ function normalizeWeekendNight(){
       if(!isOff) return;
       Object.keys(scheduleData[tk][dstr]).forEach(nm=>{
         const e = scheduleData[tk][dstr][nm];
-        if(e.night === '석간' || e.night === '철야' || e.night === '당직'){
+        if(e.night === '석/야' || e.night === '석야' || e.night === '석간' || e.night === '철야' || e.night === '당직'){
           if(!e.weekend) e.weekend = '당직';
           e.night = '';
           changed = true;
@@ -868,7 +916,7 @@ function renderLegend(){
 // ============================================================
 const GUIDE_ITEMS = [
   {icon:'👆', h:'일정 입력', d:'달력 칸(이름 × 날짜) 클릭 → 편집창이 열립니다. 평일은 오전1·오전2·오후1·오후2·야간을, 주말·공휴일은 주말/휴일 구분(전화대기·당직·추가편성·기타)만 입력합니다. (당직은 주말·공휴일에만 선택 가능)'},
-  {icon:'⚡', h:'자동 채움', d:'OFF·휴가(전일)·당직·DP를 선택하면 오전1~오후2 전체가 자동으로 채워집니다. ON·내근은 오전1~오후2를 각각 따로 선택합니다. 야간에 "석/야간"을 선택하면 다음 근무일들도 자동으로 이어서 채워집니다.'},
+  {icon:'⚡', h:'자동 채움', d:'OFF·휴가(전일)·당직·DP를 선택하면 오전1~오후2 전체가 자동으로 채워집니다. ON·내근은 오전1~오후2를 각각 따로 선택합니다. 야간에 "석/야"를 선택하면 다음 근무일들도 자동으로 이어서 채워집니다.'},
   {icon:'🔎', h:'범례 필터', d:'상단 범례 클릭 → 해당 상태만 강조, 나머지는 흐리게 표시됩니다. "🌙 당직만 보기"를 누르면 야간·당직 관련 항목만 따로 볼 수 있습니다.'},
   {icon:'🗂️', h:'팀 전환 · 오늘 현황', d:'상단 팀 탭(East·West·Central·South·전체)으로 전환합니다. 배너에는 오늘 야간 근무자, 휴가자, 주말·공휴일 당직자가 바로 표시됩니다.'},
   {icon:'✍️', h:'직접 입력', d:'오전1·오전2·오후1·오후2는 목록에서 고르거나 원하는 내용을 직접 입력할 수 있습니다. 회의·교육·병원명은 선택 후 콜론(:) 뒤에 세부 내용을 이어 쓸 수 있습니다.'},
@@ -1454,7 +1502,7 @@ function openEditor(team, date, name){
   const nightSel = panel.querySelector('#f-night');
   if(nightSel){
     nightSel.addEventListener('change', function(){
-      if(this.value === '석간' || this.value === '철야'){
+      if(this.value === '석/야' || this.value === '석간'){
         slotIds.forEach(oid=>{ panel.querySelector('#'+oid).value = 'OFF'; });
       }
     });
@@ -1482,16 +1530,17 @@ function openEditor(team, date, name){
     setEntry(team, date, name, updated);
     const nightSt = nightStatusOf(updated.night);
     const nightLabel = nightSt ? nightSt.label : '';
-    if(nightLabel === '석/야간'){
-      // 석간/야간 선택 시: 다음 근무일 = 석간, 그다음 근무일 = OFF (주말·공휴일은 건너뜀)
+    if(nightLabel === '석/야'){
+      // 석/야 선택 시: 다음 근무일 = 석간, 그다음 근무일 = OFF (주말·공휴일은 건너뜀)
       const day1 = nextWorkday(date);
       const e1 = Object.assign(blankEntry(), getEntry(team, day1, name));
-      e1.night = '철야';
+      e1.night = '석간';
       e1.am1 = e1.am2 = e1.pm1 = e1.pm2 = 'OFF';
       setEntry(team, day1, name, e1);
 
       const day2 = nextWorkday(day1);
       const e2 = Object.assign(blankEntry(), getEntry(team, day2, name));
+      e2.night = 'OFF';
       e2.am1 = e2.am2 = e2.pm1 = e2.pm2 = 'OFF';
       setEntry(team, day2, name, e2);
     } else if(nightLabel === '석간'){
@@ -1836,6 +1885,14 @@ document.getElementById('refreshBtn').onclick = async ()=>{
     await saveStorage();
     await markSeedV3Applied();
     showToast('석/야간·석간·주말당직·전화당직 데이터를 반영했습니다');
+  }
+  if(migrateNightKeyNames()){
+    render();
+    await saveStorage();
+  }
+  if(migrateNightKeyNamesV2()){
+    render();
+    await saveStorage();
   }
   if(normalizeWeekendKeys()){
     render();
