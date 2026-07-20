@@ -1519,7 +1519,7 @@ function openEditor(team, date, name){
 
       const day2 = nextWorkday(day1);
       const e2 = Object.assign(blankEntry(), getEntry(team, day2, name));
-      e2.night = 'OFF';
+      e2.am1 = e2.am2 = e2.pm1 = e2.pm2 = 'OFF';
       setEntry(team, day2, name, e2);
     } else if(nightLabel === '석간'){
       // 석간 단독 선택 시: 다음 근무일 = OFF (주말·공휴일은 건너뜀)
