@@ -1623,7 +1623,9 @@ async function exportExcel(){
       phone: stats['w_전화']||0,
       extra: stats['w_추가편성']||0,
       etc: stats['w_기타']||0,
-      nightTotal: (stats['n_석간']||0) + (stats['n_철야']||0) + (stats['n_잔업']||0),
+      nightTotal: (stats['n_석/야']||0) + (stats['n_석간']||0) + (stats['n_잔업']||0),
+      naegeun: stats['s_내근']||0,
+      dp: stats['s_DP']||0,
       edu: stats['s_교육']||0,
       meet: stats['s_회의']||0,
     };
@@ -1646,7 +1648,7 @@ async function exportExcel(){
   TEAM_ORDER.forEach(tk=>{
     TEAMS[tk].members.forEach(m=>{
       const s = summarize(computePersonStats(tk, m.name, viewYear, viewMonth));
-      summaryRows.push([TEAMS[tk].label, m.name, m.role, s.workDays, s.leaveDays, s.duty, s.phone, s.nightTotal, s.edu, s.meet]);
+      summaryRows.push([TEAMS[tk].label, m.name, m.role, s.workDays, s.leaveDays, s.duty, s.phone, s.nightTotal, s.naegeun, s.dp, s.edu, s.meet]);
     });
   });
   summaryWs.addTable({
@@ -1655,32 +1657,37 @@ async function exportExcel(){
     columns: [
       {name:'팀', filterButton:true}, {name:'이름', filterButton:true}, {name:'직급', filterButton:true},
       {name:'근무일', filterButton:false}, {name:'휴가일수', filterButton:false}, {name:'당직', filterButton:false},
-      {name:'전화대기', filterButton:false}, {name:'야간계', filterButton:false}, {name:'교육', filterButton:false}, {name:'회의', filterButton:false},
+      {name:'전화대기', filterButton:false}, {name:'야간계', filterButton:false}, {name:'내근', filterButton:false},
+      {name:'DP', filterButton:false}, {name:'교육', filterButton:false}, {name:'회의', filterButton:false},
     ],
     rows: summaryRows
   });
-  [12,10,8,9,10,8,10,9,8,8].forEach((w,i)=> summaryWs.getColumn(i+1).width = w);
+  [12,10,8,9,10,8,10,9,8,8,8,8].forEach((w,i)=> summaryWs.getColumn(i+1).width = w);
   styleHeaderRow(summaryWs.getRow(1));
   summaryWs.views = [{state:'frozen', ySplit:1}];
+  summaryRows.forEach((r,i)=>{
+    const row = summaryWs.getRow(i+2);
+    for(let c=4; c<=12; c++) row.getCell(c).alignment = {horizontal:'center', vertical:'middle'};
+  });
   summaryWs.getCell('A' + (summaryRows.length+3)).value = ymLabel + ' 기준';
   summaryWs.getCell('A' + (summaryRows.length+3)).font = {italic:true, color:{argb:'FF5A6B8C'}, size:10};
 
   // ================= 팀별 비교 (이번 달) =================
   const teamWs = wb.addWorksheet('팀별 비교');
   const teamRows = [];
-  const grandTotal = {workDays:0, leaveDays:0, duty:0, phone:0, extra:0, etc:0, nightTotal:0, edu:0, meet:0};
+  const grandTotal = {workDays:0, leaveDays:0, duty:0, phone:0, extra:0, etc:0, nightTotal:0, naegeun:0, dp:0, edu:0, meet:0};
   let grandCount = 0;
   TEAM_ORDER.forEach(tk=>{
-    const totals = {workDays:0, leaveDays:0, duty:0, phone:0, extra:0, etc:0, nightTotal:0, edu:0, meet:0};
+    const totals = {workDays:0, leaveDays:0, duty:0, phone:0, extra:0, etc:0, nightTotal:0, naegeun:0, dp:0, edu:0, meet:0};
     TEAMS[tk].members.forEach(m=>{
       const s = summarize(computePersonStats(tk, m.name, viewYear, viewMonth));
       Object.keys(totals).forEach(k=> totals[k]+=s[k]);
     });
     Object.keys(grandTotal).forEach(k=> grandTotal[k]+=totals[k]);
     grandCount += TEAMS[tk].members.length;
-    teamRows.push([TEAMS[tk].label, TEAMS[tk].members.length, totals.workDays, totals.leaveDays, totals.duty, totals.phone, totals.extra, totals.etc, totals.nightTotal, totals.edu, totals.meet]);
+    teamRows.push([TEAMS[tk].label, TEAMS[tk].members.length, totals.workDays, totals.leaveDays, totals.duty, totals.phone, totals.extra, totals.etc, totals.nightTotal, totals.naegeun, totals.dp, totals.edu, totals.meet]);
   });
-  teamRows.push(['전체 합계', grandCount, grandTotal.workDays, grandTotal.leaveDays, grandTotal.duty, grandTotal.phone, grandTotal.extra, grandTotal.etc, grandTotal.nightTotal, grandTotal.edu, grandTotal.meet]);
+  teamRows.push(['전체 합계', grandCount, grandTotal.workDays, grandTotal.leaveDays, grandTotal.duty, grandTotal.phone, grandTotal.extra, grandTotal.etc, grandTotal.nightTotal, grandTotal.naegeun, grandTotal.dp, grandTotal.edu, grandTotal.meet]);
   teamWs.addTable({
     name: 'TeamCompare', ref: 'A1', headerRow: true, totalsRow: false,
     style: {theme:'TableStyleMedium9', showRowStripes:true},
@@ -1688,15 +1695,20 @@ async function exportExcel(){
       {name:'팀', filterButton:false}, {name:'인원수', filterButton:false}, {name:'총근무일', filterButton:false},
       {name:'총휴가일수', filterButton:false}, {name:'총당직', filterButton:false}, {name:'총전화대기', filterButton:false},
       {name:'총추가편성', filterButton:false}, {name:'총기타', filterButton:false}, {name:'총야간계', filterButton:false},
+      {name:'총내근', filterButton:false}, {name:'총DP', filterButton:false},
       {name:'총교육', filterButton:false}, {name:'총회의', filterButton:false},
     ],
     rows: teamRows
   });
-  [13,9,10,11,9,11,11,9,10,9,9].forEach((w,i)=> teamWs.getColumn(i+1).width = w);
+  [13,9,10,11,9,11,11,9,10,9,8,9,9].forEach((w,i)=> teamWs.getColumn(i+1).width = w);
   styleHeaderRow(teamWs.getRow(1));
   const teamTotalRowIdx = 1 + teamRows.length;
   teamWs.getRow(teamTotalRowIdx).eachCell(c=>{ c.font = {bold:true}; c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:LIGHTBLUE}}; });
   teamWs.views = [{state:'frozen', ySplit:1}];
+  teamRows.forEach((r,i)=>{
+    const row = teamWs.getRow(i+2);
+    for(let c=2; c<=13; c++) row.getCell(c).alignment = {horizontal:'center', vertical:'middle'};
+  });
 
   // ================= 당직·야간 형평성 (팀별로 당직 많은 순 정렬 + 색상 스케일) =================
   const equityWs = wb.addWorksheet('형평성');
@@ -1721,6 +1733,11 @@ async function exportExcel(){
   [12,10,8,8,9].forEach((w,i)=> equityWs.getColumn(i+1).width = w);
   styleHeaderRow(equityWs.getRow(1));
   equityWs.views = [{state:'frozen', ySplit:1}];
+  equityRows.forEach((r,i)=>{
+    const row = equityWs.getRow(i+2);
+    row.getCell(4).alignment = {horizontal:'center', vertical:'middle'};
+    row.getCell(5).alignment = {horizontal:'center', vertical:'middle'};
+  });
   if(equityRows.length > 0){
     const lastRow = equityRows.length + 1;
     // 당직(D열), 야간계(E열) — 많을수록 진한 빨강, 적을수록 연한 초록 (부담 쏠림 한눈에 확인)
@@ -1808,7 +1825,82 @@ async function exportExcel(){
     [5,6,7,8,9,10].forEach(colIdx=> colorCell(row.getCell(colIdx), r[colIdx-1]));
   });
 
-  [summaryWs, teamWs, equityWs, statsWs, detailWs].forEach(borderAll);
+  // ================= 야간·당직 로그 (전체 팀, 데이터 있는 모든 달) =================
+  const logWs = wb.addWorksheet('야간·당직 로그');
+  const allMonths = getMonthsWithData('all');
+
+  function logSection(startRow, title, rows, headers){
+    logWs.getCell(startRow, 1).value = title;
+    logWs.getCell(startRow, 1).font = {bold:true, size:12, color:{argb:NAVY}};
+    logWs.mergeCells(startRow, 1, startRow, headers.length);
+    const headerRow = startRow + 1;
+    headers.forEach((h,i)=>{
+      const c = logWs.getCell(headerRow, i+1);
+      c.value = h;
+      c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:NAVY}};
+      c.font = {bold:true, color:{argb:WHITE}};
+      c.alignment = {horizontal:'center', vertical:'middle'};
+    });
+    if(rows.length === 0){
+      logWs.getCell(headerRow+1, 1).value = '해당 내역 없음';
+      logWs.getCell(headerRow+1, 1).font = {italic:true, color:{argb:'FF5A6B8C'}};
+      return headerRow + 3;
+    }
+    rows.forEach((r, i)=>{
+      r.forEach((v, ci)=>{
+        const c = logWs.getCell(headerRow+1+i, ci+1);
+        c.value = v;
+        c.alignment = {horizontal: ci<=2 ? 'center' : 'left', vertical:'middle'};
+      });
+    });
+    return headerRow + rows.length + 2;
+  }
+
+  const nightRows = [];
+  const dutyRows = [];
+  const phoneRows = [];
+  allMonths.forEach(monthYm=>{
+    const parts = monthYm.split('-').map(Number);
+    const y = parts[0], mo = parts[1];
+    const nDaysM = daysInMonth(y, mo);
+    for(let d=1; d<=nDaysM; d++){
+      const dstr = fmtDate(y, mo, d);
+      const wk = weekdayKr(y, mo, d);
+      TEAM_ORDER.forEach(tk=>{
+        TEAMS[tk].members.forEach(m=>{
+          const e = getEntry(tk, dstr, m.name);
+          const nst = nightStatusOf(e.night);
+          if(nst){
+            nightRows.push([dstr, wk, TEAMS[tk].label, m.name, nst.label, e.night]);
+          }
+          const wst = weekendStatusOf(e.weekend);
+          if(wst && wst.key === '당직'){
+            dutyRows.push([dstr, wk, TEAMS[tk].label, m.name, e.weekend]);
+          }
+          if(wst && wst.key === '전화'){
+            phoneRows.push([dstr, wk, TEAMS[tk].label, m.name, e.weekend]);
+          }
+        });
+      });
+    }
+  });
+
+  let cursor = 1;
+  cursor = logSection(cursor, '■ 월별 야간근무 현황', nightRows, ['날짜','요일','팀','이름','구분','비고(세부내용)']);
+  cursor = logSection(cursor, '■ 주말 당직 현황', dutyRows, ['날짜','요일','팀','이름','비고(세부내용)']);
+  cursor = logSection(cursor, '■ 주말 전화당직 현황', phoneRows, ['날짜','요일','팀','이름','비고(세부내용)']);
+  [12,6,12,10,10,26].forEach((w,i)=> logWs.getColumn(i+1).width = w);
+  logWs.views = [{state:'frozen', ySplit:0}];
+
+  [summaryWs, teamWs, equityWs, statsWs, detailWs, logWs].forEach(borderAll);
+
+  // ---- 가독성: 시트 탭 색상 구분 ----
+  summaryWs.properties.tabColor = {argb:'FF009EE0'};
+  teamWs.properties.tabColor = {argb:'FF7A5CC4'};
+  equityWs.properties.tabColor = {argb:'FFE8871E'};
+  logWs.properties.tabColor = {argb:'FF1F9E6E'};
+  statsWs.properties.tabColor = {argb:'FF6B7280'};
+  detailWs.properties.tabColor = {argb:'FF6B7280'};
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], {type:'application/octet-stream'});
@@ -1818,7 +1910,7 @@ async function exportExcel(){
   a.download = team.label + '_근무일정_' + viewYear + String(viewMonth).padStart(2,'0') + '.xlsx';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast('Excel로 내보내기 완료 (개인별요약·팀별비교·형평성·통계·상세)');
+  showToast('Excel로 내보내기 완료 (개인별요약·팀별비교·형평성·야간당직로그·통계·상세)');
 }
 
 // ============================================================
