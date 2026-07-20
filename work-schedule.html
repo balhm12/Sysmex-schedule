@@ -145,6 +145,10 @@
   table.sched td.daycell.holiday-col{background:#FAD8D8;}
   table.sched td.daycell.today{background:var(--blue-soft);}
   table.sched td.daycell.cell-dim{opacity:.15;}
+  /* 선택 셀 십자 음영 */
+  table.sched td.hl-cross, table.weeksched td.hl-cross{background:#FFF3C4 !important;}
+  table.sched td.daycell.hl-sel, table.weeksched td.wcell.hl-sel{box-shadow:inset 0 0 0 2px #E8A600;background:#FFE79A !important;}
+  table.sched td.namecell.hl-name, table.weeksched td.datecell.hl-date{background:#FFE79A !important;}
   .quad{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;height:100%;}
   .qcell{font-size:7px;font-weight:800;border-radius:2px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
   .duty-chips{display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;height:100%;padding:2px;}
@@ -1128,6 +1132,7 @@ function renderMonthGrid(){
   const tbody = document.createElement('tbody');
   team.members.forEach(m=>{
     const tr = document.createElement('tr');
+    tr.dataset.name = m.name;
     const mTeam = memberTeam(m);
     const nameTd = document.createElement('td');
     nameTd.className = 'namecell';
@@ -1143,6 +1148,8 @@ function renderMonthGrid(){
       const entry = Object.assign(blankEntry(), getEntry(mTeam, dstr, m.name));
       const td = document.createElement('td');
       td.className = 'daycell' + (dstr===todayStr?' today':'') + (holi?' holiday-col':(weekend?' weekend-col':''));
+      td.dataset.date = dstr;
+      td.dataset.name = m.name;
       if(dutyOnlyView) fillDayCellDutyOnly(td, entry); else fillDayCell(td, entry);
       td.onclick = ()=>openEditor(mTeam, dstr, m.name);
       tr.appendChild(td);
@@ -1184,6 +1191,7 @@ function renderWeekGrid(){
   function addRow(dstr, rowLabel, cellFn, opts){
     opts = opts || {};
     const tr = document.createElement('tr');
+    tr.dataset.date = dstr;
     if(opts.groupStart) tr.classList.add('daygroup-start');
     if(dstr===todayStr) tr.classList.add('today-row');
     if(HOLIDAYS_KR[dstr]) tr.classList.add('holiday-row');
@@ -1202,6 +1210,8 @@ function renderWeekGrid(){
     team.members.forEach(m=>{
       const td = document.createElement('td');
       td.className = 'wcell';
+      td.dataset.date = dstr;
+      td.dataset.name = m.name;
       cellFn(td, m);
       td.onclick = ()=>openEditor(memberTeam(m), dstr, m.name);
       tr.appendChild(td);
@@ -1342,7 +1352,26 @@ function openMemberOrderPanel(){
   document.getElementById('overlay').classList.add('show');
 }
 
+function clearCellHighlight(){
+  document.querySelectorAll('.hl-cross, .hl-sel, .hl-name, .hl-date').forEach(el=>{
+    el.classList.remove('hl-cross','hl-sel','hl-name','hl-date');
+  });
+}
+function highlightCell(date, name){
+  clearCellHighlight();
+  // 월간: 같은 이름 행 + 같은 날짜 칸 / 주간: 같은 날짜 행 + 같은 이름 칸
+  document.querySelectorAll('td[data-date][data-name]').forEach(td=>{
+    const sameDate = td.dataset.date === date;
+    const sameName = td.dataset.name === name;
+    if(sameDate && sameName){ td.classList.add('hl-sel'); }
+    else if(sameDate || sameName){ td.classList.add('hl-cross'); }
+  });
+  document.querySelectorAll('tr[data-name="'+ (window.CSS && CSS.escape ? CSS.escape(name) : name) +'"] td.namecell').forEach(td=> td.classList.add('hl-name'));
+  document.querySelectorAll('tr[data-date="'+date+'"] td.datecell').forEach(td=> td.classList.add('hl-date'));
+}
+
 function openEditor(team, date, name){
+  highlightCell(date, name);
   const panel = document.getElementById('panel');
   const entry = Object.assign(blankEntry(), getEntry(team,date,name));
   const parts = date.split('-').map(Number);
@@ -1533,7 +1562,7 @@ function openEditor(team, date, name){
 
   document.getElementById('overlay').classList.add('show');
 }
-function closePanel(){ document.getElementById('overlay').classList.remove('show'); }
+function closePanel(){ document.getElementById('overlay').classList.remove('show'); clearCellHighlight(); }
 document.getElementById('overlay').onclick = (ev)=>{ if(ev.target.id==='overlay') closePanel(); };
 
 // ============================================================
@@ -1863,11 +1892,63 @@ async function exportExcel(){
     }
   });
 
-  let cursor = 1;
+  // ---- 월별 집계 (인원수 · 횟수) ----
+  function monthlyCount(rows){
+    const byMonth = {};
+    rows.forEach(r=>{
+      const ym = r[0].slice(0,7);
+      if(!byMonth[ym]) byMonth[ym] = {names:new Set(), count:0};
+      byMonth[ym].names.add(r[3]);
+      byMonth[ym].count++;
+    });
+    return byMonth;
+  }
+  const nightByMonth = monthlyCount(nightRows);
+  const dutyByMonth = monthlyCount(dutyRows);
+  const phoneByMonth = monthlyCount(phoneRows);
+
+  logWs.getCell(1, 1).value = '■ 월별 집계 (인원수 · 횟수)';
+  logWs.getCell(1, 1).font = {bold:true, size:12, color:{argb:NAVY}};
+  logWs.mergeCells(1, 1, 1, 7);
+  const aggHeaders = ['월','야간근무 인원','야간근무 횟수','당직 인원','당직 횟수','전화당직 인원','전화당직 횟수'];
+  aggHeaders.forEach((h,i)=>{
+    const c = logWs.getCell(2, i+1);
+    c.value = h;
+    c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:NAVY}};
+    c.font = {bold:true, color:{argb:WHITE}};
+    c.alignment = {horizontal:'center', vertical:'middle'};
+  });
+  const monthTotals = {night:{names:new Set(),count:0}, duty:{names:new Set(),count:0}, phone:{names:new Set(),count:0}};
+  allMonths.forEach((ym, i)=>{
+    const n = nightByMonth[ym] || {names:new Set(), count:0};
+    const du = dutyByMonth[ym] || {names:new Set(), count:0};
+    const ph = phoneByMonth[ym] || {names:new Set(), count:0};
+    n.names.forEach(x=>monthTotals.night.names.add(x)); monthTotals.night.count += n.count;
+    du.names.forEach(x=>monthTotals.duty.names.add(x)); monthTotals.duty.count += du.count;
+    ph.names.forEach(x=>monthTotals.phone.names.add(x)); monthTotals.phone.count += ph.count;
+    const row = 3 + i;
+    const vals = [ym, n.names.size, n.count, du.names.size, du.count, ph.names.size, ph.count];
+    vals.forEach((v,ci)=>{
+      const c = logWs.getCell(row, ci+1);
+      c.value = v;
+      c.alignment = {horizontal:'center', vertical:'middle'};
+    });
+  });
+  const totalRowIdx = 3 + allMonths.length;
+  const totalVals = ['합계(중복제거)', monthTotals.night.names.size, monthTotals.night.count, monthTotals.duty.names.size, monthTotals.duty.count, monthTotals.phone.names.size, monthTotals.phone.count];
+  totalVals.forEach((v,ci)=>{
+    const c = logWs.getCell(totalRowIdx, ci+1);
+    c.value = v;
+    c.font = {bold:true};
+    c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:LIGHTBLUE}};
+    c.alignment = {horizontal:'center', vertical:'middle'};
+  });
+
+  let cursor = totalRowIdx + 2;
   cursor = logSection(cursor, '■ 월별 야간근무 현황', nightRows, ['날짜','요일','팀','이름','구분','비고(세부내용)']);
   cursor = logSection(cursor, '■ 주말 당직 현황', dutyRows, ['날짜','요일','팀','이름','비고(세부내용)']);
   cursor = logSection(cursor, '■ 주말 전화당직 현황', phoneRows, ['날짜','요일','팀','이름','비고(세부내용)']);
-  [12,6,12,10,10,26].forEach((w,i)=> logWs.getColumn(i+1).width = w);
+  [14,10,14,12,18,20,16].forEach((w,i)=> logWs.getColumn(i+1).width = w);
   logWs.views = [{state:'frozen', ySplit:0}];
 
   [summaryWs, teamWs, equityWs, statsWs, detailWs, logWs].forEach(borderAll);
