@@ -616,6 +616,16 @@ async function loadStorage(){
   }
 }
 
+function countEntries(data){
+  let n = 0;
+  TEAM_ORDER.forEach(tk=>{
+    const team = data && data[tk];
+    if(!team) return;
+    Object.keys(team).forEach(dstr=>{ n += Object.keys(team[dstr]||{}).length; });
+  });
+  return n;
+}
+
 async function saveStorage(){
   if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 설정되지 않았습니다'); return; }
   try{
@@ -627,6 +637,19 @@ async function saveStorage(){
       if(cur.ok){ serverData = (await cur.json()) || {}; }
     }catch(e){ /* 서버 조회 실패 시 병합 없이 진행 */ }
     const merged = Object.assign({}, serverData, scheduleData);
+
+    // 안전장치: 지금 저장하려는 내용이 서버에 있던 것보다 눈에 띄게 적으면(절반 이하로 줄고,
+    // 서버에 최소 10건 이상 있었다면) 자동 저장을 막고 경고합니다 — 오래된/불완전한 화면이
+    // 서버 데이터를 통째로 지워버리는 사고를 막기 위함입니다.
+    const serverCount = countEntries(serverData);
+    const newCount = countEntries(merged);
+    if(serverCount >= 10 && newCount < serverCount * 0.5){
+      console.error('saveStorage aborted: suspicious data shrink', {serverCount, newCount});
+      alert('⚠ 저장이 취소되었습니다.\n\n서버에는 ' + serverCount + '건의 일정이 있는데, 지금 저장하려는 내용에는 ' + newCount + '건만 있어서 데이터 손실 위험이 있습니다.\n\n"⟳ 새로고침"을 눌러 최신 데이터를 먼저 불러온 후 다시 시도해주세요.');
+      showToast('⚠ 저장 취소됨 — 새로고침 후 다시 시도해주세요');
+      return;
+    }
+
     const res = await fetchWithTimeout(STORAGE_ENDPOINT, {
       method:'PUT', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(merged)
