@@ -538,6 +538,9 @@ const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
 const META_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule-meta.json'
   : null;
+const BACKUP_ENDPOINT_BASE = FIREBASE_URL.startsWith('http')
+  ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule-backups'
+  : null;
 
 // 대한민국 법정 공휴일 (2026~2027, 대체공휴일 포함)
 const HOLIDAYS_KR = {
@@ -626,6 +629,34 @@ function countEntries(data){
   return n;
 }
 
+// 매일 그날의 마지막 저장 시점 스냅샷을 별도 경로에 보관 (최근 30일 유지, 자동 정리).
+// 저장 자체를 늦추거나 실패시키지 않도록 실패해도 조용히 무시합니다.
+async function writeDailyBackup(dataToBackup){
+  if(!BACKUP_ENDPOINT_BASE) return;
+  try{
+    const today = todayISO(); // YYYY-MM-DD, Firebase 키로 그대로 사용 가능
+    await fetchWithTimeout(BACKUP_ENDPOINT_BASE + '/' + today + '.json', {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(dataToBackup)
+    }, 8000);
+    // 30일 지난 백업 정리 (가끔 한 번씩만 시도, 실패해도 무방)
+    if(Math.random() < 0.1){
+      const listRes = await fetchWithTimeout(BACKUP_ENDPOINT_BASE + '.json?shallow=true', {cache:'no-store'}, 8000);
+      if(listRes.ok){
+        const keys = await listRes.json().catch(()=>null);
+        if(keys){
+          const cutoff = addDaysStr(today, -30);
+          Object.keys(keys).forEach(k=>{
+            if(/^\d{4}-\d{2}-\d{2}$/.test(k) && k < cutoff){
+              fetchWithTimeout(BACKUP_ENDPOINT_BASE + '/' + k + '.json', {method:'DELETE'}, 8000).catch(()=>{});
+            }
+          });
+        }
+      }
+    }
+  }catch(e){ /* 백업 실패는 조용히 무시 — 본 저장에는 영향 없음 */ }
+}
+
 async function saveStorage(){
   if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 설정되지 않았습니다'); return; }
   try{
@@ -654,7 +685,10 @@ async function saveStorage(){
       method:'PUT', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(merged)
     }, 8000);
-    if(res.ok){ showToast('저장되었습니다 (팀 전체 공유)'); }
+    if(res.ok){
+      showToast('저장되었습니다 (팀 전체 공유)');
+      writeDailyBackup(merged); // 실패해도 저장 자체엔 영향 없음 (fire-and-forget)
+    }
     else{
       console.error('saveStorage HTTP error', res.status, res.statusText);
       showToast(res.status===401||res.status===403 ? '⚠ 접근 거부됨 — Firebase 규칙을 확인해주세요' : ('⚠ 저장 실패 (' + res.status + ')'));
