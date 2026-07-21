@@ -619,9 +619,17 @@ async function loadStorage(){
 async function saveStorage(){
   if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 설정되지 않았습니다'); return; }
   try{
+    // 저장 직전 서버 최신본을 먼저 확인해서, 이 브라우저(화면)가 모르는 팀/필드가
+    // 서버에 있으면 보존한 채로 병합 저장 (예전 버전 화면이 새 팀 데이터를 지우는 것 방지)
+    let serverData = {};
+    try{
+      const cur = await fetchWithTimeout(STORAGE_ENDPOINT, {cache:'no-store'}, 8000);
+      if(cur.ok){ serverData = (await cur.json()) || {}; }
+    }catch(e){ /* 서버 조회 실패 시 병합 없이 진행 */ }
+    const merged = Object.assign({}, serverData, scheduleData);
     const res = await fetchWithTimeout(STORAGE_ENDPOINT, {
       method:'PUT', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(scheduleData)
+      body: JSON.stringify(merged)
     }, 8000);
     if(res.ok){ showToast('저장되었습니다 (팀 전체 공유)'); }
     else{
