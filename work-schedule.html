@@ -48,7 +48,7 @@
   .stat .lbl{font-size:10px;color:#AFC3EF;}
 
   /* team tabs */
-  .team-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:18px;}
+  .team-tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:18px;}
   .team-tab{
     min-width:0;background:white;border:1.5px solid var(--line);border-radius:12px;
     padding:10px 14px;cursor:pointer;transition:.15s;text-align:left;
@@ -413,13 +413,16 @@ const TEAMS = {
     {name:'이승직', role:'T2'}, {name:'이준민', role:'T2'}, {name:'이도협', role:'T2'},
     {name:'김태현', role:'T1'}, {name:'윤진성', role:'T1'}, {name:'조수호', role:'T1'}, {name:'김성학', role:'T1'},
   ]},
+  fss: { key:'fss', label:'FSS팀', hex:'#D6336C', members:[
+    {name:'손흥민', role:'팀장'}, {name:'김용한', role:'T3'}, {name:'신관호', role:'T3'},
+  ]},
 };
-const TEAM_ORDER = ['west','east','central','south'];
+const TEAM_ORDER = ['west','east','central','south','fss'];
 TEAMS.all = {
   key:'all', label:'전체', hex:'#16233F',
   members: TEAM_ORDER.reduce((acc, tk)=> acc.concat(TEAMS[tk].members.map(m=>Object.assign({}, m, {team:tk}))), [])
 };
-const TAB_ORDER = ['all','west','east','central','south'];
+const TAB_ORDER = ['all','west','east','central','south','fss'];
 
 function rebuildAllTeam(){
   TEAMS.all.members = TEAM_ORDER.reduce((acc, tk)=> acc.concat(TEAMS[tk].members.map(m=>Object.assign({}, m, {team:tk}))), []);
