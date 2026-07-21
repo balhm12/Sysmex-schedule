@@ -459,22 +459,64 @@ const HALF_STATUS = [
   {key:'회의', label:'회의', short:'회', color:'#2563EB', bg:'#DBEAFE', hasDetail:true},
 ];
 // 야간은 하나만 선택
-const NIGHT_STATUS = [
+const NIGHT_STATUS_DEFAULT = [
   {key:'', label:'-'},
   {key:'석/야', label:'석/야', short:'야', color:'#0891B2', bg:'#CFFAFE', weekdayOnly:true, hasDetail:true},
   {key:'석간', label:'석간', short:'석', color:'#4F46E5', bg:'#E0E7FF', weekdayOnly:true, hasDetail:true},
   {key:'OFF', label:'OFF', short:'OF', color:'#6B7280', bg:'#F3F4F6', weekdayOnly:true, hasDetail:true},
   {key:'잔업', label:'잔업', short:'잔', color:'#B45309', bg:'#FEF3C7', weekdayOnly:true, hasDetail:true},
 ];
-const WEEKEND_STATUS = [
+// FS CENTRAL·FS SOUTH는 야간 운영 방식이 달라, 석/야·석간·OFF 대신 지역별 당직 항목을 사용합니다.
+const NIGHT_STATUS_BY_TEAM = {
+  central: [
+    {key:'', label:'-'},
+    {key:'대전당직', label:'대전당직', short:'대전', color:'#7C3AED', bg:'#EDE9FE', weekdayOnly:true, hasDetail:true},
+    {key:'광주당직', label:'광주당직', short:'광주', color:'#C026D3', bg:'#FAE8FF', weekdayOnly:true, hasDetail:true},
+    {key:'잔업', label:'잔업', short:'잔', color:'#B45309', bg:'#FEF3C7', weekdayOnly:true, hasDetail:true},
+  ],
+  south: [
+    {key:'', label:'-'},
+    {key:'부산당직', label:'부산당직', short:'부산', color:'#0D9488', bg:'#CCFBF1', weekdayOnly:true, hasDetail:true},
+    {key:'대구당직', label:'대구당직', short:'대구', color:'#CA8A04', bg:'#FEF9C3', weekdayOnly:true, hasDetail:true},
+    {key:'잔업', label:'잔업', short:'잔', color:'#B45309', bg:'#FEF3C7', weekdayOnly:true, hasDetail:true},
+  ],
+};
+function nightStatusListFor(tk){ return NIGHT_STATUS_BY_TEAM[tk] || NIGHT_STATUS_DEFAULT; }
+
+const WEEKEND_STATUS_DEFAULT = [
   {key:'', label:'-'},
   {key:'전화', label:'전화대기', short:'전', color:'#0369A1', bg:'#E0F2FE', hasDetail:true},
   {key:'당직', label:'당직', short:'당', color:'#7C3AED', bg:'#EDE9FE', hasDetail:true},
   {key:'추가편성', label:'추가편성', short:'추가', color:'#CA8A04', bg:'#FEF9C3', hasDetail:true},
   {key:'기타', label:'기타', short:'기타', color:'#57534E', bg:'#F5F5F4', hasDetail:true},
 ];
+// 주말/휴일 구분도 마찬가지로 CENTRAL·SOUTH는 "당직" 대신 지역별 당직 항목을 사용합니다.
+const WEEKEND_STATUS_BY_TEAM = {
+  central: [
+    {key:'', label:'-'},
+    {key:'전화', label:'전화대기', short:'전', color:'#0369A1', bg:'#E0F2FE', hasDetail:true},
+    {key:'대전당직', label:'대전당직', short:'대전', color:'#7C3AED', bg:'#EDE9FE', hasDetail:true},
+    {key:'광주당직', label:'광주당직', short:'광주', color:'#C026D3', bg:'#FAE8FF', hasDetail:true},
+    {key:'추가편성', label:'추가편성', short:'추가', color:'#CA8A04', bg:'#FEF9C3', hasDetail:true},
+    {key:'기타', label:'기타', short:'기타', color:'#57534E', bg:'#F5F5F4', hasDetail:true},
+  ],
+  south: [
+    {key:'', label:'-'},
+    {key:'전화', label:'전화대기', short:'전', color:'#0369A1', bg:'#E0F2FE', hasDetail:true},
+    {key:'부산당직', label:'부산당직', short:'부산', color:'#0D9488', bg:'#CCFBF1', hasDetail:true},
+    {key:'대구당직', label:'대구당직', short:'대구', color:'#CA8A04', bg:'#FEF9C3', hasDetail:true},
+    {key:'추가편성', label:'추가편성', short:'추가', color:'#CA8A04', bg:'#FEF9C3', hasDetail:true},
+    {key:'기타', label:'기타', short:'기타', color:'#57534E', bg:'#F5F5F4', hasDetail:true},
+  ],
+};
+function weekendStatusListFor(tk){ return WEEKEND_STATUS_BY_TEAM[tk] || WEEKEND_STATUS_DEFAULT; }
+// 하위 호환용 기본 목록 (팀 정보가 없는 문맥에서 사용)
+const NIGHT_STATUS = NIGHT_STATUS_DEFAULT;
+const WEEKEND_STATUS = WEEKEND_STATUS_DEFAULT;
 const mapOf = list => Object.fromEntries(list.map(s=>[s.key,s]));
 const HALF_MAP = mapOf(HALF_STATUS), NIGHT_MAP = mapOf(NIGHT_STATUS), WEEKEND_MAP = mapOf(WEEKEND_STATUS);
+function nightMapFor(tk){ return mapOf(nightStatusListFor(tk)); }
+function weekendMapFor(tk){ return mapOf(weekendStatusListFor(tk)); }
 const SLOT_KEYS = ['am1','am2','pm1','pm2'];
 const SLOT_GROUP = {am1:'am', am2:'am', pm1:'pm', pm2:'pm'};
 const SLOT_LABELS = {am1:'오전1', am2:'오전2', pm1:'오후1', pm2:'오후2'};
@@ -501,8 +543,8 @@ function statusOfIn(val, list){
   }
   return null;
 }
-function nightStatusOf(val){ return statusOfIn(val, NIGHT_STATUS); }
-function weekendStatusOf(val){ return statusOfIn(val, WEEKEND_STATUS); }
+function nightStatusOf(val, tk){ return statusOfIn(val, nightStatusListFor(tk)); }
+function weekendStatusOf(val, tk){ return statusOfIn(val, weekendStatusListFor(tk)); }
 // "키: 세부내용" 문자열을 {key, detail}로 분리 (편집창에 다시 열 때 사용)
 function splitDetail(val, list){
   if(!val) return {key:'', detail:''};
@@ -907,14 +949,14 @@ function slotMatchesFilter(val){
   const st = matchStatus(val);
   return !!(st && st.key === activeFilter);
 }
-function nightMatchesFilter(nightVal){
+function nightMatchesFilter(nightVal, tk){
   if(!activeFilter) return true;
-  const st = nightStatusOf(nightVal);
+  const st = nightStatusOf(nightVal, tk);
   return !!(st && st.key === activeFilter);
 }
-function entryMatchesFilter(entry){
+function entryMatchesFilter(entry, tk){
   if(!activeFilter) return true;
-  if(NIGHT_MAP[activeFilter]){ const st = nightStatusOf(entry.night); return !!(st && st.key === activeFilter); }
+  if(nightMapFor(tk)[activeFilter]){ const st = nightStatusOf(entry.night, tk); return !!(st && st.key === activeFilter); }
   return SLOT_KEYS.some(k=>{ const st = matchStatus(entry[k]); return st && st.key===activeFilter; });
 }
 
@@ -930,7 +972,14 @@ function renderTeamTabs(){
     tab.className = 'team-tab' + (currentTeam===tk ? ' active' : '');
     tab.style.setProperty('--tc', t.hex);
     tab.innerHTML = '<div class="tt-name">' + t.label + '</div><div class="tt-count">' + t.members.length + '명</div>';
-    tab.onclick = ()=>{ currentTeam = tk; renderTeamTabs(); render(); };
+    tab.onclick = ()=>{
+      currentTeam = tk;
+      if(activeFilter){
+        const validKeys = new Set(HALF_STATUS.map(s=>s.key).concat(legendNightItems().map(s=>s.key)));
+        if(!validKeys.has(activeFilter)) activeFilter = null;
+      }
+      renderTeamTabs(); renderLegend(); render();
+    };
     wrap.appendChild(tab);
   });
 }
@@ -938,9 +987,20 @@ function renderTeamTabs(){
 // ============================================================
 // 범례 (클릭하면 해당 상태만 필터링해서 보여줍니다)
 // ============================================================
+function legendNightItems(){
+  if(currentTeam === 'all'){
+    const seen = new Set();
+    const merged = [];
+    [NIGHT_STATUS_DEFAULT].concat(Object.values(NIGHT_STATUS_BY_TEAM)).forEach(list=>{
+      list.filter(s=>s.key).forEach(s=>{ if(!seen.has(s.key)){ seen.add(s.key); merged.push(s); } });
+    });
+    return merged;
+  }
+  return nightStatusListFor(currentTeam).filter(s=>s.key);
+}
 function renderLegend(){
   const el = document.getElementById('legend');
-  const items = HALF_STATUS.filter(s=>s.key).concat(NIGHT_STATUS.filter(s=>s.key));
+  const items = HALF_STATUS.filter(s=>s.key).concat(legendNightItems());
   let html = items.map(s=>{
     const active = activeFilter === s.key;
     const style = active ? (' style="background:' + s.color + ';color:white;border-color:' + s.color + ';"') : '';
@@ -1012,14 +1072,17 @@ function renderNightBanner(){
   function tag(m){ return currentTeam==='all' ? (' [' + TEAMS[memberTeam(m)].label.replace('FS ','') + ']') : ''; }
 
   // 1) 오늘 야간
-  const nightGroups = {};
-  NIGHT_STATUS.filter(s=>s.key).forEach(s=> nightGroups[s.key] = []);
+  const nightGroups = {}; // label -> [names]
   team.members.forEach(m=>{
-    const e = getEntry(memberTeam(m), t, m.name);
-    const nst = nightStatusOf(e.night);
-    if(nst && nightGroups[nst.key]) nightGroups[nst.key].push(m.name + tag(m));
+    const mtk = memberTeam(m);
+    const e = getEntry(mtk, t, m.name);
+    const nst = nightStatusOf(e.night, mtk);
+    if(nst){
+      if(!nightGroups[nst.label]) nightGroups[nst.label] = [];
+      nightGroups[nst.label].push(m.name + tag(m));
+    }
   });
-  const nightParts = NIGHT_STATUS.filter(s=>s.key).map(s=> nightGroups[s.key].length ? (s.label + ': ' + nightGroups[s.key].join(', ')) : null).filter(Boolean);
+  const nightParts = Object.keys(nightGroups).map(label=> label + ': ' + nightGroups[label].join(', '));
 
   // 2) 오늘 휴가자
   const leaveNames = [];
@@ -1040,16 +1103,16 @@ function renderNightBanner(){
 
   // 3) 오늘 주말·공휴일 당직자 — 팀 구분 없이 전체 팀에서 항상 표시 (오늘이 주말·공휴일일 때만)
   if(todayIsOffDay){
-    const dutyGroups = {};
-    WEEKEND_STATUS.filter(s=>s.key).forEach(s=> dutyGroups[s.label] = []);
+    const dutyGroups = {}; // label -> [names]
     TEAMS.all.members.forEach(m=>{
       const e = getEntry(m.team, t, m.name);
-      const wst = weekendStatusOf(e.weekend);
+      const wst = weekendStatusOf(e.weekend, m.team);
       if(wst){
+        if(!dutyGroups[wst.label]) dutyGroups[wst.label] = [];
         dutyGroups[wst.label].push(m.name + '(' + TEAMS[m.team].label + ')');
       }
     });
-    const dutyParts = WEEKEND_STATUS.filter(s=>s.key).map(s=> dutyGroups[s.label].length ? (s.label + ': ' + dutyGroups[s.label].join(', ')) : null).filter(Boolean);
+    const dutyParts = Object.keys(dutyGroups).map(label=> label + ': ' + dutyGroups[label].join(', '));
     html += '<div style="margin-top:4px;"><span class="night-band-label">오늘 주말·공휴일 당직 (전체 팀)</span><span class="night-band-sep">—</span>' +
       (dutyParts.length ? dutyParts.join(', ') : '<span class="night-band-empty">없음</span>') + '</div>';
   }
@@ -1076,7 +1139,7 @@ function renderNavLabel(){
 // ============================================================
 // 월간 뷰 — 각 칸을 오전1/오전2/오후1/오후2 4분할로 표시
 // ============================================================
-function fillDayCell(td, entry){
+function fillDayCell(td, entry, tk){
   td.querySelectorAll('.quad, .night-badge').forEach(n=>n.remove());
   td.title = '';
   td.style.borderLeft = '';
@@ -1107,8 +1170,8 @@ function fillDayCell(td, entry){
   });
   td.appendChild(quad);
 
-  if(entry.night && nightStatusOf(entry.night)){
-    const st = nightStatusOf(entry.night);
+  if(entry.night && nightStatusOf(entry.night, tk)){
+    const st = nightStatusOf(entry.night, tk);
     const badge = document.createElement('span');
     badge.className = 'night-badge';
     badge.style.background = st.color;
@@ -1116,8 +1179,8 @@ function fillDayCell(td, entry){
     td.appendChild(badge);
     titleParts.push('야간: ' + entry.night);
   }
-  if(entry.weekend && weekendStatusOf(entry.weekend)){
-    const st = weekendStatusOf(entry.weekend);
+  if(entry.weekend && weekendStatusOf(entry.weekend, tk)){
+    const st = weekendStatusOf(entry.weekend, tk);
     td.style.borderLeft = '3px solid ' + st.color;
     const badge = document.createElement('span');
     badge.className = 'night-badge';
@@ -1127,11 +1190,11 @@ function fillDayCell(td, entry){
     titleParts.push('주말/휴일 구분: ' + entry.weekend);
   }
   if(titleParts.length) td.title = titleParts.join('\n');
-  if(!entryMatchesFilter(entry)) td.classList.add('cell-dim');
+  if(!entryMatchesFilter(entry, tk)) td.classList.add('cell-dim');
 }
 
 // 당직만 보기: 석/야간·석간·잔업(야간 필드) + 당직·전화당직(주말/휴일 구분 필드)만 표시
-function fillDayCellDutyOnly(td, entry){
+function fillDayCellDutyOnly(td, entry, tk){
   td.querySelectorAll('.duty-chips').forEach(n=>n.remove());
   td.title = '';
   td.style.borderLeft = '';
@@ -1141,8 +1204,8 @@ function fillDayCellDutyOnly(td, entry){
   wrap.className = 'duty-chips';
   const titleParts = [];
 
-  if(entry.night && nightStatusOf(entry.night)){
-    const st = nightStatusOf(entry.night);
+  if(entry.night && nightStatusOf(entry.night, tk)){
+    const st = nightStatusOf(entry.night, tk);
     const chip = document.createElement('div');
     chip.className = 'duty-chip';
     chip.style.color = st.color; chip.style.background = st.bg;
@@ -1150,8 +1213,8 @@ function fillDayCellDutyOnly(td, entry){
     wrap.appendChild(chip);
     titleParts.push('야간: ' + entry.night);
   }
-  if(entry.weekend && weekendStatusOf(entry.weekend)){
-    const st = weekendStatusOf(entry.weekend);
+  if(entry.weekend && weekendStatusOf(entry.weekend, tk)){
+    const st = weekendStatusOf(entry.weekend, tk);
     const chip = document.createElement('div');
     chip.className = 'duty-chip';
     chip.style.color = st.color; chip.style.background = st.bg;
@@ -1167,7 +1230,7 @@ function fillDayCellDutyOnly(td, entry){
   }
   td.appendChild(wrap);
   if(titleParts.length) td.title = titleParts.join('\n');
-  if(!entryMatchesFilter(entry)) td.classList.add('cell-dim');
+  if(!entryMatchesFilter(entry, tk)) td.classList.add('cell-dim');
 }
 
 function renderMonthGrid(){
@@ -1217,7 +1280,7 @@ function renderMonthGrid(){
       td.className = 'daycell' + (dstr===todayStr?' today':'') + (holi?' holiday-col':(weekend?' weekend-col':''));
       td.dataset.date = dstr;
       td.dataset.name = m.name;
-      if(dutyOnlyView) fillDayCellDutyOnly(td, entry); else fillDayCell(td, entry);
+      if(dutyOnlyView) fillDayCellDutyOnly(td, entry, mTeam); else fillDayCell(td, entry, mTeam);
       td.onclick = ()=>openEditor(mTeam, dstr, m.name);
       tr.appendChild(td);
     }
@@ -1299,8 +1362,8 @@ function renderWeekGrid(){
     }
     if(!slotMatchesFilter(val)) td.classList.add('wcell-dim');
   }
-  function badgeHtml(resolverFn, val){
-    const st = val ? resolverFn(val) : null;
+  function badgeHtml(resolverFn, val, tk){
+    const st = val ? resolverFn(val, tk) : null;
     return st ? ('<span class="wbadge" style="color:' + st.color + ';background:' + st.bg + '">' + val + '</span>') : null;
   }
 
@@ -1319,41 +1382,44 @@ function renderWeekGrid(){
         addRow(dstr, SLOT_LABELS.pm1, (td,m)=>slotCell(td, memberTeam(m), dstr, m.name, 'pm1'));
         addRow(dstr, SLOT_LABELS.pm2, (td,m)=>slotCell(td, memberTeam(m), dstr, m.name, 'pm2'));
         addRow(dstr, '야간', (td,m)=>{
-          const e = getEntry(memberTeam(m),dstr,m.name);
-          const html = badgeHtml(nightStatusOf, e.night);
+          const mtk = memberTeam(m);
+          const e = getEntry(mtk,dstr,m.name);
+          const html = badgeHtml(nightStatusOf, e.night, mtk);
           if(html){
             td.innerHTML = html;
           } else { td.classList.add('empty'); td.textContent='-'; }
-          if(!nightMatchesFilter(e.night)) td.classList.add('wcell-dim');
+          if(!nightMatchesFilter(e.night, mtk)) td.classList.add('wcell-dim');
         });
       } else {
         addRow(dstr, '야간', (td,m)=>{
-          const e = getEntry(memberTeam(m),dstr,m.name);
-          const html = badgeHtml(nightStatusOf, e.night);
+          const mtk = memberTeam(m);
+          const e = getEntry(mtk,dstr,m.name);
+          const html = badgeHtml(nightStatusOf, e.night, mtk);
           if(html){
             td.innerHTML = html;
           } else { td.classList.add('empty'); td.textContent='-'; }
-          if(!nightMatchesFilter(e.night)) td.classList.add('wcell-dim');
+          if(!nightMatchesFilter(e.night, mtk)) td.classList.add('wcell-dim');
         }, {groupStart:true, dateLabel, rowSpan:1});
       }
     } else {
       const rowLabel = holi ? ('휴일 <span style="color:#A21E1E;">· ' + holi + '</span>') : '주말 · 구분';
       addRow(dstr, rowLabel, (td,m)=>{
-        const e = getEntry(memberTeam(m),dstr,m.name);
-        let html = badgeHtml(weekendStatusOf, e.weekend);
+        const mtk = memberTeam(m);
+        const e = getEntry(mtk,dstr,m.name);
+        let html = badgeHtml(weekendStatusOf, e.weekend, mtk);
         if(!html){
           const parts2 = SLOT_KEYS.map(k=>{
             const st = matchStatus(e[k]);
             if(st) return '<span class="wbadge" style="color:' + st.color + ';background:' + st.bg + '">' + e[k] + '</span>';
             return e[k] ? ('<span class="wbadge" style="background:var(--paper);color:var(--ink-soft);">'+e[k]+'</span>') : '';
           }).filter(Boolean);
-          const nightBadge = badgeHtml(nightStatusOf, e.night);
+          const nightBadge = badgeHtml(nightStatusOf, e.night, mtk);
           if(nightBadge) parts2.push(nightBadge);
           if(parts2.length) html = parts2.join(' ');
         }
         if(html) td.innerHTML = html; else { td.classList.add('empty'); td.textContent='-'; }
-        const wst = weekendStatusOf(e.weekend);
-        const matches = !activeFilter || (wst && wst.key===activeFilter) || entryMatchesFilter(e);
+        const wst = weekendStatusOf(e.weekend, mtk);
+        const matches = !activeFilter || (wst && wst.key===activeFilter) || entryMatchesFilter(e, mtk);
         if(!matches) td.classList.add('wcell-dim');
       }, {groupStart:true, dateLabel, rowSpan:1});
     }
@@ -1456,9 +1522,11 @@ function openEditor(team, date, name){
     '</div>';
   }
 
-  const nightParsed = splitDetail(entry.night, NIGHT_STATUS);
-  const weekendParsed = splitDetail(entry.weekend, WEEKEND_STATUS);
-  const nightOptions = NIGHT_STATUS.filter(s=> !s.key || s.weekdayOnly || s.key === nightParsed.key);
+  const teamNightList = nightStatusListFor(team);
+  const teamWeekendList = weekendStatusListFor(team);
+  const nightParsed = splitDetail(entry.night, teamNightList);
+  const weekendParsed = splitDetail(entry.weekend, teamWeekendList);
+  const nightOptions = teamNightList.filter(s=> !s.key || s.weekdayOnly || s.key === nightParsed.key);
 
   panel.innerHTML =
     '<button class="close" onclick="closePanel()">✕</button>' +
@@ -1483,7 +1551,7 @@ function openEditor(team, date, name){
     '</div>' +
 
     '<div class="form-row" id="weekendRow" style="' + (isOffDay?'':'display:none;') + '">' +
-      '<label>주말/휴일 구분</label><select id="f-weekend">' + WEEKEND_STATUS.map(s=>'<option value="' + s.key + '" ' + (weekendParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
+      '<label>주말/휴일 구분</label><select id="f-weekend">' + teamWeekendList.map(s=>'<option value="' + s.key + '" ' + (weekendParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
       '<input type="text" id="f-weekend-detail" placeholder="세부내용 (선택)" style="margin-top:6px;" value="' + weekendParsed.detail.replace(/"/g,'&quot;') + '">' +
     '</div>' +
 
@@ -1577,7 +1645,7 @@ function openEditor(team, date, name){
   const nightSel = panel.querySelector('#f-night');
   if(nightSel){
     nightSel.addEventListener('change', function(){
-      if(this.value === '석/야' || this.value === '석간'){
+      if(this.value && this.value !== 'OFF' && this.value !== '잔업'){
         slotIds.forEach(oid=>{ panel.querySelector('#'+oid).value = 'OFF'; });
       }
     });
@@ -1603,7 +1671,7 @@ function openEditor(team, date, name){
       pm2: isOffDay ? '' : cleanSlot(panel.querySelector('#f-pm2').value),
     };
     setEntry(team, date, name, updated);
-    const nightSt = nightStatusOf(updated.night);
+    const nightSt = nightStatusOf(updated.night, team);
     const nightLabel = nightSt ? nightSt.label : '';
     if(nightLabel === '석/야'){
       // 석/야 선택 시: 다음 근무일 = 석간, 그다음 근무일 = OFF (주말·공휴일은 건너뜀)
@@ -1640,8 +1708,20 @@ async function exportExcel(){
   const team = TEAMS[currentTeam];
   const nDays = daysInMonth(viewYear, viewMonth);
   const statDefs = HALF_STATUS.filter(s=>s.key);
-  const nightDefs = NIGHT_STATUS.filter(s=>s.key);
-  const weekendDefs = WEEKEND_STATUS.filter(s=>s.key);
+  const nightDefs = (function(){
+    const seen = new Set(); const list = [];
+    [NIGHT_STATUS_DEFAULT].concat(Object.values(NIGHT_STATUS_BY_TEAM)).forEach(l=>{
+      l.filter(s=>s.key).forEach(s=>{ if(!seen.has(s.key)){ seen.add(s.key); list.push(s); } });
+    });
+    return list;
+  })();
+  const weekendDefs = (function(){
+    const seen = new Set(); const list = [];
+    [WEEKEND_STATUS_DEFAULT].concat(Object.values(WEEKEND_STATUS_BY_TEAM)).forEach(l=>{
+      l.filter(s=>s.key).forEach(s=>{ if(!seen.has(s.key)){ seen.add(s.key); list.push(s); } });
+    });
+    return list;
+  })();
   const NAVY = 'FF003087', WHITE = 'FFFFFFFF', LIGHTBLUE = 'FFE4F5FC', LINE = 'FFDFE6F2';
 
   function getMonthsWithData(tk){
@@ -1657,12 +1737,12 @@ async function exportExcel(){
   function toArgb(hex){ return hex ? ('FF' + hex.replace('#','').toUpperCase()) : null; }
 
   // 값(am1~pm2/night/weekend) → 해당 상태 정의(HALF_STATUS/NIGHT_STATUS/WEEKEND_STATUS) 찾기 (색상 입히기용)
-  function statusOf(val){
+  function statusOf(val, tk){
     if(!val) return null;
-    return matchStatus(val) || nightStatusOf(val) || weekendStatusOf(val);
+    return matchStatus(val) || nightStatusOf(val, tk) || weekendStatusOf(val, tk);
   }
-  function colorCell(cell, val){
-    const st = statusOf(val);
+  function colorCell(cell, val, tk){
+    const st = statusOf(val, tk);
     if(st && st.color){
       cell.font = {color:{argb: toArgb(st.color)}, bold:true};
       if(st.bg) cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb: toArgb(st.bg)}};
@@ -1682,9 +1762,9 @@ async function exportExcel(){
       const foundToday = new Set();
       SLOT_KEYS.forEach(k=>{ const st = matchStatus(e[k]); if(st) foundToday.add(st.key); });
       foundToday.forEach(k=>{ if(stats['s_'+k]!==undefined) stats['s_'+k]++; });
-      const nst = nightStatusOf(e.night);
+      const nst = nightStatusOf(e.night, teamKey);
       if(nst && stats['n_'+nst.key]!==undefined) stats['n_'+nst.key]++;
-      const wst = weekendStatusOf(e.weekend);
+      const wst = weekendStatusOf(e.weekend, teamKey);
       if(wst && stats['w_'+wst.key]!==undefined) stats['w_'+wst.key]++;
     }
     return stats;
@@ -1693,11 +1773,11 @@ async function exportExcel(){
     return {
       workDays: stats['s_ON']||0,
       leaveDays: (stats['s_휴가']||0) + 0.5*(stats['s_오전휴가']||0) + 0.5*(stats['s_오후휴가']||0),
-      duty: stats['w_당직']||0,
+      duty: weekendDefs.filter(s=>s.key.indexOf('당직')!==-1).reduce((sum,s)=> sum + (stats['w_'+s.key]||0), 0),
       phone: stats['w_전화']||0,
       extra: stats['w_추가편성']||0,
       etc: stats['w_기타']||0,
-      nightTotal: (stats['n_석/야']||0) + (stats['n_석간']||0) + (stats['n_잔업']||0),
+      nightTotal: nightDefs.filter(s=>s.key!=='OFF').reduce((sum,s)=> sum + (stats['n_'+s.key]||0), 0),
       naegeun: stats['s_내근']||0,
       dp: stats['s_DP']||0,
       edu: stats['s_교육']||0,
@@ -1873,12 +1953,15 @@ async function exportExcel(){
   // ---- 상세 시트 (일자별, 현재 팀 · 이번 달) — 상태별 색상 적용 ----
   const detailWs = wb.addWorksheet('상세');
   const detailRows = [];
+  const detailTeams = [];
   for(let d=1; d<=nDays; d++){
     const dstr = fmtDate(viewYear, viewMonth, d);
     const wk = weekdayKr(viewYear, viewMonth, d);
     team.members.forEach(m=>{
-      const e = getEntry(memberTeam(m), dstr, m.name);
+      const mtk = memberTeam(m);
+      const e = getEntry(mtk, dstr, m.name);
       detailRows.push([dstr, wk, m.name, m.role, e.am1||'', e.am2||'', e.pm1||'', e.pm2||'', e.night||'', e.weekend||'']);
+      detailTeams.push(mtk);
     });
   }
   detailWs.addTable({
@@ -1896,7 +1979,8 @@ async function exportExcel(){
   detailWs.views = [{state:'frozen', ySplit:1}];
   detailRows.forEach((r,i)=>{
     const row = detailWs.getRow(i+2);
-    [5,6,7,8,9,10].forEach(colIdx=> colorCell(row.getCell(colIdx), r[colIdx-1]));
+    const rowTk = detailTeams[i];
+    [5,6,7,8,9,10].forEach(colIdx=> colorCell(row.getCell(colIdx), r[colIdx-1], rowTk));
   });
 
   // ================= 야간·당직 로그 (전체 팀, 데이터 있는 모든 달) =================
@@ -1943,12 +2027,12 @@ async function exportExcel(){
       TEAM_ORDER.forEach(tk=>{
         TEAMS[tk].members.forEach(m=>{
           const e = getEntry(tk, dstr, m.name);
-          const nst = nightStatusOf(e.night);
+          const nst = nightStatusOf(e.night, tk);
           if(nst){
             nightRows.push([dstr, wk, TEAMS[tk].label, m.name, nst.label, e.night]);
           }
-          const wst = weekendStatusOf(e.weekend);
-          if(wst && wst.key === '당직'){
+          const wst = weekendStatusOf(e.weekend, tk);
+          if(wst && wst.key.indexOf('당직')!==-1){
             dutyRows.push([dstr, wk, TEAMS[tk].label, m.name, e.weekend]);
           }
           if(wst && wst.key === '전화'){
