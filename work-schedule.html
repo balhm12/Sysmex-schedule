@@ -1645,7 +1645,8 @@ function openEditor(team, date, name){
   const nightSel = panel.querySelector('#f-night');
   if(nightSel){
     nightSel.addEventListener('change', function(){
-      if(this.value && this.value !== 'OFF' && this.value !== '잔업'){
+      const usesDefaultNightSet = !NIGHT_STATUS_BY_TEAM[team];
+      if(usesDefaultNightSet && this.value && this.value !== 'OFF' && this.value !== '잔업'){
         slotIds.forEach(oid=>{ panel.querySelector('#'+oid).value = 'OFF'; });
       }
     });
