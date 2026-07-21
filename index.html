@@ -465,6 +465,9 @@ const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/schedule-overrides.json'
   : null;
+const BACKUP_ENDPOINT_BASE = FIREBASE_URL.startsWith('http')
+  ? FIREBASE_URL.replace(/\/$/,'') + '/schedule-backups'
+  : null;
 
 const CATS = {
   install:    {label:'설치',    order:1},
@@ -565,6 +568,40 @@ async function loadStorage(){
   }
 }
 
+function scheduleDataSize(d){
+  if(!d) return 0;
+  return (d.custom ? d.custom.length : 0) + (d.edited ? Object.keys(d.edited).length : 0) + (d.clients ? d.clients.length : 0);
+}
+
+async function writeDailyBackup(dataToBackup){
+  if(!BACKUP_ENDPOINT_BASE) return;
+  try{
+    const today = todayISO();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(()=>controller.abort(), 8000);
+    await fetch(BACKUP_ENDPOINT_BASE + '/' + today + '.json', {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(dataToBackup), signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if(Math.random() < 0.1){
+      const listRes = await fetch(BACKUP_ENDPOINT_BASE + '.json?shallow=true', {cache:'no-store'});
+      if(listRes.ok){
+        const keys = await listRes.json().catch(()=>null);
+        if(keys){
+          const cutoffDate = new Date(); cutoffDate.setDate(cutoffDate.getDate()-30);
+          const cutoff = fmtDate(cutoffDate.getFullYear(), cutoffDate.getMonth()+1, cutoffDate.getDate());
+          Object.keys(keys).forEach(k=>{
+            if(/^\d{4}-\d{2}-\d{2}$/.test(k) && k < cutoff){
+              fetch(BACKUP_ENDPOINT_BASE + '/' + k + '.json', {method:'DELETE'}).catch(()=>{});
+            }
+          });
+        }
+      }
+    }
+  }catch(e){ /* 백업 실패는 조용히 무시 */ }
+}
+
 async function saveStorage(){
   if(!STORAGE_ENDPOINT){
     showToast('⚠ 공유 저장소가 아직 설정되지 않았습니다 (하단 설정 안내 참고)');
@@ -573,17 +610,34 @@ async function saveStorage(){
   const controller = new AbortController();
   const timeoutId = setTimeout(()=>controller.abort(), 8000);
   try{
+    // 저장 직전 서버 최신 크기를 확인해서, 지금 저장하려는 내용이 갑자기 확 줄어들면
+    // (예: 오래된 화면을 열어둔 채 저장) 자동으로 막습니다.
+    let serverSize = 0;
+    try{
+      const curRes = await fetch(STORAGE_ENDPOINT, {cache:'no-store'});
+      if(curRes.ok){ serverSize = scheduleDataSize(await curRes.json().catch(()=>null)); }
+    }catch(e){ /* 서버 조회 실패 시 검사 없이 진행 */ }
+
+    const payload = { custom: customEvents, edited: editedMap, deleted: Array.from(deletedIds), clients: customClients };
+    const newSize = scheduleDataSize(payload);
+    if(serverSize >= 10 && newSize < serverSize * 0.5){
+      clearTimeout(timeoutId);
+      console.error('saveStorage aborted: suspicious data shrink', {serverSize, newSize});
+      alert('⚠ 저장이 취소되었습니다.\n\n서버에는 ' + serverSize + '건의 항목이 있는데, 지금 저장하려는 내용에는 ' + newSize + '건만 있어서 데이터 손실 위험이 있습니다.\n\n"⟳ 새로고침"을 눌러 최신 데이터를 먼저 불러온 후 다시 시도해주세요.');
+      showToast('⚠ 저장 취소됨 — 새로고침 후 다시 시도해주세요');
+      return;
+    }
+
     const res = await fetch(STORAGE_ENDPOINT, {
       method: 'PUT',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        custom: customEvents, edited: editedMap, deleted: Array.from(deletedIds), clients: customClients
-      }),
+      body: JSON.stringify(payload),
       signal: controller.signal
     });
     clearTimeout(timeoutId);
     if(res.ok){
       showToast('저장되었습니다 (팀 전체 공유)');
+      writeDailyBackup(payload);
     } else {
       console.error('saveStorage HTTP error', res.status, res.statusText);
       if(res.status===401 || res.status===403){
