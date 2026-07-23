@@ -699,6 +699,48 @@ async function writeDailyBackup(dataToBackup){
   }catch(e){ /* 백업 실패는 조용히 무시 — 본 저장에는 영향 없음 */ }
 }
 
+// 핵심 안전장치: 칸 하나를 고쳐도 전체 데이터를 통째로 다시 올리지 않고,
+// 그 사람·그 날짜 경로 하나만 서버에 직접 씁니다. 이러면 이 화면이 모르는
+// 다른 팀·다른 날짜 데이터는 애초에 건드릴 방법이 없어집니다.
+function entryUrl(team, date, name){
+  return FIREBASE_URL + '/work-schedule/' + team + '/' + encodeURIComponent(date) + '/' + encodeURIComponent(name) + '.json';
+}
+async function saveEntryToServer(team, date, name, entry){
+  if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 설정되지 않았습니다'); return false; }
+  const isEmpty = !entry.night && !entry.weekend && !entry.am1 && !entry.am2 && !entry.pm1 && !entry.pm2;
+  try{
+    const res = await fetchWithTimeout(entryUrl(team, date, name), {
+      method: isEmpty ? 'DELETE' : 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: isEmpty ? undefined : JSON.stringify(entry)
+    }, 8000);
+    if(res.ok){
+      backupFullSnapshot(); // 성공 후 전체 스냅샷 1회 백업 (fire-and-forget)
+      return true;
+    } else {
+      console.error('saveEntryToServer HTTP error', res.status, res.statusText);
+      showToast(res.status===401||res.status===403 ? '⚠ 접근 거부됨 — Firebase 규칙을 확인해주세요' : ('⚠ 저장 실패 (' + res.status + ')'));
+      return false;
+    }
+  }catch(err){
+    console.error('saveEntryToServer network error', err);
+    showToast(err.message==='TIMEOUT' ? '⚠ 서버 응답이 없습니다 (네트워크가 느리거나 차단됨)' : '⚠ 서버에 연결할 수 없습니다 (네트워크/방화벽 확인)');
+    return false;
+  }
+}
+// 여러 항목(연쇄 입력 등)을 한 번에 저장하고, 결과에 따라 토스트 1개만 표시
+async function saveEntriesToServer(items){
+  const results = await Promise.all(items.map(it=> saveEntryToServer(it.team, it.date, it.name, it.entry)));
+  if(results.every(Boolean)){ showToast('저장되었습니다 (팀 전체 공유)'); }
+}
+// 전체 스냅샷을 가져와 매일 백업 경로에 저장 (읽기 전용이라 안전, 실패해도 무시)
+async function backupFullSnapshot(){
+  try{
+    const res = await fetchWithTimeout(STORAGE_ENDPOINT, {cache:'no-store'}, 8000);
+    if(res.ok){ writeDailyBackup(await res.json()); }
+  }catch(e){ /* 무시 */ }
+}
+
 async function saveStorage(){
   if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 설정되지 않았습니다'); return; }
   try{
@@ -1478,7 +1520,13 @@ function openMemberOrderPanel(){
     rebuildAllTeam();
     renderList();
     render();
-    await saveStorage();
+    try{
+      await fetchWithTimeout(FIREBASE_URL + '/work-schedule/memberOrder/' + tk + '.json', {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(scheduleData.memberOrder[tk])
+      }, 8000);
+      backupFullSnapshot();
+    }catch(e){ showToast('⚠ 순서 저장 실패 — 네트워크를 확인해주세요'); }
   }
 
   renderList();
@@ -1655,7 +1703,8 @@ function openEditor(team, date, name){
   panel.querySelector('#f-cancel').onclick = closePanel;
   panel.querySelector('#f-clear').onclick = async ()=>{
     setEntry(team, date, name, blankEntry());
-    closePanel(); render(); await saveStorage();
+    closePanel(); render();
+    await saveEntriesToServer([{team, date, name, entry: blankEntry()}]);
   };
   panel.querySelector('#f-save').onclick = async ()=>{
     function cleanSlot(v){
@@ -1672,6 +1721,7 @@ function openEditor(team, date, name){
       pm2: isOffDay ? '' : cleanSlot(panel.querySelector('#f-pm2').value),
     };
     setEntry(team, date, name, updated);
+    const toSave = [{team, date, name, entry: updated}];
     const nightSt = nightStatusOf(updated.night, team);
     const nightLabel = nightSt ? nightSt.label : '';
     if(nightLabel === '석/야'){
@@ -1681,19 +1731,23 @@ function openEditor(team, date, name){
       e1.night = '석간';
       e1.am1 = e1.am2 = e1.pm1 = e1.pm2 = 'OFF';
       setEntry(team, day1, name, e1);
+      toSave.push({team, date:day1, name, entry:e1});
 
       const day2 = nextWorkday(day1);
       const e2 = Object.assign(blankEntry(), getEntry(team, day2, name));
       e2.am1 = e2.am2 = e2.pm1 = e2.pm2 = 'OFF';
       setEntry(team, day2, name, e2);
+      toSave.push({team, date:day2, name, entry:e2});
     } else if(nightLabel === '석간'){
       // 석간 단독 선택 시: 다음 근무일 = OFF (주말·공휴일은 건너뜀)
       const nd = nextWorkday(date);
       const otherEntry = Object.assign(blankEntry(), getEntry(team, nd, name));
       otherEntry.am1 = otherEntry.am2 = otherEntry.pm1 = otherEntry.pm2 = 'OFF';
       setEntry(team, nd, name, otherEntry);
+      toSave.push({team, date:nd, name, entry:otherEntry});
     }
-    closePanel(); render(); await saveStorage();
+    closePanel(); render();
+    await saveEntriesToServer(toSave);
   };
 
   document.getElementById('overlay').classList.add('show');

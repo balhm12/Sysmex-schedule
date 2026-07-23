@@ -552,10 +552,14 @@ async function loadStorage(){
     }
     const data = await res.json();
     if(data){
-      customEvents = data.custom || [];
+      customEvents = Array.isArray(data.custom) ? data.custom.slice() : Object.values(data.custom || {});
       editedMap = data.edited || {};
-      deletedIds = new Set(data.deleted || []);
-      customClients = data.clients || [];
+      deletedIds = new Set(Array.isArray(data.deleted) ? data.deleted : Object.keys(data.deleted || {}));
+      customClients = Array.isArray(data.clients) ? data.clients.slice() : Object.values(data.clients || {});
+      // 예전 배열 형식이면 한 번만 새 형식(키 기반)으로 정리해서 다시 저장
+      if(Array.isArray(data.custom) || Array.isArray(data.deleted) || Array.isArray(data.clients)){
+        saveStorage();
+      }
     }
   }catch(err){
     clearTimeout(timeoutId);
@@ -568,9 +572,13 @@ async function loadStorage(){
   }
 }
 
+function bucketSize(v){
+  if(!v) return 0;
+  return Array.isArray(v) ? v.length : Object.keys(v).length;
+}
 function scheduleDataSize(d){
   if(!d) return 0;
-  return (d.custom ? d.custom.length : 0) + (d.edited ? Object.keys(d.edited).length : 0) + (d.clients ? d.clients.length : 0);
+  return bucketSize(d.custom) + (d.edited ? Object.keys(d.edited).length : 0) + bucketSize(d.clients);
 }
 
 async function writeDailyBackup(dataToBackup){
@@ -602,6 +610,71 @@ async function writeDailyBackup(dataToBackup){
   }catch(e){ /* 백업 실패는 조용히 무시 */ }
 }
 
+// Firebase 키 제한 문자(. # $ / [ ])를 안전하게 치환
+function sanitizeKey(s){
+  return String(s).replace(/[.#$\/\[\]]/g, ch => '%' + ch.charCodeAt(0).toString(16));
+}
+function overridesPath(subpath){
+  return FIREBASE_URL + '/schedule-overrides/' + subpath + '.json';
+}
+async function backupFullSnapshot(){
+  try{
+    const res = await fetch(STORAGE_ENDPOINT, {cache:'no-store'});
+    if(res.ok){ writeDailyBackup(await res.json().catch(()=>null)); }
+  }catch(e){ /* 무시 */ }
+}
+// 핵심 안전장치: 일정 하나를 저장/삭제해도 전체 데이터를 통째로 다시 올리지 않고,
+// 그 일정 하나(또는 거래처 하나)의 경로만 서버에 직접 씁니다.
+async function saveEventToServer(event, isEditOfBase){
+  if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 아직 설정되지 않았습니다'); return false; }
+  const bucket = isEditOfBase ? 'edited' : 'custom';
+  try{
+    const res = await fetch(overridesPath(bucket + '/' + event.id), {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(event)
+    });
+    if(res.ok){ backupFullSnapshot(); return true; }
+    console.error('saveEventToServer HTTP error', res.status);
+    showToast(res.status===401||res.status===403 ? '⚠ 접근 거부됨 — Firebase 규칙을 확인해주세요' : ('⚠ 저장 실패 (' + res.status + ')'));
+    return false;
+  }catch(err){
+    console.error('saveEventToServer network error', err);
+    showToast('⚠ 서버에 연결할 수 없습니다 (네트워크/방화벽 확인)');
+    return false;
+  }
+}
+async function saveClientToServer(client){
+  if(!STORAGE_ENDPOINT) return false;
+  try{
+    const res = await fetch(overridesPath('clients/' + sanitizeKey(client.client)), {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(client)
+    });
+    if(res.ok){ backupFullSnapshot(); return true; }
+    return false;
+  }catch(e){ return false; }
+}
+async function deleteEventFromServer(id){
+  if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 아직 설정되지 않았습니다'); return false; }
+  try{
+    const res = await fetch(overridesPath('deleted/' + id), {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(true)
+    });
+    if(String(id).startsWith('user-')){
+      fetch(overridesPath('custom/' + id), {method:'DELETE'}).catch(()=>{});
+    }
+    if(res.ok){ backupFullSnapshot(); showToast('삭제되었습니다 (팀 전체 공유)'); return true; }
+    console.error('deleteEventFromServer HTTP error', res.status);
+    showToast(res.status===401||res.status===403 ? '⚠ 접근 거부됨 — Firebase 규칙을 확인해주세요' : ('⚠ 삭제 실패 (' + res.status + ')'));
+    return false;
+  }catch(err){
+    console.error('deleteEventFromServer network error', err);
+    showToast('⚠ 서버에 연결할 수 없습니다 (네트워크/방화벽 확인)');
+    return false;
+  }
+}
+
+// saveStorage: 이제 평소 편집에는 쓰이지 않고, 예전 형식(배열) 데이터를 새 형식으로
+// 한 번에 정리하는 마이그레이션 등 "전체를 통째로 써야 하는" 드문 경우에만 사용합니다.
+// 급감 감지 안전장치는 그대로 유지합니다.
 async function saveStorage(){
   if(!STORAGE_ENDPOINT){
     showToast('⚠ 공유 저장소가 아직 설정되지 않았습니다 (하단 설정 안내 참고)');
@@ -618,7 +691,10 @@ async function saveStorage(){
       if(curRes.ok){ serverSize = scheduleDataSize(await curRes.json().catch(()=>null)); }
     }catch(e){ /* 서버 조회 실패 시 검사 없이 진행 */ }
 
-    const payload = { custom: customEvents, edited: editedMap, deleted: Array.from(deletedIds), clients: customClients };
+    const customObj = {}; customEvents.forEach(ev=>{ if(ev.id) customObj[ev.id] = ev; });
+    const deletedObj = {}; deletedIds.forEach(id=>{ deletedObj[id] = true; });
+    const clientsObj = {}; customClients.forEach(c=>{ const k = sanitizeKey(c.client); if(k) clientsObj[k] = c; });
+    const payload = { custom: customObj, edited: editedMap, deleted: deletedObj, clients: clientsObj };
     const newSize = scheduleDataSize(payload);
     if(serverSize >= 10 && newSize < serverSize * 0.5){
       clearTimeout(timeoutId);
@@ -636,7 +712,6 @@ async function saveStorage(){
     });
     clearTimeout(timeoutId);
     if(res.ok){
-      showToast('저장되었습니다 (팀 전체 공유)');
       writeDailyBackup(payload);
     } else {
       console.error('saveStorage HTTP error', res.status, res.statusText);
@@ -857,7 +932,7 @@ async function deleteEvent(e){
   customEvents = customEvents.filter(c=>c.id!==e.id);
   closePanel();
   render();
-  await saveStorage();
+  await deleteEventFromServer(e.id);
 }
 
 function closePanel(){ document.getElementById('overlay').classList.remove('show'); }
@@ -993,10 +1068,13 @@ function openForm(existing, presetDate){
 
     // 신규 거래처면 거래처 리스트에 자동 등록 (담당자를 적었을 때만)
     const existingClient = getAllClients().find(c=> c.client === title);
+    let newClient = null;
     if(!existingClient && assignee){
-      customClients.push({ client: title, manager: assignee, team: team || '' });
+      newClient = { client: title, manager: assignee, team: team || '' };
+      customClients.push(newClient);
     }
 
+    const isEditOfBase = isEdit && !String(data.id).startsWith('user-');
     if(isEdit){
       if(String(data.id).startsWith('user-')){
         const idx = customEvents.findIndex(c=>c.id===data.id);
@@ -1013,8 +1091,9 @@ function openForm(existing, presetDate){
     saveBtn.textContent = '저장 중...';
     render(); // reflect change on the calendar immediately
 
-    await saveStorage(); // persist to shared storage right away
-
+    const ok = await saveEventToServer(newEvent, isEditOfBase);
+    if(newClient) await saveClientToServer(newClient);
+    if(ok) showToast('저장되었습니다 (팀 전체 공유)');
 
     closePanel();
   };
