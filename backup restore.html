@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>근무일정표 백업 복구 도구</title>
+<style>
+  body{font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",-apple-system,sans-serif;background:#F6F8FB;color:#16233F;margin:0;padding:20px;}
+  .card{max-width:640px;margin:0 auto;background:white;border:1px solid #DFE6F2;border-radius:16px;padding:24px;box-shadow:0 6px 24px -14px rgba(20,40,90,0.15);}
+  h1{font-size:18px;margin:0 0 6px;color:#003087;}
+  .sub{color:#5A6B8C;font-size:13px;margin-bottom:18px;}
+  .box{background:#F6F8FB;border:1px solid #DFE6F2;border-radius:10px;padding:14px;margin-bottom:14px;font-size:13px;line-height:1.7;}
+  button{width:100%;padding:12px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px;}
+  .btn-refresh{background:#E4F5FC;color:#003087;}
+  .backup-item{display:flex;justify-content:space-between;align-items:center;padding:12px;border:1px solid #DFE6F2;border-radius:10px;margin-bottom:8px;}
+  .backup-item .info{font-size:13px;}
+  .backup-item .info b{display:block;color:#003087;font-size:14px;}
+  .backup-item button{width:auto;padding:8px 14px;background:#003087;color:white;margin:0;font-size:12.5px;}
+  .backup-item button:disabled{background:#9AA6C0;}
+  #log{margin-top:16px;font-size:12.5px;white-space:pre-wrap;background:#16233F;color:#D1FAE5;padding:14px;border-radius:10px;max-height:260px;overflow-y:auto;display:none;}
+  #list{margin-top:10px;}
+  .warn{color:#A21E1E;font-weight:700;}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>근무일정표 백업 복구 도구</h1>
+  <div class="sub">매일 자동으로 쌓인 백업 목록에서 원하는 날짜를 골라 복원합니다.</div>
+
+  <div class="box">
+    <b>안전 장치</b><br>
+    지금 서버에 이미 있는 데이터(날짜·이름 단위)는 <span class="warn">덮어쓰지 않고 그대로 유지</span>합니다. 선택한 백업에만 있고 서버엔 없는 항목만 채워 넣습니다.
+  </div>
+
+  <button class="btn-refresh" id="loadBtn">백업 목록 불러오기</button>
+  <div id="list"></div>
+  <div id="log"></div>
+</div>
+
+<script>
+const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
+const STORAGE_ENDPOINT = FIREBASE_URL + '/work-schedule.json';
+const BACKUP_BASE = FIREBASE_URL + '/work-schedule-backups';
+
+const logEl = document.getElementById('log');
+function log(msg){
+  logEl.style.display = 'block';
+  logEl.textContent += msg + '\n';
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function countEntries(data){
+  let n = 0;
+  ['west','east','central','south','fss'].forEach(tk=>{
+    const team = data && data[tk];
+    if(!team) return;
+    Object.keys(team).forEach(dstr=>{ n += Object.keys(team[dstr]||{}).length; });
+  });
+  return n;
+}
+
+document.getElementById('loadBtn').onclick = async function(){
+  this.disabled = true;
+  this.textContent = '불러오는 중...';
+  log('백업 목록 조회 중...');
+  try{
+    const res = await fetch(BACKUP_BASE + '.json?shallow=true', {cache:'no-store'});
+    if(!res.ok){ log('❌ 백업 목록 조회 실패: ' + res.status); this.disabled=false; this.textContent='백업 목록 불러오기'; return; }
+    const keys = await res.json();
+    if(!keys){ log('❌ 백업이 하나도 없습니다.'); this.disabled=false; this.textContent='백업 목록 불러오기'; return; }
+    const dates = Object.keys(keys).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse();
+    log('백업 ' + dates.length + '개 발견.');
+
+    const listEl = document.getElementById('list');
+    listEl.innerHTML = '';
+    for(const dstr of dates){
+      const row = document.createElement('div');
+      row.className = 'backup-item';
+      row.innerHTML = '<div class="info"><b>' + dstr + '</b>불러오는 중...</div><button disabled>복원</button>';
+      listEl.appendChild(row);
+      fetch(BACKUP_BASE + '/' + dstr + '.json', {cache:'no-store'}).then(r=>r.json()).then(data=>{
+        const cnt = countEntries(data);
+        row.querySelector('.info').innerHTML = '<b>' + dstr + '</b>' + cnt + '건';
+        const btn = row.querySelector('button');
+        btn.disabled = false;
+        btn.onclick = async ()=>{
+          btn.disabled = true; btn.textContent = '복원 중...';
+          await restoreFrom(dstr, data);
+          btn.textContent = '완료됨';
+        };
+      });
+    }
+
+    this.disabled = false;
+    this.textContent = '백업 목록 다시 불러오기';
+  }catch(err){
+    log('❌ 오류: ' + err.message);
+    this.disabled = false;
+    this.textContent = '백업 목록 불러오기';
+  }
+};
+
+async function restoreFrom(dstr, backupData){
+  log(dstr + ' 백업으로 복원 시작...');
+  try{
+    const curRes = await fetch(STORAGE_ENDPOINT, {cache:'no-store'});
+    const current = curRes.ok ? ((await curRes.json()) || {}) : {};
+    let newEntries = 0, filledFields = 0, untouched = 0;
+    ['west','east','central','south','fss'].forEach(tk=>{
+      if(!backupData[tk]) return;
+      if(!current[tk]) current[tk] = {};
+      Object.keys(backupData[tk]).forEach(d2=>{
+        if(!current[tk][d2]) current[tk][d2] = {};
+        Object.keys(backupData[tk][d2]).forEach(name=>{
+          const backupEntry = backupData[tk][d2][name];
+          if(!current[tk][d2][name]){
+            current[tk][d2][name] = backupEntry;
+            newEntries++;
+          } else {
+            // 항목 자체는 있지만 일부 칸이 비어있을 수 있으므로, 빈 칸만 백업 값으로 채움
+            // (이미 값이 있는 칸은 절대 덮어쓰지 않음)
+            const curEntry = current[tk][d2][name];
+            let filled = false;
+            ['night','weekend','am1','am2','pm1','pm2'].forEach(f=>{
+              if(!curEntry[f] && backupEntry[f]){
+                curEntry[f] = backupEntry[f];
+                filled = true;
+              }
+            });
+            if(filled) filledFields++; else untouched++;
+          }
+        });
+      });
+    });
+    if(backupData.memberOrder && !current.memberOrder) current.memberOrder = backupData.memberOrder;
+
+    log(dstr + ': 새 항목 ' + newEntries + '건, 빈 칸만 채움 ' + filledFields + '건, 이미 완전해서 그대로 둠 ' + untouched + '건.');
+    const putRes = await fetch(STORAGE_ENDPOINT, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(current)
+    });
+    if(putRes.ok){ log('✅ ' + dstr + ' 복원 완료!'); }
+    else{ log('❌ 저장 실패: ' + putRes.status); }
+  }catch(err){
+    log('❌ 오류: ' + err.message);
+  }
+}
+</script>
+</body>
+</html>
