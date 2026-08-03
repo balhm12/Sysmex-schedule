@@ -1,0 +1,30 @@
+name: 배포 전 자동 검증
+
+# index.html 또는 work-schedule.html이 바뀔 때마다 자동으로 실행됩니다.
+# GitHub Pages 자체는 지금처럼 그대로 즉시 반영되지만(브랜치 기반 배포이므로
+# 이 검증이 배포를 막지는 않습니다), 커밋 옆에 ✅/❌ 표시가 붙어서
+# 문법 오류나 XSS 방어 회귀를 커밋 직후에 바로 알 수 있습니다.
+on:
+  push:
+    paths:
+      - "index.html"
+      - "work-schedule.html"
+  workflow_dispatch: {}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 테스트 의존성 설치 (jsdom)
+        run: npm install --no-audit --no-fund
+
+      - name: 문법 검증 + XSS 방어 + 팀원 관리 기능 회귀 테스트
+        run: npm test
