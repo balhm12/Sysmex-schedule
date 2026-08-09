@@ -437,7 +437,10 @@
     }).join('');
     panel.innerHTML =
       '<button class="close" id="wp-close">✕</button>' +
-      '<h3>📋 주간계획서 내보내기</h3>' +
+      '<h3>📋 주간계획서 내보내기 <span style="font-size:10px;font-weight:800;color:#B45309;background:#FEF3C7;padding:2px 7px;border-radius:8px;vertical-align:2px;">Beta</span></h3>' +
+      '<div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;padding:8px 10px;margin-bottom:12px;font-size:11.5px;color:#92400E;line-height:1.5;">' +
+        '⚠️ <b>Beta 테스트 중입니다.</b> 아직 정식 사용 전이며, 내용을 검증하는 단계입니다. 실제 보고에 쓰시기 전에 내보낸 파일을 꼭 확인해주세요.' +
+      '</div>' +
       '<div class="sub">선택한 팀·주차의 근무표 데이터를 첨부 양식(xlsx)으로 내보냅니다. (근무표는 변경되지 않습니다)</div>' +
       '<div class="form-row"><label>팀</label><select id="wp-team">' + teamOpts + '</select></div>' +
       '<div class="form-row"><label>주차</label>' +
@@ -500,21 +503,21 @@
     }
   }
 
-  // ---- 버튼 주입 (견고: 즉시 + DOMContentLoaded + 재시도) ----
+  // ---- 탭 주입 (견고: 즉시 + DOMContentLoaded + 재시도) ----
+  // 상단 "🏥 설치일정 / 📅 근무일정"과 같은 자리에 세 번째 탭으로 추가합니다.
   function injectButton() {
     if (document.getElementById('weeklyPlanBtn')) return true;
-    var rc = document.querySelector('.right-controls');
-    if (!rc) return false;
-    var btn = document.createElement('button');
-    btn.className = 'add-btn';
+    var nav = document.querySelector('.app-nav');
+    if (!nav) return false;
+    var btn = document.createElement('a');
+    btn.href = '#';
     btn.id = 'weeklyPlanBtn';
-    btn.title = '팀·주차를 골라 주간계획서/보고서를 엑셀로 내보냅니다';
-    btn.textContent = '📋 주간계획서';
-    btn.onclick = openDialog;
-    var anchor = document.getElementById('exportXlsxBtn');
-    if (anchor && anchor.parentNode === rc) rc.insertBefore(btn, anchor.nextSibling);
-    else rc.appendChild(btn);
-    console.log('[주간계획서] 버튼 추가됨');
+    btn.title = '팀·주차를 골라 주간계획서/보고서를 엑셀로 내보냅니다 (Beta 테스트 중 — 아직 정식 사용 전입니다)';
+    btn.innerHTML = '📋 주간계획서 <span style="font-size:9px;font-weight:800;color:#B45309;background:#FEF3C7;' +
+      'padding:1px 6px;border-radius:8px;margin-left:3px;vertical-align:1px;">Beta</span>';
+    btn.onclick = function (e) { e.preventDefault(); openDialog(); };
+    nav.appendChild(btn);
+    console.log('[주간계획서] 탭 추가됨');
     return true;
   }
   function tryInject() {
