@@ -354,8 +354,6 @@
   if (!WR) { console.error('[주간계획서] report_core(WeeklyReport) 미로드 — 순서를 확인하세요'); return; }
   console.log('[주간계획서] 애드온 로드됨 (v3.1)');
 
-  var NICKNAMES = { '손흥민': 'Jun', '김용한': 'Max', '신관호': 'Bob' };
-
   // 원본 페이지 전역은 const/let(전역 식별자, window 프로퍼티 아님)일 수 있으므로
   // window[name] 대신 typeof 가드로 식별자를 직접 참조한다.
   var NOOP = function () { return null; };
@@ -371,7 +369,7 @@
   function teamKeysAll() { return (typeof TEAM_ORDER !== 'undefined') ? TEAM_ORDER : ['west', 'east', 'central', 'south', 'fss']; }
   function membersOf(teamKey) {
     var t = TEAMS[teamKey];
-    return t.members.map(function (m) { return { name: m.name, nickname: NICKNAMES[m.name] || '', role: m.role || '', team: m.team || teamKey }; });
+    return t.members.map(function (m) { return { name: m.name, nickname: '', role: m.role || '', team: m.team || teamKey }; });
   }
 
   // 근무표 → 주간 업무행 자동 생성 (읽기 전용)
