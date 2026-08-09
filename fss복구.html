@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FSG 근무일정표 — 데이터 복구</title>
+<style>
+  :root{--navy:#003087;--navy-deep:#001C55;--blue:#009EE0;--blue-soft:#E4F5FC;--paper:#F6F8FB;--ink:#16233F;--ink-soft:#5A6B8C;--line:#DFE6F2;--red:#D93B3B;--green:#1FA85C;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",-apple-system,sans-serif;background:var(--paper);color:var(--ink);}
+  .wrap{max-width:720px;margin:0 auto;padding:28px 20px 60px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px 24px;box-shadow:0 6px 24px -14px rgba(20,40,90,.15);margin-bottom:16px;}
+  .header{background:linear-gradient(120deg,var(--navy),var(--navy-deep));color:#fff;border-radius:14px;padding:18px 22px;margin-bottom:18px;}
+  .header h1{margin:0;font-size:19px;font-weight:800;}
+  .header p{margin:6px 0 0;font-size:12.5px;color:#C9D8F5;line-height:1.6;}
+  h2{font-size:14px;color:var(--navy);margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+  h2::before{content:"";width:4px;height:15px;background:var(--blue);border-radius:2px;}
+  label{display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin:10px 0 5px;}
+  select,button{font-family:inherit;}
+  select{width:100%;padding:10px;border:1.5px solid var(--line);border-radius:9px;font-size:14px;background:#fff;color:var(--ink);}
+  .row{display:flex;gap:12px;flex-wrap:wrap;}
+  .row>div{flex:1;min-width:180px;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:800;cursor:pointer;transition:.15s;}
+  .btn-primary{background:var(--navy);color:#fff;width:100%;margin-top:16px;padding:15px;font-size:15px;}
+  .btn-primary:hover{background:var(--navy-deep);}
+  .btn-primary:disabled{background:#AEBAD0;cursor:not-allowed;}
+  .btn-ghost{background:var(--blue-soft);color:var(--navy);border:1.5px solid var(--blue);}
+  .status{font-size:13px;line-height:1.7;padding:12px 14px;border-radius:10px;background:var(--paper);border:1px solid var(--line);margin-top:10px;white-space:pre-wrap;word-break:break-word;}
+  .status.ok{background:#E7F7EE;border-color:#B7E4C7;color:#146c43;}
+  .status.warn{background:#FFF4E5;border-color:#E8871E;color:#8C4E0C;}
+  .status.err{background:#FCE6E6;border-color:#F5C2C2;color:#A21E1E;}
+  .muted{font-size:11.5px;color:var(--ink-soft);line-height:1.6;margin-top:8px;}
+  .big{font-size:16px;font-weight:800;}
+  a{color:var(--blue);}
+  .preview{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:9px;margin-top:10px;font-size:12px;}
+  .preview table{width:100%;border-collapse:collapse;}
+  .preview th,.preview td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;}
+  .preview th{background:var(--navy);color:#fff;position:sticky;top:0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>🛟 FSG 근무일정표 — 데이터 복구</h1>
+    <p>매일 자동 백업(<code>/work-schedule-backups</code>)에서 선택한 <b>팀 하나</b>를 원하는 날짜 시점으로 되돌립니다.
+       선택한 팀 경로만 덮어쓰며 <b>다른 팀 데이터는 건드리지 않습니다.</b></p>
+  </div>
+
+  <div class="card">
+    <h2>1) 복구 대상 선택</h2>
+    <div class="row">
+      <div>
+        <label>팀</label>
+        <select id="teamSel">
+          <option value="fss">FSS팀</option>
+          <option value="west">FS WEST</option>
+          <option value="east">FS EAST</option>
+          <option value="central">FS CENTRAL</option>
+          <option value="south">FS SOUTH</option>
+        </select>
+      </div>
+      <div>
+        <label>백업 날짜 (되돌릴 시점)</label>
+        <select id="dateSel"><option>불러오는 중…</option></select>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <button class="btn btn-ghost" id="previewBtn">🔍 현재 상태 · 백업 미리보기</button>
+    </div>
+    <div id="status" class="status">준비 중… 백업 목록을 불러옵니다.</div>
+    <div id="preview" class="preview" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <h2>2) 복구 실행</h2>
+    <div class="muted">아래 버튼을 누르면 <b><span id="tgtLabel">FSS팀</span></b>을(를) <b><span id="tgtDate">-</span></b> 백업 시점으로 되돌립니다.
+       실행 전 반드시 위에서 <b>미리보기</b>로 내용을 확인하세요. (다른 팀·다른 백업은 변경되지 않습니다)</div>
+    <button class="btn btn-primary" id="restoreBtn" disabled>미리보기를 먼저 눌러주세요</button>
+    <div id="result" class="status" style="display:none;"></div>
+  </div>
+
+  <div class="muted">
+    ⚠ 복구 중에는 팀원들이 근무표에서 저장하지 않도록 잠시 알려주세요(오래된 화면 저장이 방금 복구한 내용을 덮어쓸 수 있음).<br>
+    복구가 끝나면 근무일정표에서 <b>Ctrl+F5</b>(강력 새로고침) 하세요. ·
+    <a href="work-schedule.html">→ 근무일정표로 이동</a>
+  </div>
+</div>
+
+<script>
+const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
+const TEAM_LABEL = {fss:'FSS팀', west:'FS WEST', east:'FS EAST', central:'FS CENTRAL', south:'FS SOUTH'};
+const $ = id => document.getElementById(id);
+let previewData = null; // {team, date, data}
+
+function setStatus(msg, cls){ const el=$('status'); el.textContent=msg; el.className='status'+(cls?(' '+cls):''); }
+function backupsUrl(){ return FIREBASE_URL + '/work-schedule-backups.json?shallow=true'; }
+function backupTeamUrl(date, team){ return FIREBASE_URL + '/work-schedule-backups/' + date + '/' + team + '.json'; }
+function currentTeamUrl(team){ return FIREBASE_URL + '/work-schedule/' + team + '.json'; }
+
+// 백업 날짜 목록 로드
+async function loadDates(){
+  try{
+    const res = await fetch(backupsUrl(), {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    const dates = data ? Object.keys(data).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse() : [];
+    const sel = $('dateSel');
+    if(!dates.length){ sel.innerHTML='<option value="">백업 없음</option>'; setStatus('백업이 없습니다. 관리자에게 문의하세요.', 'err'); return; }
+    sel.innerHTML = dates.map((d,i)=>'<option value="'+d+'"'+(i===0?' selected':'')+'>'+d+(i===0?' (최신)':'')+'</option>').join('');
+    setStatus('백업 ' + dates.length + '개를 찾았습니다 (최신: ' + dates[0] + '). 팀·날짜를 고르고 "미리보기"를 누르세요.');
+  }catch(e){ setStatus('백업 목록을 불러오지 못했습니다: '+e.message+'\n네트워크/방화벽을 확인하세요.', 'err'); }
+}
+
+function countEntries(teamData){
+  if(!teamData) return {dates:0, entries:0, names:new Set()};
+  let entries=0; const names=new Set();
+  Object.keys(teamData).forEach(dstr=>{
+    const day = teamData[dstr]||{};
+    Object.keys(day).forEach(nm=>{ entries++; names.add(nm); });
+  });
+  return {dates:Object.keys(teamData).length, entries, names};
+}
+
+function renderPreview(cur, bak, team, date){
+  const c = countEntries(cur), b = countEntries(bak);
+  let html = '';
+  html += '<b>현재 서버(' + TEAM_LABEL[team] + ')</b>: ' + (c.entries? (c.dates+'일 · '+c.entries+'건 · '+[...c.names].join(', ')) : '⚠ 비어 있음(삭제됨)') + '\n';
+  html += '<b>' + date + ' 백업</b>: ' + (b.entries? (b.dates+'일 · '+b.entries+'건 · '+[...b.names].join(', ')) : '⚠ 이 백업에는 해당 팀 데이터가 없음') + '\n';
+  if(!b.entries){ html += '\n→ 이 백업으로는 복구할 내용이 없습니다. 다른 날짜를 선택하세요.'; setStatus(html,'warn'); return false; }
+  html += '\n→ 복구하면 현재 ' + TEAM_LABEL[team] + ' 내용이 위 백업(' + date + ')으로 교체됩니다.';
+  setStatus(html, 'ok');
+
+  // 표 미리보기
+  const pv = $('preview'); pv.style.display='block';
+  const rows = Object.keys(bak).sort().map(dstr=>{
+    const day = bak[dstr];
+    const cells = Object.keys(day).map(nm=>{
+      const e=day[nm]; const v=[e.am1,e.am2,e.pm1,e.pm2,e.night,e.weekend].filter(Boolean).join(' / ');
+      return nm+': '+(v||'-');
+    }).join('  |  ');
+    return '<tr><td style="white-space:nowrap;font-weight:700;">'+dstr+'</td><td>'+cells+'</td></tr>';
+  }).join('');
+  pv.innerHTML = '<table><thead><tr><th>날짜</th><th>'+TEAM_LABEL[team]+' 내용(백업)</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  return true;
+}
+
+async function doPreview(){
+  const team = $('teamSel').value, date = $('dateSel').value;
+  if(!date){ setStatus('백업 날짜가 없습니다.', 'err'); return; }
+  setStatus('불러오는 중…');
+  $('preview').style.display='none';
+  $('restoreBtn').disabled = true;
+  try{
+    const [curR, bakR] = await Promise.all([
+      fetch(currentTeamUrl(team), {cache:'no-store'}),
+      fetch(backupTeamUrl(date, team), {cache:'no-store'})
+    ]);
+    const cur = curR.ok ? await curR.json() : null;
+    const bak = bakR.ok ? await bakR.json() : null;
+    const ok = renderPreview(cur, bak, team, date);
+    previewData = ok ? {team, date, data:bak} : null;
+    $('tgtLabel').textContent = TEAM_LABEL[team];
+    $('tgtDate').textContent = date;
+    $('restoreBtn').disabled = !ok;
+    $('restoreBtn').textContent = ok ? ('✅ '+TEAM_LABEL[team]+'을(를) '+date+' 시점으로 복구') : '복구할 내용이 없습니다';
+  }catch(e){ setStatus('미리보기 실패: '+e.message, 'err'); }
+}
+
+async function doRestore(){
+  if(!previewData){ setStatus('먼저 미리보기를 눌러주세요.', 'warn'); return; }
+  const {team, date, data} = previewData;
+  if(!confirm(TEAM_LABEL[team]+'을(를) '+date+' 백업 시점으로 되돌립니다.\n현재 '+TEAM_LABEL[team]+' 내용은 이 백업으로 교체됩니다.\n계속할까요?')) return;
+  const btn=$('restoreBtn'); btn.disabled=true; btn.textContent='복구 중…';
+  const rslt=$('result'); rslt.style.display='block'; rslt.className='status'; rslt.textContent='복구 중…';
+  try{
+    const res = await fetch(currentTeamUrl(team), {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    rslt.className='status ok';
+    rslt.innerHTML='✅ <b>'+TEAM_LABEL[team]+' 복구 완료!</b> ('+date+' 시점)\n근무일정표로 가서 Ctrl+F5(강력 새로고침) 하세요.';
+    btn.textContent='복구 완료됨';
+  }catch(e){
+    rslt.className='status err';
+    rslt.textContent='복구 실패: '+e.message+'\n네트워크/방화벽 또는 Firebase 규칙(쓰기 권한)을 확인하세요.';
+    btn.disabled=false; btn.textContent='다시 시도';
+  }
+}
+
+$('previewBtn').onclick = doPreview;
+$('restoreBtn').onclick = doRestore;
+$('teamSel').onchange = ()=>{ $('restoreBtn').disabled=true; $('restoreBtn').textContent='미리보기를 먼저 눌러주세요'; $('preview').style.display='none'; };
+$('dateSel').onchange = ()=>{ $('restoreBtn').disabled=true; $('restoreBtn').textContent='미리보기를 먼저 눌러주세요'; $('preview').style.display='none'; };
+loadDates();
+</script>
+</body>
+</html>
