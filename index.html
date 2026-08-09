@@ -473,18 +473,47 @@ const BACKUP_ENDPOINT_BASE = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/schedule-backups'
   : null;
 
+// ---- 익명 인증(선택) ----
+// FIREBASE_API_KEY를 채워넣으면 자동으로(로그인 화면 없이) 익명 인증을 받아
+// 모든 Firebase 요청에 토큰을 붙입니다. 비워두면(기본값) 인증 없이 그대로 작동합니다.
+const FIREBASE_API_KEY = "AIzaSyANZEYTXeDy3M1TV_rIG9Rp3m1TJk3MEy8";
+let _authToken = null;
+let _authTokenExpires = 0;
+async function ensureAuth(){
+  if(!FIREBASE_API_KEY) return;
+  if(_authToken && Date.now() < _authTokenExpires) return;
+  try{
+    const res = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + FIREBASE_API_KEY, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({returnSecureToken:true})
+    });
+    if(res.ok){
+      const data = await res.json();
+      _authToken = data.idToken;
+      _authTokenExpires = Date.now() + (parseInt(data.expiresIn,10)-60)*1000;
+    }
+  }catch(e){ console.error('anonymous auth error', e); }
+}
+function withAuth(url){
+  if(!_authToken) return url;
+  return url + (url.includes('?') ? '&' : '?') + 'auth=' + _authToken;
+}
+async function fbFetch(url, options){
+  await ensureAuth();
+  return fetch(withAuth(url), options);
+}
+
 // 화면이 오래된 버전이면 강하게 새로고침을 안내합니다 (근무일정표와 동일한 목적).
 const APP_VERSION = '2026-08-02-01';
 async function checkVersionAndWarn(){
   if(!FIREBASE_URL.startsWith('http')) return;
   try{
     const url = FIREBASE_URL.replace(/\/$/,'') + '/schedule-meta/latestVersion.json';
-    const res = await fetch(url, {cache:'no-store'});
+    const res = await fbFetch(url, {cache:'no-store'});
     const serverVersion = res.ok ? await res.json().catch(()=>null) : null;
     if(serverVersion && serverVersion > APP_VERSION){
       document.getElementById('staleBanner').style.display = 'block';
     } else if(!serverVersion || APP_VERSION > serverVersion){
-      fetch(url, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(APP_VERSION)}).catch(()=>{});
+      fbFetch(url, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(APP_VERSION)}).catch(()=>{});
     }
   }catch(e){ /* 무시 */ }
 }
@@ -561,7 +590,7 @@ async function loadStorage(){
   const controller = new AbortController();
   const timeoutId = setTimeout(()=>controller.abort(), 8000);
   try{
-    const res = await fetch(STORAGE_ENDPOINT, {cache:'no-store', signal: controller.signal});
+    const res = await fbFetch(STORAGE_ENDPOINT, {cache:'no-store', signal: controller.signal});
     clearTimeout(timeoutId);
     if(!res.ok){
       console.error('loadStorage HTTP error', res.status, res.statusText);
@@ -607,13 +636,13 @@ async function writeDailyBackup(dataToBackup){
     const today = todayISO();
     const controller = new AbortController();
     const timeoutId = setTimeout(()=>controller.abort(), 8000);
-    await fetch(BACKUP_ENDPOINT_BASE + '/' + today + '.json', {
+    await fbFetch(BACKUP_ENDPOINT_BASE + '/' + today + '.json', {
       method:'PUT', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(dataToBackup), signal: controller.signal
     });
     clearTimeout(timeoutId);
     if(Math.random() < 0.1){
-      const listRes = await fetch(BACKUP_ENDPOINT_BASE + '.json?shallow=true', {cache:'no-store'});
+      const listRes = await fbFetch(BACKUP_ENDPOINT_BASE + '.json?shallow=true', {cache:'no-store'});
       if(listRes.ok){
         const keys = await listRes.json().catch(()=>null);
         if(keys){
@@ -639,7 +668,7 @@ function overridesPath(subpath){
 }
 async function backupFullSnapshot(){
   try{
-    const res = await fetch(STORAGE_ENDPOINT, {cache:'no-store'});
+    const res = await fbFetch(STORAGE_ENDPOINT, {cache:'no-store'});
     if(res.ok){ writeDailyBackup(await res.json().catch(()=>null)); }
   }catch(e){ /* 무시 */ }
 }
@@ -649,7 +678,7 @@ async function saveEventToServer(event, isEditOfBase){
   if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 아직 설정되지 않았습니다'); return false; }
   const bucket = isEditOfBase ? 'edited' : 'custom';
   try{
-    const res = await fetch(overridesPath(bucket + '/' + event.id), {
+    const res = await fbFetch(overridesPath(bucket + '/' + event.id), {
       method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(event)
     });
     if(res.ok){ backupFullSnapshot(); return true; }
@@ -665,7 +694,7 @@ async function saveEventToServer(event, isEditOfBase){
 async function saveClientToServer(client){
   if(!STORAGE_ENDPOINT) return false;
   try{
-    const res = await fetch(overridesPath('clients/' + sanitizeKey(client.client)), {
+    const res = await fbFetch(overridesPath('clients/' + sanitizeKey(client.client)), {
       method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(client)
     });
     if(res.ok){ backupFullSnapshot(); return true; }
@@ -675,7 +704,7 @@ async function saveClientToServer(client){
 async function deleteEventFromServer(id){
   if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 아직 설정되지 않았습니다'); return false; }
   try{
-    const res = await fetch(overridesPath('deleted/' + id), {
+    const res = await fbFetch(overridesPath('deleted/' + id), {
       method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(true)
     });
     if(String(id).startsWith('user-')){
@@ -707,7 +736,7 @@ async function saveStorage(){
     // (예: 오래된 화면을 열어둔 채 저장) 자동으로 막습니다.
     let serverSize = 0;
     try{
-      const curRes = await fetch(STORAGE_ENDPOINT, {cache:'no-store'});
+      const curRes = await fbFetch(STORAGE_ENDPOINT, {cache:'no-store'});
       if(curRes.ok){ serverSize = scheduleDataSize(await curRes.json().catch(()=>null)); }
     }catch(e){ /* 서버 조회 실패 시 검사 없이 진행 */ }
 
@@ -724,7 +753,7 @@ async function saveStorage(){
       return;
     }
 
-    const res = await fetch(STORAGE_ENDPOINT, {
+    const res = await fbFetch(STORAGE_ENDPOINT, {
       method: 'PUT',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(payload),
@@ -1431,7 +1460,7 @@ async function testConnection(){
   let msg = `연결 대상:\n${STORAGE_ENDPOINT}\n\n`;
   try{
     const start = Date.now();
-    const res = await fetch(STORAGE_ENDPOINT, {cache:'no-store'});
+    const res = await fbFetch(STORAGE_ENDPOINT, {cache:'no-store'});
     const ms = Date.now()-start;
     if(res.ok){
       const data = await res.json().catch(()=>null);
