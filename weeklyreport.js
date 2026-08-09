@@ -423,26 +423,28 @@
   var st = null;
   function weekLabel(sunday) { var d = WR.weekDates(sunday); return d[0] + ' ~ ' + d[6]; }
 
+  // 베타 테스트 기간 동안 지원하는 팀 목록. 정식 오픈 시 이 배열에 팀 키를 추가하면 됩니다.
+  var BETA_TEAMS = ['fss'];
+
   function openDialog() {
-    var ck = (typeof currentTeam !== 'undefined' && currentTeam !== 'all') ? currentTeam : teamKeysAll()[0];
-    st = { teamKey: ck, sunday: WR.sundayOf(todayStr()), weeks: 2 };
+    st = { teamKey: BETA_TEAMS[0], sunday: WR.sundayOf(todayStr()), weeks: 2 };
     renderDialog();
     document.getElementById('overlay').classList.add('show');
   }
 
   function renderDialog() {
     var panel = document.getElementById('panel');
-    var teamOpts = teamKeysAll().map(function (tk) {
+    var teamOpts = BETA_TEAMS.map(function (tk) {
       return '<option value="' + tk + '"' + (tk === st.teamKey ? ' selected' : '') + '>' + TEAMS[tk].label + '</option>';
     }).join('');
     panel.innerHTML =
       '<button class="close" id="wp-close">✕</button>' +
       '<h3>📋 주간계획서 내보내기 <span style="font-size:10px;font-weight:800;color:#B45309;background:#FEF3C7;padding:2px 7px;border-radius:8px;vertical-align:2px;">Beta</span></h3>' +
       '<div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;padding:8px 10px;margin-bottom:12px;font-size:11.5px;color:#92400E;line-height:1.5;">' +
-        '⚠️ <b>Beta 테스트 중입니다.</b> 아직 정식 사용 전이며, 내용을 검증하는 단계입니다. 실제 보고에 쓰시기 전에 내보낸 파일을 꼭 확인해주세요.' +
+        '⚠️ <b>Beta 테스트 중입니다.</b> 현재 <b>FSS팀만</b> 지원하며, 다른 팀은 검증 후 순차 오픈 예정입니다. 실제 보고에 쓰시기 전에 내보낸 파일을 꼭 확인해주세요.' +
       '</div>' +
       '<div class="sub">선택한 팀·주차의 근무표 데이터를 첨부 양식(xlsx)으로 내보냅니다. (근무표는 변경되지 않습니다)</div>' +
-      '<div class="form-row"><label>팀</label><select id="wp-team">' + teamOpts + '</select></div>' +
+      '<div class="form-row"><label>팀</label><select id="wp-team" disabled>' + teamOpts + '</select></div>' +
       '<div class="form-row"><label>주차</label>' +
         '<div style="display:flex;align-items:center;gap:8px;">' +
           '<button class="add-btn" id="wp-prev">‹</button>' +
