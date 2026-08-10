@@ -350,6 +350,9 @@
 </style>
 </head>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<!-- 아래 두 스크립트는 FIREBASE_API_KEY를 설정했을 때만 실제로 사용됩니다 (익명 인증용, 선택 사항) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <body>
 <div class="app">
   <div class="app-nav">
@@ -448,10 +451,6 @@
   <div class="panel" id="panel"></div>
 </div>
 <div class="save-toast" id="toast">저장되었습니다</div>
-<div id="staleBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#A21E1E;color:white;padding:12px 16px;text-align:center;font-size:13px;font-weight:700;">
-  ⚠️ 이 화면이 오래된 버전입니다 — 새로고침 해주세요.
-  <button onclick="location.reload()" style="margin-left:10px;background:white;color:#A21E1E;border:none;border-radius:6px;padding:6px 12px;font-weight:800;cursor:pointer;">지금 새로고침</button>
-</div>
 
 <script>
 const BASE_EVENTS = [{"id": "base-0", "category": "holiday", "start": "2026-02-16", "end": "2026-02-16", "title": "설날", "device": null, "team": null, "assignee": null}, {"id": "base-1", "category": "evaluation", "start": "2026-02-25", "end": "2026-02-25", "title": "대구가톨릭", "device": "XR Demo", "team": null, "assignee": "Mia"}, {"id": "base-2", "category": "evaluation", "start": "2026-02-26", "end": "2026-02-26", "title": "Hema", "device": "CAL", "team": null, "assignee": null}, {"id": "base-3", "category": "holiday", "start": "2026-03-02", "end": "2026-03-02", "title": "휴일", "device": null, "team": null, "assignee": null}, {"id": "base-4", "category": "evaluation", "start": "2026-03-03", "end": "2026-03-03", "title": "Hema", "device": "CAL", "team": null, "assignee": null}, {"id": "base-5", "category": "evaluation", "start": "2026-07-01", "end": "2026-07-01", "title": "신원의료재단", "device": "XN 설치평가", "team": null, "assignee": "Judy"}, {"id": "base-6", "category": "install", "start": "2026-07-08", "end": "2026-07-10", "title": "강남차병원", "device": "XR-9100", "team": "FS East", "assignee": null}, {"id": "base-7", "category": "install", "start": "2026-07-14", "end": "2026-07-16", "title": "SD의학연구소", "device": "XN 2EA 추가 (System 연결)", "team": "FS East", "assignee": null}, {"id": "base-8", "category": "evaluation", "start": "2026-07-20", "end": "2026-07-20", "title": "SD의학연구소", "device": "XN 설치평가", "team": null, "assignee": "Jinny"}, {"id": "base-9", "category": "evaluation", "start": "2026-07-20", "end": "2026-07-20", "title": "대구파티마병원", "device": "XN-350 BF 설치평가", "team": null, "assignee": "Carson, Sea"}, {"id": "base-10", "category": "evaluation", "start": "2026-07-29", "end": "2026-07-29", "title": "녹십자", "device": "CN 설치평가", "team": null, "assignee": "Yusuf"}, {"id": "base-11", "category": "install", "start": "2026-08-03", "end": "2026-08-07", "title": "대구가톨릭병원", "device": "XR-9100", "team": "FS South", "assignee": null}, {"id": "base-12", "category": "relocation", "start": "2026-08-20", "end": "2026-08-20", "title": "대구카톨릭병원", "device": "XR 이전설치", "team": "FS South", "assignee": null}, {"id": "base-13", "category": "install", "start": "2026-08-24", "end": "2026-08-24", "title": "남양주현대병원", "device": "UN 설치", "team": null, "assignee": null}, {"id": "base-14", "category": "install", "start": "2026-08-25", "end": "2026-08-28", "title": "광주씨젠", "device": "XR-9100 / UN-2000", "team": "FS Central", "assignee": null}, {"id": "base-15", "category": "install", "start": "2026-08-25", "end": "2026-08-28", "title": "대구씨젠", "device": "XR-9100", "team": "FS South", "assignee": null}, {"id": "base-16", "category": "install", "start": "2026-08-25", "end": "2026-08-25", "title": "대구가톨릭대학교병원", "device": "- XR > Judy 8월 초 설치", "team": "FS South", "assignee": null}, {"id": "base-17", "category": "evaluation", "start": "2026-08-26", "end": "2026-08-26", "title": "남양주현대병원", "device": "UN 평가", "team": null, "assignee": null}, {"id": "base-18", "category": "install", "start": "2026-08-31", "end": "2026-09-04", "title": "한양대병원", "device": "XR-9100", "team": "FS East", "assignee": null}, {"id": "base-19", "category": "install", "start": "2026-09-07", "end": "2026-09-11", "title": "강릉아산병원", "device": "XR-9100", "team": "FS East", "assignee": null}, {"id": "base-20", "category": "install", "start": "2026-09-07", "end": "2026-09-11", "title": "대구파티마병원", "device": "XR-9100", "team": "FS South", "assignee": null}, {"id": "base-21", "category": "evaluation", "start": "2026-09-07", "end": "2026-09-07", "title": "한양대병원", "device": "XR 설치평가", "team": null, "assignee": "Sea, Jinny"}, {"id": "base-22", "category": "relocation", "start": "2026-09-12", "end": "2026-09-12", "title": "대구씨젠", "device": "XR 이전설치", "team": "FS South", "assignee": null}, {"id": "base-23", "category": "relocation", "start": "2026-09-12", "end": "2026-09-12", "title": "광주씨젠", "device": "XR/UN 이전설치", "team": "FS Central", "assignee": null}, {"id": "base-24", "category": "install", "start": "2026-09-14", "end": "2026-09-18", "title": "삼성서울병원", "device": "XR-9100", "team": "FS East", "assignee": null}, {"id": "base-25", "category": "evaluation", "start": "2026-09-14", "end": "2026-09-14", "title": "강릉아산병원", "device": "XR 설치평가", "team": null, "assignee": "Judy"}, {"id": "base-26", "category": "relocation", "start": "2026-09-17", "end": "2026-09-17", "title": "한양대병원", "device": "XR 이전설치", "team": "FS East", "assignee": null}, {"id": "base-27", "category": "relocation", "start": "2026-09-21", "end": "2026-09-21", "title": "강릉아산", "device": "XR 이전설치", "team": "FS East", "assignee": null}, {"id": "base-28", "category": "evaluation", "start": "2026-09-21", "end": "2026-09-21", "title": "삼성서울", "device": "XR (~30일까지 평가 완료 필)", "team": null, "assignee": null}, {"id": "base-29", "category": "install", "start": "2026-09-28", "end": "2026-10-01", "title": "국립암센터", "device": "XR-9100", "team": "FS West", "assignee": null}, {"id": "base-30", "category": "relocation", "start": "2026-10-02", "end": "2026-10-02", "title": "삼성서울병원", "device": "XR 이전설치 (야간)", "team": "FS East", "assignee": null}];
@@ -473,49 +472,63 @@ const BACKUP_ENDPOINT_BASE = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/schedule-backups'
   : null;
 
-// ---- 익명 인증(선택) ----
-// FIREBASE_API_KEY를 채워넣으면 자동으로(로그인 화면 없이) 익명 인증을 받아
-// 모든 Firebase 요청에 토큰을 붙입니다. 비워두면(기본값) 인증 없이 그대로 작동합니다.
+// ============================================================
+// (선택) 익명 인증 — 공개 URL만 알면 누구나 읽고 쓸 수 있던 것에서 벗어나
+// "이 페이지를 거쳐 로그인한 사람만" 읽고 쓸 수 있도록 하는 안전장치입니다.
+// 사용자에게는 로그인 화면이 전혀 뜨지 않고 뒤에서 조용히 처리됩니다.
+//
+// 켜는 방법 (모두 Firebase 콘솔에서):
+//   1) Authentication → Sign-in method → "익명" 로그인 사용 설정
+//   2) 프로젝트 설정 → 일반 → 내 앱 → 웹 API 키를 아래 FIREBASE_API_KEY에 붙여넣기
+//   3) Realtime Database → 규칙을 아래처럼 변경 후 게시:
+//      { "rules": { ".read": "auth != null", ".write": "auth != null" } }
+// 세 가지를 모두 하기 전까지는 FIREBASE_API_KEY를 비워두세요 — 비워두면 지금과
+// 완전히 동일하게(인증 없이) 동작하므로 안전하게 먼저 배포해둘 수 있습니다.
+// ============================================================
 const FIREBASE_API_KEY = "AIzaSyANZEYTXeDy3M1TV_rIG9Rp3m1TJk3MEy8";
-let _authToken = null;
-let _authTokenExpires = 0;
-async function ensureAuth(){
-  if(!FIREBASE_API_KEY) return;
-  if(_authToken && Date.now() < _authTokenExpires) return;
-  try{
-    const res = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + FIREBASE_API_KEY, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({returnSecureToken:true})
-    });
-    if(res.ok){
-      const data = await res.json();
-      _authToken = data.idToken;
-      _authTokenExpires = Date.now() + (parseInt(data.expiresIn,10)-60)*1000;
+let _idToken = null;
+if(FIREBASE_API_KEY && window.firebase){
+  firebase.initializeApp({ apiKey: FIREBASE_API_KEY, databaseURL: FIREBASE_URL });
+  firebase.auth().onIdTokenChanged(async (user)=>{
+    if(user){
+      try{ _idToken = await user.getIdToken(); }catch(e){ console.error('ID 토큰 갱신 실패', e); }
+    } else {
+      _idToken = null;
+      firebase.auth().signInAnonymously().catch(err=>console.error('익명 로그인 실패', err));
     }
-  }catch(e){ console.error('anonymous auth error', e); }
-}
-function withAuth(url){
-  if(!_authToken) return url;
-  return url + (url.includes('?') ? '&' : '?') + 'auth=' + _authToken;
-}
-async function fbFetch(url, options){
-  await ensureAuth();
-  return fetch(withAuth(url), options);
+  });
+  firebase.auth().signInAnonymously().catch(err=>console.error('익명 로그인 실패', err));
+
+  // 이 앱이 Firebase로 보내는 모든 요청에 인증 토큰을 자동으로 붙여줍니다.
+  // (개별 fetch 호출부는 하나도 건드리지 않고, 이 한 곳에서만 처리합니다)
+  const _rawFetch = window.fetch.bind(window);
+  window.fetch = function(url, opts){
+    if(typeof url === 'string' && _idToken && url.indexOf(FIREBASE_URL) === 0){
+      url += (url.indexOf('?') !== -1 ? '&' : '?') + 'auth=' + _idToken;
+    }
+    return _rawFetch(url, opts);
+  };
 }
 
-// 화면이 오래된 버전이면 강하게 새로고침을 안내합니다 (근무일정표와 동일한 목적).
-const APP_VERSION = '2026-08-02-01';
-async function checkVersionAndWarn(){
-  if(!FIREBASE_URL.startsWith('http')) return;
-  try{
-    const url = FIREBASE_URL.replace(/\/$/,'') + '/schedule-meta/latestVersion.json';
-    const res = await fbFetch(url, {cache:'no-store'});
-    const serverVersion = res.ok ? await res.json().catch(()=>null) : null;
-    if(serverVersion && serverVersion > APP_VERSION){
-      document.getElementById('staleBanner').style.display = 'block';
-    } else if(!serverVersion || APP_VERSION > serverVersion){
-      fbFetch(url, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(APP_VERSION)}).catch(()=>{});
-    }
-  }catch(e){ /* 무시 */ }
+// 사용자가 입력한 값(제목/담당자/거래처명 등)을 화면에 표시하기 전 HTML로 해석되지 않도록 변환합니다.
+// 이 캘린더는 팀 전체가 공유 쓰기 권한을 갖기 때문에, 실수든 악의적 입력이든
+// <script> 같은 태그가 그대로 저장될 수 있어 반드시 이 함수를 거쳐야 안전합니다.
+function escapeHtml(str){
+  return String(str==null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Excel 셀에 =, +, -, @ 로 시작하는 텍스트를 그대로 쓰면 일부 프로그램에서
+// 수식으로 오인해 실행할 수 있습니다("수식 삽입/CSV 삽입" 공격). 앞에 이런 문자가
+// 있으면 눈에 띄지 않는 작은따옴표를 붙여 항상 순수 텍스트로 취급되게 만듭니다.
+function sanitizeForExcel(v){
+  if(v == null) return v;
+  const s = String(v);
+  return /^[=+\-@\t\r]/.test(s) ? ("'" + s) : s;
 }
 
 const CATS = {
@@ -582,6 +595,39 @@ function showToast(msg){
   showToast._t = setTimeout(()=>t.classList.remove('show'), 1600);
 }
 
+// ============================================================
+// 실시간 동기화 (선택 사항, 실패해도 안전)
+// work-schedule.html과 동일한 방식: Firebase REST 스트리밍(SSE)으로
+// 변경 신호만 받고, 실제 반영은 항상 loadStorage()로 다시 받아와서 처리합니다.
+// 연결이 끊기면 자동 재연결하며, 실패해도 기존 20초 폴링이 안전망 역할을 합니다.
+// ============================================================
+let _syncDebounceTimer = null;
+function scheduleRealtimeSync(){
+  clearTimeout(_syncDebounceTimer);
+  _syncDebounceTimer = setTimeout(async ()=>{
+    if(document.getElementById('overlay').classList.contains('show')) return;
+    await loadStorage();
+    render();
+  }, 400);
+}
+function startRealtimeSync(){
+  if(!STORAGE_ENDPOINT || typeof EventSource === 'undefined') return;
+  let es, reconnectDelay = 2000;
+  function connect(){
+    const url = STORAGE_ENDPOINT + (_idToken ? (STORAGE_ENDPOINT.indexOf('?')!==-1?'&':'?') + 'auth=' + _idToken : '');
+    try{ es = new EventSource(url); }catch(e){ return; }
+    es.addEventListener('put', scheduleRealtimeSync);
+    es.addEventListener('patch', scheduleRealtimeSync);
+    es.onopen = ()=>{ reconnectDelay = 2000; };
+    es.onerror = ()=>{
+      es.close();
+      setTimeout(connect, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+    };
+  }
+  connect();
+}
+
 async function loadStorage(){
   if(!STORAGE_ENDPOINT){
     showToast('⚠ 공유 저장소가 아직 설정되지 않았습니다 (하단 설정 안내 참고)');
@@ -590,7 +636,7 @@ async function loadStorage(){
   const controller = new AbortController();
   const timeoutId = setTimeout(()=>controller.abort(), 8000);
   try{
-    const res = await fbFetch(STORAGE_ENDPOINT, {cache:'no-store', signal: controller.signal});
+    const res = await fetch(STORAGE_ENDPOINT, {cache:'no-store', signal: controller.signal});
     clearTimeout(timeoutId);
     if(!res.ok){
       console.error('loadStorage HTTP error', res.status, res.statusText);
@@ -636,13 +682,13 @@ async function writeDailyBackup(dataToBackup){
     const today = todayISO();
     const controller = new AbortController();
     const timeoutId = setTimeout(()=>controller.abort(), 8000);
-    await fbFetch(BACKUP_ENDPOINT_BASE + '/' + today + '.json', {
+    await fetch(BACKUP_ENDPOINT_BASE + '/' + today + '.json', {
       method:'PUT', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(dataToBackup), signal: controller.signal
     });
     clearTimeout(timeoutId);
     if(Math.random() < 0.1){
-      const listRes = await fbFetch(BACKUP_ENDPOINT_BASE + '.json?shallow=true', {cache:'no-store'});
+      const listRes = await fetch(BACKUP_ENDPOINT_BASE + '.json?shallow=true', {cache:'no-store'});
       if(listRes.ok){
         const keys = await listRes.json().catch(()=>null);
         if(keys){
@@ -668,7 +714,7 @@ function overridesPath(subpath){
 }
 async function backupFullSnapshot(){
   try{
-    const res = await fbFetch(STORAGE_ENDPOINT, {cache:'no-store'});
+    const res = await fetch(STORAGE_ENDPOINT, {cache:'no-store'});
     if(res.ok){ writeDailyBackup(await res.json().catch(()=>null)); }
   }catch(e){ /* 무시 */ }
 }
@@ -678,7 +724,7 @@ async function saveEventToServer(event, isEditOfBase){
   if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 아직 설정되지 않았습니다'); return false; }
   const bucket = isEditOfBase ? 'edited' : 'custom';
   try{
-    const res = await fbFetch(overridesPath(bucket + '/' + event.id), {
+    const res = await fetch(overridesPath(bucket + '/' + event.id), {
       method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(event)
     });
     if(res.ok){ backupFullSnapshot(); return true; }
@@ -694,7 +740,7 @@ async function saveEventToServer(event, isEditOfBase){
 async function saveClientToServer(client){
   if(!STORAGE_ENDPOINT) return false;
   try{
-    const res = await fbFetch(overridesPath('clients/' + sanitizeKey(client.client)), {
+    const res = await fetch(overridesPath('clients/' + sanitizeKey(client.client)), {
       method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(client)
     });
     if(res.ok){ backupFullSnapshot(); return true; }
@@ -704,7 +750,7 @@ async function saveClientToServer(client){
 async function deleteEventFromServer(id){
   if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 아직 설정되지 않았습니다'); return false; }
   try{
-    const res = await fbFetch(overridesPath('deleted/' + id), {
+    const res = await fetch(overridesPath('deleted/' + id), {
       method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(true)
     });
     if(String(id).startsWith('user-')){
@@ -736,7 +782,7 @@ async function saveStorage(){
     // (예: 오래된 화면을 열어둔 채 저장) 자동으로 막습니다.
     let serverSize = 0;
     try{
-      const curRes = await fbFetch(STORAGE_ENDPOINT, {cache:'no-store'});
+      const curRes = await fetch(STORAGE_ENDPOINT, {cache:'no-store'});
       if(curRes.ok){ serverSize = scheduleDataSize(await curRes.json().catch(()=>null)); }
     }catch(e){ /* 서버 조회 실패 시 검사 없이 진행 */ }
 
@@ -753,7 +799,7 @@ async function saveStorage(){
       return;
     }
 
-    const res = await fbFetch(STORAGE_ENDPOINT, {
+    const res = await fetch(STORAGE_ENDPOINT, {
       method: 'PUT',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(payload),
@@ -954,16 +1000,16 @@ function openDetail(e){
   const panel = document.getElementById('panel');
   const isRange = e.start !== e.end;
   let meta = '';
-  if(e.team) meta += `<div class="meta">담당팀: ${e.team}</div>`;
-  if(e.assignee) meta += `<div class="meta">담당: ${e.assignee}</div>`;
-  if(e.createdAt) meta += `<div class="meta">등록: ${fmtTimestamp(e.createdAt)}${e.creator? ' · '+e.creator : ''}</div>`;
+  if(e.team) meta += `<div class="meta">담당팀: ${escapeHtml(e.team)}</div>`;
+  if(e.assignee) meta += `<div class="meta">담당: ${escapeHtml(e.assignee)}</div>`;
+  if(e.createdAt) meta += `<div class="meta">등록: ${fmtTimestamp(e.createdAt)}${e.creator? ' · '+escapeHtml(e.creator) : ''}</div>`;
   if(e.updatedAt && e.updatedAt !== e.createdAt) meta += `<div class="meta">최근 수정: ${fmtTimestamp(e.updatedAt)}</div>`;
   panel.innerHTML = `<button class="close" onclick="closePanel()">✕</button>
-    <h3>${e.title}</h3>
+    <h3>${escapeHtml(e.title)}</h3>
     <div class="sub">${isRange ? e.start+' ~ '+e.end : e.start}</div>
     <div class="detail-ev ${e.category}">
       <div class="cat-label">${CATS[e.category].label}</div>
-      <div class="txt">${e.device || e.title}</div>
+      <div class="txt">${escapeHtml(e.device || e.title)}</div>
       ${meta}
       <div class="detail-actions">
         <button class="btn-edit">수정</button>
@@ -1008,13 +1054,13 @@ function openForm(existing, presetDate){
 
     <div class="form-row" style="position:relative;">
       <label>병원</label>
-      <input type="text" id="f-title" autocomplete="off" value="${(data.title||'').replace(/"/g,'&quot;')}" placeholder="예: OO병원">
+      <input type="text" id="f-title" autocomplete="off" value="${escapeHtml(data.title)}" placeholder="예: OO병원">
       <div class="client-suggest" id="clientSuggest"></div>
     </div>
 
     <div class="form-row">
       <label>장비 / 상세내용 (선택)</label>
-      <input type="text" id="f-device" value="${(data.device||'').replace(/"/g,'&quot;')}" placeholder="예: XR-9100">
+      <input type="text" id="f-device" value="${escapeHtml(data.device)}" placeholder="예: XR-9100">
     </div>
 
     <div class="form-row form-grid2">
@@ -1038,13 +1084,13 @@ function openForm(existing, presetDate){
       </div>
       <div>
         <label>담당자 (선택)</label>
-        <input type="text" id="f-assignee" value="${(data.assignee||'').replace(/"/g,'&quot;')}" placeholder="예: Jinny">
+        <input type="text" id="f-assignee" value="${escapeHtml(data.assignee)}" placeholder="예: Jinny">
       </div>
     </div>
 
     <div class="form-row">
       <label>만든이 (선택)</label>
-      <input type="text" id="f-creator" value="${(data.creator||'').replace(/"/g,'&quot;')}" placeholder="예: Jun">
+      <input type="text" id="f-creator" value="${escapeHtml(data.creator)}" placeholder="예: Jun">
       ${(data.createdAt || data.updatedAt) ? `<div class="ts-info">
         ${data.createdAt ? `등록: ${fmtTimestamp(data.createdAt)}${data.creator? ' · '+data.creator : ''}` : ''}
         ${data.updatedAt && data.updatedAt!==data.createdAt ? `<br>최근 수정: ${fmtTimestamp(data.updatedAt)}` : ''}
@@ -1075,8 +1121,8 @@ function openForm(existing, presetDate){
     const matches = getAllClients().filter(c=> c.client.toLowerCase().includes(q)).slice(0, 8);
     if(matches.length===0){ suggestBox.classList.remove('show'); suggestBox.innerHTML=''; return; }
     suggestBox.innerHTML = matches.map(c=>
-      `<div class="client-suggest-item" data-client="${c.client.replace(/"/g,'&quot;')}" data-manager="${(c.manager||'').replace(/"/g,'&quot;')}" data-team="${c.team||''}">
-        <b>${c.client}</b> <span class="cs-meta">· ${c.manager||'담당자 미상'}${c.team? ' · '+c.team : ''}</span>
+      `<div class="client-suggest-item" data-client="${escapeHtml(c.client)}" data-manager="${escapeHtml(c.manager)}" data-team="${c.team||''}">
+        <b>${escapeHtml(c.client)}</b> <span class="cs-meta">· ${escapeHtml(c.manager||'담당자 미상')}${c.team? ' · '+escapeHtml(c.team) : ''}</span>
       </div>`
     ).join('');
     suggestBox.classList.add('show');
@@ -1258,13 +1304,13 @@ async function exportExcel(){
 
   const rows = events.map(e=>[
     CATS[e.category] ? CATS[e.category].label : e.category,
-    e.title,
-    e.device || '',
+    sanitizeForExcel(e.title),
+    sanitizeForExcel(e.device || ''),
     e.start,
     e.end,
     durationDays(e.start, e.end),
-    e.team || '',
-    e.assignee || ''
+    sanitizeForExcel(e.team || ''),
+    sanitizeForExcel(e.assignee || '')
   ]);
 
   const wb = new ExcelJS.Workbook();
@@ -1387,7 +1433,7 @@ async function exportExcel(){
     let grandTotal = 0;
     teams.forEach(t=>{
       let rowTotal = 0;
-      ws2.getCell(r, 1).value = t;
+      ws2.getCell(r, 1).value = sanitizeForExcel(t);
       ws2.getCell(r, 1).font = {bold:true};
       FY_MONTHS.forEach((m,i)=>{
         const v = teamByMonth[t][m][catKey];
@@ -1460,7 +1506,7 @@ async function testConnection(){
   let msg = `연결 대상:\n${STORAGE_ENDPOINT}\n\n`;
   try{
     const start = Date.now();
-    const res = await fbFetch(STORAGE_ENDPOINT, {cache:'no-store'});
+    const res = await fetch(STORAGE_ENDPOINT, {cache:'no-store'});
     const ms = Date.now()-start;
     if(res.ok){
       const data = await res.json().catch(()=>null);
@@ -1505,8 +1551,8 @@ function openManagerSearch(){
     }
     resultsBox.innerHTML = matches.slice(0, 30).map(c=>
       `<div class="detail-ev install" style="margin-bottom:8px;">
-        <div class="txt">${c.client}</div>
-        <div class="meta">담당자: ${c.manager || '미상'}${c.team? ' · 담당팀: '+c.team : ''}</div>
+        <div class="txt">${escapeHtml(c.client)}</div>
+        <div class="meta">담당자: ${escapeHtml(c.manager || '미상')}${c.team? ' · 담당팀: '+escapeHtml(c.team) : ''}</div>
       </div>`
     ).join('') + (matches.length>30 ? `<div class="search-empty">외 ${matches.length-30}건 더 있음 (검색어를 구체적으로 입력해주세요)</div>` : '');
   }
@@ -1566,8 +1612,8 @@ function renderSearchResults(){
     item.className = 'search-result-item';
     const dateTxt = (e.start!==e.end ? `${e.start} ~ ${e.end}` : fmtDateLabel(e.start));
     const catLabel = CATS[e.category] ? CATS[e.category].label : e.category;
-    item.innerHTML = `<div class="sr-title">${e.title}${e.device? ' · '+e.device : ''}</div>
-      <div class="sr-meta">${catLabel} · ${dateTxt}${e.team? ' · '+e.team : ''}</div>`;
+    item.innerHTML = `<div class="sr-title">${escapeHtml(e.title)}${e.device? ' · '+escapeHtml(e.device) : ''}</div>
+      <div class="sr-meta">${catLabel} · ${dateTxt}${e.team? ' · '+escapeHtml(e.team) : ''}</div>`;
     item.onclick = ()=>{
       const [y,m] = e.start.split('-').map(Number);
       viewYear = y; viewMonth = m;
@@ -1601,12 +1647,11 @@ document.addEventListener('click', (ev)=>{
   }
   await loadStorage();
   render(); // 공유 데이터가 도착하면 다시 그려서 반영
-  checkVersionAndWarn();
+  startRealtimeSync();
   setInterval(async ()=>{
     if(document.getElementById('overlay').classList.contains('show')) return; // don't disrupt active edits
     await loadStorage();
     render();
-    checkVersionAndWarn();
   }, 20000);
 })();
 </script>
