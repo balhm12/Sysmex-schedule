@@ -630,17 +630,26 @@ const BACKUP_ENDPOINT_BASE = FIREBASE_URL.startsWith('http')
 // ============================================================
 const FIREBASE_API_KEY = "AIzaSyANZEYTXeDy3M1TV_rIG9Rp3m1TJk3MEy8";
 let _idToken = null;
+// 페이지가 뜨자마자 데이터를 불러오는 시점이 익명 로그인(서버 왕복 필요, 100~500ms)보다
+// 먼저 실행되면 토큰 없이 요청이 나가서 규칙에 막힙니다. init()이 최초 로딩 전에 이 프로미스를
+// 기다리게 해서 그 경쟁 상태를 없앱니다. (인증 기능이 꺼져있으면 즉시 resolve되어 영향 없음)
+let _resolveAuthReady;
+const _authReady = new Promise(res=>{ _resolveAuthReady = res; });
 if(FIREBASE_API_KEY && window.firebase){
   firebase.initializeApp({ apiKey: FIREBASE_API_KEY, databaseURL: FIREBASE_URL });
+  let _authSettled = false;
+  function _settleAuthReady(){ if(!_authSettled){ _authSettled = true; _resolveAuthReady(); } }
   firebase.auth().onIdTokenChanged(async (user)=>{
     if(user){
       try{ _idToken = await user.getIdToken(); }catch(e){ console.error('ID 토큰 갱신 실패', e); }
+      _settleAuthReady();
     } else {
       _idToken = null;
-      firebase.auth().signInAnonymously().catch(err=>console.error('익명 로그인 실패', err));
+      firebase.auth().signInAnonymously().catch(err=>{ console.error('익명 로그인 실패', err); _settleAuthReady(); });
     }
   });
   firebase.auth().signInAnonymously().catch(err=>console.error('익명 로그인 실패', err));
+  setTimeout(_settleAuthReady, 4000); // 인증이 오래 걸리거나 실패해도 4초 넘게 화면을 막지는 않음
 
   const _rawFetch = window.fetch.bind(window);
   window.fetch = function(url, opts){
@@ -649,6 +658,8 @@ if(FIREBASE_API_KEY && window.firebase){
     }
     return _rawFetch(url, opts);
   };
+} else {
+  _resolveAuthReady();
 }
 
 // 대한민국 법정 공휴일 (2026~2027, 대체공휴일 포함)
@@ -2426,6 +2437,7 @@ document.getElementById('refreshBtn').onclick = async ()=>{
   renderLegend();
   renderGuide();
   render();
+  await _authReady; // 인증 사용 중이면 토큰이 준비될 때까지(최대 4초) 대기 후 최초 데이터 요청
   await loadStorage();
   const removedAlready = await checkSeedRemoved();
   if(!removedAlready){
