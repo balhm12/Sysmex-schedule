@@ -59,6 +59,33 @@
     return null;
   }
 
+  // ---- 내용(content) 텍스트에서 구분(카테고리) 키워드 감지 ----
+  var CATEGORY_KEYWORDS = [
+    { words: ['설치', '이전설치', '폐기'], category: 'Installation' },
+    { words: ['점검', 'PM'], category: 'Preventive maintenance' },
+    { words: ['칼', 'Calibration', '칼리브레이션', 'Cal'], category: 'Application work' },
+  ];
+  function detectCategory(content) {
+    if (!content) return null;
+    var text = String(content);
+    for (var i = 0; i < CATEGORY_KEYWORDS.length; i++) {
+      var grp = CATEGORY_KEYWORDS[i];
+      for (var j = 0; j < grp.words.length; j++) {
+        var word = grp.words[j];
+        var isAscii = /^[A-Za-z0-9]+$/.test(word);
+        if (isAscii) {
+          // 영문/숫자 키워드는 단어 경계로 매칭(예: "Cal"이 "Calibration" 중간에 우연히 걸리는 것 방지)
+          var re2 = new RegExp('\\b' + escRe(word) + '\\b', 'i');
+          if (re2.test(text)) return grp.category;
+        } else {
+          // 한글은 \b 경계가 제대로 동작하지 않아 단순 포함 여부로 판단
+          if (text.indexOf(word) !== -1) return grp.category;
+        }
+      }
+    }
+    return null;
+  }
+
   // ---- 날짜 유틸 ----
   function pad2(n) { return String(n).padStart(2, '0'); }
   function fmtDate(y, m, d) { return y + '-' + pad2(m) + '-' + pad2(d); }
@@ -81,6 +108,7 @@
     if (type === '거래처') {
       var det = detectDevice(content); // 거래처 업무 내용 안에 DB 장비명이 있으면 아이템/장비명 자동 채움
       if (det) { item = det.item; device = det.device; }
+      if (!category) { var detCat = detectCategory(content); if (detCat) category = detCat; } // 내용 키워드로 구분 자동 채움
     }
     return { type: type, category: category || '', inst: inst || '', item: item, device: device, content: content || '', multi: '', ot: '' };
   }
@@ -141,7 +169,6 @@
   // ---- 스타일 ----
   var NAVY = 'FF003087', WHITE = 'FFFFFFFF', LIGHT = 'FFE4F5FC', LINE = 'FFDFE6F2', HINT = 'FFF6F8FB';
   var FILL_ROW = 'FFFCE4D6'; // 작성 영역(색 셀) 배경 — "■색 셀만 작성하세요" 안내와 맞춤
-  var FILL_WEEKEND = 'FFDCE7FB'; // 토·일 구분 배경 (근무표 화면의 주말 색상과 통일)
 
   // ============================================================
   // 워크북 빌더
@@ -275,7 +302,12 @@
       blockStarts.push(r);
       for (var k = 0; k < 6; k++) {
         var row = r + k;
-        if (k === 0) { ws.getCell(row, 1).value = wk; ws.getCell(row, 1).alignment = { horizontal: 'center' }; dateCell(ws.getCell(row, 2), dstr); }
+        if (k === 0) {
+          var wkCell = ws.getCell(row, 1);
+          wkCell.value = wk; wkCell.alignment = { horizontal: 'center' };
+          if (isWeekend) wkCell.font = { color: { argb: 'FFDC2626' }, bold: true }; // 토·일은 빨간 글씨
+          dateCell(ws.getCell(row, 2), dstr);
+        }
         members.forEach(function (m, i) {
           if (k === 0) {
             var rows = (memberRows[m.name] || []).filter(function (x) { return x.__date === dstr; });
@@ -283,12 +315,6 @@
             ws.getCell(row, 3 + i).value = txt;
           }
         });
-        // 토·일은 하루 블록 전체를 옅은 파란색으로 구분 표시
-        if (isWeekend) {
-          for (var col = 1; col <= lastCol; col++) {
-            ws.getCell(row, col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: FILL_WEEKEND } };
-          }
-        }
       }
       r += 6;
     });
@@ -334,13 +360,15 @@
         }
         // 구분: 유형에 종속(INDIRECT) — 행별로 지정
         ws.getCell(row, 4).dataValidation = { type: 'list', allowBlank: true, formulae: ['INDIRECT($C' + row + ')'] };
-        // 작성 영역(유형~내용, C:F)에 "■색 셀" 안내와 맞춘 배경색. 토·일은 전체 행을 주말색으로.
-        for (var col = isWeekend ? 1 : 3; col <= 6; col++) {
-          ws.getCell(row, col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isWeekend ? FILL_WEEKEND : FILL_ROW } };
+        // 작성 영역(유형~내용, C:F)에 "■색 셀" 안내와 맞춘 배경색 — 주중·주말 동일하게 적용
+        for (var col = 3; col <= 6; col++) {
+          ws.getCell(row, col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: FILL_ROW } };
         }
       }
       // 요일·날짜는 하루 블록당 맨 위 한 번만 표기(병합)
-      ws.getCell(r, 1).value = weekdayKr(dstr);
+      var wkCell2 = ws.getCell(r, 1);
+      wkCell2.value = weekdayKr(dstr);
+      if (isWeekend) wkCell2.font = { color: { argb: 'FFDC2626' }, bold: true }; // 토·일은 빨간 글씨
       dateCell(ws.getCell(r, 2), dstr);
       ws.mergeCells(r, 1, r + 5, 1);
       ws.mergeCells(r, 2, r + 5, 2);
