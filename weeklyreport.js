@@ -32,6 +32,33 @@
   var REPORT_TYPES = CAT;
   var ITEM_OPTIONS = ITEMS;
 
+  // ---- 내용(content) 텍스트에서 DB의 장비명을 감지 → 아이템/장비명 자동 채움 ----
+  var FLAT_DEVICES = [];
+  ITEMS.forEach(function (it) {
+    DEV[it].forEach(function (dev) {
+      FLAT_DEVICES.push({ item: it, device: dev, needle: dev });
+      if (dev.indexOf('/') !== -1) {
+        dev.split('/').forEach(function (part) {
+          part = part.trim(); if (part) FLAT_DEVICES.push({ item: it, device: dev, needle: part });
+        });
+      }
+    });
+  });
+  // 더 길고 구체적인 표기(예: "XR/XN-20")가 짧은 표기보다 먼저 매칭되도록 정렬
+  FLAT_DEVICES.sort(function (a, b) { return b.needle.length - a.needle.length; });
+  function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function detectDevice(content) {
+    if (!content) return null;
+    var text = String(content);
+    for (var i = 0; i < FLAT_DEVICES.length; i++) {
+      var f = FLAT_DEVICES[i];
+      // 단어 경계(\b) 매칭 — "FSTL MEETING"의 "ST"처럼 단어 중간에 우연히 포함된 경우는 제외
+      var re = new RegExp('\\b' + escRe(f.needle) + '\\b', 'i');
+      if (re.test(text)) return { item: f.item, device: f.device };
+    }
+    return null;
+  }
+
   // ---- 날짜 유틸 ----
   function pad2(n) { return String(n).padStart(2, '0'); }
   function fmtDate(y, m, d) { return y + '-' + pad2(m) + '-' + pad2(d); }
@@ -48,7 +75,15 @@
   function minutesToOt(min) { if (!min) return '0:00'; return Math.floor(min / 60) + ':' + pad2(min % 60); }
 
   // ---- 근무 셀 → 보고행 자동 시드 ----
-  function mk(type, category, inst, content) { return { type: type, category: category || '', inst: inst || '', item: '', device: '', content: content || '', multi: '', ot: '' }; }
+  function mk(type, category, inst, content) {
+    if (type === '사내' && !inst) inst = '사무실'; // 유형=사내는 기관명을 "사무실"로 자동 등록
+    var item = '', device = '';
+    if (type === '거래처') {
+      var det = detectDevice(content); // 거래처 업무 내용 안에 DB 장비명이 있으면 아이템/장비명 자동 채움
+      if (det) { item = det.item; device = det.device; }
+    }
+    return { type: type, category: category || '', inst: inst || '', item: item, device: device, content: content || '', multi: '', ot: '' };
+  }
   function seedRowsFromEntry(entry, dstr, team, H) {
     var rows = []; H = H || {};
     var isHoli = H.isHoliday ? H.isHoliday(dstr) : false;
@@ -105,6 +140,8 @@
 
   // ---- 스타일 ----
   var NAVY = 'FF003087', WHITE = 'FFFFFFFF', LIGHT = 'FFE4F5FC', LINE = 'FFDFE6F2', HINT = 'FFF6F8FB';
+  var FILL_ROW = 'FFFCE4D6'; // 작성 영역(색 셀) 배경 — "■색 셀만 작성하세요" 안내와 맞춤
+  var FILL_WEEKEND = 'FFDCE7FB'; // 토·일 구분 배경 (근무표 화면의 주말 색상과 통일)
 
   // ============================================================
   // 워크북 빌더
@@ -124,6 +161,17 @@
 
     function headFill(cell) { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }; cell.font = { bold: true, color: { argb: WHITE }, size: 10 }; cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; }
     function thin(ws, r1, c1, r2, c2) { for (var r = r1; r <= r2; r++) for (var c = c1; c <= c2; c++) { ws.getCell(r, c).border = { top: { style: 'thin', color: { argb: LINE } }, bottom: { style: 'thin', color: { argb: LINE } }, left: { style: 'thin', color: { argb: LINE } }, right: { style: 'thin', color: { argb: LINE } } }; } }
+    function outerBorder(ws, r1, c1, r2, c2) {
+      var st = { style: 'medium', color: { argb: NAVY } };
+      for (var c = c1; c <= c2; c++) {
+        var tc = ws.getCell(r1, c); tc.border = tc.border || {}; tc.border.top = st;
+        var bc = ws.getCell(r2, c); bc.border = bc.border || {}; bc.border.bottom = st;
+      }
+      for (var r = r1; r <= r2; r++) {
+        var lc = ws.getCell(r, c1); lc.border = lc.border || {}; lc.border.left = st;
+        var rc = ws.getCell(r, c2); rc.border = rc.border || {}; rc.border.right = st;
+      }
+    }
     function dateCell(cell, dstr) { cell.value = jsDate(dstr); cell.numFmt = 'yyyy-mm-dd'; cell.alignment = { horizontal: 'center' }; }
 
     // ===== DB 시트 (숨김) + 정의된 이름 =====
@@ -158,11 +206,11 @@
     if (!isPlan) buildSummary(wb, teamLabel, start, end, members, memberRows, opts.note, headFill, thin);
 
     // ===== 전체일정 (plan 모드) =====
-    if (isPlan) buildOverview(wb, teamLabel, members, dates, memberRows, headFill, thin, dateCell);
+    if (isPlan) buildOverview(wb, teamLabel, members, dates, memberRows, headFill, thin, outerBorder, dateCell);
 
     // ===== 개인별 시트 =====
     members.forEach(function (m) {
-      if (isPlan) buildPersonPlan(wb, m, teamLabel, dates, memberRows[m.name] || [], headFill, thin, dateCell, typeListRange);
+      if (isPlan) buildPersonPlan(wb, m, teamLabel, dates, memberRows[m.name] || [], headFill, thin, outerBorder, dateCell, typeListRange);
       else buildPersonReport(wb, m, teamLabel, dates, memberRows[m.name] || [], headFill, thin, dateCell, typeListRange, itemListRange);
     });
 
@@ -209,7 +257,7 @@
   }
 
   // ---- 전체일정 (다음주 계획) ----
-  function buildOverview(wb, teamLabel, members, dates, memberRows, headFill, thin, dateCell) {
+  function buildOverview(wb, teamLabel, members, dates, memberRows, headFill, thin, outerBorder, dateCell) {
     var ws = wb.addWorksheet('전체일정');
     ws.properties.tabColor = { argb: 'FF009EE0' };
     ws.mergeCells('A1:B2'); ws.getCell('A1').value = teamLabel; headFill(ws.getCell('A1'));
@@ -218,9 +266,13 @@
       var c1 = ws.getCell(1, col); c1.value = m.name; headFill(c1);
       var c2 = ws.getCell(2, col); c2.value = m.nickname || ''; c2.font = { italic: true, color: { argb: 'FF5A6B8C' } }; c2.alignment = { horizontal: 'center' };
     });
+    var lastCol = 2 + members.length;
     var r = 3;
+    var blockStarts = [];
     dates.forEach(function (dstr) {
       var wk = weekdayKr(dstr);
+      var isWeekend = (wk === '토' || wk === '일');
+      blockStarts.push(r);
       for (var k = 0; k < 6; k++) {
         var row = r + k;
         if (k === 0) { ws.getCell(row, 1).value = wk; ws.getCell(row, 1).alignment = { horizontal: 'center' }; dateCell(ws.getCell(row, 2), dstr); }
@@ -231,18 +283,29 @@
             ws.getCell(row, 3 + i).value = txt;
           }
         });
+        // 토·일은 하루 블록 전체를 옅은 파란색으로 구분 표시
+        if (isWeekend) {
+          for (var col = 1; col <= lastCol; col++) {
+            ws.getCell(row, col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: FILL_WEEKEND } };
+          }
+        }
       }
-      // 하루 블록 상단 경계
-      ws.getCell(r, 1).border = { top: { style: 'medium', color: { argb: 'FF003087' } } };
       r += 6;
     });
     [6, 12].concat(members.map(function () { return 16; })).forEach(function (w, i) { ws.getColumn(i + 1).width = w; });
     ws.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
-    thin(ws, 1, 1, r - 1, 2 + members.length);
+    thin(ws, 1, 1, r - 1, lastCol);
+    outerBorder(ws, 1, 1, r - 1, lastCol);
+    // 하루 블록 상단 경계(전체 너비) — thin()이 셀 테두리를 덮어쓰므로 반드시 그 이후에 적용
+    blockStarts.forEach(function (row0) {
+      for (var col2 = 1; col2 <= lastCol; col2++) {
+        var cell = ws.getCell(row0, col2); cell.border = cell.border || {}; cell.border.top = { style: 'medium', color: { argb: 'FF003087' } };
+      }
+    });
   }
 
   // ---- 개인 다음주 계획 시트 ----
-  function buildPersonPlan(wb, m, teamLabel, dates, rows, headFill, thin, dateCell, typeListRange) {
+  function buildPersonPlan(wb, m, teamLabel, dates, rows, headFill, thin, outerBorder, dateCell, typeListRange) {
     var ws = wb.addWorksheet(sheetName(m.name, wb));
     ws.mergeCells('A1:C1'); ws.getCell('A1').value = 'Next Week Schedule';
     ws.getCell('A1').font = { bold: true, color: { argb: 'FF003087' } };
@@ -255,12 +318,14 @@
     ws.getRow(2).height = 28;
 
     var r = 3;
+    var blockStarts = [];
     dates.forEach(function (dstr) {
       var dayRows = rows.filter(function (x) { return x.__date === dstr; });
+      var wk = weekdayKr(dstr);
+      var isWeekend = (wk === '토' || wk === '일');
+      blockStarts.push(r);
       for (var k = 0; k < 6; k++) {
         var row = r + k; var src = dayRows[k];
-        if (k === 0) ws.getCell(row, 1).value = weekdayKr(dstr);
-        dateCell(ws.getCell(row, 2), dstr);
         if (src) {
           ws.getCell(row, 3).value = src.type || '';
           ws.getCell(row, 4).value = src.category || '';
@@ -269,7 +334,18 @@
         }
         // 구분: 유형에 종속(INDIRECT) — 행별로 지정
         ws.getCell(row, 4).dataValidation = { type: 'list', allowBlank: true, formulae: ['INDIRECT($C' + row + ')'] };
+        // 작성 영역(유형~내용, C:F)에 "■색 셀" 안내와 맞춘 배경색. 토·일은 전체 행을 주말색으로.
+        for (var col = isWeekend ? 1 : 3; col <= 6; col++) {
+          ws.getCell(row, col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isWeekend ? FILL_WEEKEND : FILL_ROW } };
+        }
       }
+      // 요일·날짜는 하루 블록당 맨 위 한 번만 표기(병합)
+      ws.getCell(r, 1).value = weekdayKr(dstr);
+      dateCell(ws.getCell(r, 2), dstr);
+      ws.mergeCells(r, 1, r + 5, 1);
+      ws.mergeCells(r, 2, r + 5, 2);
+      ws.getCell(r, 1).alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getCell(r, 2).alignment = { horizontal: 'center', vertical: 'middle' };
       r += 6;
     });
     // 유형(C): 목록형 — 범위 단위 1회 지정(중복 방지)
@@ -277,6 +353,13 @@
     [6, 12, 14, 22, 22, 30].forEach(function (w, i) { ws.getColumn(i + 1).width = w; });
     ws.views = [{ state: 'frozen', ySplit: 2 }];
     thin(ws, 2, 1, r - 1, 6);
+    outerBorder(ws, 2, 1, r - 1, 6);
+    // 하루 블록 상단 경계(전체 너비) — thin()이 셀 테두리를 덮어쓰므로 반드시 그 이후에 적용
+    blockStarts.forEach(function (row0) {
+      for (var col2 = 1; col2 <= 6; col2++) {
+        var cell = ws.getCell(row0, col2); cell.border = cell.border || {}; cell.border.top = { style: 'medium', color: { argb: 'FF003087' } };
+      }
+    });
   }
 
   // ---- 개인 지난주 보고 시트 ----
@@ -411,7 +494,7 @@
     var blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
-    var tag = mode === 'plan' ? '주간계획' : '주간보고';
+    var tag = mode === 'plan' ? '다음 주 계획' : '지난 주 보고';
     var span = (mode === 'plan' || weeks <= 1) ? '' : ('_' + weeks + '주');
     a.href = url;
     a.download = (TEAMS[teamKey] ? TEAMS[teamKey].label : teamKey) + '_' + tag + '_' + startSunday.replace(/-/g, '') + span + '.xlsx';
