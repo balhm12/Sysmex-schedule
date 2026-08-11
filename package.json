@@ -3,7 +3,7 @@
   "private": true,
   "description": "index.html / work-schedule.html 배포 전 자동 검증용 테스트 (GitHub Actions에서 실행됨)",
   "scripts": {
-    "test": "node tests/test_xss.js && node tests/test_roster.js && node tests/test_roster_xss_surfaces.js"
+    "test": "node tests/test_xss.js && node tests/test_roster.js && node tests/test_roster_xss_surfaces.js && node tests/test_pm_combo.js && node tests/test_weekly_report.js && node tests/test_auth_race.js && node tests/test_token_expiry.js && node tests/test_refresh.js && node tests/test_tab_return.js && node tests/test_tab_return_edit.js && node tests/test_data_loss.js"
   },
   "devDependencies": {
     "jsdom": "^24.0.0"

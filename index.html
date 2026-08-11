@@ -510,10 +510,22 @@ if(FIREBASE_API_KEY && window.firebase){
 
   // 이 앱이 Firebase로 보내는 모든 요청에 인증 토큰을 자동으로 붙여줍니다.
   // (개별 fetch 호출부는 하나도 건드리지 않고, 이 한 곳에서만 처리합니다)
+  // Firebase 로그인 토큰은 1시간이면 만료된다. 로그인 시점에 받아둔 값을 계속 쓰면
+  // 페이지를 오래 열어둔 뒤 "새로고침" 버튼을 눌렀을 때 만료된 토큰으로 요청이 나가
+  // 서버가 거부하고, 화면이 갱신되지 않는다(주소창 새로고침은 페이지가 다시 로드되며
+  // 새 토큰을 받으므로 정상 동작해서 원인을 찾기 어려웠다).
+  // 그래서 요청 직전에 항상 최신 토큰을 가져온다. getIdToken()은 만료가 임박했을 때만
+  // 실제로 갱신하고 평소에는 캐시된 값을 즉시 돌려주므로 추가 지연은 거의 없다.
   const _rawFetch = window.fetch.bind(window);
-  window.fetch = function(url, opts){
-    if(typeof url === 'string' && _idToken && url.indexOf(FIREBASE_URL) === 0){
-      url += (url.indexOf('?') !== -1 ? '&' : '?') + 'auth=' + _idToken;
+  window.fetch = async function(url, opts){
+    if(typeof url === 'string' && url.indexOf(FIREBASE_URL) === 0){
+      try{
+        const u = firebase.auth().currentUser;
+        if(u) _idToken = await u.getIdToken();
+      }catch(e){ console.error('ID 토큰 갱신 실패', e); }
+      if(_idToken){
+        url += (url.indexOf('?') !== -1 ? '&' : '?') + 'auth=' + _idToken;
+      }
     }
     return _rawFetch(url, opts);
   };
@@ -639,6 +651,9 @@ function startRealtimeSync(){
   connect();
 }
 
+// 서버 데이터를 한 번이라도 성공적으로 받아왔는지. false인 동안 전체 저장을 차단한다
+// (빈 초기값으로 서버를 통째로 덮어쓰는 사고 방지 — work-schedule.html과 동일한 장치).
+let _dataLoadedOnce = false;
 async function loadStorage(){
   if(!STORAGE_ENDPOINT){
     showToast('⚠ 공유 저장소가 아직 설정되지 않았습니다 (하단 설정 안내 참고)');
@@ -657,6 +672,7 @@ async function loadStorage(){
       return;
     }
     const data = await res.json();
+    _dataLoadedOnce = true;
     if(data){
       customEvents = Array.isArray(data.custom) ? data.custom.slice() : Object.values(data.custom || {});
       editedMap = data.edited || {};
@@ -689,6 +705,9 @@ function scheduleDataSize(d){
 
 async function writeDailyBackup(dataToBackup){
   if(!BACKUP_ENDPOINT_BASE) return;
+  // null이나 빈 객체를 백업으로 쓰면 오늘자 백업이 무의미한 값으로 덮인다.
+  // (서버 조회가 이상 응답을 준 경우 등) 실데이터가 있을 때만 기록한다.
+  if(!dataToBackup || (typeof dataToBackup === 'object' && Object.keys(dataToBackup).length === 0)) return;
   try{
     const today = todayISO();
     const controller = new AbortController();
@@ -784,6 +803,11 @@ async function deleteEventFromServer(id){
 async function saveStorage(){
   if(!STORAGE_ENDPOINT){
     showToast('⚠ 공유 저장소가 아직 설정되지 않았습니다 (하단 설정 안내 참고)');
+    return;
+  }
+  if(!_dataLoadedOnce){
+    console.error('saveStorage blocked: data never loaded successfully in this session');
+    showToast('⚠ 저장 취소됨 — 서버 데이터를 먼저 불러오지 못했습니다. 새로고침 후 다시 시도해주세요');
     return;
   }
   const controller = new AbortController();
@@ -1660,6 +1684,15 @@ document.addEventListener('click', (ev)=>{
   await loadStorage();
   render(); // 공유 데이터가 도착하면 다시 그려서 반영
   startRealtimeSync();
+  // 오래 열어둔 탭 대응.
+  // 브라우저는 백그라운드 탭이나 절전 상태에서 타이머를 늦추거나 멈추고 실시간 연결도
+  // 끊어버린다. 그래서 노트북을 덮었다 열거나 다른 탭을 보다 돌아오면 한동안 옛 데이터가
+  // 그대로 보일 수 있다. 화면으로 돌아온 시점과 네트워크가 복구된 시점에 즉시 다시 불러온다.
+  document.addEventListener('visibilitychange', ()=>{
+    if(!document.hidden) scheduleRealtimeSync();
+  });
+  window.addEventListener('focus', scheduleRealtimeSync);
+  window.addEventListener('online', scheduleRealtimeSync);
   setInterval(async ()=>{
     if(document.getElementById('overlay').classList.contains('show')) return; // don't disrupt active edits
     await loadStorage();
