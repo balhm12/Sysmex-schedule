@@ -1032,6 +1032,7 @@ function renderStats(EVENTS){
 }
 
 function openDetail(e){
+  _panelDismissable = true; // 읽기용 — 바깥 클릭으로 닫혀도 잃을 게 없음
   const panel = document.getElementById('panel');
   const isRange = e.start !== e.end;
   let meta = '';
@@ -1066,9 +1067,17 @@ async function deleteEvent(e){
 }
 
 function closePanel(){ document.getElementById('overlay').classList.remove('show'); }
-document.getElementById('overlay').onclick = (ev)=>{ if(ev.target.id==='overlay') closePanel(); };
+// 바깥(배경) 클릭으로 닫히는 동작은 패널 종류에 따라 다르게 한다.
+// - 읽기용(상세보기, 담당자 찾기): 잃을 입력이 없으므로 바깥 클릭으로 닫힘 (편의)
+// - 입력용(일정 등록/수정): 실수로 바깥을 터치하면(특히 모바일) 입력 내용이
+//   통째로 사라지므로 바깥 클릭으로는 닫히지 않고 ✕/취소 버튼으로만 닫는다.
+let _panelDismissable = true; // 패널을 여는 함수가 매번 설정한다
+document.getElementById('overlay').onclick = (ev)=>{
+  if(ev.target.id==='overlay' && _panelDismissable) closePanel();
+};
 
 function openForm(existing, presetDate){
+  _panelDismissable = false; // 입력용 — 바깥 클릭으로 입력이 날아가면 안 됨
   const panel = document.getElementById('panel');
   const isEdit = !!existing;
   const data = existing || {
@@ -1559,6 +1568,7 @@ async function testConnection(){
 }
 
 function openManagerSearch(){
+  _panelDismissable = true; // 검색 편의용 — 바깥 클릭으로 닫혀도 무방
   const panel = document.getElementById('panel');
   panel.innerHTML = `
     <button class="close" onclick="closePanel()">✕</button>

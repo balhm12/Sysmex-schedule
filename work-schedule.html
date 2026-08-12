@@ -1676,6 +1676,7 @@ function render(){
 // 편집 패널
 // ============================================================
 function openMemberOrderPanel(){
+  _panelDismissable = false; // 입력용 (팀원 추가 입력칸이 있음)
   const panel = document.getElementById('panel');
 
   function renderList(){
@@ -1776,6 +1777,7 @@ function highlightCell(date, name){
 }
 
 function openEditor(team, date, name){
+  _panelDismissable = false; // 입력용
   highlightCell(date, name);
   const panel = document.getElementById('panel');
   const entry = Object.assign(blankEntry(), getEntry(team,date,name));
@@ -1998,7 +2000,14 @@ function openEditor(team, date, name){
   document.getElementById('overlay').classList.add('show');
 }
 function closePanel(){ document.getElementById('overlay').classList.remove('show'); clearCellHighlight(); }
-document.getElementById('overlay').onclick = (ev)=>{ if(ev.target.id==='overlay') closePanel(); };
+// 바깥(배경) 클릭으로 닫히는 동작은 패널 종류에 따라 다르게 한다.
+// - 입력용(근무 입력, 팀원 관리): 실수로 바깥을 터치하면(특히 모바일) 입력 내용이
+//   통째로 사라지므로 바깥 클릭으로는 닫히지 않고 ✕/취소 버튼으로만 닫는다.
+// - 읽기용 패널이 새로 생기면 여는 함수에서 _panelDismissable = true 로 설정하면 된다.
+let _panelDismissable = false;
+document.getElementById('overlay').onclick = (ev)=>{
+  if(ev.target.id==='overlay' && _panelDismissable) closePanel();
+};
 
 // ============================================================
 // Excel 내보내기 (현재 팀 · 현재 월) — 통계 시트 + 상세 시트
