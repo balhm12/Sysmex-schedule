@@ -47,6 +47,15 @@
   // 더 길고 구체적인 표기(예: "XR/XN-20")가 짧은 표기보다 먼저 매칭되도록 정렬
   FLAT_DEVICES.sort(function (a, b) { return b.needle.length - a.needle.length; });
   function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  // 정확한 DB 장비명은 없지만 모델 계열로 아이템을 알 수 있는 경우 (예: XN-2000 → 혈액)
+  // 장비명은 비워둔다 — DB에 없는 값을 넣으면 종속 드롭다운과 어긋나므로, 아는 것(아이템)만 채운다.
+  var FAMILY_ITEMS = [
+    [/\bX[NR]-?\d{2,4}\b/i, '혈액'],
+    [/\b(XQ|XP)-?\d{2,4}\b/i, '혈액_소'],
+    [/\b(CN|CS|CA)-?\d{2,4}\b/i, '응고'],
+    [/\b(UN|UF|UC|UD)-?\d{2,4}\b/i, '유린'],
+    [/\bHISCL\b/i, '면역'],
+  ];
   function detectDevice(content) {
     if (!content) return null;
     var text = String(content);
@@ -54,7 +63,10 @@
       var f = FLAT_DEVICES[i];
       // 단어 경계(\b) 매칭 — "FSTL MEETING"의 "ST"처럼 단어 중간에 우연히 포함된 경우는 제외
       var re = new RegExp('\\b' + escRe(f.needle) + '\\b', 'i');
-      if (re.test(text)) return { item: f.item, device: f.device };
+      if (re.test(text)) return { item: f.item, device: f.device, needle: f.needle };
+    }
+    for (var j = 0; j < FAMILY_ITEMS.length; j++) {
+      if (FAMILY_ITEMS[j][0].test(text)) return { item: FAMILY_ITEMS[j][1], device: '', needle: '' };
     }
     return null;
   }
@@ -112,6 +124,71 @@
     }
     return { type: type, category: category || '', inst: inst || '', item: item, device: device, content: content || '', multi: '', ot: '' };
   }
+  // ---- 지난 주 보고: 자유 입력 텍스트 정제 ----
+  // 근무표 칸에는 "서울아산병원 점검 / 작성 김병우"처럼 기관명·업무·작성자가 한 칸에 섞여
+  // 들어온다. 보고서에서는 이걸 기관명/아이템/장비명/내용 열로 분리해 넣는다.
+  var INST_SUFFIXES = ['요양병원', '대학병원', '동물병원', '병원', '의료원', '의원', '보건소',
+    '건강관리협회', '협회', '검사센터', '센터', '연구소', '대학교', '학교', '재단', '부대',
+    '카페', '클리닉', '랩', '요양원', '의학연구소'];
+  function stripEdgePunct(s) { return String(s || '').replace(/^[\s\/_,·\-]+|[\s\/_,·\-]+$/g, ''); }
+  function parseInstText(raw) {
+    var tokens = String(raw || '').trim().split(/\s+/).filter(Boolean);
+    if (!tokens.length) return { inst: '', rest: '' };
+    var cut = -1;
+    for (var i = 0; i < tokens.length; i++) {
+      var t = stripEdgePunct(tokens[i]);
+      for (var s = 0; s < INST_SUFFIXES.length; s++) {
+        if (t.length > INST_SUFFIXES[s].length - 1 && t.slice(-INST_SUFFIXES[s].length) === INST_SUFFIXES[s]) { cut = i; break; }
+      }
+      if (cut !== -1) break;
+    }
+    if (cut === -1) cut = 0; // 접미어를 못 찾으면 첫 단어를 기관명으로
+    return {
+      inst: stripEdgePunct(tokens.slice(0, cut + 1).join(' ')),
+      rest: tokens.slice(cut + 1).join(' ')
+    };
+  }
+  function stripAuthors(text, personNames) {
+    var s = String(text || '');
+    s = s.replace(/[\/·,]?\s*작성\s*[:：]?/g, ' '); // "작성" 표기는 항상 제거
+    if (personNames && personNames.length) {
+      personNames.forEach(function (nm) {
+        if (!nm) return;
+        s = s.replace(new RegExp('(^|\\s)' + escRe(nm) + '(?=\\s|$)', 'g'), ' ');
+      });
+    }
+    return stripEdgePunct(s.replace(/\s{2,}/g, ' '));
+  }
+  function fmtMD(dstr) { var p = String(dstr).split('-'); return Number(p[1]) + '/' + Number(p[2]); }
+  function refineReportRows(rows, personNames) {
+    // 1단계: 거래처 행의 기관명 텍스트를 분리·정제
+    var refined = rows.map(function (r) {
+      var out = {}; for (var k in r) out[k] = r[k];
+      if (out.type !== '거래처') { out.content = stripAuthors(out.content, personNames); return out; }
+      var parsed = parseInstText(out.inst);
+      var content = stripAuthors(stripEdgePunct([parsed.rest, out.content].filter(Boolean).join(' ')), personNames);
+      var det = detectDevice(content) || detectDevice(parsed.inst);
+      if (det) {
+        if (!out.item) out.item = det.item;
+        if (!out.device && det.device) out.device = det.device;
+        // 장비명 칸에 정확히 들어간 표기는 내용에서 중복 제거 (계열 폴백은 내용에 남김)
+        if (det.needle) content = stripEdgePunct(content.replace(new RegExp('\\b' + escRe(det.needle) + '\\b', 'i'), ' ').replace(/\s{2,}/g, ' '));
+      }
+      out.inst = parsed.inst;
+      out.content = content;
+      return out;
+    });
+    // 2단계: "같은 날" 안에서 겹치는 동일 일정만 한 행으로 병합한다.
+    // 날짜가 다르면 같은 내용이라도 날짜별로 각각 남긴다 — 며칠에 걸친 반복을 한 행으로
+    // 합쳐봤더니 어느 날 무엇을 했는지가 보고서에서 사라져서, 하루 단위 통합으로 좁혔다.
+    var seen = {}; var order = [];
+    refined.forEach(function (r) {
+      var key = [r.__date, r.type, r.category, r.inst, r.item, r.device, r.content].join('|');
+      if (!seen[key]) { seen[key] = r; order.push(key); }
+    });
+    return order.map(function (key) { return seen[key]; });
+  }
+
   function seedRowsFromEntry(entry, dstr, team, H) {
     var rows = []; H = H || {};
     var isHoli = H.isHoliday ? H.isHoliday(dstr) : false;
@@ -489,7 +566,7 @@
     REPORT_TYPES: REPORT_TYPES, ITEM_OPTIONS: ITEM_OPTIONS,
     otToMinutes: otToMinutes, minutesToOt: minutesToOt,
     weekdayKr: weekdayKr, mondayOf: mondayOf, sundayOf: sundayOf, addDays: addDays, weekDates: weekDates,
-    seedRowsFromEntry: seedRowsFromEntry, summarize: summarize, buildWorkbook: buildWorkbook,
+    seedRowsFromEntry: seedRowsFromEntry, refineReportRows: refineReportRows, summarize: summarize, buildWorkbook: buildWorkbook,
   };
 });
 
@@ -550,6 +627,14 @@
     var startSunday = (mode === 'plan') ? sunday : WR.addDays(sunday, -(weeks - 1) * 7);
     var members = membersOf(teamKey);
     var memberRows = buildMemberRows(teamKey, startSunday, weeks);
+    // 계획서·보고서 모두: 기관명/작성자/장비가 한 칸에 섞인 자유 입력을 열별로 분리·정제하고,
+    // 같은 일정이 여러 날 반복되면 한 행으로 병합한다.
+    // 작성자 이름 제거용으로 전 팀 인원 이름을 넘긴다 (다른 팀원이 대신 작성한 경우도 있어서).
+    var allNames = [];
+    teamKeysAll().forEach(function (tk) { membersOf(tk).forEach(function (m) { allNames.push(m.name); }); });
+    Object.keys(memberRows).forEach(function (nm) {
+      memberRows[nm] = WR.refineReportRows(memberRows[nm], allNames);
+    });
     var wb = await WR.buildWorkbook({
       ExcelJS: ExcelJS,
       teamLabel: TEAMS[teamKey] ? TEAMS[teamKey].label : teamKey,
@@ -580,7 +665,7 @@
   var BETA_TEAMS = ['fss', 'west', 'east'];
 
   function openDialog() {
-    st = { teamKey: BETA_TEAMS[0], sunday: WR.sundayOf(todayStr()), weeks: 2 };
+    st = { teamKey: BETA_TEAMS[0], sunday: WR.mondayOf(todayStr()), weeks: 2 }; // 주 단위는 월요일~일요일
     renderDialog();
     document.getElementById('overlay').classList.add('show');
   }
@@ -630,8 +715,8 @@
     panel.querySelector('#wp-weeks').onchange = function () { st.weeks = parseInt(this.value, 10) || 1; };
     panel.querySelector('#wp-prev').onclick = function () { st.sunday = WR.addDays(st.sunday, -7); upd(); };
     panel.querySelector('#wp-next').onclick = function () { st.sunday = WR.addDays(st.sunday, 7); upd(); };
-    panel.querySelector('#wp-this').onclick = function () { st.sunday = WR.sundayOf(todayStr()); upd(); };
-    panel.querySelector('#wp-nextw').onclick = function () { st.sunday = WR.addDays(WR.sundayOf(todayStr()), 7); upd(); };
+    panel.querySelector('#wp-this').onclick = function () { st.sunday = WR.mondayOf(todayStr()); upd(); };
+    panel.querySelector('#wp-nextw').onclick = function () { st.sunday = WR.addDays(WR.mondayOf(todayStr()), 7); upd(); };
     panel.querySelector('#wp-plan').onclick = function () { run('plan'); };
     panel.querySelector('#wp-report').onclick = function () { run('report'); };
     panel.querySelector('#wp-both').onclick = function () { run('both'); };
