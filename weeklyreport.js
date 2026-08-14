@@ -147,7 +147,15 @@
     Object.keys(instAdded).forEach(function (inst) { rows.push(mk('거래처', '', inst, instAdded[inst])); });
 
     var allOff = slots.every(function (k) { var st = H.matchStatus ? H.matchStatus(entry[k]) : null; return st && st.key === 'OFF'; });
-    if (!isWeekend && allOff && rows.length === 0) rows.push(mk('휴무', isHoli ? '공휴일' : '연차', '', ''));
+    if (rows.length === 0) {
+      if (isHoli) {
+        // 공휴일은 다른 일정이 없어도(입력이 아예 없어도) 휴일명과 함께 표시한다.
+        // "빈 날짜 건너뛰기" 정책의 예외 — 계획서에서 다음 주에 휴일이 있다는 사실 자체가 정보이기 때문.
+        rows.push(mk('휴무', '공휴일', '', H.holidayName ? H.holidayName(dstr) : ''));
+      } else if (!isWeekend && allOff) {
+        rows.push(mk('휴무', '연차', '', ''));
+      }
+    }
     return rows;
   }
 
@@ -297,6 +305,11 @@
     var r = 3;
     var blockStarts = [];
     dates.forEach(function (dstr) {
+      // 일정이 없는 날짜는 표시하지 않는다 (모든 팀원이 해당 날짜에 행이 없으면 건너뜀)
+      var anyRows = members.some(function (m) {
+        return (memberRows[m.name] || []).some(function (x) { return x.__date === dstr; });
+      });
+      if (!anyRows) return;
       var wk = weekdayKr(dstr);
       var isWeekend = (wk === '토' || wk === '일');
       blockStarts.push(r);
@@ -318,6 +331,14 @@
       }
       r += 6;
     });
+    if (r === 3) { // 표시할 날짜가 하나도 없음
+      ws.mergeCells(3, 1, 3, lastCol);
+      var noneCell = ws.getCell(3, 1);
+      noneCell.value = '해당 기간 일정 없음';
+      noneCell.alignment = { horizontal: 'center' };
+      noneCell.font = { italic: true, color: { argb: 'FF5A6B8C' } };
+      r = 4;
+    }
     [6, 12].concat(members.map(function () { return 16; })).forEach(function (w, i) { ws.getColumn(i + 1).width = w; });
     ws.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
     thin(ws, 1, 1, r - 1, lastCol);
@@ -347,6 +368,7 @@
     var blockStarts = [];
     dates.forEach(function (dstr) {
       var dayRows = rows.filter(function (x) { return x.__date === dstr; });
+      if (dayRows.length === 0) return; // 일정이 없는 날짜는 표시하지 않음
       var wk = weekdayKr(dstr);
       var isWeekend = (wk === '토' || wk === '일');
       blockStarts.push(r);
@@ -376,8 +398,16 @@
       ws.getCell(r, 2).alignment = { horizontal: 'center', vertical: 'middle' };
       r += 6;
     });
-    // 유형(C): 목록형 — 범위 단위 1회 지정(중복 방지)
-    ws.dataValidations.add('C3:C' + (r - 1), { type: 'list', allowBlank: true, formulae: [typeListRange] });
+    if (r === 3) { // 이 기간에 일정이 전혀 없는 팀원
+      ws.mergeCells(3, 1, 3, 6);
+      var noneCell2 = ws.getCell(3, 1);
+      noneCell2.value = '해당 기간 일정 없음';
+      noneCell2.alignment = { horizontal: 'center' };
+      noneCell2.font = { italic: true, color: { argb: 'FF5A6B8C' } };
+      r = 4;
+    }
+    // 유형(C): 목록형 — 실제 날짜 블록이 있을 때만 범위 단위 1회 지정(중복 방지)
+    if (blockStarts.length > 0) ws.dataValidations.add('C3:C' + (r - 1), { type: 'list', allowBlank: true, formulae: [typeListRange] });
     [6, 12, 14, 22, 22, 30].forEach(function (w, i) { ws.getColumn(i + 1).width = w; });
     ws.views = [{ state: 'frozen', ySplit: 2 }];
     thin(ws, 2, 1, r - 1, 6);
@@ -403,9 +433,12 @@
     ws.getRow(2).height = 28;
 
     var r = 3;
+    var hasData = false;
     dates.forEach(function (dstr) {
       var dayRows = rows.filter(function (x) { return x.__date === dstr; });
-      var n = Math.max(1, dayRows.length);
+      if (dayRows.length === 0) return; // 일정이 없는 날짜는 표시하지 않음
+      hasData = true;
+      var n = dayRows.length;
       for (var k = 0; k < n; k++) {
         var src = dayRows[k];
         if (k === 0) ws.getCell(r, 1).value = weekdayKr(dstr);
@@ -426,8 +459,16 @@
         r++;
       }
     });
+    if (!hasData) {
+      ws.mergeCells(3, 1, 3, 10);
+      var noneCell3 = ws.getCell(3, 1);
+      noneCell3.value = '해당 기간 일정 없음';
+      noneCell3.alignment = { horizontal: 'center' };
+      noneCell3.font = { italic: true, color: { argb: 'FF5A6B8C' } };
+      r = 4;
+    }
     // 유형(C)·아이템(F) 목록형은 범위 단위 1회 지정(중복 방지)
-    if (r > 3) {
+    if (hasData) {
       ws.dataValidations.add('C3:C' + (r - 1), { type: 'list', allowBlank: true, formulae: [typeListRange] });
       ws.dataValidations.add('F3:F' + (r - 1), { type: 'list', allowBlank: true, formulae: [itemListRange] });
     }
@@ -474,6 +515,7 @@
       nightStatusOf: (typeof nightStatusOf !== 'undefined') ? nightStatusOf : NOOP,
       weekendStatusOf: (typeof weekendStatusOf !== 'undefined') ? weekendStatusOf : NOOP,
       isHoliday: function (d) { return (typeof HOLIDAYS_KR !== 'undefined') && !!HOLIDAYS_KR[d]; },
+      holidayName: function (d) { return (typeof HOLIDAYS_KR !== 'undefined') && HOLIDAYS_KR[d] ? String(HOLIDAYS_KR[d]) : ''; },
     };
   }
   function todayStr() { return (typeof todayISO !== 'undefined') ? todayISO() : new Date().toISOString().slice(0, 10); }
