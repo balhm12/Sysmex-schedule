@@ -457,7 +457,7 @@ function applyTeamRoster(){
   const roster = scheduleData.teamRoster || {};
   TEAM_ORDER.forEach(tk=>{
     if(roster[tk] && roster[tk].length){
-      TEAMS[tk].members = roster[tk].map(m=>({name:m.name, role:m.role||''}));
+      TEAMS[tk].members = roster[tk].map(m=>({name:m.name, role:m.role||'', nickname:m.nickname||''}));
     }
   });
   rebuildAllTeam();
@@ -1087,7 +1087,7 @@ async function saveTeamRoster(tk){
     return false;
   }
   scheduleData.teamRoster = scheduleData.teamRoster || {};
-  scheduleData.teamRoster[tk] = TEAMS[tk].members.map(m=>({name:m.name, role:m.role||''}));
+  scheduleData.teamRoster[tk] = TEAMS[tk].members.map(m=>({name:m.name, role:m.role||'', nickname:m.nickname||''}));
   try{
     await fetchWithTimeout(FIREBASE_URL + '/work-schedule/teamRoster/' + tk + '.json', {
       method:'PUT', headers:{'Content-Type':'application/json'},
@@ -1687,9 +1687,12 @@ function openMemberOrderPanel(){
       '<button class="close" onclick="closePanel()">✕</button>' +
       '<h3>팀원 관리</h3>' +
       '<div class="sub">' + escapeHtml(teamLabel) + (currentTeam==='all' ? ' (팀별로 각각 관리해요 · 상단 팀 탭에서 다른 팀 선택 후 다시 열어주세요)' : '') + '</div>' +
-      '<div class="form-row form-grid2" style="margin-bottom:10px;">' +
+      '<div class="form-row form-grid2" style="margin-bottom:6px;">' +
         '<div><input type="text" id="newMemberName" placeholder="이름" autocomplete="off"></div>' +
         '<div><input type="text" id="newMemberRole" placeholder="직급 (예: T1)" autocomplete="off"></div>' +
+      '</div>' +
+      '<div class="form-row" style="margin-bottom:10px;">' +
+        '<input type="text" id="newMemberNickname" placeholder="영문명 (선택, 예: Jun) — 주간계획서에 표시" autocomplete="off">' +
       '</div>' +
       '<button class="btn-save" id="addMemberBtn" style="width:100%;margin-bottom:14px;">+ 팀원 추가</button>' +
       '<div id="orderList"></div>';
@@ -1699,9 +1702,12 @@ function openMemberOrderPanel(){
       row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px;background:var(--paper);';
       row.innerHTML =
         '<span style="flex:1;font-size:13px;font-weight:700;color:var(--ink);">' + escapeHtml(m.name) + ' <span style="font-size:11px;font-weight:600;color:var(--ink-soft);">' + escapeHtml(m.role) + '</span></span>' +
+        '<input data-act="nick" type="text" value="' + escapeHtml(m.nickname||'') + '" placeholder="영문명" autocomplete="off" style="width:88px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px;">' +
         '<button data-dir="up" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--line);background:white;cursor:pointer;font-size:12px;" ' + (i===0?'disabled':'') + '>▲</button>' +
         '<button data-dir="down" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--line);background:white;cursor:pointer;font-size:12px;" ' + (i===members.length-1?'disabled':'') + '>▼</button>' +
         '<button data-act="del" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--c-holiday, #D93B3B);background:white;color:#D93B3B;cursor:pointer;font-size:12px;">✕</button>';
+      const nickInput = row.querySelector('[data-act="nick"]');
+      nickInput.onchange = ()=> updateNickname(tk, i, nickInput.value);
       row.querySelector('[data-dir="up"]').onclick = ()=> moveMember(tk, i, -1);
       row.querySelector('[data-dir="down"]').onclick = ()=> moveMember(tk, i, 1);
       row.querySelector('[data-act="del"]').onclick = ()=> removeMember(tk, i);
@@ -1710,7 +1716,8 @@ function openMemberOrderPanel(){
     panel.querySelector('#addMemberBtn').onclick = ()=>{
       const nameInput = panel.querySelector('#newMemberName');
       const roleInput = panel.querySelector('#newMemberRole');
-      addMember(tk, nameInput.value, roleInput.value);
+      const nickInput2 = panel.querySelector('#newMemberNickname');
+      addMember(tk, nameInput.value, roleInput.value, nickInput2.value);
     };
   }
 
@@ -1730,15 +1737,25 @@ function openMemberOrderPanel(){
     await persistAndRefresh(tk);
   }
 
-  async function addMember(tk, name, role){
+  async function addMember(tk, name, role, nickname){
     name = (name||'').trim();
     role = (role||'').trim();
+    nickname = (nickname||'').trim();
     if(!name){ showToast('⚠ 이름을 입력해주세요'); return; }
     if(/[.#$\/\[\]]/.test(name)){ showToast('⚠ 이름에 . # $ / [ ] 문자는 사용할 수 없습니다 (저장이 실패할 수 있어요)'); return; }
     if(TEAMS[tk].members.some(m=> m.name === name)){ showToast('⚠ 이미 같은 이름의 팀원이 있습니다'); return; }
-    TEAMS[tk].members.push({ name, role });
+    TEAMS[tk].members.push({ name, role, nickname });
     await persistAndRefresh(tk);
     showToast(name + ' 님을 추가했습니다');
+  }
+
+  async function updateNickname(tk, idx, nickname){
+    const m = TEAMS[tk].members[idx];
+    if(!m) return;
+    m.nickname = (nickname||'').trim();
+    rebuildAllTeam();
+    await saveTeamRoster(tk);
+    showToast(m.name + ' 님의 영문명을 저장했습니다');
   }
 
   async function removeMember(tk, idx){
@@ -2543,6 +2560,6 @@ document.getElementById('refreshBtn').onclick = async ()=>{
 </script>
 <!-- 주간계획서/보고서 내보내기 애드온 (FSS팀 베타) — weeklyreport.js는 저장소에 이미 있었으나
      이 연결 태그가 빠져 있어서 실제로는 한 번도 로드된 적이 없었습니다. -->
-<script src="weeklyreport.js?v=3"></script>
+<script src="weeklyreport.js?v=5"></script>
 </body>
 </html>
