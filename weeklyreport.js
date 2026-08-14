@@ -55,6 +55,11 @@
     [/\b(CN|CS|CA)-?\d{2,4}\b/i, '응고'],
     [/\b(UN|UF|UC|UD)-?\d{2,4}\b/i, '유린'],
     [/\bHISCL\b/i, '면역'],
+    // 숫자 없이 접두만 적은 경우 (예: "XN 2대 점검", "SP 교체") — 계열은 알 수 있으므로 아이템만 채운다
+    [/\b(XN|XR|SP|TS|DI)\b/i, '혈액'],
+    [/\b(XQ|XP)\b/i, '혈액_소'],
+    [/\b(CN|CS|CA)\b/i, '응고'],
+    [/\b(UN|UF|UC|UD)\b/i, '유린'],
   ];
   function detectDevice(content) {
     if (!content) return null;
@@ -62,7 +67,9 @@
     for (var i = 0; i < FLAT_DEVICES.length; i++) {
       var f = FLAT_DEVICES[i];
       // 단어 경계(\b) 매칭 — "FSTL MEETING"의 "ST"처럼 단어 중간에 우연히 포함된 경우는 제외
-      var re = new RegExp('\\b' + escRe(f.needle) + '\\b', 'i');
+      // (?!-?\d): "XR"이 "XR-1000" 안에서 걸리는 오탐 방지 — 뒤에 -숫자가 이어지면
+      // 더 긴 모델명이므로 정확 매칭이 아니다 (그 경우 아래 계열 규칙이 아이템만 채운다)
+      var re = new RegExp('\\b' + escRe(f.needle) + '\\b(?!-?\\d)', 'i');
       if (re.test(text)) return { item: f.item, device: f.device, needle: f.needle };
     }
     for (var j = 0; j < FAMILY_ITEMS.length; j++) {
@@ -73,9 +80,11 @@
 
   // ---- 내용(content) 텍스트에서 구분(카테고리) 키워드 감지 ----
   var CATEGORY_KEYWORDS = [
+    // 순서 중요: "CAL 전 점검"처럼 여러 키워드가 겹치면 위에 있는 것이 이긴다
+    { words: ['Calibration', 'Cal', '칼리브레이션', '칼'], category: 'Application work' },
+    { words: ['수리', 'AS', 'A/S'], category: 'Technical service' },
     { words: ['설치', '이전설치', '폐기'], category: 'Installation' },
-    { words: ['점검', 'PM'], category: 'Preventive maintenance' },
-    { words: ['칼', 'Calibration', '칼리브레이션', 'Cal'], category: 'Application work' },
+    { words: ['점검', 'PM', 'P/M'], category: 'Preventive maintenance' },
   ];
   function detectCategory(content) {
     if (!content) return null;
@@ -165,6 +174,13 @@
     var refined = rows.map(function (r) {
       var out = {}; for (var k in r) out[k] = r[k];
       if (out.type !== '거래처') { out.content = stripAuthors(out.content, personNames); return out; }
+      // 근무칸에 "DP" / "DP 업무"처럼 직접 입력한 경우 — 기관명이 아니라 사내 업무다
+      if (/^DP(\s|$)/i.test(String(out.inst || '').trim())) {
+        out.type = '사내'; out.category = 'Office work'; out.item = ''; out.device = '';
+        out.content = stripAuthors(stripEdgePunct([out.inst, out.content].filter(Boolean).join(' ')), personNames);
+        out.inst = '사무실';
+        return out;
+      }
       var parsed = parseInstText(out.inst);
       var content = stripAuthors(stripEdgePunct([parsed.rest, out.content].filter(Boolean).join(' ')), personNames);
       var det = detectDevice(content) || detectDevice(parsed.inst);
@@ -172,10 +188,13 @@
         if (!out.item) out.item = det.item;
         if (!out.device && det.device) out.device = det.device;
         // 장비명 칸에 정확히 들어간 표기는 내용에서 중복 제거 (계열 폴백은 내용에 남김)
-        if (det.needle) content = stripEdgePunct(content.replace(new RegExp('\\b' + escRe(det.needle) + '\\b', 'i'), ' ').replace(/\s{2,}/g, ' '));
+        if (det.needle) content = stripEdgePunct(content.replace(new RegExp('\\b' + escRe(det.needle) + '\\b(?!-?\\d)', 'i'), ' ').replace(/\s{2,}/g, ' '));
       }
       out.inst = parsed.inst;
       out.content = content;
+      // 구분이 비어 있으면 내용 키워드로 자동 판정 (수리/AS→Technical service, CAL→Application work,
+      // 설치→Installation, 점검/PM→Preventive maintenance)
+      if (!out.category) { var detCat = detectCategory(out.content); if (detCat) out.category = detCat; }
       return out;
     });
     // 2단계: "같은 날" 안에서 겹치는 동일 일정만 한 행으로 병합한다.
@@ -201,13 +220,14 @@
     if (nst && (nst.key === '석/야' || nst.key === '석간' || (nst.key || '').indexOf('당직') !== -1)) rows.push(mk('대기업무', '당직 근무', '', detailOf(entry.night)));
     if (wst && (wst.key || '').indexOf('당직') !== -1) rows.push(mk('대기업무', '당직 근무', '', detailOf(entry.weekend)));
 
-    var slots = ['am1', 'am2', 'pm1', 'pm2']; var seen = {}; var instAdded = {};
+    var slots = ['am1', 'am2', 'pm1', 'pm2']; var seen = {}; var instAdded = {}; var hasOn = false;
     slots.forEach(function (k) {
       var val = entry[k]; if (!val) return;
       var st = H.matchStatus ? H.matchStatus(val) : null;
       if (st) {
         var key = st.key;
-        if (key === 'ON' || key === 'OFF') return;
+        if (key === 'ON') { hasOn = true; return; }
+        if (key === 'OFF') return;
         if (key === '휴가' || key === '오전휴가' || key === '오후휴가') { if (!('연차' in seen)) seen['연차'] = ''; return; }
         if (!(key in seen)) seen[key] = detailOf(val); else if (!seen[key] && detailOf(val)) seen[key] = detailOf(val);
         return;
@@ -215,10 +235,13 @@
       var inst = String(val).split(':')[0].trim();
       if (inst && !(inst in instAdded)) instAdded[inst] = String(val).indexOf(':') !== -1 ? val.split(':').slice(1).join(':').trim() : '';
     });
+    // ON(정상 필드 근무)은 참고 양식(FY2025 주간보고)에서 "Service ON"으로 기록되는 항목이라
+    // 하루에 한 번 표시한다 (전체일정에서 노란색으로 칠해지는 그 항목)
+    if (hasOn) rows.push(mk('대기업무', 'Service ON', '', ''));
     if ('내근' in seen) rows.push(mk('사내', 'Office work', '', seen['내근']));
     if ('교육' in seen) rows.push(mk('사내', 'Training', '', seen['교육']));
     if ('회의' in seen) rows.push(mk('사내', 'Meeting', '', seen['회의']));
-    if ('DP' in seen) rows.push(mk('거래처', 'Technical service', '', ['DP', seen['DP']].filter(Boolean).join(' ')));
+    if ('DP' in seen) rows.push(mk('사내', 'Office work', '', ['DP', seen['DP']].filter(Boolean).join(' ')));
     if ('당직' in seen) rows.push(mk('대기업무', '당직 근무', '', seen['당직']));
     if ('연차' in seen) rows.push(mk('휴무', '연차', '', ''));
     Object.keys(instAdded).forEach(function (inst) { rows.push(mk('거래처', '', inst, instAdded[inst])); });
@@ -369,6 +392,13 @@
   }
 
   // ---- 전체일정 (다음주 계획) ----
+  // 참고 양식(FY2025 FS group 주간보고)의 구분별 셀 색상
+  var CATEGORY_FILLS = {
+    'Service ON': 'FFFFE699',     // 노랑
+    '당직 근무': 'FFB4C6E7',       // 파랑
+    '야근 후 정비': 'FFBFBFBF',    // 회색
+    '연차': 'FFC6E0B4',           // 초록
+  };
   function buildOverview(wb, teamLabel, members, dates, memberRows, headFill, thin, outerBorder, dateCell) {
     var ws = wb.addWorksheet('전체일정');
     ws.properties.tabColor = { argb: 'FF009EE0' };
@@ -382,11 +412,7 @@
     var r = 3;
     var blockStarts = [];
     dates.forEach(function (dstr) {
-      // 일정이 없는 날짜는 표시하지 않는다 (모든 팀원이 해당 날짜에 행이 없으면 건너뜀)
-      var anyRows = members.some(function (m) {
-        return (memberRows[m.name] || []).some(function (x) { return x.__date === dstr; });
-      });
-      if (!anyRows) return;
+      // 전체일정은 계획 워크북의 주간 틀이므로 빈 날짜도 그대로 보여준다
       var wk = weekdayKr(dstr);
       var isWeekend = (wk === '토' || wk === '일');
       blockStarts.push(r);
@@ -398,24 +424,24 @@
           if (isWeekend) wkCell.font = { color: { argb: 'FFDC2626' }, bold: true }; // 토·일은 빨간 글씨
           dateCell(ws.getCell(row, 2), dstr);
         }
-        members.forEach(function (m, i) {
-          if (k === 0) {
-            var rows = (memberRows[m.name] || []).filter(function (x) { return x.__date === dstr; });
-            var txt = rows.map(function (x) { return x.category || x.type; }).filter(Boolean).join(', ');
-            ws.getCell(row, 3 + i).value = txt;
-          }
-        });
       }
+      // 참고 양식과 동일하게: 각 팀원 칸에 [구분(색상 라벨)] / [기관명(우측 정렬)] 쌍으로 최대 3건 표시
+      members.forEach(function (m, i) {
+        var dayItems = (memberRows[m.name] || []).filter(function (x) { return x.__date === dstr; });
+        dayItems.slice(0, 3).forEach(function (x, idx) {
+          var cCat = ws.getCell(r + idx * 2, 3 + i);
+          cCat.value = x.category || x.type;
+          cCat.font = { size: 8 };
+          var fill = CATEGORY_FILLS[x.category];
+          if (fill) cCat.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
+          var cInst = ws.getCell(r + idx * 2 + 1, 3 + i);
+          cInst.value = x.inst && x.inst !== '사무실' ? x.inst : (x.content || '');
+          cInst.alignment = { horizontal: 'right' };
+          cInst.font = { size: 9 };
+        });
+      });
       r += 6;
     });
-    if (r === 3) { // 표시할 날짜가 하나도 없음
-      ws.mergeCells(3, 1, 3, lastCol);
-      var noneCell = ws.getCell(3, 1);
-      noneCell.value = '해당 기간 일정 없음';
-      noneCell.alignment = { horizontal: 'center' };
-      noneCell.font = { italic: true, color: { argb: 'FF5A6B8C' } };
-      r = 4;
-    }
     [6, 12].concat(members.map(function () { return 16; })).forEach(function (w, i) { ws.getColumn(i + 1).width = w; });
     ws.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];
     thin(ws, 1, 1, r - 1, lastCol);
@@ -445,7 +471,8 @@
     var blockStarts = [];
     dates.forEach(function (dstr) {
       var dayRows = rows.filter(function (x) { return x.__date === dstr; });
-      if (dayRows.length === 0) return; // 일정이 없는 날짜는 표시하지 않음
+      // 계획서는 빈 날짜도 칸을 유지한다 — 다음 주 계획을 엑셀에서 손으로 채워 넣는 용도라
+      // 칸이 없으면 쓸 곳이 사라진다. (지난 주 "보고"만 빈 날짜를 생략한다)
       var wk = weekdayKr(dstr);
       var isWeekend = (wk === '토' || wk === '일');
       blockStarts.push(r);
@@ -475,15 +502,7 @@
       ws.getCell(r, 2).alignment = { horizontal: 'center', vertical: 'middle' };
       r += 6;
     });
-    if (r === 3) { // 이 기간에 일정이 전혀 없는 팀원
-      ws.mergeCells(3, 1, 3, 6);
-      var noneCell2 = ws.getCell(3, 1);
-      noneCell2.value = '해당 기간 일정 없음';
-      noneCell2.alignment = { horizontal: 'center' };
-      noneCell2.font = { italic: true, color: { argb: 'FF5A6B8C' } };
-      r = 4;
-    }
-    // 유형(C): 목록형 — 실제 날짜 블록이 있을 때만 범위 단위 1회 지정(중복 방지)
+    // 유형(C): 목록형 — 범위 단위 1회 지정(중복 방지)
     if (blockStarts.length > 0) ws.dataValidations.add('C3:C' + (r - 1), { type: 'list', allowBlank: true, formulae: [typeListRange] });
     [6, 12, 14, 22, 22, 30].forEach(function (w, i) { ws.getColumn(i + 1).width = w; });
     ws.views = [{ state: 'frozen', ySplit: 2 }];
