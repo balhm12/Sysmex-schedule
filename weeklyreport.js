@@ -307,7 +307,12 @@
         var rc = ws.getCell(r, c2); rc.border = rc.border || {}; rc.border.right = st;
       }
     }
-    function dateCell(cell, dstr) { cell.value = jsDate(dstr); cell.numFmt = 'yyyy-mm-dd'; cell.alignment = { horizontal: 'center' }; }
+    // ExcelJS는 Date 객체를 UTC 기준으로 직렬화한다. 한국(UTC+9)에서 만든 로컬 자정
+    // Date(2026-08-10 00:00 KST)는 UTC로 2026-08-09 15:00이 되어 엑셀에 하루 전 날짜로
+    // 기록됐다(요일 라벨은 원본 문자열 기준이라 정상 → 요일과 날짜가 어긋나 보임).
+    // UTC 자정으로 만들어 넣으면 어느 시간대에서 내보내도 날짜가 그대로 유지된다.
+    function excelDate(dstr) { var p = parseISO(dstr); return new Date(Date.UTC(p.y, p.m - 1, p.d)); }
+    function dateCell(cell, dstr) { cell.value = excelDate(dstr); cell.numFmt = 'yyyy-mm-dd'; cell.alignment = { horizontal: 'center' }; }
 
     // ===== DB 시트 (숨김) + 정의된 이름 =====
     var db = wb.addWorksheet('DB');
