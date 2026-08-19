@@ -289,6 +289,16 @@
     var members = opts.members;
     var weeks = Math.max(1, opts.weeks || 1);
     var dates = []; for (var _i = 0; _i < weeks * 7; _i++) dates.push(addDays(opts.sunday, _i));
+    // 휴일(공휴일) 날짜 집합 — 날짜 셀을 붉게 표시하는 데 쓴다.
+    // opts.holidays(날짜→이름 맵)가 오면 그것을 쓰고, 없으면 데이터에 시드된
+    // '공휴일' 행에서 역으로 알아낸다(코어만 단독으로 쓰는 테스트에서도 동작하도록).
+    var holidaySet = {};
+    if (opts.holidays) { Object.keys(opts.holidays).forEach(function (d) { holidaySet[d] = true; }); }
+    Object.keys(opts.memberRows || {}).forEach(function (nm) {
+      (opts.memberRows[nm] || []).forEach(function (rw) {
+        if (rw && rw.category === '공휴일' && rw.__date) holidaySet[rw.__date] = true;
+      });
+    });
     var start = dates[0], end = dates[dates.length - 1];
     var teamLabel = opts.teamLabel;
     var memberRows = opts.memberRows || {};
@@ -312,7 +322,15 @@
     // 기록됐다(요일 라벨은 원본 문자열 기준이라 정상 → 요일과 날짜가 어긋나 보임).
     // UTC 자정으로 만들어 넣으면 어느 시간대에서 내보내도 날짜가 그대로 유지된다.
     function excelDate(dstr) { var p = parseISO(dstr); return new Date(Date.UTC(p.y, p.m - 1, p.d)); }
-    function dateCell(cell, dstr) { cell.value = excelDate(dstr); cell.numFmt = 'yyyy-mm-dd'; cell.alignment = { horizontal: 'center' }; }
+    function isRedDay(dstr) {
+      var wk = weekdayKr(dstr);
+      return !!holidaySet[dstr] || wk === '토' || wk === '일';
+    }
+    function dateCell(cell, dstr) {
+      cell.value = excelDate(dstr); cell.numFmt = 'yyyy-mm-dd'; cell.alignment = { horizontal: 'center' };
+      // 공휴일·주말은 날짜도 붉게 (요일 셀은 기존대로 별도 처리)
+      if (isRedDay(dstr)) cell.font = { color: { argb: 'FFDC2626' }, bold: true };
+    }
 
     // ===== DB 시트 (숨김) + 정의된 이름 =====
     var db = wb.addWorksheet('DB');
@@ -346,12 +364,12 @@
     if (!isPlan) buildSummary(wb, teamLabel, start, end, members, memberRows, opts.note, headFill, thin);
 
     // ===== 전체일정 (plan 모드) =====
-    if (isPlan) buildOverview(wb, teamLabel, members, dates, memberRows, headFill, thin, outerBorder, dateCell);
+    if (isPlan) buildOverview(wb, teamLabel, members, dates, memberRows, headFill, thin, outerBorder, dateCell, isRedDay);
 
     // ===== 개인별 시트 =====
     members.forEach(function (m) {
-      if (isPlan) buildPersonPlan(wb, m, teamLabel, dates, memberRows[m.name] || [], headFill, thin, outerBorder, dateCell, typeListRange);
-      else buildPersonReport(wb, m, teamLabel, dates, memberRows[m.name] || [], headFill, thin, dateCell, typeListRange, itemListRange);
+      if (isPlan) buildPersonPlan(wb, m, teamLabel, dates, memberRows[m.name] || [], headFill, thin, outerBorder, dateCell, typeListRange, isRedDay);
+      else buildPersonReport(wb, m, teamLabel, dates, memberRows[m.name] || [], headFill, thin, dateCell, typeListRange, itemListRange, isRedDay);
     });
 
     return wb;
@@ -404,7 +422,7 @@
     '야근 후 정비': 'FFBFBFBF',    // 회색
     '연차': 'FFC6E0B4',           // 초록
   };
-  function buildOverview(wb, teamLabel, members, dates, memberRows, headFill, thin, outerBorder, dateCell) {
+  function buildOverview(wb, teamLabel, members, dates, memberRows, headFill, thin, outerBorder, dateCell, isRedDay) {
     var ws = wb.addWorksheet('전체일정');
     ws.properties.tabColor = { argb: 'FF009EE0' };
     ws.mergeCells('A1:B2'); ws.getCell('A1').value = teamLabel; headFill(ws.getCell('A1'));
@@ -426,7 +444,7 @@
         if (k === 0) {
           var wkCell = ws.getCell(row, 1);
           wkCell.value = wk; wkCell.alignment = { horizontal: 'center' };
-          if (isWeekend) wkCell.font = { color: { argb: 'FFDC2626' }, bold: true }; // 토·일은 빨간 글씨
+          if (isRedDay(dstr)) wkCell.font = { color: { argb: 'FFDC2626' }, bold: true }; // 토·일·공휴일은 빨간 글씨
           dateCell(ws.getCell(row, 2), dstr);
         }
       }
@@ -460,7 +478,7 @@
   }
 
   // ---- 개인 다음주 계획 시트 ----
-  function buildPersonPlan(wb, m, teamLabel, dates, rows, headFill, thin, outerBorder, dateCell, typeListRange) {
+  function buildPersonPlan(wb, m, teamLabel, dates, rows, headFill, thin, outerBorder, dateCell, typeListRange, isRedDay) {
     var ws = wb.addWorksheet(sheetName(m.name, wb));
     ws.mergeCells('A1:C1'); ws.getCell('A1').value = 'Next Week Schedule';
     ws.getCell('A1').font = { bold: true, color: { argb: 'FF003087' } };
@@ -499,7 +517,7 @@
       // 요일·날짜는 하루 블록당 맨 위 한 번만 표기(병합)
       var wkCell2 = ws.getCell(r, 1);
       wkCell2.value = weekdayKr(dstr);
-      if (isWeekend) wkCell2.font = { color: { argb: 'FFDC2626' }, bold: true }; // 토·일은 빨간 글씨
+      if (isRedDay(dstr)) wkCell2.font = { color: { argb: 'FFDC2626' }, bold: true }; // 토·일·공휴일은 빨간 글씨
       dateCell(ws.getCell(r, 2), dstr);
       ws.mergeCells(r, 1, r + 5, 1);
       ws.mergeCells(r, 2, r + 5, 2);
@@ -522,7 +540,7 @@
   }
 
   // ---- 개인 지난주 보고 시트 ----
-  function buildPersonReport(wb, m, teamLabel, dates, rows, headFill, thin, dateCell, typeListRange, itemListRange) {
+  function buildPersonReport(wb, m, teamLabel, dates, rows, headFill, thin, dateCell, typeListRange, itemListRange, isRedDay) {
     var ws = wb.addWorksheet(sheetName(m.name, wb));
     ws.getCell('A1').value = jsDate(dates[0]).getFullYear();
     ws.getCell('D1').value = teamLabel + ' Team'; ws.getCell('D1').font = { bold: true };
@@ -542,7 +560,11 @@
       var n = dayRows.length;
       for (var k = 0; k < n; k++) {
         var src = dayRows[k];
-        if (k === 0) ws.getCell(r, 1).value = weekdayKr(dstr);
+        if (k === 0) {
+          var wkCell3 = ws.getCell(r, 1);
+          wkCell3.value = weekdayKr(dstr);
+          if (isRedDay(dstr)) wkCell3.font = { color: { argb: 'FFDC2626' }, bold: true };
+        }
         dateCell(ws.getCell(r, 2), dstr);
         if (src) {
           ws.getCell(r, 3).value = src.type || '';
@@ -667,6 +689,8 @@
       weeks: weeks,
       mode: mode,
       memberRows: memberRows,
+      // 근무표 공휴일 달력을 그대로 넘겨, 그날 일정이 없는 팀원 시트에서도 날짜가 붉게 표시되게 한다
+      holidays: (typeof HOLIDAYS_KR !== 'undefined') ? HOLIDAYS_KR : null,
       note: '',
     });
     var buffer = await wb.xlsx.writeBuffer();
