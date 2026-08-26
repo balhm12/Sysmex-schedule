@@ -668,9 +668,12 @@
 
   async function exportWorkbook(teamKey, sunday, mode, weeks) {
     if (typeof ExcelJS === 'undefined') { alert('엑셀 모듈(ExcelJS)을 불러오지 못했습니다.'); return; }
-    // 계획=선택 주 1주. 보고=선택 주 포함 뒤로 weeks 주(직전 주들 포함).
+    // 기준 주차(sunday)는 "지금 주"를 가리킨다. 거기서
+    //  - 계획: 그 다음 주 1주 (버튼 이름대로 '다음주 계획')
+    //  - 보고: 그 주를 포함해 뒤로 weeks 주 (직전 주들 포함)
+    // 금요일에 '둘 다'를 누르면 지난 주들 보고 + 다음 주 계획이 한 번에 나오는 흐름이다.
     weeks = (mode === 'plan') ? 1 : Math.max(1, weeks || 1);
-    var startSunday = (mode === 'plan') ? sunday : WR.addDays(sunday, -(weeks - 1) * 7);
+    var startSunday = (mode === 'plan') ? WR.addDays(sunday, 7) : WR.addDays(sunday, -(weeks - 1) * 7);
     var members = membersOf(teamKey);
     var memberRows = buildMemberRows(teamKey, startSunday, weeks);
     // 계획서·보고서 모두: 기관명/작성자/장비가 한 칸에 섞인 자유 입력을 열별로 분리·정제하고,
@@ -713,7 +716,7 @@
   var BETA_TEAMS = ['fss', 'west', 'east'];
 
   function openDialog() {
-    st = { teamKey: BETA_TEAMS[0], sunday: WR.mondayOf(todayStr()), weeks: 2 }; // 주 단위는 월요일~일요일
+    st = { teamKey: BETA_TEAMS[0], sunday: WR.mondayOf(todayStr()), weeks: 4 }; // 주 단위는 월요일~일요일 / 보고 기간 기본 4주
     renderDialog();
     document.getElementById('overlay').classList.add('show');
   }
@@ -742,12 +745,11 @@
       '</div>' +
       '<div class="form-row"><label>보고서 포함 기간 (지난주 보고 전용)</label>' +
         '<select id="wp-weeks">' +
-          '<option value="1"' + (st.weeks === 1 ? ' selected' : '') + '>선택한 주만 (1주)</option>' +
-          '<option value="2"' + (st.weeks === 2 ? ' selected' : '') + '>선택 주 + 직전 1주 (2주)</option>' +
           '<option value="4"' + (st.weeks === 4 ? ' selected' : '') + '>최근 4주</option>' +
           '<option value="13"' + (st.weeks === 13 ? ' selected' : '') + '>최근 13주 (분기)</option>' +
         '</select>' +
-        '<div class="field-hint" style="margin-top:4px;">지난주 보고는 선택한 주부터 <b>뒤로 위 기간만큼</b> 모두 포함합니다 (직전 주 일정까지 표시). 다음주 계획은 항상 선택한 1주만.</div>' +
+        '<div class="field-hint" style="margin-top:4px;">위 주차는 <b>기준 주</b>입니다. <b>지난주 보고</b>는 기준 주부터 뒤로 위 기간만큼, <b>다음주 계획</b>은 기준 주의 <b>다음 주</b> 1주가 나옵니다.</div>' +
+        '<div class="field-hint" id="wp-target" style="margin-top:4px;color:#003087;font-weight:700;"></div>' +
       '</div>' +
       '<div class="field-hint">계획서=요일/날짜/유형/구분/기관명/내용 · 보고서=집계 요약+개인별 상세(아이템·장비·OT 칸 포함). 근무표에 있는 휴무·당직·내근·병원명은 자동으로 채워지고, 나머지 세부칸은 엑셀에서 직접 채워 완성하시면 됩니다.</div>' +
       '<div class="form-actions" style="flex-wrap:wrap;">' +
@@ -760,7 +762,7 @@
     panel.querySelector('#wp-close').onclick = close;
     panel.querySelector('#wp-cancel').onclick = close;
     panel.querySelector('#wp-team').onchange = function () { st.teamKey = this.value; };
-    panel.querySelector('#wp-weeks').onchange = function () { st.weeks = parseInt(this.value, 10) || 1; };
+    panel.querySelector('#wp-weeks').onchange = function () { st.weeks = parseInt(this.value, 10) || 4; upd(); };
     panel.querySelector('#wp-prev').onclick = function () { st.sunday = WR.addDays(st.sunday, -7); upd(); };
     panel.querySelector('#wp-next').onclick = function () { st.sunday = WR.addDays(st.sunday, 7); upd(); };
     panel.querySelector('#wp-this').onclick = function () { st.sunday = WR.mondayOf(todayStr()); upd(); };
@@ -769,7 +771,16 @@
     panel.querySelector('#wp-report').onclick = function () { run('report'); };
     panel.querySelector('#wp-both').onclick = function () { run('both'); };
 
-    function upd() { panel.querySelector('#wp-week').textContent = weekLabel(st.sunday); }
+    function upd() {
+      panel.querySelector('#wp-week').textContent = weekLabel(st.sunday);
+      var t = panel.querySelector('#wp-target');
+      if (t) {
+        var planWeek = WR.addDays(st.sunday, 7);
+        var repStart = WR.addDays(st.sunday, -(st.weeks - 1) * 7);
+        t.innerHTML = '→ 계획: ' + weekLabel(planWeek) + ' &nbsp;|&nbsp; 보고: ' + repStart + ' ~ ' + WR.weekDates(st.sunday)[6];
+      }
+    }
+    upd(); // 다이얼로그를 열자마자 대상 주를 표시
   }
   function close() { document.getElementById('overlay').classList.remove('show'); }
 
