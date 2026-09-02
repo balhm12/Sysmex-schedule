@@ -1879,8 +1879,18 @@ function openEditor(team, date, name){
         html += '<div class="combo-item" data-val="' + n.replace(/"/g,'&quot;') + '"><span class="ci-dot" style="background:#C6CEDD"></span>' + n + '</div>';
       });
     }
-    if(!html) html = '<div class="combo-item" style="color:var(--ink-soft);cursor:default;">일치하는 항목 없음</div>';
     listEl.innerHTML = html;
+    // 예전에는 결과가 없을 때 "일치하는 항목 없음" 한 줄을 띄웠는데, 병원명을 직접 입력하는
+    // 중에는 대부분 0건이라 그 한 줄이 계속 떠서 입력칸을 가렸다(특히 모바일).
+    // 이제는 보여줄 항목이 있을 때만 목록을 띄운다.
+    return matchedStatus.length + instItems.length;
+  }
+  // 목록을 열되, 보여줄 항목이 없으면 닫아둔다
+  function showComboList(input, list, filterText){
+    const count = renderComboList(list, filterText);
+    if(count === 0){ list.classList.remove('show'); return; }
+    positionCombo(input, list);
+    list.classList.add('show');
   }
 
   function closeAllCombos(){
@@ -1891,20 +1901,48 @@ function openEditor(team, date, name){
   // 화면 좌표 기준으로 직접 위치를 계산해서 항상 전체 목록이 보이게 합니다.
   function positionCombo(input, list){
     const rect = input.getBoundingClientRect();
-    const maxListHeight = 220;
-    const spaceBelow = window.innerHeight - rect.bottom;
+    // 모바일에서 키보드가 올라오면 window.innerHeight는 키보드에 가려진 부분까지 포함한 값이라
+    // "아래 공간"을 과대평가해서, 목록이 키보드 뒤로 들어가거나 입력칸을 덮었다.
+    // visualViewport는 실제로 보이는 영역만 알려주므로 그것을 우선 사용한다.
+    const vv = window.visualViewport;
+    const viewTop = vv ? vv.offsetTop : 0;
+    const viewH = vv ? vv.height : window.innerHeight;
+    const viewBottom = viewTop + viewH;
+
+    // 실제 목록 높이를 재서(최대 220px) 남는 공간과 비교한다
     list.style.left = rect.left + 'px';
     list.style.width = rect.width + 'px';
-    if(spaceBelow < maxListHeight && rect.top > spaceBelow){
-      // 아래쪽 공간이 부족하면 입력창 위로 펼침
-      list.style.top = '';
-      list.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
-    } else {
+    list.style.maxHeight = '220px';
+    const listH = Math.min(list.scrollHeight || 220, 220);
+
+    const spaceBelow = viewBottom - rect.bottom - 8;
+    const spaceAbove = rect.top - viewTop - 8;
+
+    if(spaceBelow >= listH || spaceBelow >= spaceAbove){
+      // 아래에 펼침 (공간이 모자라면 남는 만큼으로 줄여서, 입력칸을 덮지 않게)
       list.style.bottom = '';
       list.style.top = (rect.bottom + 4) + 'px';
+      list.style.maxHeight = Math.max(80, Math.min(listH, spaceBelow)) + 'px';
+    } else {
+      // 위로 펼침
+      list.style.top = '';
+      list.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+      list.style.maxHeight = Math.max(80, Math.min(listH, spaceAbove)) + 'px';
     }
   }
   panel.addEventListener('scroll', closeAllCombos);
+  // 모바일에서 키보드가 올라오면 보이는 영역이 바뀌므로, 열려 있는 목록의 위치를 다시 잡는다
+  if(window.visualViewport){
+    const reposition = ()=>{
+      const open = panel.querySelector('.combo-list.show');
+      if(!open) return;
+      const wrap = open.closest('.combo');
+      const inp = wrap && wrap.querySelector('.combo-input');
+      if(inp) positionCombo(inp, open);
+    };
+    window.visualViewport.addEventListener('resize', reposition);
+    window.visualViewport.addEventListener('scroll', reposition);
+  }
 
   slotIds.forEach(id=>{
     const wrap = panel.querySelector('#wrap-'+id);
@@ -1916,18 +1954,14 @@ function openEditor(team, date, name){
       e.stopPropagation();
       const willOpen = !list.classList.contains('show');
       closeAllCombos();
-      if(willOpen){ renderComboList(list, ''); positionCombo(input, list); list.classList.add('show'); }
+      if(willOpen) showComboList(input, list, '');
     };
     input.addEventListener('focus', ()=>{
       closeAllCombos();
-      renderComboList(list, '');
-      positionCombo(input, list);
-      list.classList.add('show');
+      showComboList(input, list, '');
     });
     input.addEventListener('input', function(){
-      renderComboList(list, this.value);
-      positionCombo(input, list);
-      list.classList.add('show');
+      showComboList(input, list, this.value);
       applyCascade(id, this.value.trim());
     });
     list.addEventListener('mousedown', (e)=>{
