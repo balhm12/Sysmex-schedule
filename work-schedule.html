@@ -222,9 +222,12 @@
     display:flex;align-items:center;justify-content:center;border-radius:6px;
   }
   .combo-toggle:hover{background:var(--paper);color:var(--blue);}
+  /* 드롭다운을 화면 위에 띄우면(fixed/absolute) iOS에서 키보드가 올라올 때 좌표 기준이
+     어긋나 입력칸을 덮는 문제가 반복됐다. 대신 입력칸 바로 아래에 자리를 차지하도록 두면
+     원리적으로 어떤 요소도 가릴 수 없고, 패널 스크롤로 전체 목록을 볼 수 있다. */
   .combo-list{
-    position:fixed;background:white;border:1.5px solid var(--line);
-    border-radius:8px;box-shadow:0 10px 24px -10px rgba(20,40,90,0.3);z-index:60;max-height:220px;overflow-y:auto;display:none;
+    margin-top:6px;background:white;border:1.5px solid var(--line);
+    border-radius:8px;box-shadow:0 6px 16px -8px rgba(20,40,90,0.25);max-height:200px;overflow-y:auto;display:none;
   }
   .combo-list.show{display:block;}
   .combo-item{padding:9px 12px;font-size:13px;cursor:pointer;color:var(--ink);}
@@ -1899,55 +1902,21 @@ function openEditor(team, date, name){
   // 드롭다운이 패널 안(overflow:auto)에 붙어있으면 패널 하단 근처 입력창(특히 오후1·오후2)에서
   // 목록 뒷부분(교육·회의 등)이 화면 밖으로 잘려 안 보이는 문제가 있었습니다.
   // 화면 좌표 기준으로 직접 위치를 계산해서 항상 전체 목록이 보이게 합니다.
+  // 목록이 입력칸 아래 흐름에 놓이므로 위치 계산은 필요 없다.
+  // 다만 목록이 화면 밖으로 밀려 안 보일 수 있으니, 열린 뒤 보이도록 스크롤만 맞춘다.
   function positionCombo(input, list){
-    const rect = input.getBoundingClientRect();
-    // 모바일에서 키보드가 올라오면 window.innerHeight는 키보드에 가려진 부분까지 포함한 값이라
-    // "아래 공간"을 과대평가해서, 목록이 키보드 뒤로 들어가거나 입력칸을 덮었다.
-    // visualViewport는 실제로 보이는 영역만 알려주므로 그것을 우선 사용한다.
-    const vv = window.visualViewport;
-    const viewTop = vv ? vv.offsetTop : 0;
-    const viewH = vv ? vv.height : window.innerHeight;
-    const viewBottom = viewTop + viewH;
-
-    // 실제 목록 높이를 재서(최대 220px) 남는 공간과 비교한다
-    list.style.left = rect.left + 'px';
-    list.style.width = rect.width + 'px';
-    list.style.maxHeight = '220px';
-    const listH = Math.min(list.scrollHeight || 220, 220);
-
-    const spaceBelow = viewBottom - rect.bottom - 8;
-    const spaceAbove = rect.top - viewTop - 8;
-
-    // 위/아래 어느 쪽이든 top으로만 배치한다.
-    // 예전에는 위로 펼칠 때 bottom(= innerHeight - rect.top)을 썼는데, iOS에서 키보드가
-    // 올라오면 fixed 요소의 기준(레이아웃 뷰포트)과 getBoundingClientRect가 어긋나면서
-    // 목록이 입력칸 위를 덮어버렸다. rect와 같은 좌표계인 top만 쓰면 그 어긋남이 없다.
-    list.style.bottom = '';
-    if(spaceBelow >= listH || spaceBelow >= spaceAbove){
-      // 아래에 펼침 (공간이 모자라면 남는 만큼으로 줄임)
-      const h = Math.max(80, Math.min(listH, spaceBelow));
-      list.style.maxHeight = h + 'px';
-      list.style.top = (rect.bottom + 4) + 'px';
-    } else {
-      // 위로 펼침 — 목록 아래끝이 입력칸 위 4px에 오도록 top을 직접 계산
-      const h = Math.max(80, Math.min(listH, spaceAbove));
-      list.style.maxHeight = h + 'px';
-      list.style.top = Math.max(viewTop + 4, rect.top - h - 4) + 'px';
-    }
+    setTimeout(()=>{
+      if(!list.classList.contains('show')) return;
+      const r = list.getBoundingClientRect();
+      const vv = window.visualViewport;
+      const viewBottom = vv ? (vv.offsetTop + vv.height) : window.innerHeight;
+      if(r.bottom > viewBottom - 8){
+        list.scrollIntoView({ block:'nearest', behavior:'smooth' });
+      }
+    }, 0);
   }
-  panel.addEventListener('scroll', closeAllCombos);
-  // 모바일에서 키보드가 올라오면 보이는 영역이 바뀌므로, 열려 있는 목록의 위치를 다시 잡는다
-  if(window.visualViewport){
-    const reposition = ()=>{
-      const open = panel.querySelector('.combo-list.show');
-      if(!open) return;
-      const wrap = open.closest('.combo');
-      const inp = wrap && wrap.querySelector('.combo-input');
-      if(inp) positionCombo(inp, open);
-    };
-    window.visualViewport.addEventListener('resize', reposition);
-    window.visualViewport.addEventListener('scroll', reposition);
-  }
+  // 목록이 패널 안에서 함께 스크롤되므로, 예전처럼 스크롤 시 닫을 필요가 없다
+  // (떠 있는 방식일 때만 위치가 어긋나서 닫아야 했다).
 
   slotIds.forEach(id=>{
     const wrap = panel.querySelector('#wrap-'+id);
