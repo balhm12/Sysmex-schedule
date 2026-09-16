@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FSG 방문 서비스 만족도</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<!-- 설치일정표·근무일정표와 동일한 익명 인증 SDK (익명 계정을 재사용하기 위해 필요) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<style>
+:root{
+  color-scheme:light;
+  --ground:#f3f6f6; --surface:#ffffff; --surface-2:#eaf0f0;
+  --ink:#10201f; --ink-2:#4f6362; --ink-3:#7f9190;
+  --line:#d8e1e0; --line-2:#e6eded;
+  --accent:#0f6e8c; --accent-soft:#d9ecf2;
+  --t-east:#2a78d6; --t-west:#eb6834; --t-south:#1baf7a; --t-central:#eda100;
+  --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
+  --chip:#eef3f3;
+  --shadow:0 1px 2px rgba(16,32,31,.06),0 8px 24px -16px rgba(16,32,31,.25);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0f1516; --surface:#171f20; --surface-2:#1f2829;
+    --ink:#f2f6f5; --ink-2:#b4c2c1; --ink-3:#7f9190;
+    --line:#2b3637; --line-2:#222c2d;
+    --accent:#4fb3d3; --accent-soft:#12333d;
+    --t-east:#3987e5; --t-west:#d95926; --t-south:#199e70; --t-central:#c98500;
+    --chip:#222c2d;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -16px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0f1516; --surface:#171f20; --surface-2:#1f2829;
+  --ink:#f2f6f5; --ink-2:#b4c2c1; --ink-3:#7f9190;
+  --line:#2b3637; --line-2:#222c2d;
+  --accent:#4fb3d3; --accent-soft:#12333d;
+  --t-east:#3987e5; --t-west:#d95926; --t-south:#199e70; --t-central:#c98500;
+  --chip:#222c2d;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -16px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans KR","Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;font-size:14px;line-height:1.5;padding-inline:clamp(16px,3vw,40px);padding-block:20px 48px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+h1,h2,h3{margin:0;text-wrap:balance}
+.wrap{max-width:1240px;margin:0 auto;display:grid;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+h1{font-size:clamp(22px,3vw,30px);font-weight:700;letter-spacing:-.01em}
+.stamp{color:var(--ink-2);font-size:12px}
+.stamp b{color:var(--ink);font-weight:600}
+.filters{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{appearance:none;border:0;background:transparent;color:var(--ink-2);font:inherit;font-weight:500;padding:6px 12px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.flabel{font-size:12px;color:var(--ink-3);font-weight:600;letter-spacing:.06em}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:4px;box-shadow:var(--shadow)}
+.kpi .l{font-size:12px;color:var(--ink-2);font-weight:500}
+.kpi .v{font-size:28px;font-weight:600;line-height:1.1;letter-spacing:-.01em}
+.kpi .v small{font-size:13px;color:var(--ink-3);font-weight:500;margin-left:2px}
+.kpi .s{font-size:12px;color:var(--ink-3)}
+.kpi .s.good{color:var(--good)} .kpi .s.crit{color:var(--crit)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:820px){.grid2{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow);display:grid;gap:12px;align-content:start;min-width:0}
+.panel h2{font-size:15px;font-weight:600}
+.panel .sub{font-size:12px;color:var(--ink-3);margin-top:-8px}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 8px;text-align:left;border-bottom:1px solid var(--line-2);white-space:nowrap}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600;border-bottom:1px solid var(--line);cursor:pointer;user-select:none}
+th[aria-sort="descending"]::after{content:" ▾";color:var(--accent)}
+th[aria-sort="ascending"]::after{content:" ▴";color:var(--accent)}
+td.num,th.num{text-align:right}
+.tscroll{overflow-x:auto}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+.chip{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--chip);color:var(--ink-2);font-weight:500}
+.chip.warn{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--ink)}
+.chip.ok{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--ink)}
+.chip.praise{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.bar{height:8px;border-radius:4px;background:var(--surface-2);position:relative;overflow:hidden;min-width:80px}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:4px;background:var(--accent)}
+svg text{font-family:"IBM Plex Sans KR",system-ui,sans-serif;fill:var(--ink-2);font-size:11px}
+svg .grid{stroke:var(--line-2)} svg .axis{stroke:var(--line)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--ink-2)}
+.voc{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(360px,1fr))}
+.more{appearance:none;font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--accent);font-weight:600;padding:8px 14px;border-radius:8px;cursor:pointer;justify-self:start}
+.voc article{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:10px 12px;border:1px solid var(--line-2);border-radius:8px;background:var(--surface)}
+.voc .m{font-size:11px;color:var(--ink-3);display:grid;gap:2px;min-width:110px}
+.voc .m b{color:var(--ink);font-weight:600;font-size:12px}
+.voc p{margin:0;font-size:13px;line-height:1.55}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--ground);font-size:12px;padding:6px 9px;border-radius:6px;box-shadow:var(--shadow);opacity:0;transition:opacity .12s;z-index:10;white-space:nowrap}
+.tip.on{opacity:1}
+footer{font-size:12px;color:var(--ink-3);line-height:1.6;max-width:70ch}
+.hint{font-size:12px;color:var(--ink-3)}
+.empty{color:var(--ink-3);font-size:13px;padding:12px 0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.search input{font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);width:min(320px,100%)}
+.search input:focus-visible{outline:2px solid var(--accent);outline-offset:-1px}
+.chip.severe{background:color-mix(in srgb,var(--crit) 18%,transparent);color:var(--crit);font-weight:600}
+.chip.improve{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--ink);font-weight:600}
+.refresh{appearance:none;font:inherit;font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--accent);font-weight:600;padding:5px 10px;border-radius:8px;cursor:pointer;margin-left:8px}
+.refresh[disabled]{opacity:.5;cursor:default}
+.app-nav{display:flex;gap:8px;flex-wrap:wrap}
+.app-nav a{flex:0 0 auto;padding:8px 16px;border-radius:10px;font-size:12.5px;font-weight:700;text-decoration:none;border:1.5px solid var(--line);color:var(--ink-2);background:var(--surface);transition:.15s}
+.app-nav a:hover{border-color:#009EE0;color:#009EE0}
+.app-nav a.active{background:#003087;color:#fff;border-color:#003087}
+.notice{font-size:13px;padding:10px 14px;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-weight:500}
+.notice.err{background:color-mix(in srgb,var(--crit) 14%,transparent);color:var(--crit)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="app-nav">
+    <a href="index.html">🏥 설치일정</a>
+    <a href="work-schedule.html">📅 근무일정</a>
+    <a href="voc-dashboard.html" class="active">📊 만족도</a>
+  </div>
+  <header>
+    <div>
+      <div class="eyebrow">Sysmex Korea · FS Group</div>
+      <h1>FSG 방문 서비스 만족도</h1>
+    </div>
+    <div class="stamp">시트 자동갱신 <b id="updated"></b> · 응답 <b id="hdrN"></b>건 · CRM 방문 <b id="hdrV"></b>건 <button class="refresh" id="btnRefresh" type="button">새로고침</button></div>
+  </header>
+
+  <div class="filters">
+    <span class="flabel">기간</span>
+    <div class="seg" id="segMonth" role="group" aria-label="기간"></div>
+    <span class="flabel">팀</span>
+    <div class="seg" id="segTeam" role="group" aria-label="팀"></div>
+    <span class="hint" id="filterHint"></span>
+  </div>
+
+  <div id="loadMsg" class="notice" hidden></div>
+  <section class="kpis" id="kpis"></section>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="ph"><h2>팀별 만족도 · 응답률</h2><span class="hint">응답률 = 응답수 ÷ CRM 방문건수</span></div>
+      <div class="tscroll"><table id="teamTbl"></table></div>
+    </section>
+    <section class="panel">
+      <div class="ph"><h2>일별 응답 추이</h2><span class="hint" id="trendHint"></span></div>
+      <div id="trend"></div>
+      <div class="legend" id="trendLegend"></div>
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="ph"><h2>문항별 점수 분포</h2><span class="hint">5점 만점 · 건수</span></div>
+      <div id="qdist"></div>
+    </section>
+    <section class="panel">
+      <div class="ph"><h2>서비스 형태 · 장비 · 직급별</h2><span class="hint">응답수 / 평균</span></div>
+      <div id="breakdown" class="tscroll"></div>
+    </section>
+  </div>
+  <section class="panel">
+    <div class="ph"><h2>개인별 TOP 5</h2><span class="hint">응답 2건 이상 · 종합평균 → 응답수 → 응답률 순</span></div>
+    <div class="tscroll"><table id="topTbl"></table></div>
+    <div class="ph" style="margin-top:6px"><h2>내 결과 찾기</h2><span class="hint">이름을 입력하면 본인 순위·점수·응답률이 표시됩니다</span></div>
+    <div class="search"><input id="fsrSearch" type="search" placeholder="이름 입력 (예: 홍길동)" autocomplete="off" aria-label="FSR 이름 검색"></div>
+    <div class="tscroll"><table id="meTbl"></table></div>
+  </section>
+  </section>
+
+  <section class="panel">
+    <div class="ph"><h2>고객 의견 (서술형)</h2><span class="hint" id="vocHint"></span></div>
+    <div class="voc" id="voc"></div>
+  </section>
+
+  <footer>
+    Sysmex Korea FS Group 방문 서비스 고객만족도 조사 결과입니다. 평균은 세 문항(신속성·일정 / 전문성·해결 / 응대·마무리)의 단순 평균, 응답률은 CRM 완료 방문건수(수리·PM) 대비 응답 비율이며 진행 중인 달은 집계 시점까지의 누적입니다. 팀·직급은 만족도 시트 정제데이터 기준, 개인별 TOP 5의 팀은 소속 명단 기준입니다. 데이터는 만족도 시트의 Apps Script가 응답 접수 시·매시간 자동으로 내보낸 것을 읽어 옵니다.
+  </footer>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+/* ============================ 설정 ============================
+ * 1) Firebase Realtime Database 주소 (예: https://xxxx-default-rtdb.asia-southeast1.firebasedatabase.app)
+ *    Apps Script의 pushDashboardToFirebase()가 /voc-dashboard/data 에 저장한 JSON을 읽는다.
+ * 2) 데이터베이스 규칙이 auth != null 이면 Firebase 웹 API 키를 넣는다 (익명 로그인, 화면 변화 없음).
+ *    규칙이 공개 읽기(.read: true)면 비워 둬도 된다.
+ * 3) Firebase 없이 쓰려면 FIREBASE_URL을 비우고 Apps Script 웹앱 URL(/exec)을 넣는다 — 페이지가 ?format=json 으로 직접 읽는다.
+ */
+const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
+const FIREBASE_API_KEY = "AIzaSyANZEYTXeDy3M1TV_rIG9Rp3m1TJk3MEy8";
+const APPS_SCRIPT_JSON_URL = "";
+const APP_VERSION = "2026-09-16.1";
+const DATA_PATH = "/voc-dashboard/data.json";
+
+/* 익명 인증 — 설치일정표(index.html)·근무일정표와 완전히 동일한 방식.
+ * SDK의 signInAnonymously()는 한 번 만든 익명 계정을 브라우저에 저장해 두고 재사용하므로,
+ * 페이지를 열 때마다 새 익명 사용자가 쌓이지 않는다. 토큰은 요청 직전에 갱신한다
+ * (1시간 만료 후 "새로고침"이 먹히지 않던 문제와 같은 원인을 피하기 위함). */
+let _idToken = null;
+let _resolveAuthReady;
+const _authReady = new Promise(res=>{ _resolveAuthReady = res; });
+if(FIREBASE_URL && FIREBASE_API_KEY && window.firebase){
+  firebase.initializeApp({ apiKey: FIREBASE_API_KEY, databaseURL: FIREBASE_URL });
+  let _authSettled = false;
+  const _settleAuthReady = ()=>{ if(!_authSettled){ _authSettled = true; _resolveAuthReady(); } };
+  firebase.auth().onIdTokenChanged(async (user)=>{
+    if(user){
+      try{ _idToken = await user.getIdToken(); }catch(e){ console.error('ID 토큰 갱신 실패', e); }
+      _settleAuthReady();
+    } else {
+      _idToken = null;
+      firebase.auth().signInAnonymously().catch(err=>{ console.error('익명 로그인 실패', err); _settleAuthReady(); });
+    }
+  });
+  firebase.auth().signInAnonymously().catch(err=>console.error('익명 로그인 실패', err));
+  setTimeout(_settleAuthReady, 4000);
+} else {
+  _resolveAuthReady();
+}
+async function ensureAuth(){
+  await _authReady;
+  try{
+    const u = (window.firebase && firebase.apps.length) ? firebase.auth().currentUser : null;
+    if(u) _idToken = await u.getIdToken();
+  }catch(e){ console.error('ID 토큰 갱신 실패', e); }
+}
+function withAuth(u){ return _idToken ? u+(u.includes('?')?'&':'?')+'auth='+_idToken : u; }
+async function fetchDashboardData(){
+  let res;
+  if(FIREBASE_URL){
+    await ensureAuth();
+    res=await fetch(withAuth(FIREBASE_URL.replace(/\/+$/,'')+DATA_PATH+'?t='+Date.now()),{cache:'no-store'});
+    if(res.status===401||res.status===403) throw new Error('읽기 권한이 없습니다 — Firebase 규칙 또는 API 키를 확인하세요.');
+    if(!res.ok) throw new Error('Firebase 응답 오류 ('+res.status+')');
+    const d=await res.json();
+    if(!d||!d.recs) throw new Error('아직 데이터가 없습니다 — Apps Script에서 pushDashboardToFirebase()를 한 번 실행하세요.');
+    return d;
+  }
+  if(APPS_SCRIPT_JSON_URL){
+    res=await fetch(APPS_SCRIPT_JSON_URL+(APPS_SCRIPT_JSON_URL.includes('?')?'&':'?')+'format=json&t='+Date.now(),{cache:'no-store',redirect:'follow'});
+    if(!res.ok) throw new Error('Apps Script 응답 오류 ('+res.status+')');
+    return await res.json();
+  }
+  throw new Error('설정이 비어 있습니다 — 파일 상단의 FIREBASE_URL 또는 APPS_SCRIPT_JSON_URL을 입력하세요.');
+}
+const DATA={recs:[],total:{},visits:{},fsrv:{},voc:[],roster:[],updated:'–'};
+</script>
+<script>
+const TEAMS=['FS EAST','FS WEST','FS SOUTH','FS CENTRAL'];
+const TCOL={'FS EAST':'var(--t-east)','FS WEST':'var(--t-west)','FS SOUTH':'var(--t-south)','FS CENTRAL':'var(--t-central)'};
+let MONTHS=Object.keys(DATA.total).sort();
+const roster={};DATA.roster.forEach(r=>roster[r.name]=r);
+// normalize: team/grade from roster
+// 팀·직급: 시트 정제데이터 값 사용(방문 기관 지역 반영), 정제데이터에 없는 응답만 명단 기준
+let month='ALL',team='ALL';
+const $=s=>document.querySelector(s);
+const fmt=(n,d=2)=>n==null||isNaN(n)?'–':n.toFixed(d);
+const pct=(a,b)=>b?(100*a/b):null;
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+const mlabel=m=>m==='ALL'?'전체':`${parseInt(m.slice(5))}월`;
+
+function seg(el,opts,cur,on){el.innerHTML='';opts.forEach(([v,l])=>{const b=document.createElement('button');b.textContent=l;b.setAttribute('aria-pressed',v===cur);b.onclick=()=>on(v);el.appendChild(b);});}
+function filtered(){return DATA.recs.filter(r=>(month==='ALL'||r.month===month)&&(team==='ALL'||r.team===team));}
+function visitsFor(t,m){const ms=m==='ALL'?MONTHS:[m];if(t==='ALL')return ms.reduce((s,x)=>s+DATA.total[x],0);return ms.reduce((s,x)=>s+(DATA.visits[t]?.[x]||0),0);}
+function fsrVisits(f,m){const v=DATA.fsrv[f];if(!v)return 0;const ms=m==='ALL'?MONTHS:[m];return ms.reduce((s,x)=>s+(v[x]||0),0);}
+
+function render(){
+  Object.keys(roster).forEach(k=>delete roster[k]);DATA.roster.forEach(r=>roster[r.name]=r);
+  MONTHS=Object.keys(DATA.total).sort();if(month!=='ALL'&&MONTHS.indexOf(month)===-1)month='ALL';
+  seg($('#segMonth'),[['ALL','전체'],...MONTHS.map(m=>[m,mlabel(m)])],month,v=>{month=v;render();});
+  seg($('#segTeam'),[['ALL','전체'],...TEAMS.map(t=>[t,t.replace('FS ','')])],team,v=>{team=v;render();});
+  const R=filtered();
+  $('#filterHint').textContent=`${mlabel(month)} · ${team==='ALL'?'전 팀':team} · ${R.length}건`;
+  renderKPI(R);renderTeam();renderTrend(R);renderQ(R);renderBreak(R);renderFSR(R);renderVOC(R);
+}
+$('#updated').textContent=DATA.updated;$('#hdrN').textContent=DATA.recs.length;$('#hdrV').textContent=MONTHS.reduce((s,m)=>s+DATA.total[m],0);
+
+function renderKPI(R){
+  const n=R.length,avg=mean(R.map(r=>r.avg)),q=[1,2,3].map(i=>mean(R.map(r=>r['q'+i])));
+  const perfect=R.filter(r=>r.avg===5).length,low=R.filter(r=>Math.min(r.q1,r.q2,r.q3)<=2).length;
+  const v=visitsFor(team,month),rr=pct(n,v),flag=R.filter(r=>r.flag).length,cm=R.filter(r=>r.comment&&r.comment.trim()).length;
+  const tiles=[
+    ['응답 수',`${n}<small>건</small>`,`방문 ${v}건 중`],
+    ['응답률',`${fmt(rr,1)}<small>%</small>`,month==='ALL'?'8–9월 누적':`${mlabel(month)} CRM 방문 대비`],
+    ['종합 만족도',`${fmt(avg)}<small>/ 5</small>`,`신속 ${fmt(q[0])} · 전문 ${fmt(q[1])} · 응대 ${fmt(q[2])}`],
+    ['만점(5.0) 비율',`${fmt(pct(perfect,n),0)}<small>%</small>`,`${perfect}건 세 문항 모두 5점`],
+    ['저점수(≤2) 건수',`${low}<small>건</small>`,low?'즉시 확인 필요':'해당 없음', low?'crit':'good'],
+    ['서술형 의견',`${cm}<small>건</small>`,`확인필요 플래그 ${flag}건`],
+  ];
+  $('#kpis').innerHTML=tiles.map(([l,v,s,c])=>`<div class="kpi"><div class="l">${l}</div><div class="v mono">${v}</div><div class="s ${c||''}">${s}</div></div>`).join('');
+}
+
+function renderTeam(){
+  const rows=TEAMS.map(t=>{const R=DATA.recs.filter(r=>r.team===t&&(month==='ALL'||r.month===month));const v=visitsFor(t,month);
+    return {t,n:R.length,v,rr:pct(R.length,v),avg:mean(R.map(r=>r.avg)),q:[1,2,3].map(i=>mean(R.map(r=>r['q'+i]))),cm:R.filter(r=>r.comment&&r.comment.trim()).length};});
+  const maxrr=Math.max(...rows.map(r=>r.rr||0),1);
+  $('#teamTbl').innerHTML=`<thead><tr><th>팀</th><th class="num">응답</th><th class="num">방문</th><th>응답률</th><th class="num">신속</th><th class="num">전문</th><th class="num">응대</th><th class="num">종합</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr style="${team!=='ALL'&&team!==r.t?'opacity:.45':''}"><td><span class="dot" style="background:${TCOL[r.t]}"></span>${r.t.replace('FS ','')}</td><td class="num mono">${r.n}</td><td class="num mono">${r.v}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="bar" style="flex:1"><i style="width:${(r.rr||0)/maxrr*100}%;background:${TCOL[r.t]}"></i></div><span class="mono" style="min-width:48px;text-align:right">${fmt(r.rr,1)}%</span></div></td><td class="num mono">${fmt(r.q[0])}</td><td class="num mono">${fmt(r.q[1])}</td><td class="num mono">${fmt(r.q[2])}</td><td class="num mono"><b>${fmt(r.avg)}</b></td></tr>`).join('')+`</tbody>`;
+}
+
+function renderTrend(R){
+  // daily counts by team, stacked bars
+  const days=[...new Set(R.map(r=>r.ts.slice(0,10)))].sort();
+  if(!days.length){$('#trend').innerHTML='<div class="empty">해당 조건의 응답이 없습니다.</div>';$('#trendLegend').innerHTML='';return;}
+  const d0=new Date(days[0]),d1=new Date(days[days.length-1]);const all=[];for(let d=new Date(d0);d<=d1;d.setDate(d.getDate()+1))all.push(d.toISOString().slice(0,10));
+  const byDay={};all.forEach(d=>byDay[d]={});R.forEach(r=>{const d=r.ts.slice(0,10);byDay[d][r.team]=(byDay[d][r.team]||0)+1;});
+  const tot=all.map(d=>Object.values(byDay[d]).reduce((a,b)=>a+b,0));const max=Math.max(...tot,1);
+  const W=560,H=200,pl=28,pr=8,pt=10,pb=26,iw=W-pl-pr,ih=H-pt-pb,bw=iw/all.length;
+  const yTicks=[0,Math.ceil(max/2),max];
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible" role="img" aria-label="일별 응답 건수">`;
+  yTicks.forEach(v=>{const y=pt+ih-v/max*ih;s+=`<line class="grid" x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}"/><text x="${pl-6}" y="${y+4}" text-anchor="end" class="mono">${v}</text>`;});
+  all.forEach((d,i)=>{let y=pt+ih;const x=pl+i*bw+1,w=Math.max(bw-2,1.5);
+    TEAMS.forEach(t=>{const c=byDay[d][t]||0;if(!c)return;const h=c/max*ih;y-=h;s+=`<rect x="${x}" y="${y+1}" width="${w}" height="${Math.max(h-1,.5)}" fill="${TCOL[t]}" rx="1.5" data-tip="${d} · ${t.replace('FS ','')} ${c}건 (일 합계 ${tot[i]})"/>`;});
+    if(tot[i]&&(all.length<=20||tot[i]===max))s+=`<text x="${x+w/2}" y="${y-4}" text-anchor="middle" class="mono">${tot[i]}</text>`;
+    const step=all.length>24?7:all.length>12?3:1;if(i%step===0)s+=`<text x="${x+w/2}" y="${H-8}" text-anchor="middle">${parseInt(d.slice(5,7))}/${parseInt(d.slice(8))}</text>`;});
+  s+=`<line class="axis" x1="${pl}" x2="${W-pr}" y1="${pt+ih}" y2="${pt+ih}"/></svg>`;
+  $('#trend').innerHTML=s;
+  $('#trendHint').textContent=`${all[0].slice(5).replace('-','/')} – ${all[all.length-1].slice(5).replace('-','/')} · 최다 ${max}건/일`;
+  $('#trendLegend').innerHTML=TEAMS.filter(t=>team==='ALL'||t===team).map(t=>`<span><span class="dot" style="background:${TCOL[t]}"></span>${t.replace('FS ','')}</span>`).join('');
+}
+
+function renderQ(R){
+  const qs=[['신속성 · 일정 준수','q1'],['전문성 · 문제 해결','q2'],['고객 응대 · 마무리','q3']];
+  const n=R.length||1;
+  $('#qdist').innerHTML=qs.map(([l,k])=>{const cnt=[5,4,3,2,1].map(v=>R.filter(r=>r[k]===v).length);const m=mean(R.map(r=>r[k]));
+    return `<div style="display:grid;gap:4px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px"><span>${l}</span><span class="mono" style="color:var(--ink-2)">평균 ${fmt(m)}</span></div>
+    <div style="display:flex;height:14px;border-radius:4px;overflow:hidden;gap:2px;background:var(--surface-2)">${cnt.map((c,i)=>c?`<div data-tip="${5-i}점 · ${c}건 (${fmt(100*c/n,1)}%)" style="width:${100*c/n}%;background:${['var(--accent)','#6da7ec','#b7d3f6','var(--warn)','var(--crit)'][i]}"></div>`:'').join('')}</div>
+    <div style="display:flex;gap:12px;font-size:11px;color:var(--ink-3)" class="mono">${cnt.map((c,i)=>`<span>${5-i}점 ${c}</span>`).join('')}</div></div>`;}).join('');
+}
+
+function renderBreak(R){
+  const groups=[['서비스 형태','svc'],['장비 모델','model'],['직급','grade']];
+  const order={grade:['팀장','T4','T3','T2','T1']};
+  $('#breakdown').innerHTML=`<table><thead><tr><th>구분</th><th class="num">응답</th><th class="num">평균</th><th class="num">만점비율</th></tr></thead><tbody>`+groups.map(([l,k])=>{
+    let keys=[...new Set(R.map(r=>r[k]||'(미입력)'))];keys.sort((a,b)=>order[k]?order[k].indexOf(a)-order[k].indexOf(b):R.filter(r=>r[k]===b).length-R.filter(r=>r[k]===a).length);
+    return `<tr><td colspan="4" style="font-size:11px;color:var(--ink-3);letter-spacing:.06em;font-weight:600;padding-top:10px">${l}</td></tr>`+keys.map(x=>{const S=R.filter(r=>(r[k]||'(미입력)')===x);const p=S.filter(r=>r.avg===5).length;
+      return `<tr><td>${x}</td><td class="num mono">${S.length}</td><td class="num mono">${fmt(mean(S.map(r=>r.avg)))}</td><td class="num mono">${fmt(pct(p,S.length),0)}%</td></tr>`;}).join('');}).join('')+`</tbody></table>`;
+}
+
+function fsrRows(R){
+  const names=DATA.roster.filter(r=>team==='ALL'||r.team===team).map(r=>r.name);
+  const rows=names.map(f=>{const S=R.filter(r=>r.fsr===f);const v=fsrVisits(f,month);const ro=roster[f];
+    return {f,team:ro.team,grade:ro.grade,n:S.length,v,rr:pct(S.length,v),q:[1,2,3].map(i=>mean(S.map(r=>r['q'+i]))),avg:mean(S.map(r=>r.avg)),cm:S.filter(r=>r.comment&&r.comment.trim()).length,low:S.filter(r=>Math.min(r.q1,r.q2,r.q3)<=2).length};});
+  const ranked=rows.filter(r=>r.n>=2).sort((a,b)=>(b.avg-a.avg)||(b.n-a.n)||((b.rr||0)-(a.rr||0)));
+  let rank=0,prev=null;ranked.forEach((r,i)=>{if(r.avg!==prev){rank=i+1;prev=r.avg;}r.rank=rank;});
+  return {rows,ranked};
+}
+const fsrRow=(r,showRank)=>`<tr><td class="num mono">${showRank&&r.rank?r.rank:'–'}</td><td><b style="font-weight:600">${r.f}</b></td><td><span class="dot" style="background:${TCOL[r.team]}"></span>${r.team.replace('FS ','')}</td><td>${r.grade}</td><td class="num mono">${r.n}</td><td class="num mono">${r.v}</td><td class="num mono">${r.rr==null?'–':fmt(r.rr,1)+'%'}</td><td class="num mono">${fmt(r.q[0])}</td><td class="num mono">${fmt(r.q[1])}</td><td class="num mono">${fmt(r.q[2])}</td><td class="num mono"><b>${fmt(r.avg)}</b></td><td class="num mono">${r.cm}</td><td>${r.n===0?'<span class="chip">응답 없음</span>':r.n<2?'<span class="chip warn">순위 미포함 (1건)</span>':r.n<5?`<span class="chip warn">표본부족 (${r.n}건)</span>`:'<span class="chip ok">평가 가능</span>'}</td></tr>`;
+const FSR_HEAD=`<thead><tr><th class="num">#</th><th>FSR</th><th>팀</th><th>직급</th><th class="num">응답</th><th class="num">방문</th><th class="num">응답률</th><th class="num">신속</th><th class="num">전문</th><th class="num">응대</th><th class="num">종합</th><th class="num">의견</th><th>비고</th></tr></thead>`;
+let lastFsr=null;
+function renderFSR(R){
+  lastFsr=fsrRows(R);
+  const top=lastFsr.ranked.slice(0,5);
+  $('#topTbl').innerHTML=FSR_HEAD+'<tbody>'+(top.length?top.map(r=>fsrRow(r,true)).join(''):'<tr><td colspan="13" class="empty">해당 조건에서 응답 2건 이상인 FSR이 없습니다.</td></tr>')+'</tbody>';
+  renderMe();
+}
+function renderMe(){
+  const q=($('#fsrSearch').value||'').replace(/\s+/g,'');
+  const box=$('#meTbl');
+  if(!q){box.innerHTML='';return;}
+  const hits=lastFsr.rows.filter(r=>r.f.replace(/\s+/g,'').includes(q));
+  if(!hits.length){box.innerHTML=`<tbody><tr><td class="empty">"${q.replace(/</g,'&lt;')}" 이름의 FSR이 ${team==='ALL'?'명단':team}에 없습니다.</td></tr></tbody>`;return;}
+  box.innerHTML=FSR_HEAD+'<tbody>'+hits.map(r=>fsrRow(r,true)).join('')+'</tbody>'+`<tfoot><tr><td colspan="13" class="hint" style="white-space:normal">순위는 ${mlabel(month)} · ${team==='ALL'?'전체':team} 기준, 응답 2건 이상 ${lastFsr.ranked.length}명 중 위치입니다. 동점은 같은 순위로 표시됩니다.</td></tr></tfoot>`;
+}
+$('#fsrSearch').addEventListener('input',renderMe);
+
+let vocAll=false;
+function renderVOC(R){
+  const cat={};DATA.voc.forEach(v=>cat[v.ts+'|'+v.fsr]=v.cat);
+  const list=R.filter(r=>r.comment&&r.comment.trim()&&!/^(없음|없습니다|\.|-|x)$/i.test(r.comment.trim())).sort((a,b)=>b.ts.localeCompare(a.ts));
+  $('#vocHint').textContent=`${list.length}건 · 최신순`;
+  const lim=vocAll?list.length:24;$('#voc').innerHTML=list.length?list.slice(0,lim).map(r=>{const c0=cat[r.ts+'|'+r.fsr]||'';const c=c0.indexOf('심각')!==-1?'심각':c0;const cc=c==='칭찬'?'praise':c==='심각'?'severe':c==='개선요청'?'improve':'';
+    return `<article><div class="m"><b>${r.fsr} <span style="font-weight:400;color:var(--ink-3)">· ${r.team.replace('FS ','')}</span></b><span>${r.org}</span><span class="mono">${r.ts} · ${fmt(r.avg,1)}점</span>${c?`<span class="chip ${cc}">${c}</span>`:''}</div><p>${r.comment.replace(/</g,'&lt;')}</p></article>`;}).join('')+(list.length>lim?`<button class="more" id="vocMore">나머지 ${list.length-lim}건 더 보기</button>`:''):'<div class="empty">해당 조건의 서술형 의견이 없습니다.</div>';
+  const mb=$('#vocMore');if(mb)mb.onclick=()=>{vocAll=true;renderVOC(filtered());};
+}
+
+// tooltip
+const tip=$('#tip');
+document.addEventListener('mousemove',e=>{const t=e.target.closest('[data-tip]');if(t){tip.textContent=t.dataset.tip;tip.classList.add('on');tip.style.left=Math.min(e.clientX+12,innerWidth-tip.offsetWidth-8)+'px';tip.style.top=(e.clientY+14)+'px';}else tip.classList.remove('on');});
+const btn=$('#btnRefresh');
+function applyData(d){Object.keys(DATA).forEach(k=>delete DATA[k]);Object.keys(d).forEach(k=>DATA[k]=d[k]);
+  $('#updated').textContent=DATA.updated;$('#hdrN').textContent=DATA.recs.length;$('#hdrV').textContent=Object.keys(DATA.total).reduce((s,m)=>s+DATA.total[m],0);vocAll=false;render();}
+async function load(){
+  btn.disabled=true;btn.textContent='읽는 중…';$('#loadMsg').hidden=false;$('#loadMsg').textContent='데이터를 불러오는 중입니다…';$('#loadMsg').className='notice';
+  try{applyData(await fetchDashboardData());lastLoad=Date.now();$('#loadMsg').hidden=true;btn.textContent='새로고침';}
+  catch(err){console.error(err);$('#loadMsg').className='notice err';$('#loadMsg').textContent='불러오지 못했습니다: '+err.message;btn.textContent='다시 시도';}
+  btn.disabled=false;
+}
+btn.onclick=load;
+let lastLoad=0;
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-lastLoad>5*60*1000)load();});
+render();load();
+</script>
+</body>
+</html>
