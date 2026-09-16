@@ -179,6 +179,7 @@ footer{font-size:12px;color:var(--ink-3);line-height:1.6;max-width:70ch}
   </section>
 
   <footer>
+    <span id="scopeNote"></span>
     Sysmex Korea FS Group 방문 서비스 고객만족도 조사 결과입니다. 평균은 세 문항(신속성·일정 / 전문성·해결 / 응대·마무리)의 단순 평균, 응답률은 CRM 완료 방문건수(수리·PM) 대비 응답 비율이며 진행 중인 달은 집계 시점까지의 누적입니다. 팀·직급은 만족도 시트 정제데이터 기준, 개인별 TOP 5의 팀은 소속 명단 기준입니다. 데이터는 만족도 시트의 Apps Script가 응답 접수 시·매시간 자동으로 내보낸 것을 읽어 옵니다.
   </footer>
 </div>
@@ -264,6 +265,11 @@ const fmt=(n,d=2)=>n==null||isNaN(n)?'–':n.toFixed(d);
 const pct=(a,b)=>b?(100*a/b):null;
 const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
 const mlabel=m=>m==='ALL'?'전체':`${parseInt(m.slice(5))}월`;
+const rangeLabel=()=>{
+  if(!MONTHS.length) return 'CRM 방문 대비';
+  if(MONTHS.length===1) return `${mlabel(MONTHS[0])} CRM 방문 대비`;
+  return `${parseInt(MONTHS[0].slice(5))}–${parseInt(MONTHS[MONTHS.length-1].slice(5))}월 누적`;
+};
 
 function seg(el,opts,cur,on){el.innerHTML='';opts.forEach(([v,l])=>{const b=document.createElement('button');b.textContent=l;b.setAttribute('aria-pressed',v===cur);b.onclick=()=>on(v);el.appendChild(b);});}
 function filtered(){return DATA.recs.filter(r=>(month==='ALL'||r.month===month)&&(team==='ALL'||r.team===team));}
@@ -287,7 +293,7 @@ function renderKPI(R){
   const v=visitsFor(team,month),rr=pct(n,v),flag=R.filter(r=>r.flag).length,cm=R.filter(r=>r.comment&&r.comment.trim()).length;
   const tiles=[
     ['응답 수',`${n}<small>건</small>`,`방문 ${v}건 중`],
-    ['응답률',`${fmt(rr,1)}<small>%</small>`,month==='ALL'?'8–9월 누적':`${mlabel(month)} CRM 방문 대비`],
+    ['응답률',`${fmt(rr,1)}<small>%</small>`,month==='ALL'?rangeLabel():`${mlabel(month)} CRM 방문 대비`],
     ['종합 만족도',`${fmt(avg)}<small>/ 5</small>`,`신속 ${fmt(q[0])} · 전문 ${fmt(q[1])} · 응대 ${fmt(q[2])}`],
     ['만점(5.0) 비율',`${fmt(pct(perfect,n),0)}<small>%</small>`,`${perfect}건 세 문항 모두 5점`],
     ['저점수(≤2) 건수',`${low}<small>건</small>`,low?'즉시 확인 필요':'해당 없음', low?'crit':'good'],
@@ -385,7 +391,10 @@ const tip=$('#tip');
 document.addEventListener('mousemove',e=>{const t=e.target.closest('[data-tip]');if(t){tip.textContent=t.dataset.tip;tip.classList.add('on');tip.style.left=Math.min(e.clientX+12,innerWidth-tip.offsetWidth-8)+'px';tip.style.top=(e.clientY+14)+'px';}else tip.classList.remove('on');});
 const btn=$('#btnRefresh');
 function applyData(d){Object.keys(DATA).forEach(k=>delete DATA[k]);Object.keys(d).forEach(k=>DATA[k]=d[k]);
-  $('#updated').textContent=DATA.updated;$('#hdrN').textContent=DATA.recs.length;$('#hdrV').textContent=Object.keys(DATA.total).reduce((s,m)=>s+DATA.total[m],0);vocAll=false;render();}
+  $('#updated').textContent=DATA.updated;$('#hdrN').textContent=DATA.recs.length;$('#hdrV').textContent=Object.keys(DATA.total).reduce((s,m)=>s+DATA.total[m],0);vocAll=false;
+  const sn=$('#scopeNote');
+  sn.textContent=DATA.startMonth?`집계 대상: ${parseInt(DATA.startMonth.slice(5))}월부터 (${parseInt(DATA.startMonth.slice(5))-1}월은 시범운영 기간이라 제외). `:'';
+  render();}
 async function load(){
   btn.disabled=true;btn.textContent='읽는 중…';$('#loadMsg').hidden=false;$('#loadMsg').textContent='데이터를 불러오는 중입니다…';$('#loadMsg').className='notice';
   try{applyData(await fetchDashboardData());lastLoad=Date.now();$('#loadMsg').hidden=true;btn.textContent='새로고침';}
