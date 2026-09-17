@@ -119,19 +119,26 @@ async function loadPreview(){
   try{ roster = JSON.parse(rawText) || {}; }
   catch(e){ throw new Error('응답이 JSON이 아닙니다: ' + rawText.slice(0,200)); }
 
-  let usingDefault = false;
-  if(!roster || Object.keys(roster).length === 0){
-    usingDefault = true;
-    roster = {};
-    Object.keys(DEFAULT_ROSTER).forEach(t=>{ roster[t] = DEFAULT_ROSTER[t].map(m=>({name:m.name, role:m.role})); });
-    log('⚠ 서버에 저장된 팀원 명단이 없습니다(null).');
-    log('  → 근무일정표 화면에는 코드 내장 기본 명단이 표시되고 있었을 것입니다.');
-    log('  → 그 기본 명단을 기준으로 영문명을 채워 새로 저장합니다.');
+  roster = roster || {};
+  log('· 서버에 명단이 있는 팀: [' + Object.keys(roster).join(', ') + ']');
+  // 팀 단위로 폴백한다. 서버에 그 팀 키가 아예 없으면(한 번도 저장된 적 없는 팀)
+  // 근무일정표 화면에는 코드 내장 기본 명단이 쓰이고 있으므로, 그것을 기준으로 만든다.
+  const fellBack = [];
+  Object.keys(NICKNAME_MAP).forEach(t=>{
+    if(!roster[t] || roster[t].length === 0){
+      if(DEFAULT_ROSTER[t]){
+        roster[t] = DEFAULT_ROSTER[t].map(m=>({name:m.name, role:m.role}));
+        fellBack.push(TEAM_LABEL[t] || t);
+      }
+    }
+  });
+  if(fellBack.length){
+    log('⚠ 서버에 명단이 없는 팀: ' + fellBack.join(', '));
+    log('  → 근무일정표에 내장된 기본 명단을 기준으로 영문명을 채워 새로 저장합니다.');
     document.getElementById('preview').insertAdjacentHTML('beforebegin',
-      '<div class="warn">⚠ 서버에 팀원 명단이 저장되어 있지 않아, <b>근무일정표에 내장된 기본 명단</b>을 기준으로 만듭니다. ' +
-      '팀원 관리에서 추가·삭제·순서변경을 하신 적이 있다면 그 내용이 반영되지 않을 수 있으니, 적용 후 근무일정표에서 명단을 확인해주세요.</div>');
-  } else {
-    log('✓ 서버 명단 사용 — 팀 키: [' + Object.keys(roster).join(', ') + ']');
+      '<div class="warn">⚠ <b>' + fellBack.join(', ') + '</b> 팀은 서버에 명단이 저장된 적이 없어, ' +
+      '<b>근무일정표에 내장된 기본 명단</b>을 기준으로 만듭니다. 팀원 관리에서 추가·삭제·순서변경을 하신 적이 ' +
+      '있다면 그 내용이 반영되지 않을 수 있으니, 적용 후 근무일정표에서 명단을 확인해주세요.</div>');
   }
 
   let html = '';
@@ -189,6 +196,11 @@ async function applyAll(applyPlan){
   document.getElementById('applyBtn').textContent = '적용 중...';
   for(const team of Object.keys(applyPlan)){
     try{
+      // 빈 명단을 쓰면 그 팀 전체가 지워진다. 어떤 경우에도 차단한다.
+      if(!Array.isArray(applyPlan[team]) || applyPlan[team].length === 0){
+        log('✗ ' + (TEAM_LABEL[team]||team) + ' 건너뜀 — 명단이 비어 있어 저장하지 않습니다');
+        continue;
+      }
       // 팀 하나(teamRoster/{team})만 타겟 저장 — 다른 팀·다른 데이터는 건드리지 않음
       await fbFetch('/work-schedule/teamRoster/' + team + '.json', {
         method: 'PUT',
