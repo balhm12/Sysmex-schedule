@@ -713,7 +713,7 @@
   function weekLabel(sunday) { var d = WR.weekDates(sunday); return d[0] + ' ~ ' + d[6]; }
 
   // 지원 팀 목록. 정식 오픈 시 이 배열에 팀 키를 추가하면 됩니다. (2026-08: west·east 오픈)
-  var BETA_TEAMS = ['fss', 'west', 'east'];
+  var BETA_TEAMS = ['fss', 'west', 'east', 'central', 'south'];
 
   function openDialog() {
     st = { teamKey: BETA_TEAMS[0], sunday: WR.mondayOf(todayStr()), weeks: 4 }; // 주 단위는 월요일~일요일 / 보고 기간 기본 4주
@@ -730,7 +730,7 @@
       '<button class="close" id="wp-close">✕</button>' +
       '<h3>📋 주간계획서 내보내기 <span style="font-size:10px;font-weight:800;color:#B45309;background:#FEF3C7;padding:2px 7px;border-radius:8px;vertical-align:2px;">Beta</span></h3>' +
       '<div style="background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;padding:8px 10px;margin-bottom:12px;font-size:11.5px;color:#92400E;line-height:1.5;">' +
-        '⚠️ <b>Beta 테스트 중입니다.</b> 현재 <b>FSS · FS West · FS East</b> 팀을 지원하며, 나머지 팀은 검증 후 순차 오픈 예정입니다. 실제 보고에 쓰시기 전에 내보낸 파일을 꼭 확인해주세요.' +
+        '⚠️ <b>Beta 테스트 중입니다.</b> <b>FSG 5개 팀 전체</b>를 지원합니다. 실제 보고에 쓰시기 전에 내보낸 파일을 꼭 확인해주세요.' +
       '</div>' +
       '<div class="sub">선택한 팀·주차의 근무표 데이터를 첨부 양식(xlsx)으로 내보냅니다. (근무표는 변경되지 않습니다)</div>' +
       '<div class="form-row"><label>팀</label><select id="wp-team">' + teamOpts + '</select></div>' +
