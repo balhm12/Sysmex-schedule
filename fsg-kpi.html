@@ -282,20 +282,22 @@ function modelOf(prod, subj){
   if(prod) return prod;
   const s=(subj||'').split('/'); return s.length>2? s[1].trim() : '';
 }
+/* 장비군 — 화면 표시 순서도 이 목록(FAM_ORDER)을 따른다 */
+const FAM_ORDER=['XR-Series','XN-Series','XN-L Series','SP-50','UF-Series','UC-3500','CN-Series','CA/CS','HISCL-Series','G11','SP-10','TS-10','기타'];
 function famOf(m){
   const u=(m||'').toUpperCase();
-  if(!u) return '미기재';
+  if(!u) return '기타';                                            // 모델 미기재 포함
   if(u.includes('G11')||u.includes('HLC')||u.includes('TOSOH')) return 'G11';
-  if(/^XN-?(3|4|5)\d\d/.test(u)||u.startsWith('XN-L')) return 'XN-L';
-  if(u.startsWith('XN')) return 'XN';
-  if(u.startsWith('XR')) return 'XR';
+  if(/^XN-?(3|4|5)\d\d/.test(u)||u.startsWith('XN-L')) return 'XN-L Series';
+  if(u.startsWith('XN')) return 'XN-Series';
+  if(u.startsWith('XR')) return 'XR-Series';
   if(u.startsWith('SP-50')) return 'SP-50';
   if(u.startsWith('SP-10')) return 'SP-10';
-  if(u.startsWith('CN')) return 'CN';
+  if(u.startsWith('CN')) return 'CN-Series';
   if(u.startsWith('CA')||u.startsWith('CS')||u.startsWith('CV')) return 'CA/CS';
   if(u.startsWith('UF')||u.startsWith('UN')) return 'UF-Series';   // UF-5000·4000·1500, UN 라인 시스템
   if(u.startsWith('UC-3500')) return 'UC-3500';
-  if(u.includes('HISCL')) return 'HISCL-Series';   // HISCL-5000, HISCL-800
+  if(u.includes('HISCL')) return 'HISCL-Series';                   // HISCL-5000, HISCL-800
   if(u.startsWith('TS-10')) return 'TS-10';
   return '기타';
 }
@@ -566,20 +568,18 @@ function renderHealth(end, p){
 }
 function hc(l,v,c,good){return `<div class="hc"><div class="l">${l}</div><div class="v ${v==null?'off':''}" ${good===true?'style="color:var(--good)"':good===false?'':''}>${v==null?'자산대장 필요':v}</div>${c?`<div class="c">${c}</div>`:''}</div>`;}
 
-const ALWAYS_FAM=['HISCL-Series'];
 function renderErrors(p, team){
   const ms=new Set(p.months); const famC={};
   const rows=D.rows.filter(o=>o.ok&&o.purp==='고장 수리'&&ms.has(o.mk)&&(!team||o.team===team));
   rows.forEach(o=>{const f=famC[o.fam]=famC[o.fam]||{n:0,f:0,s:0};f.n++;if(o.sn){f.s++;f.f+=o.fail;}});
-  const allK=Object.keys(famC).sort((a,b)=>famC[b].n-famC[a].n);
-  const fk=allK.slice(0,12); ALWAYS_FAM.forEach(f=>{ if(famC[f]&&!fk.includes(f)) fk.push(f); });   // 항상 보이는 장비군
+  const fk=FAM_ORDER.filter(f=>famC[f]);   // 정해진 장비군 순서
   $('errSub').textContent=`${p.label}, ${team||'FSG 전체'}`;
   upsert('cFam',{data:{labels:fk,datasets:[
     {type:'bar',label:'고장 수리',data:fk.map(f=>famC[f].n),backgroundColor:'#005BAC',yAxisID:'y'},
     {type:'line',label:'재방문율(%)',data:fk.map(f=>famC[f].n?+(famC[f].f/famC[f].n*100).toFixed(1):null),showLine:false,pointRadius:6,borderColor:'#E69E0B',backgroundColor:'#E69E0B',yAxisID:'y2'}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}}},
       scales:{x:axis({grid:{display:false},ticks:{color:css('--text'),autoSkip:false}}),y:axis({beginAtZero:true}),y2:axis({position:'right',grid:{display:false},min:0,ticks:{color:css('--text'),callback:v=>v+'%'}})}}});
-  const sel=$('fErrFam'), cur=sel.value; const opts=[...ALWAYS_FAM.filter(f=>famC[f]),...allK.filter(f=>!ALWAYS_FAM.includes(f))]; sel.innerHTML='<option value="">전체</option>'+opts.map(f=>`<option>${esc(f)}</option>`).join(''); if(opts.includes(cur)) sel.value=cur;
+  const sel=$('fErrFam'), cur=sel.value; const opts=fk; sel.innerHTML='<option value="">전체</option>'+opts.map(f=>`<option>${esc(f)}</option>`).join(''); if(opts.includes(cur)) sel.value=cur;
   drawErr(rows);
 }
 let lastErrRows=[];
