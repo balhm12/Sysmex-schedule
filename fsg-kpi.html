@@ -347,8 +347,8 @@ function prepare(){
     const model=modelOf(r.prod,r.subj), rm=rosterMap[r.own];
     const ek=errKey(r.err);
     if(ek!=='미기재'&&ek!=='others'){const disp=r.err.trim().replace(/^\*+/,'');(errDisp[ek]=errDisp[ek]||{})[disp]=((errDisp[ek]||{})[disp]||0)+1;}
-    const o={t:r.t, dur:(r.e!=null&&r.e>=r.t)?(r.e-r.t)/60000:null, ok:OK.has(r.st), cancel:r.st==='취소됨', purp:r.purp||'미기재',
-      own:r.own, team:rm?rm.team:null, grade:rm?rm.grade:null, acct:r.acct, sn:r.sn, model, fam:famOf(model), ser:seriesOf(model),
+    const o={t:r.t, dur:(r.e!=null)?(r.e-r.t)/60000:null, ok:OK.has(r.st), done:r.st==='완료됨', cancel:r.st==='취소됨', purp:r.purp||'미기재',
+      own:r.own, team:rm?rm.team:null, grade:rm?rm.grade:null, acct:r.acct, sn:r.sn, model, fam:famOf(model), ser:seriesOf(r.prod),
       ek, mk:mkey(r.t), fail:0};
     rows.push(o); if(r.t>maxT) maxT=r.t; if(r.t<minT) minT=r.t;
   }
@@ -393,18 +393,26 @@ function prevPeriod(p){
 }
 
 /* ===== 집계 ===== */
+/* KPI 집계 — 보고서 데이터 도구(Apps Script v44)와 같은 정의
+   · 상태: 완료·시작(취소 제외) / 팀별 건수(D 접미사)는 v44 팀 실적과 같이 '완료됨'만
+   · FTFR 분모 = 고장 수리 전체(S/N 없는 건은 재방문 판정 불가 → 재방문 아님으로 계산)
+   · MTTR = 종료 시간이 있는 고장 수리의 (종료−시작) 평균
+   · Calibration = 목적 'Calibration'만 (원격 Calibration은 별도) */
 function stats(months, team){
-  const ms=new Set(months); const s={total:0,rep:0,pm:0,cal:0,repSn:0,fail:0,durS:0,durN:0};
+  const ms=new Set(months); const s={total:0,rep:0,pm:0,cal:0,calR:0,repSn:0,fail:0,durS:0,durN:0,repD:0,pmD:0,instD:0,calD:0};
   for(const o of D.rows){
-    if(!o.ok||!ms.has(o.mk)) continue; if(team&&o.team!==team) continue;
+    if(!ms.has(o.mk)) continue; if(team&&o.team!==team) continue;
+    if(o.done){ if(o.purp==='고장 수리') s.repD++; else if(o.purp==='PM') s.pmD++; else if(o.purp==='장비 설치'||o.purp==='장비 이전 설치') s.instD++; else if(o.purp==='Calibration') s.calD++; }
+    if(!o.ok) continue;
     s.total++;
-    if(o.purp==='고장 수리'){ s.rep++; if(o.sn){s.repSn++; s.fail+=o.fail;} if(o.dur!=null){s.durS+=o.dur;s.durN++;} }
+    if(o.purp==='고장 수리'){ s.rep++; s.fail+=o.fail; if(o.sn) s.repSn++; if(o.dur!=null){s.durS+=o.dur;s.durN++;} }
     else if(o.purp==='PM') s.pm++;
-    else if(o.purp==='Calibration'||o.purp==='원격 Calibration') s.cal++;
+    else if(o.purp==='Calibration') s.cal++;
+    else if(o.purp==='원격 Calibration') s.calR++;
   }
   s.idx = s.pm+s.rep? s.pm/(s.pm+s.rep)*100 : null;
-  s.ftfr = s.repSn? (s.repSn-s.fail)/s.repSn*100 : null;
-  s.rev = s.repSn? s.fail/s.repSn*100 : null;
+  s.ftfr = s.rep? (s.rep-s.fail)/s.rep*100 : null;
+  s.rev = s.rep? s.fail/s.rep*100 : null;
   s.mttr = s.durN? s.durS/s.durN : null;
   s.hasData = months.some(m=>D.months.includes(m));
   return s;
@@ -423,7 +431,7 @@ function delta(cur, prev, unit, better, label){
   const pct= prev? d/prev*100 : null;
   if(pct!=null&&Math.abs(pct)<0.5) return `<div class="dl flat">${label}과 거의 동일</div>`;
   const cls= better===0?'neu':((d>0)===(better>0)?'up':'down');
-  return `<div class="dl ${cls}">${label} 대비 ${d>0?'+':''}${unit==='분'?Math.round(d)+'분':fmt(d)+'건'}${pct!=null?` (${pct>0?'+':''}${pct.toFixed(1)}%)`:''}</div>`;
+  return `<div class="dl ${cls}">${label} 대비 ${d>0?'+':''}${unit==='분'?d.toFixed(1)+'분':fmt(d)+'건'}${pct!=null?` (${pct>0?'+':''}${pct.toFixed(1)}%)`:''}</div>`;
 }
 function card(label, val, suffix, dl, cap, opt={}){
   return `<div class="kpi ${opt.tg||''}"><div class="l">${label}${opt.prov?'<span class="pv">잠정</span>':''}</div><div class="v">${val}${suffix?`<small>${suffix}</small>`:''}</div>${dl}<div class="cap">${cap}</div></div>`;
@@ -442,13 +450,13 @@ function render(){
 
   const revTg = cur.rev==null?'':(cur.rev<=TARGET_REV?'tg-good':'tg-bad');
   $('kpis').innerHTML=[
-    card('서비스 활동', fmt(cur.total), '건', delta(cur.total,prv.total,'건',0,pp.label), `고장 수리 ${fmt(cur.rep)}, PM ${fmt(cur.pm)}, Calibration ${fmt(cur.cal)}, 기타 ${fmt(cur.total-cur.rep-cur.pm-cur.cal)}`),
+    card('서비스 활동', fmt(cur.total), '건', delta(cur.total,prv.total,'건',0,pp.label), `고장 수리 ${fmt(cur.rep)}, PM ${fmt(cur.pm)}, Calibration ${fmt(cur.cal)}${cur.calR?` (원격 ${fmt(cur.calR)} 별도)`:''}, 기타 ${fmt(cur.total-cur.rep-cur.pm-cur.cal-cur.calR)}`),
     card('고장 수리', fmt(cur.rep), '건', delta(cur.rep,prv.rep,'건',-1,pp.label), '완료·진행 중 활동 기준(취소 제외)'),
     card('PM', fmt(cur.pm), '건', delta(cur.pm,prv.pm,'건',1,pp.label), '예방점검 활동 건수'),
     card('예방정비 지수', f1(cur.idx), '%', delta(cur.idx,prv.idx,'%p',1,pp.label), 'PM ÷ (PM + 고장 수리). 높을수록 고장 전에 미리 점검'),
-    card('FTFR', f1(cur.ftfr), '%', delta(cur.ftfr,prv.ftfr,'%p',1,pp.label), `한 번 방문으로 해결된 고장 수리 비율. 기준평균 ${BASE.ftfr}%`, {prov, tg: cur.ftfr==null?'':(cur.ftfr>=BASE.ftfr?'tg-good':'tg-bad')}),
+    card('FTFR', f1(cur.ftfr), '%', delta(cur.ftfr,prv.ftfr,'%p',1,pp.label), `(고장 수리 − 14일 내 재방문) ÷ 고장 수리. 기준평균 ${BASE.ftfr}%`, {prov, tg: cur.ftfr==null?'':(cur.ftfr>=BASE.ftfr?'tg-good':'tg-bad')}),
     card('재방문율', f1(cur.rev), '%', delta(cur.rev,prv.rev,'%p',-1,pp.label), `14일 이내 같은 장비 재수리 비율. 목표 ${TARGET_REV}% 이하`, {prov, tg:revTg}),
-    card('MTTR', fmt(cur.mttr), '분', delta(cur.mttr,prv.mttr,'분',-1,pp.label), `고장 수리 1건당 평균 활동 시간(일정 슬롯 기준). 기준평균 ${BASE.mttr}분`, {tg: cur.mttr==null?'':(cur.mttr<=BASE.mttr?'tg-good':'tg-bad')}),
+    card('MTTR', f1(cur.mttr), '분', delta(cur.mttr,prv.mttr,'분',-1,pp.label), `고장 수리 1건당 평균 활동 시간(일정 슬롯 기준). 기준평균 ${BASE.mttr}분`, {tg: cur.mttr==null?'':(cur.mttr<=BASE.mttr?'tg-good':'tg-bad')}),
   ].join('');
   $('na').innerHTML='<span>설치 실적: 설치 공유캘린더 기준이라 이 화면에서 집계하지 않음</span><span>Uptime: CRM에 자료 없음</span><span>고객 만족도: 만족도 조사 시트 기준</span>'
     +calNote(p,team)
@@ -470,7 +478,7 @@ function render(){
     {label:'FTFR(%)',data:ts.map(s=>s.hasData&&s.ftfr!=null?+s.ftfr.toFixed(1):null),borderColor:'#005BAC',backgroundColor:'#005BAC',pointRadius:ts.map((s,i)=>provIdx[i]?5:3),pointStyle:ts.map((s,i)=>provIdx[i]?'rectRot':'circle'),tension:.25,yAxisID:'y',
       segment:{borderDash:c=>provIdx[c.p1DataIndex]?[4,4]:undefined}},
     {label:`FTFR 기준평균 ${BASE.ftfr}%`,data:tm.map(()=>BASE.ftfr),borderColor:'#005BAC',borderDash:[6,4],borderWidth:1,pointRadius:0,yAxisID:'y'},
-    {label:'MTTR(분)',data:ts.map(s=>s.hasData&&s.mttr!=null?Math.round(s.mttr):null),borderColor:'#00B8EE',backgroundColor:'#00B8EE',pointRadius:3,tension:.25,yAxisID:'y2'},
+    {label:'MTTR(분)',data:ts.map(s=>s.hasData&&s.mttr!=null?+s.mttr.toFixed(1):null),borderColor:'#00B8EE',backgroundColor:'#00B8EE',pointRadius:3,tension:.25,yAxisID:'y2'},
     {label:`MTTR 기준평균 ${BASE.mttr}분`,data:tm.map(()=>BASE.mttr),borderColor:'#00B8EE',borderDash:[6,4],borderWidth:1,pointRadius:0,yAxisID:'y2'}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}},tooltip:{callbacks:{afterTitle:it=>provIdx[it[0].dataIndex]?'FTFR 잠정치':''}}},
@@ -481,19 +489,21 @@ function render(){
   /* 팀별 */
   $('teamSub').textContent=`${p.label}`;
   const load=workload(end);
-  const trow=(name,s,size,ld)=>`<tr${name==='합계'?' class="tot"':''}><td>${name}</td><td class="num">${size??'-'}</td><td class="num">${fmt(s.rep)}</td><td class="num">${fmt(s.pm)}</td><td class="num">${fmt(s.cal)}</td><td class="num">${fmt(s.total)}</td><td class="num">${size?f1(s.total/size/p.months.length):'-'}</td><td class="num">${f1(s.idx)}%</td><td class="num">${f1(s.ftfr)}%</td><td class="num ${s.rev!=null&&s.rev>TARGET_REV?'bad':s.rev!=null?'good':''}">${f1(s.rev)}%</td><td class="num">${ld==null?'-':ld+'%'}</td></tr>`;
-  const all=stats(p.months,null); let teamRows='';
-  TEAMS.forEach(t=>{teamRows+=trow(t,stats(p.months,t),teamSize[t],load[t]);});
-  $('tTeam').innerHTML=`<thead><tr><th>팀</th><th class="num">인원</th><th class="num">고장 수리</th><th class="num">PM</th><th class="num">Calibration</th><th class="num">활동 합계</th><th class="num">1인당 월평균</th><th class="num">예방정비 지수</th><th class="num">FTFR</th><th class="num">재방문율</th><th class="num">팀원 간 업무량 차이</th></tr></thead><tbody>${teamRows}${trow('합계',all,null,null)}</tbody>`;
-  $('teamNote').innerHTML=`팀은 FSG 로스터(${ROSTER_DATE} 시행) 기준으로 담당자를 매핑했습니다. 로스터에 없는 담당자 활동은 팀 행에서 빠지고 합계에만 포함됩니다. 1인당 = 활동 합계 ÷ 인원(팀장 포함 전원) ÷ 개월 수. 팀원 간 업무량 차이는 최근 12개월 개인별 활동 건수의 편차(표준편차 ÷ 평균)로, 팀장과 신입은 제외합니다. 낮을수록 업무가 고르게 나뉜 것입니다.`;
+  const trow=(name,s,size,ld)=>{const sum=s.instD+s.pmD+s.repD; return `<tr${name==='합계'?' class="tot"':''}><td>${name}</td><td class="num">${size??'-'}</td><td class="num">${fmt(s.instD)}</td><td class="num">${fmt(s.pmD)}</td><td class="num">${fmt(s.repD)}</td><td class="num">${fmt(sum)}</td><td class="num">${size?f1(sum/size/p.months.length):'-'}</td><td class="num">${fmt(s.calD)}</td><td class="num">${f1(s.idx)}%</td><td class="num">${f1(s.ftfr)}%</td><td class="num ${s.rev!=null&&s.rev>TARGET_REV?'bad':s.rev!=null?'good':''}">${f1(s.rev)}%</td><td class="num">${ld==null?'-':ld+'%'}</td></tr>`;};
+  const all=stats(p.months,null); let teamRows=''; const rosterAll={instD:0,pmD:0,repD:0,calD:0};
+  TEAMS.forEach(t=>{const s=stats(p.months,t); ['instD','pmD','repD','calD'].forEach(k=>rosterAll[k]+=s[k]); teamRows+=trow(t,s,teamSize[t],load[t]);});
+  const totRow={...all,...rosterAll};
+  $('tTeam').innerHTML=`<thead><tr><th>팀</th><th class="num">인원</th><th class="num">설치+이전</th><th class="num">PM</th><th class="num">고장 수리</th><th class="num">합계</th><th class="num">1인당 (월)</th><th class="num">Calibration</th><th class="num">예방정비 지수</th><th class="num">FTFR</th><th class="num">재방문율</th><th class="num">팀원 간 업무량 차이</th></tr></thead><tbody>${teamRows}${trow('합계',totRow,ROSTER.length,null)}</tbody>`;
+  $('teamNote').innerHTML=`월간 보고서 팀 실적과 같은 기준입니다: 완료 상태 활동을 FSG 로스터(${ROSTER_DATE} 시행)로 팀에 매핑하고, 로스터 밖 담당자는 제외합니다. 합계 = 설치+이전 + PM + 고장 수리, 1인당 = 합계 ÷ 인원(팀장 포함 전원) ÷ 개월 수. 설치+이전은 CRM 기록 기준이라 설치 공유캘린더로 보완한 보고서 값과 다를 수 있습니다. 예방정비 지수·FTFR·재방문율은 완료·진행 중 활동 기준입니다. 팀원 간 업무량 차이는 최근 12개월 개인별 활동 건수의 편차(표준편차 ÷ 평균)로, 팀장과 신입은 제외합니다. 낮을수록 업무가 고르게 나뉜 것입니다.`;
 
   /* 시리즈 */
   const ser=['XN-Series','SP-50','CN-Series',null];
-  $('tSeries').innerHTML=`<thead><tr><th>구분</th><th class="num">고장 수리</th><th class="num">재방문</th><th class="num">재방문율</th><th class="num">${pp.label}</th><th class="num">증감</th></tr></thead><tbody>`+
+  const fl=serFleet(end,team);
+  $('tSeries').innerHTML=`<thead><tr><th>구분</th><th class="num">가동 대수</th><th class="num">고장 장비</th><th class="num">고장 수리</th><th class="num">재방문</th><th class="num">재방문율</th><th class="num">${pp.label}</th><th class="num">증감</th></tr></thead><tbody>`+
     ser.map(sn=>{const a=serStats(p.months,team,sn), b=serStats(pp.months,team,sn); const d=(a.r!=null&&b.r!=null)?a.r-b.r:null;
-      const dc=d==null?'':Math.abs(d)<0.1?'':(d<0?'good':'bad');
-      return `<tr${sn?'':' class="tot"'}><td>${sn||'전체 (SP-10 등 포함)'}</td><td class="num">${fmt(a.n)}</td><td class="num">${fmt(a.f)}</td><td class="num ${a.r!=null&&a.r>TARGET_REV?'bad':''}">${f1(a.r)}%</td><td class="num">${f1(b.r)}%</td><td class="num ${dc}">${d==null?'-':Math.abs(d)<0.1?'거의 동일':(d>0?'+':'')+d.toFixed(1)+'%p'}</td></tr>`;}).join('')+'</tbody>'
-    +(prov?`<caption style="caption-side:bottom;text-align:left;font-size:11.5px;color:var(--muted);padding-top:6px">${p.label}은 잠정치입니다.</caption>`:'');
+      const dc=d==null?'':Math.abs(d)<0.1?'':(d<0?'good':'bad'); const fc=sn?(fl.count[sn]||0):fl.total;
+      return `<tr${sn?'':' class="tot"'}><td>${sn||'전체 (SP-10 등 포함)'}</td><td class="num">${fmt(fc)}대</td><td class="num">${fmt(a.u)}대</td><td class="num">${fmt(a.n)}</td><td class="num">${fmt(a.f)}</td><td class="num ${a.r!=null&&a.r>TARGET_REV?'bad':''}">${f1(a.r)}%</td><td class="num">${f1(b.r)}%</td><td class="num ${dc}">${d==null?'-':Math.abs(d)<0.1?'거의 동일':(d>0?'+':'')+d.toFixed(1)+'%p'}</td></tr>`;}).join('')+'</tbody>'
+    +`<caption style="caption-side:bottom;text-align:left;font-size:11.5px;color:var(--muted);padding-top:6px">가동 대수: ${fl.src==='asset'?"자산대장 '사용' 장비 중 최근 12개월 서비스 이력이 있는 장비(S/N+기관)":'CRM 기준 최근 12개월 서비스 이력이 있는 장비(S/N+기관). 자산대장이 올라오면 자산 기준으로 바뀝니다'}${team?`, ${team} 서비스 장비`:''}. 고장 장비 = 보고 기간에 고장 수리를 받은 장비 수. 시리즈는 CRM Product 열 기준.${prov?` ${p.label}은 잠정치입니다.`:''}</caption>`;
 
   renderHealth(end, p);
   renderErrors(p, team);
@@ -525,24 +535,39 @@ function renderOrg(p, team){
   $('orgSub').textContent=`FSG 로스터 ${ROSTER_DATE} 시행 기준`;
 }
 function serStats(months, team, sn){
-  const ms=new Set(months); let n=0,f=0;
-  for(const o of D.rows){ if(!o.ok||o.purp!=='고장 수리'||!o.sn||!ms.has(o.mk)) continue; if(team&&o.team!==team) continue; if(sn&&o.ser!==sn) continue; n++; f+=o.fail; }
-  return {n,f,r:n?f/n*100:null};
+  const ms=new Set(months); let n=0,f=0; const units=new Set();
+  for(const o of D.rows){ if(!o.ok||o.purp!=='고장 수리'||!ms.has(o.mk)) continue; if(team&&o.team!==team) continue; if(sn&&o.ser!==sn) continue; n++; f+=o.fail; if(o.sn) units.add(o.sn+'|'+o.acct); }
+  return {n,f,u:units.size,r:n?f/n*100:null};
+}
+/* 시리즈 가동 대수 — 자산대장(모델 포함)이 있으면 '사용' ∩ 12개월 서비스 이력(S/N+기관),
+   없으면 CRM 기준 최근 12개월 서비스 이력이 있는 장비 수 */
+function serFleet(end, team){
+  const ms=last12Set(end), touched={}, all=new Set();
+  for(const o of D.rows){ if(!o.ok||!ms.has(o.mk)||!o.sn||!o.acct) continue; if(team&&o.team!==team) continue;
+    const k=o.sn+'|'+o.acct; all.add(k); if(o.ser) touched[k]=o.ser; }
+  const useSer=SERIAL&&SERIAL.length&&SERIAL.some(s=>s.model);
+  const res={src:useSer?'asset':'crm', count:{}, total:0};
+  if(useSer){
+    for(const s of SERIAL){ const k=s.sn+'|'+s.acct; if(!all.has(k)) continue; res.total++; const sr=seriesOf(s.model); if(sr) res.count[sr]=(res.count[sr]||0)+1; }
+  } else {
+    res.total=all.size; for(const k in touched) res.count[touched[k]]=(res.count[touched[k]]||0)+1;
+  }
+  return res;
 }
 function last12Set(end){const s=new Set();for(let i=0;i<12;i++)s.add(shiftMonth(end,-i));return s;}
 function workload(end){
   const ms=last12Set(end), cnt={};
   ROSTER.forEach(([n,t,g])=>{ if(g!=='팀장'&&!NEWBIE.includes(n)) cnt[n]=0; });
-  for(const o of D.rows){ if(o.ok&&ms.has(o.mk)&&o.own in cnt) cnt[o.own]++; }
+  for(const o of D.rows){ if(o.done&&ms.has(o.mk)&&o.own in cnt) cnt[o.own]++; }
   const res={};
-  TEAMS.forEach(t=>{ const v=ROSTER.filter(r=>r[1]===t&&r[0] in cnt).map(r=>cnt[r[0]]); if(v.length<2){res[t]=null;return;}
+  TEAMS.forEach(t=>{ const v=ROSTER.filter(r=>r[1]===t&&cnt[r[0]]>0).map(r=>cnt[r[0]]);   // v44: 기간 내 활동 기록이 있는 인원만 if(v.length<2){res[t]=null;return;}
     const m=v.reduce((a,b)=>a+b,0)/v.length; const sd=Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/(v.length-1)); res[t]=m?Math.round(sd/m*100):null; });
   return res;
 }
 function renderHealth(end, p){
   const ms=last12Set(end); const pmM={}; const rep12={}, touched=new Set(), pmPairs=new Set();
   for(const o of D.rows){ if(!o.ok||!ms.has(o.mk)) continue;
-    if(o.purp==='PM') pmM[o.mk]=(pmM[o.mk]||0)+1;
+    if(o.purp==='PM'&&o.done) pmM[o.mk]=(pmM[o.mk]||0)+1;
     if(!o.sn||!o.acct) continue; const k=o.sn+'|'+o.acct; touched.add(k);
     if(o.purp==='PM') pmPairs.add(k); if(o.purp==='고장 수리') rep12[k]=(rep12[k]||0)+1; }
   const v=[...ms].filter(m=>D.months.includes(m)).map(m=>pmM[m]||0);
@@ -623,7 +648,7 @@ function renderDQ(p){
   if(D.rawN>=40000) L.push(`<li><span class="tag b">확인</span>불러온 행 수가 ${fmt(D.rawN)}건으로 CRM 내보내기 상한(40,000행)에 걸렸을 가능성이 큽니다. 가장 오래된 기록(${ymd(D.minT)} 이전)이 잘렸을 수 있으므로, 12개월 추이 앞쪽 달과 최근 12개월 지표는 실제보다 적게 나올 수 있습니다. 기간을 나눠 내보내면 해결됩니다.</li>`);
   L.push(`<li><span class="tag i">범위</span>데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)}. 시작·끝 달은 한 달 전체가 아니면 '(일부)'로 표시했습니다.</li>`);
   L.push(`<li><span class="tag i">제외</span>내부·미지정 기관(시스멕스코리아, 기타 등) ${fmt(D.excl.internal)}건${SERIAL?`, 자산대장에 '사용' 장비가 없는 기관(폐업 추정) ${fmt(D.excl.noasset)}건`:''}을 집계에서 뺐습니다.${SERIAL?'':' 자산대장이 함께 올라오면 폐업 추정 기관도 제외되어 월간 보고서 수치와 같아집니다.'}</li>`);
-  if(rep.length) L.push(`<li><span class="tag w">주의</span>보고 기간 고장 수리 중 Error 1이 미기재이거나 Others인 비율이 ${(unk/rep.length*100).toFixed(0)}%입니다. S/N이 없는 고장 수리 ${fmt(noSn)}건은 FTFR·재방문율 계산에서 빠집니다.</li>`);
+  if(rep.length) L.push(`<li><span class="tag w">주의</span>보고 기간 고장 수리 중 Error 1이 미기재이거나 Others인 비율이 ${(unk/rep.length*100).toFixed(0)}%입니다. S/N이 없는 고장 수리 ${fmt(noSn)}건은 재방문 여부를 판정할 수 없어 '재방문 없음'으로 계산됩니다(보고서와 같은 방식).</li>`);
   L.push(`<li><span class="tag w">주의</span>로스터(${ROSTER_DATE})에 없는 담당자 ${fmt(D.unmappedNames)}명의 활동 ${fmt(D.unmapped)}건은 팀 행에서 빠집니다(퇴사자, FSS팀, 공용 계정 등). 팀은 현재 로스터 기준이라 2026년 4월 조직개편 이전 기간은 당시 소속과 다를 수 있습니다.</li>`);
   L.push(`<li><span class="tag i">기준</span>MTTR의 시작~종료는 실제 작업시간이 아니라 일정표 예약 슬롯입니다. 추이 비교용으로만 보세요.</li>`);
   $('dq').innerHTML=L.join('');
@@ -660,8 +685,8 @@ function parseActivity(buf){
 }
 function parseSerial(buf){
   const t=xlsxRows(buf,null); if(!t) throw new Error('시트를 읽지 못했습니다.');
-  const h=t.h; const ix={state:col(h,['상태'],3),acct:col(h,['거래처'],6),sn:col(h,['Serial No.','Serial No','Serial'],14)};
-  const out=t.rows.filter(r=>r.length).map(r=>({state:String(r[ix.state]??'').trim(),acct:String(r[ix.acct]??'').trim(),sn:String(r[ix.sn]??'').trim()}));
+  const h=t.h; const ix={state:col(h,['상태'],3),acct:col(h,['거래처'],6),sn:col(h,['Serial No.','Serial No','Serial'],14),model:col(h,['모델','Product','Model'],13)};
+  const out=t.rows.filter(r=>r.length).map(r=>({state:String(r[ix.state]??'').trim(),acct:String(r[ix.acct]??'').trim(),sn:String(r[ix.sn]??'').trim(),model:String(r[ix.model]??'').trim()}));
   if(!out.some(s=>s.state==='사용')) throw new Error("상태가 '사용'인 장비를 찾지 못했습니다. Serial No 자산대장 내보내기인지 확인해 주세요.");
   return out;
 }
@@ -766,8 +791,8 @@ function encodeAct(recs, src){
     keys.forEach(k=>{const v=r[k]||''; let j=idx[k].get(v); if(j===undefined){j=d[k].length;d[k].push(v);idx[k].set(v,j);} c[k][i]=j;}); });
   return {v:1,n:recs.length,t,e,d,c,src};
 }
-function encodeSer(list){ return {v:1,used:list.map(s=>[s.acct,s.sn])}; }
-function decodeSer(o){ return o.used.map(([acct,sn])=>({state:'사용',acct,sn})); }
+function encodeSer(list){ return {v:2,used:list.map(s=>[s.acct,s.sn,s.model||''])}; }
+function decodeSer(o){ return o.used.map(([acct,sn,model])=>({state:'사용',acct,sn,model:model||''})); }
 
 /* --- 올리기 (관리자) --- */
 const today=()=>nowStr().slice(0,10);
