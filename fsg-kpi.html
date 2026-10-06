@@ -575,9 +575,9 @@ function renderErrors(p, team){
   const fk=FAM_ORDER.filter(f=>famC[f]);   // 정해진 장비군 순서
   $('errSub').textContent=`${p.label}, ${team||'FSG 전체'}`;
   upsert('cFam',{data:{labels:fk,datasets:[
-    {type:'bar',label:'고장 수리',data:fk.map(f=>famC[f].n),backgroundColor:'#005BAC',yAxisID:'y'},
-    {type:'line',label:'재방문율(%)',data:fk.map(f=>famC[f].n?+(famC[f].f/famC[f].n*100).toFixed(1):null),showLine:false,pointRadius:6,borderColor:'#E69E0B',backgroundColor:'#E69E0B',yAxisID:'y2'}]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}}},
+    {type:'bar',label:'고장 수리',data:fk.map(f=>famC[f].n),backgroundColor:'#005BAC',yAxisID:'y',order:2},
+    {type:'line',label:'재방문율(%)',data:fk.map(f=>famC[f].n?+(famC[f].f/famC[f].n*100).toFixed(1):null),showLine:false,pointRadius:6,pointHoverRadius:8,pointBorderWidth:2,pointBorderColor:'#FFFFFF',borderColor:'#E69E0B',backgroundColor:'#E69E0B',yAxisID:'y2',order:1}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text'),sort:(p,q)=>p.datasetIndex-q.datasetIndex}}},
       scales:{x:axis({grid:{display:false},ticks:{color:css('--text'),autoSkip:false}}),y:axis({beginAtZero:true}),y2:axis({position:'right',grid:{display:false},min:0,ticks:{color:css('--text'),callback:v=>v+'%'}})}}});
   const sel=$('fErrFam'), cur=sel.value; const opts=fk; sel.innerHTML='<option value="">전체</option>'+opts.map(f=>`<option>${esc(f)}</option>`).join(''); if(opts.includes(cur)) sel.value=cur;
   drawErr(rows);
