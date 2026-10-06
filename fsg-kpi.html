@@ -194,12 +194,6 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
   <h2 class="sec">팀 구성 <small id="orgSub"></small></h2>
   <section class="teams" id="teams"></section>
 
-  <h2 class="sec">팀별 실적 <small id="teamSub"></small></h2>
-  <section class="panel">
-    <div class="tw"><table id="tTeam"></table></div>
-    <p class="d" style="margin:10px 0 0" id="teamNote"></p>
-  </section>
-
   <div class="grid" style="margin-top:16px">
     <section class="panel">
       <h3>시리즈별 재방문율</h3>
@@ -457,7 +451,7 @@ function render(){
     card('재방문율', f1(cur.rev), '%', delta(cur.rev,prv.rev,'%p',-1,pp.label), `14일 이내 같은 장비 재수리 비율. 목표 ${TARGET_REV}% 이하`, {prov, tg:revTg}),
     card('MTTR', f1(cur.mttr), '분', delta(cur.mttr,prv.mttr,'분',-1,pp.label), `고장 수리 1건당 평균 활동 시간(일정 슬롯 기준). 기준평균 ${BASE.mttr}분`, {tg: cur.mttr==null?'':(cur.mttr<=BASE.mttr?'tg-good':'tg-bad')}),
   ].join('');
-  $('na').innerHTML='<span>설치 실적: 설치 공유캘린더 기준이라 이 화면에서 집계하지 않음</span><span>Uptime: CRM에 자료 없음</span><span>고객 만족도: 만족도 조사 시트 기준</span>'
+  $('na').innerHTML='<span>설치 실적: 설치 공유캘린더 기준이라 이 화면에서 집계하지 않음</span><span>Uptime: CRM에 자료 없음</span>'
     +calNote(p,team)
     +(prov?`<span style="color:var(--warn);border-color:var(--warn)">잠정: 기간 종료 후 14일이 지나지 않아 재방문 여부가 아직 확정되지 않았습니다</span>`:'');
 
@@ -485,16 +479,6 @@ function render(){
         y2:axis({position:'right',grid:{display:false},beginAtZero:true,title:{display:true,text:'MTTR(분)',color:css('--muted')}})}}});
 
   renderOrg(p, team);
-  /* 팀별 */
-  $('teamSub').textContent=`${p.label}`;
-  const load=workload(end);
-  const trow=(name,s,size,ld)=>{const sum=s.instD+s.pmD+s.repD; return `<tr${name==='합계'?' class="tot"':''}><td>${name}</td><td class="num">${size??'-'}</td><td class="num">${fmt(s.instD)}</td><td class="num">${fmt(s.pmD)}</td><td class="num">${fmt(s.repD)}</td><td class="num">${fmt(sum)}</td><td class="num">${size?f1(sum/size/p.months.length):'-'}</td><td class="num">${fmt(s.calD)}</td><td class="num">${f1(s.idx)}%</td><td class="num">${f1(s.ftfr)}%</td><td class="num ${s.rev!=null&&s.rev>TARGET_REV?'bad':s.rev!=null?'good':''}">${f1(s.rev)}%</td><td class="num">${ld==null?'-':ld+'%'}</td></tr>`;};
-  const all=stats(p.months,null); let teamRows=''; const rosterAll={instD:0,pmD:0,repD:0,calD:0};
-  TEAMS.forEach(t=>{const s=stats(p.months,t); ['instD','pmD','repD','calD'].forEach(k=>rosterAll[k]+=s[k]); teamRows+=trow(t,s,teamSize[t],load[t]);});
-  const totRow={...all,...rosterAll};
-  $('tTeam').innerHTML=`<thead><tr><th>팀</th><th class="num">인원</th><th class="num">설치+이전</th><th class="num">PM</th><th class="num">고장 수리</th><th class="num">합계</th><th class="num">1인당 (월)</th><th class="num">Calibration</th><th class="num">예방정비 지수</th><th class="num">FTFR</th><th class="num">재방문율</th><th class="num">팀원 간 업무량 차이</th></tr></thead><tbody>${teamRows}${trow('합계',totRow,ROSTER.length,null)}</tbody>`;
-  $('teamNote').innerHTML=`월간 보고서 팀 실적과 같은 기준입니다: 완료 상태 활동을 FSG 로스터(${ROSTER_DATE} 시행)로 팀에 매핑하고, 로스터 밖 담당자는 제외합니다. 합계 = 설치+이전 + PM + 고장 수리, 1인당 = 합계 ÷ 인원(팀장 포함 전원) ÷ 개월 수. 설치+이전은 CRM 기록 기준이라 설치 공유캘린더로 보완한 보고서 값과 다를 수 있습니다. 예방정비 지수·FTFR·재방문율은 완료·진행 중 활동 기준입니다. 팀원 간 업무량 차이는 최근 12개월 개인별 활동 건수의 편차(표준편차 ÷ 평균)로, 팀장과 신입은 제외합니다. 낮을수록 업무가 고르게 나뉜 것입니다.`;
-
   /* 시리즈 */
   const ser=['XN-Series','SP-50','CN-Series',null];
   const fl=serFleet(end,team);
