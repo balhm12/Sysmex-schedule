@@ -61,6 +61,11 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .inner{max-width:1240px;margin:0 auto;padding-inline:clamp(16px,3vw,40px)}
 .wrap{max-width:1240px;margin:0 auto;display:grid;gap:20px;padding-inline:clamp(16px,3vw,40px);padding-top:20px}
 
+/* (0) 최상단 앱 네비 — 설치일정·근무일정·만족도 이동 */
+.appbar{background:var(--surface);border-bottom:1px solid var(--line)}
+.appbar .inner{padding-block:10px}
+.appbar .app-nav{margin:0}
+
 .topband{background:var(--accent-deep);color:#fff;padding:16px 0 18px}
 .topband .inner{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .topband .logo{height:28px;width:auto;flex:none;display:block}
@@ -144,6 +149,17 @@ footer{font-size:12px;color:var(--ink-3);line-height:1.6;max-width:70ch}
 </style>
 </head>
 <body>
+<!-- (0) 앱 네비 : 설치일정 · 근무일정 · 만족도 -->
+<div class="appbar">
+  <div class="inner">
+    <div class="app-nav">
+    <a href="index.html">🏥 설치일정</a>
+    <a href="work-schedule.html">📅 근무일정</a>
+    <a href="voc-dashboard.html" class="active">📊 만족도</a>
+  </div>
+  </div>
+</div>
+
 <!-- (1) 상단 밴드 : 로고 · 제목 · 갱신정보 -->
 <div class="topband">
   <div class="inner">
@@ -171,11 +187,6 @@ footer{font-size:12px;color:var(--ink-3);line-height:1.6;max-width:70ch}
 
 <!-- (3) 본문 -->
 <div class="wrap">
-  <div class="app-nav">
-    <a href="index.html">🏥 설치일정</a>
-    <a href="work-schedule.html">📅 근무일정</a>
-    <a href="voc-dashboard.html" class="active">📊 만족도</a>
-  </div>
 <div id="loadMsg" class="notice" hidden></div>
   <section class="kpis" id="kpis"></section>
 
