@@ -342,14 +342,13 @@ function prepare(){
   const errDisp={};
   for(const r of RAW){
     if(r.t==null){excl.notime++;continue;}
-    if(INTERNAL.has(r.acct)){excl.internal++;continue;}
-    if(assetAcct && !assetAcct.has(r.acct)){excl.noasset++;continue;}
+    const internal=INTERNAL.has(r.acct); if(internal) excl.internal++;   // v44: 집계에는 포함, 기관 표에서만 제외
     const model=modelOf(r.prod,r.subj), rm=rosterMap[r.own];
     const ek=errKey(r.err);
     if(ek!=='미기재'&&ek!=='others'){const disp=r.err.trim().replace(/^\*+/,'');(errDisp[ek]=errDisp[ek]||{})[disp]=((errDisp[ek]||{})[disp]||0)+1;}
     const o={t:r.t, dur:(r.e!=null)?(r.e-r.t)/60000:null, ok:OK.has(r.st), done:r.st==='완료됨', cancel:r.st==='취소됨', purp:r.purp||'미기재',
       own:r.own, team:rm?rm.team:null, grade:rm?rm.grade:null, acct:r.acct, sn:r.sn, model, fam:famOf(model), ser:seriesOf(r.prod),
-      ek, mk:mkey(r.t), fail:0};
+      ek, mk:mkey(r.t), fail:0, internal};
     rows.push(o); if(r.t>maxT) maxT=r.t; if(r.t<minT) minT=r.t;
   }
   // FTFR: 고장 수리 후 동일 S/N 14일 이내(0<Δ≤14일) 재수리 여부 — forward-looking
@@ -561,7 +560,7 @@ function workload(end){
   for(const o of D.rows){ if(o.done&&ms.has(o.mk)&&o.own in cnt) cnt[o.own]++; }
   const res={};
   TEAMS.forEach(t=>{ const v=ROSTER.filter(r=>r[1]===t&&cnt[r[0]]>0).map(r=>cnt[r[0]]);   // v44: 기간 내 활동 기록이 있는 인원만 if(v.length<2){res[t]=null;return;}
-    const m=v.reduce((a,b)=>a+b,0)/v.length; const sd=Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/(v.length-1)); res[t]=m?Math.round(sd/m*100):null; });
+    const m=v.reduce((a,b)=>a+b,0)/v.length; const sd=Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/v.length); res[t]=m?Math.round(sd/m*100):null; });   // v44 stdev_ = ÷n
   return res;
 }
 function renderHealth(end, p){
@@ -571,7 +570,7 @@ function renderHealth(end, p){
     if(!o.sn||!o.acct) continue; const k=o.sn+'|'+o.acct; touched.add(k);
     if(o.purp==='PM') pmPairs.add(k); if(o.purp==='고장 수리') rep12[k]=(rep12[k]||0)+1; }
   const v=[...ms].filter(m=>D.months.includes(m)).map(m=>pmM[m]||0);
-  let cv=null; if(v.length>1){const m=v.reduce((a,b)=>a+b,0)/v.length;const sd=Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/(v.length-1));cv=m?sd/m*100:null;}
+  let cv=null; if(v.length>1){const m=v.reduce((a,b)=>a+b,0)/v.length;const sd=Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/v.length);cv=m?sd/m*100:null;}
   const chronicAll=Object.entries(rep12).filter(([k,n])=>n>=3).map(([k])=>k);
   const h=[];
   h.push(hc('PM 월별 편차', cv==null?null:Math.round(cv)+'%', `점검 일정 고르기. 월별 PM 건수의 표준편차 ÷ 평균, 목표 15% 이하${v.length<12?` (${v.length}개월 자료)`:''}`, cv!=null&&cv<=15));
@@ -622,14 +621,14 @@ function drawErr(rows){
 let instRows=[], sortKey='rep', sortDir=-1;
 function renderInst(p, team){
   const ms=new Set(p.months), m12=last12Set(p.months[p.months.length-1]); const a={}; const rep12={};
-  for(const o of D.rows){ if(!o.ok) continue;
+  for(const o of D.rows){ if(!o.ok||o.internal) continue;
     if(m12.has(o.mk)&&o.purp==='고장 수리'&&o.sn){const k=o.acct; (rep12[k]=rep12[k]||{})[o.sn]=((rep12[k]||{})[o.sn]||0)+1;}
     if(!ms.has(o.mk)) continue; if(team&&o.team!==team) continue;
     const x=a[o.acct]=a[o.acct]||{name:o.acct,rep:0,pm:0,fail:0,sn:0,tc:{},fc:{}};
     if(o.team) x.tc[o.team]=(x.tc[o.team]||0)+1; x.fc[o.fam]=(x.fc[o.fam]||0)+1;
-    if(o.purp==='고장 수리'){x.rep++; if(o.sn){x.sn++;x.fail+=o.fail;}} else if(o.purp==='PM') x.pm++; }
+    if(o.purp==='고장 수리'){x.rep++; x.fail+=o.fail;} else if(o.purp==='PM') x.pm++; }
   const top=o=>{const e=Object.entries(o).sort((x,y)=>y[1]-x[1]);return e.length?e[0][0]:'-';};
-  instRows=Object.values(a).map(x=>({name:x.name,team:top(x.tc),fam:top(x.fc),rep:x.rep,pm:x.pm,fail:x.fail,rate:x.sn?x.fail/x.sn*100:-1,
+  instRows=Object.values(a).map(x=>({name:x.name,team:top(x.tc),fam:top(x.fc),rep:x.rep,pm:x.pm,fail:x.fail,rate:x.rep?x.fail/x.rep*100:-1,
     chronic:Object.values(rep12[x.name]||{}).filter(n=>n>=3).length}));
   drawInst();
 }
@@ -647,7 +646,7 @@ function renderDQ(p){
   const noSn=rep.filter(o=>!o.sn).length;
   if(D.rawN>=40000) L.push(`<li><span class="tag b">확인</span>불러온 행 수가 ${fmt(D.rawN)}건으로 CRM 내보내기 상한(40,000행)에 걸렸을 가능성이 큽니다. 가장 오래된 기록(${ymd(D.minT)} 이전)이 잘렸을 수 있으므로, 12개월 추이 앞쪽 달과 최근 12개월 지표는 실제보다 적게 나올 수 있습니다. 기간을 나눠 내보내면 해결됩니다.</li>`);
   L.push(`<li><span class="tag i">범위</span>데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)}. 시작·끝 달은 한 달 전체가 아니면 '(일부)'로 표시했습니다.</li>`);
-  L.push(`<li><span class="tag i">제외</span>내부·미지정 기관(시스멕스코리아, 기타 등) ${fmt(D.excl.internal)}건${SERIAL?`, 자산대장에 '사용' 장비가 없는 기관(폐업 추정) ${fmt(D.excl.noasset)}건`:''}을 집계에서 뺐습니다.${SERIAL?'':' 자산대장이 함께 올라오면 폐업 추정 기관도 제외되어 월간 보고서 수치와 같아집니다.'}</li>`);
+  L.push(`<li><span class="tag i">기준</span>집계 방식은 보고서 데이터 시트(Apps Script v44)와 같습니다. 내부·미지정 기관(시스멕스코리아, 기타 등) 활동 ${fmt(D.excl.internal)}건은 KPI·팀 실적에는 포함하고, 기관별 현황 표에서만 뺐습니다.</li>`);
   if(rep.length) L.push(`<li><span class="tag w">주의</span>보고 기간 고장 수리 중 Error 1이 미기재이거나 Others인 비율이 ${(unk/rep.length*100).toFixed(0)}%입니다. S/N이 없는 고장 수리 ${fmt(noSn)}건은 재방문 여부를 판정할 수 없어 '재방문 없음'으로 계산됩니다(보고서와 같은 방식).</li>`);
   L.push(`<li><span class="tag w">주의</span>로스터(${ROSTER_DATE})에 없는 담당자 ${fmt(D.unmappedNames)}명의 활동 ${fmt(D.unmapped)}건은 팀 행에서 빠집니다(퇴사자, FSS팀, 공용 계정 등). 팀은 현재 로스터 기준이라 2026년 4월 조직개편 이전 기간은 당시 소속과 다를 수 있습니다.</li>`);
   L.push(`<li><span class="tag i">기준</span>MTTR의 시작~종료는 실제 작업시간이 아니라 일정표 예약 슬롯입니다. 추이 비교용으로만 보세요.</li>`);
