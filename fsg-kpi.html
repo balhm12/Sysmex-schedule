@@ -252,7 +252,6 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 /* ===== 기준 정보 (fsg-monthly-quarterly-report 확정 규칙과 동일) ===== */
 const ROSTER = [["허석", "FS WEST", "팀장"], ["채대석", "FS WEST", "T3"], ["전우상", "FS WEST", "T3"], ["김보석", "FS WEST", "T3"], ["이인구", "FS WEST", "T2"], ["김태윤", "FS WEST", "T2"], ["현준", "FS WEST", "T1"], ["김동찬", "FS WEST", "T1"], ["안성무", "FS WEST", "T1"], ["이경민", "FS WEST", "T1"], ["백원욱", "FS WEST", "T1"], ["심구", "FS WEST", "T1"], ["김병우", "FS EAST", "팀장"], ["유용선", "FS EAST", "T4"], ["이준호", "FS EAST", "T2"], ["손지원", "FS EAST", "T2"], ["김규민", "FS EAST", "T2"], ["김세진", "FS EAST", "T2"], ["서윤걸", "FS EAST", "T2"], ["윤병지", "FS EAST", "T1"], ["박재우", "FS EAST", "T1"], ["서재훈", "FS EAST", "T1"], ["김회창", "FS EAST", "T1"], ["정근하", "FS CENTRAL", "팀장"], ["이만식", "FS CENTRAL", "T3"], ["문유진", "FS CENTRAL", "T3"], ["이건석", "FS CENTRAL", "T3"], ["김재모", "FS CENTRAL", "T2"], ["한승호", "FS CENTRAL", "T2"], ["유재혁", "FS CENTRAL", "T1"], ["강태은", "FS CENTRAL", "T1"], ["손혜린", "FS CENTRAL", "T1"], ["이건우", "FS CENTRAL", "T1"], ["성기홍", "FS SOUTH", "팀장"], ["문창수", "FS SOUTH", "T3"], ["박석영", "FS SOUTH", "T4"], ["박동민", "FS SOUTH", "T3"], ["이승직", "FS SOUTH", "T3"], ["이준민", "FS SOUTH", "T2"], ["이도협", "FS SOUTH", "T2"], ["김태현", "FS SOUTH", "T2"], ["윤진성", "FS SOUTH", "T2"], ["조수호", "FS SOUTH", "T1"], ["김성학", "FS SOUTH", "T1"]];              // [성명, 팀, 직급] — FSG 로스터 2026-10-01 기준
 const ROSTER_DATE = '2026-10-01';
-const NEWBIE = ['심구'];
 const GRADES = ['팀장','T4','T3','T2','T1'];
 const GCOL = {'팀장':'#005BAC','T4':'#3378BD','T3':'#00B8EE','T2':'#66D4F5','T1':'#B3E9F9'};
 const REGION = {'FS WEST':'수도권(서울·경기·인천)·강원을 East와 분담','FS EAST':'수도권·강원 분담. 강원 전역, 서울 광진·노원, 경기 동두천·가평·여주',
@@ -538,15 +537,6 @@ function serFleet(end, team){
   return res;
 }
 function last12Set(end){const s=new Set();for(let i=0;i<12;i++)s.add(shiftMonth(end,-i));return s;}
-function workload(end){
-  const ms=last12Set(end), cnt={};
-  ROSTER.forEach(([n,t,g])=>{ if(g!=='팀장'&&!NEWBIE.includes(n)) cnt[n]=0; });
-  for(const o of D.rows){ if(o.done&&ms.has(o.mk)&&o.own in cnt) cnt[o.own]++; }
-  const res={};
-  TEAMS.forEach(t=>{ const v=ROSTER.filter(r=>r[1]===t&&cnt[r[0]]>0).map(r=>cnt[r[0]]);   // v44: 기간 내 활동 기록이 있는 인원만 if(v.length<2){res[t]=null;return;}
-    const m=v.reduce((a,b)=>a+b,0)/v.length; const sd=Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/v.length); res[t]=m?Math.round(sd/m*100):null; });   // v44 stdev_ = ÷n
-  return res;
-}
 function renderHealth(end, p){
   const ms=last12Set(end); const pmM={}; const rep12={}, touched=new Set(), pmPairs=new Set();
   for(const o of D.rows){ if(!o.ok||!ms.has(o.mk)) continue;
@@ -632,7 +622,7 @@ function renderDQ(p){
   L.push(`<li><span class="tag i">범위</span>데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)}. 시작·끝 달은 한 달 전체가 아니면 '(일부)'로 표시했습니다.</li>`);
   L.push(`<li><span class="tag i">기준</span>집계 방식은 보고서 데이터 시트(Apps Script v44)와 같습니다. 내부·미지정 기관(시스멕스코리아, 기타 등) 활동 ${fmt(D.excl.internal)}건은 KPI·팀 실적에는 포함하고, 기관별 현황 표에서만 뺐습니다.</li>`);
   if(rep.length) L.push(`<li><span class="tag w">주의</span>보고 기간 고장 수리 중 Error 1이 미기재이거나 Others인 비율이 ${(unk/rep.length*100).toFixed(0)}%입니다. S/N이 없는 고장 수리 ${fmt(noSn)}건은 재방문 여부를 판정할 수 없어 '재방문 없음'으로 계산됩니다(보고서와 같은 방식).</li>`);
-  L.push(`<li><span class="tag w">주의</span>로스터(${ROSTER_DATE})에 없는 담당자 ${fmt(D.unmappedNames)}명의 활동 ${fmt(D.unmapped)}건은 팀 행에서 빠집니다(퇴사자, FSS팀, 공용 계정 등). 팀은 현재 로스터 기준이라 2026년 4월 조직개편 이전 기간은 당시 소속과 다를 수 있습니다.</li>`);
+  L.push(`<li><span class="tag w">주의</span>로스터(${ROSTER_DATE})에 없는 담당자 ${fmt(D.unmappedNames)}명의 활동 ${fmt(D.unmapped)}건은 팀을 골라 볼 때 어느 팀에도 들어가지 않습니다(퇴사자, FSS팀, 공용 계정 등). 전체 수치에는 포함됩니다. 팀은 현재 로스터 기준이라 2026년 4월 조직개편 이전 기간은 당시 소속과 다를 수 있습니다.</li>`);
   L.push(`<li><span class="tag i">기준</span>MTTR의 시작~종료는 실제 작업시간이 아니라 일정표 예약 슬롯입니다. 추이 비교용으로만 보세요.</li>`);
   $('dq').innerHTML=L.join('');
   $('foot').textContent=`지표 정의는 FSG 월간·분기 보고서 확정 규칙과 같습니다. 원본: ${SRC.act}${SRC.ser?`, ${SRC.ser}`:''}${SRC.at?` (최종 업데이트 ${SRC.at})`:''}`;
