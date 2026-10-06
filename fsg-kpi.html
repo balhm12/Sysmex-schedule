@@ -50,11 +50,11 @@ button:focus-visible,select:focus-visible,input:focus-visible,th:focus-visible,.
 
 h2.sec{font-size:17px;margin:28px 0 10px;color:var(--text)}
 h2.sec small{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:8px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;border-top:3px solid var(--primary)}
 .kpi .l{font-size:13px;font-weight:700}
 .kpi .l .pv{font-size:11px;font-weight:700;color:#fff;background:var(--warn);border-radius:3px;padding:0 5px;margin-left:4px;vertical-align:1px}
-.kpi .v{font-family:Arial,sans-serif;font-size:30px;font-weight:700;color:var(--primary);line-height:1.15;margin-top:4px}
+.kpi .v{font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:var(--primary);line-height:1.15;margin-top:4px}
 .kpi .v small{font-size:15px;margin-left:2px}
 .kpi .dl{font-size:12.5px;margin-top:2px;font-weight:700}
 .kpi .cap{font-size:11.5px;color:var(--muted);margin-top:8px;border-top:1px solid var(--border);padding-top:6px}
@@ -181,12 +181,12 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
   <div class="grid">
     <section class="panel">
       <h3>고장 수리와 PM, 예방정비 지수</h3>
-      <p class="d">예방정비 지수 = PM ÷ (PM + 고장 수리). 높을수록 고장 전에 미리 점검한다는 뜻입니다.</p>
+      
       <div class="cv"><canvas id="cVol"></canvas></div>
     </section>
     <section class="panel">
       <h3>FTFR과 MTTR</h3>
-      <p class="d">점선은 기준평균(2025.1~2026.5, 조직개편 전후 비교 기준선). 최근 2주 수리는 확인 기간이 덜 지나 FTFR이 잠정치입니다.</p>
+      <p class="d">점선 = FTFR 목표 · MTTR 기준평균</p>
       <div class="cv"><canvas id="cQual"></canvas></div>
     </section>
   </div>
@@ -197,12 +197,12 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
   <div class="grid" style="margin-top:16px">
     <section class="panel">
       <h3>시리즈별 재방문율</h3>
-      <p class="d">같은 장비(S/N)에서 고장 수리 후 14일 이내 다시 고장 수리가 발생한 비율. 목표 15% 이하, 낮을수록 좋습니다.</p>
+      <p class="d">목표 15% 이하 (= FTFR 85%)</p>
       <div class="tw"><table id="tSeries"></table></div>
     </section>
     <section class="panel">
       <h3>운영 건전성 <span style="font-size:12px;color:var(--muted);font-weight:400">(최근 12개월, 전사 기준)</span></h3>
-      <p class="d">자산대장이 필요한 지표는 Serial No 파일이 올라와 있으면 계산됩니다.</p>
+      
       <div class="health" id="health"></div>
     </section>
   </div>
@@ -211,7 +211,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
   <div class="grid">
     <section class="panel">
       <h3>장비군별 고장 수리와 재방문</h3>
-      <p class="d">막대는 고장 수리 건수, 점은 재방문율(오른쪽 축).</p>
+      
       <div class="cv tall"><canvas id="cFam"></canvas></div>
     </section>
     <section class="panel">
@@ -223,7 +223,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 
   <section class="panel" style="margin-top:16px">
     <div class="thead">
-      <div><h3>기관별 현황</h3><p class="d" style="margin:0">보고 기간 기준. 반복 고장 장비는 최근 12개월 안에 같은 장비가 3회 이상 고장 수리된 경우입니다. 열 제목을 누르면 정렬됩니다.</p></div>
+      <div><h3>기관별 현황</h3><p class="d" style="margin:0">반복 고장 장비 = 12개월 내 3회 이상 고장</p></div>
       <div class="f"><label for="fSearch">기관 검색</label><input type="text" id="fSearch" placeholder="기관명"></div>
     </div>
     <div class="tw lim"><table id="tInst">
@@ -260,7 +260,8 @@ const TEAMS = ['FS WEST','FS EAST','FS CENTRAL','FS SOUTH'];
 const OK = new Set(['완료됨','시작됨']);
 const INTERNAL = new Set(['시스멕스코리아주식회사','시스멕스코리아','기타','-','']);
 const BASE = {ftfr:71.2, mttr:143.2};   // 기준평균 2025.1~2026.5
-const TARGET_REV = 15;
+const TARGET_REV = 15;                 // 재방문율 목표
+const TARGET_FTFR = 100 - TARGET_REV;  // FTFR 목표 85% (재방문율 15%와 같은 기준)
 const DAY = 86400000, WIN = 14*DAY;
 const EMBED = null;   // GitHub 공개 배포본에는 데이터를 넣지 않습니다
 /* ===== 설정: 처음 한 번만 채우세요 ===== */
@@ -426,7 +427,7 @@ function delta(cur, prev, unit, better, label){
   return `<div class="dl ${cls}">${label} 대비 ${d>0?'+':''}${unit==='분'?d.toFixed(1)+'분':fmt(d)+'건'}${pct!=null?` (${pct>0?'+':''}${pct.toFixed(1)}%)`:''}</div>`;
 }
 function card(label, val, suffix, dl, cap, opt={}){
-  return `<div class="kpi ${opt.tg||''}"><div class="l">${label}${opt.prov?'<span class="pv">잠정</span>':''}</div><div class="v">${val}${suffix?`<small>${suffix}</small>`:''}</div>${dl}<div class="cap">${cap}</div></div>`;
+  return `<div class="kpi ${opt.tg||''}"><div class="l">${label}${opt.prov?'<span class="pv">잠정</span>':''}</div><div class="v">${val}${suffix?`<small>${suffix}</small>`:''}</div>${dl}${cap?`<div class="cap">${cap}</div>`:''}</div>`;
 }
 
 let charts={};
@@ -440,19 +441,17 @@ function render(){
   const scope=team||'FSG 전체';
   $('kpiSub').textContent=`${p.label}, ${scope} (${pp.label} 대비)`;
 
-  const revTg = cur.rev==null?'':(cur.rev<=TARGET_REV?'tg-good':'tg-bad');
   $('kpis').innerHTML=[
-    card('서비스 활동', fmt(cur.total), '건', delta(cur.total,prv.total,'건',0,pp.label), `고장 수리 ${fmt(cur.rep)}, PM ${fmt(cur.pm)}, Calibration ${fmt(cur.cal)}${cur.calR?` (원격 ${fmt(cur.calR)} 별도)`:''}, 기타 ${fmt(cur.total-cur.rep-cur.pm-cur.cal-cur.calR)}`),
-    card('고장 수리', fmt(cur.rep), '건', delta(cur.rep,prv.rep,'건',-1,pp.label), '완료·진행 중 활동 기준(취소 제외)'),
-    card('PM', fmt(cur.pm), '건', delta(cur.pm,prv.pm,'건',1,pp.label), '예방점검 활동 건수'),
-    card('예방정비 지수', f1(cur.idx), '%', delta(cur.idx,prv.idx,'%p',1,pp.label), 'PM ÷ (PM + 고장 수리). 높을수록 고장 전에 미리 점검'),
-    card('FTFR', f1(cur.ftfr), '%', delta(cur.ftfr,prv.ftfr,'%p',1,pp.label), `(고장 수리 − 14일 내 재방문) ÷ 고장 수리. 기준평균 ${BASE.ftfr}%`, {prov, tg: cur.ftfr==null?'':(cur.ftfr>=BASE.ftfr?'tg-good':'tg-bad')}),
-    card('재방문율', f1(cur.rev), '%', delta(cur.rev,prv.rev,'%p',-1,pp.label), `14일 이내 같은 장비 재수리 비율. 목표 ${TARGET_REV}% 이하`, {prov, tg:revTg}),
-    card('MTTR', f1(cur.mttr), '분', delta(cur.mttr,prv.mttr,'분',-1,pp.label), `고장 수리 1건당 평균 활동 시간(일정 슬롯 기준). 기준평균 ${BASE.mttr}분`, {tg: cur.mttr==null?'':(cur.mttr<=BASE.mttr?'tg-good':'tg-bad')}),
+    card('서비스 활동', fmt(cur.total), '건', delta(cur.total,prv.total,'건',0,pp.label), `Calibration ${fmt(cur.cal)} · 기타 ${fmt(cur.total-cur.rep-cur.pm-cur.cal)}`),
+    card('고장 수리', fmt(cur.rep), '건', delta(cur.rep,prv.rep,'건',-1,pp.label), ''),
+    card('PM', fmt(cur.pm), '건', delta(cur.pm,prv.pm,'건',1,pp.label), ''),
+    card('예방정비 지수', f1(cur.idx), '%', delta(cur.idx,prv.idx,'%p',1,pp.label), 'PM ÷ (PM + 고장 수리)'),
+    card('FTFR', f1(cur.ftfr), '%', delta(cur.ftfr,prv.ftfr,'%p',1,pp.label), `재방문율 ${f1(cur.rev)}% · 목표 ${TARGET_FTFR}%`, {prov, tg: cur.ftfr==null?'':(cur.ftfr>=TARGET_FTFR?'tg-good':'tg-bad')}),
+    card('MTTR', f1(cur.mttr), '분', delta(cur.mttr,prv.mttr,'분',-1,pp.label), `기준평균 ${BASE.mttr}분`, {tg: cur.mttr==null?'':(cur.mttr<=BASE.mttr?'tg-good':'tg-bad')}),
   ].join('');
-  $('na').innerHTML='<span>설치 실적: 설치 공유캘린더 기준이라 이 화면에서 집계하지 않음</span><span>Uptime: CRM에 자료 없음</span>'
+  $('na').innerHTML=''
     +calNote(p,team)
-    +(prov?`<span style="color:var(--warn);border-color:var(--warn)">잠정: 기간 종료 후 14일이 지나지 않아 재방문 여부가 아직 확정되지 않았습니다</span>`:'');
+    +(prov?`<span style="color:var(--warn);border-color:var(--warn)">잠정: 재방문 확인 기간(14일) 미경과</span>`:'');
 
   /* 12개월 추이 */
   const end=p.months[p.months.length-1]; const tm=[]; for(let i=11;i>=0;i--) tm.push(shiftMonth(end,-i));
@@ -469,7 +468,7 @@ function render(){
   upsert('cQual',{type:'line',data:{labels:lab,datasets:[
     {label:'FTFR(%)',data:ts.map(s=>s.hasData&&s.ftfr!=null?+s.ftfr.toFixed(1):null),borderColor:'#005BAC',backgroundColor:'#005BAC',pointRadius:ts.map((s,i)=>provIdx[i]?5:3),pointStyle:ts.map((s,i)=>provIdx[i]?'rectRot':'circle'),tension:.25,yAxisID:'y',
       segment:{borderDash:c=>provIdx[c.p1DataIndex]?[4,4]:undefined}},
-    {label:`FTFR 기준평균 ${BASE.ftfr}%`,data:tm.map(()=>BASE.ftfr),borderColor:'#005BAC',borderDash:[6,4],borderWidth:1,pointRadius:0,yAxisID:'y'},
+    {label:`FTFR 목표 ${TARGET_FTFR}%`,data:tm.map(()=>TARGET_FTFR),borderColor:'#3FBA46',borderDash:[6,4],borderWidth:1.5,pointRadius:0,yAxisID:'y'},
     {label:'MTTR(분)',data:ts.map(s=>s.hasData&&s.mttr!=null?+s.mttr.toFixed(1):null),borderColor:'#00B8EE',backgroundColor:'#00B8EE',pointRadius:3,tension:.25,yAxisID:'y2'},
     {label:`MTTR 기준평균 ${BASE.mttr}분`,data:tm.map(()=>BASE.mttr),borderColor:'#00B8EE',borderDash:[6,4],borderWidth:1,pointRadius:0,yAxisID:'y2'}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
@@ -485,7 +484,7 @@ function render(){
     ser.map(sn=>{const a=serStats(p.months,team,sn), b=serStats(pp.months,team,sn); const d=(a.r!=null&&b.r!=null)?a.r-b.r:null;
       const dc=d==null?'':Math.abs(d)<0.1?'':(d<0?'good':'bad'); const fc=sn?(fl.count[sn]||0):fl.total;
       return `<tr${sn?'':' class="tot"'}><td>${sn||'전체 (SP-10 등 포함)'}</td><td class="num">${fmt(fc)}대</td><td class="num">${fmt(a.u)}대</td><td class="num">${fmt(a.n)}</td><td class="num">${fmt(a.f)}</td><td class="num ${a.r!=null&&a.r>TARGET_REV?'bad':''}">${f1(a.r)}%</td><td class="num">${f1(b.r)}%</td><td class="num ${dc}">${d==null?'-':Math.abs(d)<0.1?'거의 동일':(d>0?'+':'')+d.toFixed(1)+'%p'}</td></tr>`;}).join('')+'</tbody>'
-    +`<caption style="caption-side:bottom;text-align:left;font-size:11.5px;color:var(--muted);padding-top:6px">가동 대수: ${fl.src==='asset'?"자산대장 '사용' 장비 중 최근 12개월 서비스 이력이 있는 장비(S/N+기관)":'CRM 기준 최근 12개월 서비스 이력이 있는 장비(S/N+기관). 자산대장이 올라오면 자산 기준으로 바뀝니다'}${team?`, ${team} 서비스 장비`:''}. 고장 장비 = 보고 기간에 고장 수리를 받은 장비 수. 시리즈는 CRM Product 열 기준.${prov?` ${p.label}은 잠정치입니다.`:''}</caption>`;
+    +`<caption style="caption-side:bottom;text-align:left;font-size:11.5px;color:var(--muted);padding-top:6px">가동 대수 = 12개월 서비스 장비${fl.src==='asset'?'(자산대장 기준)':''}${prov?' · 잠정치':''}</caption>`;
 
   renderHealth(end, p);
   renderErrors(p, team);
@@ -497,8 +496,8 @@ function calNote(p,team){   // Cal 시즌 월과 다음 달은 예방정비 지�
   const chk=mk=>{const c=stats([mk],team).cal; const ref=[];for(let i=1;i<=12;i++){const m=shiftMonth(mk,-i);if(D.months.includes(m))ref.push(stats([m],team).cal);}
     const avg=ref.length?ref.reduce((a,b)=>a+b,0)/ref.length:0; return avg&&c>=avg*1.5;};
   for(const mk of p.months){
-    if(chk(mk)) return `<span style="color:var(--warn);border-color:var(--warn)">Calibration 시즌(${mk}): Cal 방문 때 PM을 함께 몰아서 하는 관행으로 예방정비 지수가 올라가고 다음 달 내려갑니다</span>`;
-    const pm=shiftMonth(mk,-1); if(D.months.includes(pm)&&chk(pm)) return `<span style="color:var(--warn);border-color:var(--warn)">직전 달(${pm})이 Calibration 시즌이라 PM이 앞당겨져 예방정비 지수가 내려갈 수 있습니다. 팀 성과 문제가 아닌 전사 일정 요인입니다</span>`;
+    if(chk(mk)) return `<span style="color:var(--warn);border-color:var(--warn)">Cal 시즌(${mk}): 예방정비 지수 일시 상승</span>`;
+    const pm=shiftMonth(mk,-1); if(D.months.includes(pm)&&chk(pm)) return `<span style="color:var(--warn);border-color:var(--warn)">전월 Cal 시즌 영향: 예방정비 지수 하락 가능</span>`;
   }
   return '';
 }
@@ -509,10 +508,10 @@ function renderOrg(p, team){
     <div class="glg">${GRADES.map(g=>{const c=list.filter(r=>r[2]===g).length;return c?`<span><b style="background:${GCOL[g]}"></b>${g} ${c}</span>`:'';}).join('')}</div>`;};
   const cards=TEAMS.map(t=>{const m=ROSTER.filter(r=>r[1]===t); const lead=m.find(r=>r[2]==='팀장'); const act=active[t]?active[t].size:0;
     return `<div class="tc${team===t?' sel':''}"><div class="n">${t}</div><div class="hc2">${m.length}<small>명</small></div><div class="ld">팀장 ${lead?lead[0]:'-'}</div>
-      ${gbar(m)}<div class="act">보고 기간 활동 기록 있는 인원 <b>${act}명</b></div><div class="rg">${REGION[t]}</div></div>`;});
+      ${gbar(m)}<div class="act">활동 인원 <b>${act}명</b></div><div class="rg">${REGION[t]}</div></div>`;});
   const allAct=Object.values(active).reduce((a,s)=>a+s.size,0);
   cards.push(`<div class="tc${team?'':' sel'}"><div class="n">FSG 전체</div><div class="hc2">${ROSTER.length}<small>명</small></div><div class="ld">4개 팀</div>${gbar(ROSTER)}
-    <div class="act">보고 기간 활동 기록 있는 인원 <b>${allAct}명</b></div><div class="rg">FSS팀 등 로스터 밖 지원 인력은 제외</div></div>`);
+    <div class="act">활동 인원 <b>${allAct}명</b></div></div>`);
   $('teams').innerHTML=cards.join('');
   $('orgSub').textContent=`FSG 로스터 ${ROSTER_DATE} 시행 기준`;
 }
@@ -547,24 +546,24 @@ function renderHealth(end, p){
   let cv=null; if(v.length>1){const m=v.reduce((a,b)=>a+b,0)/v.length;const sd=Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/v.length);cv=m?sd/m*100:null;}
   const chronicAll=Object.entries(rep12).filter(([k,n])=>n>=3).map(([k])=>k);
   const h=[];
-  h.push(hc('PM 월별 편차', cv==null?null:Math.round(cv)+'%', `점검 일정 고르기. 월별 PM 건수의 표준편차 ÷ 평균, 목표 15% 이하${v.length<12?` (${v.length}개월 자료)`:''}`, cv!=null&&cv<=15));
+  h.push(hc('PM 월별 편차', cv==null?null:Math.round(cv)+'%', `목표 15% 이하${v.length<12?` (${v.length}개월)`:''}`, cv!=null&&cv<=15));
   if(SERIAL){
     const used=new Set(SERIAL.filter(s=>s.state==='사용'&&s.sn&&s.acct).map(s=>s.sn+'|'+s.acct));
     const active=[...used].filter(k=>touched.has(k)); const A=active.length; const aset=new Set(active);
     const cov=A?[...pmPairs].filter(k=>aset.has(k)).length/A*100:null;
     const curRep=stats(p.months,null).rep/p.months.length;
     const chronic=chronicAll.filter(k=>aset.has(k)).length;
-    h.push(hc('가동 장비(모수)', fmt(A)+'대', `자산대장 '사용' 상태 중 최근 12개월 서비스 이력이 있는 장비 (S/N+기관)`));
-    h.push(hc('PM 커버리지율', f1(cov)+'%', `12개월 내 PM을 받은 가동 장비 비율`));
-    h.push(hc('100대당 고장 발생률', f1(A?curRep/A*100:null)+'건', `보고 기간 월평균 고장 수리 ÷ 가동 장비 × 100`));
-    h.push(hc('반복 고장 장비 비율', f1(A?chronic/A*100:null)+'%', `12개월 내 같은 장비 3회 이상 고장: ${fmt(chronic)}대`));
+    h.push(hc('가동 장비(모수)', fmt(A)+'대', ''));
+    h.push(hc('PM 커버리지율', f1(cov)+'%', ''));
+    h.push(hc('100대당 고장 발생률', f1(A?curRep/A*100:null)+'건', ''));
+    h.push(hc('반복 고장 장비 비율', f1(A?chronic/A*100:null)+'%', `${fmt(chronic)}대`));
   } else {
-    h.push(hc('반복 고장 장비', fmt(chronicAll.length)+'대', '12개월 내 같은 장비(S/N+기관)가 3회 이상 고장 수리. 비율은 자산대장 필요'));
-    ['PM 커버리지율','100대당 고장 발생률'].forEach(l=>h.push(hc(l,null,'Serial No 자산대장이 올라오면 계산됩니다')));
+    h.push(hc('반복 고장 장비', fmt(chronicAll.length)+'대', '12개월 내 3회 이상 고장'));
+    ['PM 커버리지율','100대당 고장 발생률'].forEach(l=>h.push(hc(l,null,'')));
   }
   $('health').innerHTML=h.join('');
 }
-function hc(l,v,c,good){return `<div class="hc"><div class="l">${l}</div><div class="v ${v==null?'off':''}" ${good===true?'style="color:var(--good)"':good===false?'':''}>${v==null?'자료 미제공':v}</div><div class="c">${c}</div></div>`;}
+function hc(l,v,c,good){return `<div class="hc"><div class="l">${l}</div><div class="v ${v==null?'off':''}" ${good===true?'style="color:var(--good)"':good===false?'':''}>${v==null?'자산대장 필요':v}</div>${c?`<div class="c">${c}</div>`:''}</div>`;}
 
 function renderErrors(p, team){
   const ms=new Set(p.months); const famC={};
@@ -586,7 +585,7 @@ function drawErr(rows){
   const r=lastErrRows.filter(o=>!fam||o.fam===fam); const c={}; let unk=0;
   r.forEach(o=>{ if(o.ek==='미기재'||o.ek==='others'){unk++;return;} c[o.ek]=(c[o.ek]||0)+1; });
   const k=Object.keys(c).sort((a,b)=>c[b]-c[a]).slice(0,12);
-  $('errNote').textContent=r.length?`Error 1 기준. 미기재·Others ${fmt(unk)}건(${(unk/r.length*100).toFixed(0)}%)은 제외`:'고장 수리 건이 없습니다';
+  $('errNote').textContent=r.length?`미기재·Others ${(unk/r.length*100).toFixed(0)}% 제외`:'고장 수리 건이 없습니다';
   upsert('cErr',{type:'bar',data:{labels:k.map(e=>{const s=D.errDisp[e]||e;return s.length>32?s.slice(0,31)+'…':s;}),datasets:[{label:'건수',data:k.map(e=>c[e]),backgroundColor:'#005BAC'}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:it=>D.errDisp[k[it[0].dataIndex]],label:x=>`${fmt(x.raw)}건 (${(x.raw/r.length*100).toFixed(1)}%)`}}},
       scales:{x:axis({beginAtZero:true}),y:axis({grid:{display:false},ticks:{color:css('--text'),autoSkip:false}})}}});
@@ -611,21 +610,21 @@ function drawInst(){
   r.sort((a,b)=>{const va=a[sortKey],vb=b[sortKey];return (typeof va==='string'?va.localeCompare(vb,'ko'):va-vb)*sortDir;});
   const s=r.slice(0,150);
   document.querySelector('#tInst tbody').innerHTML=s.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.team}</td><td>${esc(x.fam)}</td><td class="num">${fmt(x.rep)}</td><td class="num">${fmt(x.pm)}</td><td class="num">${fmt(x.fail)}</td><td class="num ${x.rate>TARGET_REV&&x.rep>=3?'bad':''}">${x.rate<0?'-':f1(x.rate)+'%'}</td><td class="num ${x.chronic>0?'bad':''}">${x.chronic||'-'}</td></tr>`).join('');
-  $('instN').textContent=`${fmt(r.length)}개 기관 중 ${fmt(s.length)}개 표시. 재방문율 빨간색은 목표(${TARGET_REV}%) 초과이면서 고장 수리 3건 이상인 기관입니다.`;
+  $('instN').textContent=`${fmt(r.length)}개 기관${r.length>s.length?` 중 ${fmt(s.length)}개 표시`:''}`;
 }
 
 function renderDQ(p){
   const L=[], ms=new Set(p.months);
   const rep=D.rows.filter(o=>o.ok&&o.purp==='고장 수리'&&ms.has(o.mk)); const unk=rep.filter(o=>o.ek==='미기재'||o.ek==='others').length;
   const noSn=rep.filter(o=>!o.sn).length;
-  if(D.rawN>=40000) L.push(`<li><span class="tag b">확인</span>불러온 행 수가 ${fmt(D.rawN)}건으로 CRM 내보내기 상한(40,000행)에 걸렸을 가능성이 큽니다. 가장 오래된 기록(${ymd(D.minT)} 이전)이 잘렸을 수 있으므로, 12개월 추이 앞쪽 달과 최근 12개월 지표는 실제보다 적게 나올 수 있습니다. 기간을 나눠 내보내면 해결됩니다.</li>`);
-  L.push(`<li><span class="tag i">범위</span>데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)}. 시작·끝 달은 한 달 전체가 아니면 '(일부)'로 표시했습니다.</li>`);
-  L.push(`<li><span class="tag i">기준</span>집계 방식은 보고서 데이터 시트(Apps Script v44)와 같습니다. 내부·미지정 기관(시스멕스코리아, 기타 등) 활동 ${fmt(D.excl.internal)}건은 KPI·팀 실적에는 포함하고, 기관별 현황 표에서만 뺐습니다.</li>`);
-  if(rep.length) L.push(`<li><span class="tag w">주의</span>보고 기간 고장 수리 중 Error 1이 미기재이거나 Others인 비율이 ${(unk/rep.length*100).toFixed(0)}%입니다. S/N이 없는 고장 수리 ${fmt(noSn)}건은 재방문 여부를 판정할 수 없어 '재방문 없음'으로 계산됩니다(보고서와 같은 방식).</li>`);
-  L.push(`<li><span class="tag w">주의</span>로스터(${ROSTER_DATE})에 없는 담당자 ${fmt(D.unmappedNames)}명의 활동 ${fmt(D.unmapped)}건은 팀을 골라 볼 때 어느 팀에도 들어가지 않습니다(퇴사자, FSS팀, 공용 계정 등). 전체 수치에는 포함됩니다. 팀은 현재 로스터 기준이라 2026년 4월 조직개편 이전 기간은 당시 소속과 다를 수 있습니다.</li>`);
-  L.push(`<li><span class="tag i">기준</span>MTTR의 시작~종료는 실제 작업시간이 아니라 일정표 예약 슬롯입니다. 추이 비교용으로만 보세요.</li>`);
+  if(D.rawN>=40000) L.push(`<li><span class="tag b">확인</span>CRM 내보내기 상한(40,000행) 도달 — ${ymd(D.minT)} 이전 기록이 잘렸을 수 있음</li>`);
+  L.push(`<li><span class="tag i">범위</span>데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)}</li>`);
+  L.push(`<li><span class="tag i">기준</span>보고서 데이터 시트(v44)와 같은 계산식 · 내부 기관 ${fmt(D.excl.internal)}건은 기관별 현황에서만 제외</li>`);
+  if(rep.length) L.push(`<li><span class="tag w">주의</span>Error 1 미기재·Others ${(unk/rep.length*100).toFixed(0)}% · S/N 없는 고장 수리 ${fmt(noSn)}건</li>`);
+  L.push(`<li><span class="tag w">주의</span>로스터 밖 담당자 ${fmt(D.unmappedNames)}명 · ${fmt(D.unmapped)}건은 팀별 보기에서 제외(전체에는 포함)</li>`);
+  L.push(`<li><span class="tag i">기준</span>MTTR은 일정표 예약 시간 기준(추이 비교용)</li>`);
   $('dq').innerHTML=L.join('');
-  $('foot').textContent=`지표 정의는 FSG 월간·분기 보고서 확정 규칙과 같습니다. 원본: ${SRC.act}${SRC.ser?`, ${SRC.ser}`:''}${SRC.at?` (최종 업데이트 ${SRC.at})`:''}`;
+  $('foot').textContent=`원본: ${SRC.act}${SRC.ser?`, ${SRC.ser}`:''}`;
 }
 
 /* ===== 파일 읽기 ===== */
