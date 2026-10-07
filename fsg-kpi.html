@@ -9,13 +9,16 @@
 <style>
 :root{
   --primary:#005BAC;--secondary:#00B8EE;--good:#3FBA46;--warn:#E69E0B;--bad:#E7413E;
+  --good-t:#23802B;--bad-t:#C42B28;--warn-t:#A86A00;--good-bg:#EAF7EB;--bad-bg:#FDECEC;--warn-bg:#FDF4E3;
   --text:#3F3F3F;--muted:#8A8A8A;--border:#DDDDDD;--card:#F7F9FC;--tint:#EAF2FB;
   --bg:#F4F6F9;--surface:#FFFFFF;--head:#005BAC;--grid:#ECEFF3;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --text:#E6E9EE;--muted:#9AA3AE;--border:#2E3743;--card:#18202B;--tint:#1B2A3D;--bg:#0F151D;--surface:#151C26;--head:#0A3E73;--grid:#243040;}}
-:root[data-theme="dark"]{--text:#E6E9EE;--muted:#9AA3AE;--border:#2E3743;--card:#18202B;--tint:#1B2A3D;--bg:#0F151D;--surface:#151C26;--head:#0A3E73;--grid:#243040;}
+  --text:#E6E9EE;--muted:#9AA3AE;--border:#2E3743;--card:#18202B;--tint:#1B2A3D;--bg:#0F151D;--surface:#151C26;--head:#0A3E73;--grid:#243040;
+  --good-t:#6BD873;--bad-t:#FF8A87;--warn-t:#F3C060;--good-bg:#16291A;--bad-bg:#331B1C;--warn-bg:#30260F;}}
+:root[data-theme="dark"]{--text:#E6E9EE;--muted:#9AA3AE;--border:#2E3743;--card:#18202B;--tint:#1B2A3D;--bg:#0F151D;--surface:#151C26;--head:#0A3E73;--grid:#243040;
+  --good-t:#6BD873;--bad-t:#FF8A87;--warn-t:#F3C060;--good-bg:#16291A;--bad-bg:#331B1C;--warn-bg:#30260F;}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:'Malgun Gothic',Arial,sans-serif;font-size:14px;line-height:1.5}
@@ -59,7 +62,20 @@ h2.sec small{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:8px
 .kpi .dl{font-size:12.5px;margin-top:2px;font-weight:700}
 .kpi .cap{font-size:11.5px;color:var(--muted);margin-top:8px;border-top:1px solid var(--border);padding-top:6px}
 .up{color:var(--good)}.down{color:var(--bad)}.flat{color:var(--muted)}.neu{color:var(--muted)}
-.kpi.tg-good{border-top-color:var(--good)}.kpi.tg-bad{border-top-color:var(--bad)}
+.kpi.tg-good,.kpi.s-good{border-top-color:var(--good)}.kpi.tg-bad,.kpi.s-bad{border-top-color:var(--bad)}.kpi.s-warn{border-top-color:var(--warn)}
+/* 잘된 것 / 안 된 것 강조 */
+.kpi.s-good{background:var(--good-bg);border-color:color-mix(in srgb,var(--good) 35%,var(--border))}
+.kpi.s-bad{background:var(--bad-bg);border-color:color-mix(in srgb,var(--bad) 35%,var(--border))}
+.kpi.s-warn{background:var(--warn-bg)}
+.kpi.s-good .v{color:var(--good-t)}.kpi.s-bad .v{color:var(--bad-t)}
+.kpi .l{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.chip{margin-left:auto;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap;line-height:1.6}
+.chip.good{background:var(--good);color:#fff}.chip.bad{background:var(--bad);color:#fff}.chip.warn{background:var(--warn);color:#fff}
+.chip.good::before{content:'✓ '}.chip.bad::before{content:'! '}
+.up{color:var(--good-t)}.down{color:var(--bad-t)}
+td.good{color:var(--good-t);font-weight:700}td.bad{color:var(--bad-t);font-weight:700;background:var(--bad-bg)}
+.hc.s-good{background:var(--good-bg)}.hc.s-good .v{color:var(--good-t)!important}.hc.s-bad{background:var(--bad-bg)}.hc.s-bad .v{color:var(--bad-t)}
+.rng{display:flex;gap:6px;align-items:center}.rng select{min-width:110px}
 .na{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:12.5px;color:var(--muted)}
 .na span{border:1px solid var(--border);border-radius:4px;padding:3px 8px;background:var(--surface)}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -299,7 +315,14 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 #prod .gtag{display:inline-block;font-size:10.5px;font-weight:700;padding:0 5px;border-radius:3px;margin-left:5px;vertical-align:1px;background:var(--surface-2);color:var(--text-secondary)}
 #prod .gtag.lead{background:var(--tint);color:var(--primary)}
 #prod .gtag.new{background:var(--warning-soft);color:var(--warning)}
-#prod .dpos{color:var(--good);font-weight:700}#prod .dneg{color:var(--bad);font-weight:700}
+#prod .dpos{color:var(--good-t);font-weight:700}#prod .dneg{color:var(--bad-t);font-weight:700}
+#prod td.dpos span,#prod td.dneg span{display:inline-block;padding:1px 7px;border-radius:10px}
+#prod td.dpos span{background:var(--good-bg)}#prod td.dneg span{background:var(--bad-bg)}
+#prod .stat.s-good{border-top-color:var(--good);background:var(--good-bg)}#prod .stat.s-good .stat-value{color:var(--good-t)}
+#prod .stat.s-bad{border-top-color:var(--bad);background:var(--bad-bg)}#prod .stat.s-bad .stat-value{color:var(--bad-t)}
+#prod .stat.s-warn{border-top-color:var(--warn);background:var(--warn-bg)}
+#prod td.good{color:var(--good-t);font-weight:700}#prod td.bad{color:var(--bad-t);font-weight:700;background:var(--bad-bg)}
+#prod .delta-up{color:var(--bad-t)}#prod .delta-down{color:var(--good-t)}
 
 </style>
 </head>
@@ -349,10 +372,12 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 </div></nav>
 <div class="bar" id="svcBar"><div class="wrap">
   <div class="f"><label for="fPeriod">보고 기간</label><select id="fPeriod"></select></div>
+  <div class="f" id="fRange" hidden><label for="fFrom">기간 지정 (시작 월 ~ 끝 월)</label><div class="rng"><select id="fFrom"></select><span>~</span><select id="fTo"></select></div></div>
   <div class="f"><label for="fTeam">팀</label><select id="fTeam"></select></div>
 </div></div>
 <div class="bar" id="prodBar" hidden><div class="wrap">
   <div class="f"><label for="pPeriod">보고 기간</label><select id="pPeriod"></select></div>
+  <div class="f" id="pRange" hidden><label for="pFrom">기간 지정 (시작 월 ~ 끝 월)</label><div class="rng"><select id="pFrom"></select><span>~</span><select id="pTo"></select></div></div>
   <label class="chk"><input type="checkbox" id="pExLead"> 순위에서 팀장·신입 제외</label>
   <div class="info" id="pCmp"></div>
 </div></div>
@@ -1030,7 +1055,11 @@ function mapMonthVals(obj){
   return out;
 }
 function statTile(label, value, unit, deltaHtml, sub){
-  return '<div class="card stat"><div class="stat-label">'+label+'</div>'+
+  /* 목표 배지가 있으면 그것으로, 없으면 증감 방향으로 잘된 것(초록)·안 된 것(빨강)을 칠한다 */
+  var h = deltaHtml || '', st = '';
+  if (/pill good/.test(h)) st = 'good'; else if (/pill bad/.test(h)) st = 'bad'; else if (/pill warn/.test(h)) st = 'warn';
+  else if (/delta-down/.test(h)) st = 'good'; else if (/delta-up/.test(h)) st = 'bad';
+  return '<div class="card stat'+(st?' s-'+st:'')+'"><div class="stat-label">'+label+'</div>'+
     '<div class="stat-value">'+value+(unit?'<span class="unit">'+unit+'</span>':'')+'</div>'+
     (deltaHtml?'<div>'+deltaHtml+'</div>':'')+
     (sub?'<div class="stat-sub">'+sub+'</div>':'')+
@@ -1091,7 +1120,7 @@ function renderLeaderboardTable(period){
       '<td><span style="color:'+color+';font-weight:600;font-size:11.5px;">'+DATA.team_short[r.team]+'</span></td>'+
       '<td>'+esc(r.grade)+((DATA.promoted||{})[r.name]?'<span class="gtag" title="'+esc(DATA.promoted[r.name])+' 진급">진급</span>':'')+'</td>'+
       '<td class="num"><div class="score-cell"><div class="score-bar-track"><div class="score-bar-fill" style="width:'+pct+'%;background:'+color+';"></div></div><span class="score-num">'+fmt1(r.score)+'</span></div></td>'+
-      '<td class="num '+(r.delta>0.05?'dpos':(r.delta<-0.05?'dneg':''))+'">'+(r.delta>0?'+':'')+fmt1(r.delta)+'</td>'+
+      '<td class="num '+(r.delta>0.05?'dpos':(r.delta<-0.05?'dneg':''))+'"><span>'+(r.delta>0.05?'▲ +':(r.delta<-0.05?'▼ ':''))+fmt1(r.delta)+'</span></td>'+
       '<td class="num">'+fmt(r.total)+'</td>'+
       '</tr>';
   }).join('')+'</tbody>';
@@ -1268,8 +1297,12 @@ function renderHospTable(team){
   }).join('')+'</tr></thead>';
   var tbody = '<tbody>'+hospitals.map(function(h){
     return '<tr>'+cols.map(function(c){
-      var v = h[c.k];
-      return '<td class="'+(c.num?'num':'')+'">'+(c.pct ? pctStr(v) : esc(v))+'</td>';
+      var v = h[c.k], q = '';
+      if (c.pct && v != null && !isNaN(v)) {
+        if (/revisit/.test(c.k)) q = v > DATA.benchmarks.revisit_target ? ' bad' : ' good';
+        else if (/ftfr/.test(c.k)) q = v < DATA.benchmarks.ftfr_target ? ' bad' : ' good';
+      }
+      return '<td class="'+(c.num?'num':'')+q+'">'+(c.pct ? pctStr(v) : esc(v))+'</td>';
     }).join('')+'</tr>';
   }).join('')+'</tbody>';
   var table = document.getElementById('hospTable');
@@ -1573,18 +1606,35 @@ function buildPeriods(){
   ms.slice().reverse().forEach(mk=>add('m','월','m'+mk,`${mk.replace('-','년 ')}월`,[mk]));
   D.periods=per;
   const grps=[...new Set(per.map(p=>p.grp))];
-  const html=grps.map(g=>`<optgroup label="${g}">${per.filter(p=>p.grp===g).map(p=>`<option value="${p.id}">${esc(p.label)}</option>`).join('')}</optgroup>`).join('');
+  const html=grps.map(g=>`<optgroup label="${g}">${per.filter(p=>p.grp===g).map(p=>`<option value="${p.id}">${esc(p.label)}</option>`).join('')}</optgroup>`).join('')
+    +`<optgroup label="기간 지정"><option value="custom">시작 월 ~ 끝 월 직접 선택</option></optgroup>`;
+  const mo=ms.slice().reverse().map(m=>`<option value="${m}">${dm(m)}</option>`).join('');
+  const pf=$('fFrom').value||$('pFrom').value, pt=$('fTo').value||$('pTo').value;
+  const df=ms.includes(pf)?pf:(ms.find(m=>fyOfMk(m)===fyOfMk(last))||ms[0]), dt=ms.includes(pt)?pt:last;
+  ['fFrom','pFrom'].forEach(id=>{ $(id).innerHTML=mo; $(id).value=df; });
+  ['fTo','pTo'].forEach(id=>{ $(id).innerHTML=mo; $(id).value=dt; });
   const prev=$('fPeriod').value||$('pPeriod').value;
   const def=(per.find(p=>p.kind==='m'&&!p.partial)||per.find(p=>p.kind==='m')||per[0]).id;
-  const v=(prev&&per.some(p=>p.id===prev))?prev:def;
+  const v=(prev&&(prev==='custom'||per.some(p=>p.id===prev)))?prev:def;
   ['fPeriod','pPeriod'].forEach(id=>{ $(id).innerHTML=html; $(id).value=v; });
+  syncRange();
 }
+/* 현재 선택된 보고 기간 (직접 지정 포함) — 두 탭 공통 */
+function curPeriod(){
+  const v=$('fPeriod').value;
+  if(v!=='custom') return D.periods.find(x=>x.id===v)||D.periods[0];
+  let a=$('fFrom').value, b=$('fTo').value; if(a>b) [a,b]=[b,a];
+  const months=rangeMk(a,b), ms=D.months, last=ms[ms.length-1];
+  const partial=months.some(m=>!ms.includes(m))||(months.includes(last)&&!(D.maxT>=monthEnd(last)-DAY));
+  return {id:'custom',kind:'custom',grp:'기간 지정',label:`${a.replace('-','.')} ~ ${b.replace('-','.')} (${months.length}개월)`,months,partial};
+}
+function syncRange(){ const c=$('fPeriod').value==='custom'; $('fRange').hidden=!c; $('pRange').hidden=!c; }
 function prevPeriod(p){
   /* 비교 기간: 월→전월, 분기→전 분기, 반기→전 반기, 연→전년 같은 기간. 진행 중인 기간은 데이터가 있는 달까지만 같은 길이로 비교 */
   const last=D.months[D.months.length-1], upto=p.months.filter(m=>m<=last), n=p.months.length;
   const back=p.kind==='fy'?12:n;
   const months=(p.partial&&p.kind!=='m'?upto:p.months).map(m=>shiftMonth(m,-back));
-  const label={m:'전월',q:'전 분기',h:'전 반기',fy:'전년 동기'}[p.kind]||'직전 기간';
+  const label={m:'전월',q:'전 분기',h:'전 반기',fy:'전년 동기',custom:'직전 같은 기간'}[p.kind]||'직전 기간';
   return {months,label};
 }
 
@@ -1629,8 +1679,13 @@ function delta(cur, prev, unit, better, label){
   const cls= better===0?'neu':((d>0)===(better>0)?'up':'down');
   return `<div class="dl ${cls}">${label} 대비 ${d>0?'+':''}${unit==='분'?d.toFixed(1)+'분':fmt(d)+'건'}${pct!=null?` (${pct>0?'+':''}${pct.toFixed(1)}%)`:''}</div>`;
 }
+/* 카드 상태: 목표가 있으면 목표 달성 여부, 없으면 비교 기간 대비 개선·악화 */
+function tgSt(v, target, higher){ if(v==null) return {}; const ok=higher?v>=target:v<=target; return ok?{st:'good',chip:'목표 달성'}:{st:'bad',chip:'목표 미달'}; }
+function dirSt(cur, prev, better, unit){ if(cur==null||prev==null||!better) return {}; const d=cur-prev;
+  const small=unit==='%p'?Math.abs(d)<0.1:(prev?Math.abs(d/prev*100)<0.5:d===0); if(small) return {};
+  return ((d>0)===(better>0))?{st:'good',chip:'개선'}:{st:'bad',chip:'악화'}; }
 function card(label, val, suffix, dl, cap, opt={}){
-  return `<div class="kpi ${opt.tg||''}"><div class="l">${label}${opt.prov?'<span class="pv">잠정</span>':''}</div><div class="v">${val}${suffix?`<small>${suffix}</small>`:''}</div>${dl}${cap?`<div class="cap">${cap}</div>`:''}</div>`;
+  return `<div class="kpi ${opt.st?'s-'+opt.st:''}"><div class="l">${label}${opt.prov?'<span class="pv">잠정</span>':''}${opt.chip?`<span class="chip ${opt.st}">${opt.chip}</span>`:''}</div><div class="v">${val}${suffix?`<small>${suffix}</small>`:''}</div>${dl}${cap?`<div class="cap">${cap}</div>`:''}</div>`;
 }
 
 let charts={};
@@ -1638,7 +1693,7 @@ function upsert(id,cfg){ if(charts[id]) charts[id].destroy(); charts[id]=new Cha
 function axis(extra){return Object.assign({grid:{color:css('--grid')},ticks:{color:css('--text')}},extra||{});}
 
 function render(){
-  const p=D.periods.find(x=>x.id===$('fPeriod').value); const team=$('fTeam').value||null;
+  const p=curPeriod(); const team=$('fTeam').value||null;
   const pp=prevPeriod(p); const cur=stats(p.months,team), prv=stats(pp.months,team);
   const prov=isProvisional(p.months), provPrev=isProvisional(pp.months);
   const scope=team||'FSG 전체';
@@ -1646,12 +1701,12 @@ function render(){
 
   $('kpis').innerHTML=[
     card('서비스 활동', fmt(cur.total), '건', delta(cur.total,prv.total,'건',0,pp.label), `Calibration ${fmt(cur.cal)} · 기타 ${fmt(cur.total-cur.rep-cur.pm-cur.cal)}`),
-    card('고장 수리', fmt(cur.rep), '건', delta(cur.rep,prv.rep,'건',-1,pp.label), ''),
-    card('PM', fmt(cur.pm), '건', delta(cur.pm,prv.pm,'건',1,pp.label), ''),
-    card('예방정비 지수', f1(cur.idx), '%', delta(cur.idx,prv.idx,'%p',1,pp.label), 'PM ÷ (PM + 고장 수리)'),
-    card('FTFR', f1(cur.ftfr), '%', delta(cur.ftfr,prv.ftfr,'%p',1,pp.label), `목표 ${TARGET_FTFR}% 이상`, {prov, tg: cur.ftfr==null?'':(cur.ftfr>=TARGET_FTFR?'tg-good':'tg-bad')}),
-    card('재방문율', f1(cur.rev), '%', delta(cur.rev,prv.rev,'%p',-1,pp.label), `목표 ${TARGET_REV}% 이하`, {tg: cur.rev==null?'':(cur.rev<=TARGET_REV?'tg-good':'tg-bad')}),
-    card('MTTR', f1(cur.mttr), '분', delta(cur.mttr,prv.mttr,'분',-1,pp.label), `목표 ${TARGET_MTTR}분 이하`, {tg: cur.mttr==null?'':(cur.mttr<=TARGET_MTTR?'tg-good':'tg-bad')}),
+    card('고장 수리', fmt(cur.rep), '건', delta(cur.rep,prv.rep,'건',-1,pp.label), '적을수록 좋음', dirSt(cur.rep,prv.rep,-1,'건')),
+    card('PM', fmt(cur.pm), '건', delta(cur.pm,prv.pm,'건',1,pp.label), '많을수록 좋음', dirSt(cur.pm,prv.pm,1,'건')),
+    card('예방정비 지수', f1(cur.idx), '%', delta(cur.idx,prv.idx,'%p',1,pp.label), 'PM ÷ (PM + 고장 수리)', dirSt(cur.idx,prv.idx,1,'%p')),
+    card('FTFR', f1(cur.ftfr), '%', delta(cur.ftfr,prv.ftfr,'%p',1,pp.label), `목표 ${TARGET_FTFR}% 이상`, Object.assign({prov}, tgSt(cur.ftfr,TARGET_FTFR,true))),
+    card('재방문율', f1(cur.rev), '%', delta(cur.rev,prv.rev,'%p',-1,pp.label), `목표 ${TARGET_REV}% 이하`, tgSt(cur.rev,TARGET_REV,false)),
+    card('MTTR', f1(cur.mttr), '분', delta(cur.mttr,prv.mttr,'분',-1,pp.label), `목표 ${TARGET_MTTR}분 이하`, tgSt(cur.mttr,TARGET_MTTR,false)),
   ].join('');
   $('na').innerHTML=''
     +calNote(p,team)
@@ -1687,7 +1742,7 @@ function render(){
   $('tSeries').innerHTML=`<thead><tr><th>구분</th><th class="num">가동 대수</th><th class="num">고장 장비</th><th class="num">고장 수리</th><th class="num">재방문</th><th class="num">재방문율</th><th class="num">${pp.label}</th><th class="num">증감</th></tr></thead><tbody>`+
     ser.map(sn=>{const a=serStats(p.months,team,sn), b=serStats(pp.months,team,sn); const d=(a.r!=null&&b.r!=null)?a.r-b.r:null;
       const dc=d==null?'':Math.abs(d)<0.1?'':(d<0?'good':'bad'); const fc=sn?(fl.count[sn]||0):fl.total;
-      return `<tr${sn?'':' class="tot"'}><td>${sn||'전체 (SP-10 등 포함)'}</td><td class="num">${fmt(fc)}대</td><td class="num">${fmt(a.u)}대</td><td class="num">${fmt(a.n)}</td><td class="num">${fmt(a.f)}</td><td class="num ${a.r!=null&&a.r>TARGET_REV?'bad':''}">${f1(a.r)}%</td><td class="num">${f1(b.r)}%</td><td class="num ${dc}">${d==null?'-':Math.abs(d)<0.1?'거의 동일':(d>0?'+':'')+d.toFixed(1)+'%p'}</td></tr>`;}).join('')+'</tbody>'
+      return `<tr${sn?'':' class="tot"'}><td>${sn||'전체 (SP-10 등 포함)'}</td><td class="num">${fmt(fc)}대</td><td class="num">${fmt(a.u)}대</td><td class="num">${fmt(a.n)}</td><td class="num">${fmt(a.f)}</td><td class="num ${a.r==null?'':a.r>TARGET_REV?'bad':'good'}">${f1(a.r)}%</td><td class="num">${f1(b.r)}%</td><td class="num ${dc}">${d==null?'-':Math.abs(d)<0.1?'거의 동일':(d>0?'+':'')+d.toFixed(1)+'%p'}</td></tr>`;}).join('')+'</tbody>'
     +`<caption style="caption-side:bottom;text-align:left;font-size:11.5px;color:var(--muted);padding-top:6px">가동 대수 = 12개월 서비스 장비${fl.src==='asset'?'(자산대장 기준)':''}${prov?' · 잠정치':''}</caption>`;
 
   renderHealth(end, p);
@@ -1769,7 +1824,7 @@ function renderHealth(end, p){
   }
   $('health').innerHTML=h.join('');
 }
-function hc(l,v,c,good){return `<div class="hc"><div class="l">${l}</div><div class="v ${v==null?'off':''}" ${good===true?'style="color:var(--good)"':good===false?'':''}>${v==null?'자산대장 필요':v}</div>${c?`<div class="c">${c}</div>`:''}</div>`;}
+function hc(l,v,c,good){return `<div class="hc ${v==null?'':good===true?'s-good':good===false?'s-bad':''}"><div class="l">${l}</div><div class="v ${v==null?'off':''}">${v==null?'자산대장 필요':v}</div>${c?`<div class="c">${c}</div>`:''}</div>`;}
 
 function renderErrors(p, team){
   const ms=new Set(p.months); const famC={};
@@ -1780,7 +1835,7 @@ function renderErrors(p, team){
   $('errSub').textContent=`${p.label}, ${team||'FSG 전체'}`;
   upsert('cFam',{data:{labels:fk,datasets:[
     {type:'bar',label:'고장 수리',data:fk.map(f=>famC[f].n),backgroundColor:'#005BAC',yAxisID:'y',order:2},
-    {type:'line',label:'재방문율(%)',data:fk.map(f=>famC[f].s?+(famC[f].f/famC[f].s*100).toFixed(1):null),showLine:false,pointRadius:6,pointHoverRadius:8,pointBorderWidth:2,pointBorderColor:'#FFFFFF',borderColor:'#E69E0B',backgroundColor:'#E69E0B',yAxisID:'y2',order:1}]},
+    {type:'line',label:'재방문율(%) — 빨강 15% 초과·초록 이하',data:fk.map(f=>famC[f].s?+(famC[f].f/famC[f].s*100).toFixed(1):null),showLine:false,pointRadius:6,pointHoverRadius:8,pointBorderWidth:2,pointBorderColor:'#FFFFFF',borderColor:'#E7413E',backgroundColor:'#E7413E',pointBackgroundColor:fk.map(f=>{const r=famC[f].s?famC[f].f/famC[f].s*100:null;return r!=null&&r>TARGET_REV?'#E7413E':'#3FBA46';}),yAxisID:'y2',order:1}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text'),sort:(p,q)=>p.datasetIndex-q.datasetIndex}}},
       scales:{x:axis({grid:{display:false},ticks:{color:css('--text'),autoSkip:false}}),y:axis({beginAtZero:true}),y2:axis({position:'right',grid:{display:false},min:0,ticks:{color:css('--text'),callback:v=>v+'%'}})}}});
   const sel=$('fErrFam'), cur=sel.value; const opts=fk; sel.innerHTML='<option value="">전체</option>'+opts.map(f=>`<option>${esc(f)}</option>`).join(''); if(opts.includes(cur)) sel.value=cur;
@@ -2091,7 +2146,7 @@ function rangeMk(a,b){const out=[];let k=a;while(k<=b&&out.length<240){out.push(
 function buildProdPeriods(){ /* 보고 기간은 buildPeriods()가 두 탭에 같이 채운다 */ }
 function prodSelection(){
   const ms=D.months, last=ms[ms.length-1];
-  const p=D.periods.find(x=>x.id===$('pPeriod').value)||D.periods[0], pp=prevPeriod(p);
+  const p=curPeriod(), pp=prevPeriod(p);
   const sel=p.months, cmp=pp.months, rng=a=>a.length>1?`${dotMk(a[0])} ~ ${dotMk(a[a.length-1])}`:(a[0]?dotMk(a[0]):'-');
   const inData=sel.filter(m=>ms.includes(m)), end=inData.length?inData[inData.length-1]:last;
   return {sel,cmp,label:p.label,cmpLabel:`${rng(cmp)} (${pp.label})`,short:pp.label+' 대비',end,
@@ -2111,8 +2166,12 @@ function renderProd(){
   } else if(window.__prodRender) window.__prodRender();
 }
 /* 두 탭 보고 기간 동기화 */
-$('pPeriod').addEventListener('change',()=>{ $('fPeriod').value=$('pPeriod').value; PROD_DIRTY=true; renderProd(); });
-$('fPeriod').addEventListener('change',()=>{ $('pPeriod').value=$('fPeriod').value; PROD_DIRTY=true; });
+$('pPeriod').addEventListener('change',()=>{ $('fPeriod').value=$('pPeriod').value; syncRange(); PROD_DIRTY=true; renderProd(); });
+$('fPeriod').addEventListener('change',()=>{ $('pPeriod').value=$('fPeriod').value; syncRange(); PROD_DIRTY=true; });
+[['fFrom','pFrom'],['fTo','pTo']].forEach(([a,b])=>{
+  $(a).addEventListener('change',()=>{ $(b).value=$(a).value; PROD_DIRTY=true; render(); });
+  $(b).addEventListener('change',()=>{ $(a).value=$(b).value; PROD_DIRTY=true; renderProd(); });
+});
 $('pExLead').addEventListener('change',()=>{ if(PROD){ PROD.ex_lead=$('pExLead').checked; if(window.__prodRender) window.__prodRender(); } });
 function setView(v){
   VIEW=v; try{localStorage.setItem(VIEW_LS,v);}catch(e){}
