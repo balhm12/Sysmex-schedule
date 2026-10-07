@@ -207,11 +207,12 @@
 
   .form-row{margin-bottom:12px;}
   .form-row label{display:block;font-size:11.5px;font-weight:700;color:var(--ink-soft);margin-bottom:5px;}
-  .form-row input[type=text], .form-row select{
+  .form-row input[type=text], .form-row input[type=date], .form-row select, .form-row textarea{
     width:100%;padding:9px 10px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;
-    font-family:inherit;color:var(--ink);background:white;
+    font-family:inherit;color:var(--ink);background:white;box-sizing:border-box;
   }
-  .form-row input:focus, .form-row select:focus{outline:none;border-color:var(--blue);}
+  .form-row textarea{resize:vertical;line-height:1.55;}
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus{outline:none;border-color:var(--blue);}
   .form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   .field-hint{font-size:11px;color:var(--ink-soft);margin:-4px 0 12px;line-height:1.5;}
   .combo{position:relative;}
@@ -263,6 +264,51 @@
   @media(max-width:820px){.guide-grid{grid-template-columns:1fr 1fr;}}
   @media(max-width:520px){.guide-grid{grid-template-columns:1fr;}}
 
+  /* ── 특이사항 (사용법이 있던 자리) ── */
+  .notes-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+  .notes-head .guide-title{margin-bottom:0;flex:0 0 auto;}
+  .notes-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .notes-count{font-size:11.5px;font-weight:800;color:var(--blue);background:#E0F2FE;border-radius:20px;padding:3px 10px;}
+  .notes-help{background:none;border:none;color:var(--ink-soft);font-size:11.5px;font-weight:700;cursor:pointer;padding:4px 6px;border-radius:7px;}
+  .notes-help:hover{background:var(--paper);color:var(--navy);}
+  .notes-sub{font-size:11.5px;color:var(--ink-soft);margin-bottom:12px;line-height:1.5;}
+  .notes-empty{background:var(--paper);border:1px dashed var(--line);border-radius:12px;padding:22px 16px;text-align:center;color:var(--ink-soft);font-size:12px;line-height:1.6;}
+  .notes-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .notes-table th{background:var(--paper);color:var(--navy);font-size:11px;font-weight:800;text-align:left;padding:8px 10px;border-bottom:1.5px solid var(--line);white-space:nowrap;}
+  .notes-table td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink);line-height:1.5;}
+  .notes-table tr:last-child td{border-bottom:none;}
+  .notes-table tr:hover td{background:#F8FBFF;}
+  .notes-date{white-space:nowrap;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;}
+  .notes-date.is-red{color:#DC2626;}
+  .notes-inst{font-weight:700;}
+  .notes-dev{color:var(--ink-soft);white-space:nowrap;}
+  .notes-text{white-space:pre-wrap;word-break:break-word;}
+  .notes-by{color:var(--ink-soft);white-space:nowrap;font-size:11.5px;}
+  .notes-team{display:inline-block;font-size:10px;font-weight:800;color:#fff;background:var(--blue);border-radius:6px;padding:1px 6px;margin-right:5px;vertical-align:1px;}
+  .notes-ops{white-space:nowrap;text-align:right;}
+  .notes-ops button{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:6px;opacity:.55;}
+  .notes-ops button:hover{opacity:1;background:var(--paper);}
+  .note-link{display:inline-block;margin-top:2px;background:none;border:none;color:var(--blue);font-size:11.5px;font-weight:800;cursor:pointer;padding:4px 0;}
+  .note-link:hover{text-decoration:underline;}
+  /* 휴대폰: 표는 칸이 좁아 글자가 세로로 쪼개지므로, 한 건을 카드 한 장으로 쌓아 보여줍니다. */
+  @media(max-width:600px){
+    .notes-table thead{display:none;}
+    .notes-table, .notes-table tbody{display:block;}
+    .notes-table tr{
+      display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:start;
+      background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 11px;margin-bottom:8px;
+    }
+    .notes-table tr:hover td{background:transparent;}
+    .notes-table td{display:block;border:none;padding:0;}
+    .notes-date{grid-area:1/1;}
+    .notes-inst{grid-area:1/2;}
+    .notes-ops{grid-area:1/3;}
+    .notes-dev{grid-area:2/1;font-size:11px;}
+    .notes-by{grid-area:2/2;font-size:11px;}
+    .notes-by::before{content:"· ";}
+    .notes-text{grid-area:3/1/auto/4;margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);}
+  }
+
   @media(max-width:900px){
     .app{padding:16px 12px 40px;}
     .header{padding:12px 16px;}
@@ -291,7 +337,7 @@
     .cal-card{margin-top:8px;}
     .scroll-hint{padding:5px 0 1px;font-size:10.5px;}
     .panel{padding:18px 16px;border-radius:14px;}
-    .form-row input[type=text], .form-row select{font-size:16px;padding:12px 10px;}
+    .form-row input[type=text], .form-row input[type=date], .form-row select, .form-row textarea{font-size:16px;padding:12px 10px;}
     .form-grid2{grid-template-columns:1fr 1fr;}
     .guide{padding:18px 16px;margin-top:12px;}
 
@@ -382,8 +428,16 @@
   </div>
 
   <div class="guide">
-    <div class="guide-title">사용법</div>
-    <div class="guide-grid" id="guideGrid"></div>
+    <div class="notes-head">
+      <div class="guide-title">특이사항</div>
+      <div class="notes-actions">
+        <span class="notes-count" id="notesCount"></span>
+        <button class="add-btn" id="noteAddBtn" title="날짜·기관·장비·내용을 입력해 특이사항을 등록합니다">＋ 특이사항 등록</button>
+        <button class="notes-help" id="guideBtn" title="근무일정표 사용법 보기">❔ 사용법</button>
+      </div>
+    </div>
+    <div class="notes-sub" id="notesSub"></div>
+    <div id="notesBody"></div>
   </div>
 </div>
 
@@ -707,6 +761,16 @@ const HOLIDAYS_KR = {
 // 상태
 // ============================================================
 let scheduleData = { west:{}, east:{}, central:{}, south:{}, fss:{}, memberOrder:{}, teamRoster:{} }; // scheduleData[team][date][name] = entry
+
+// 특이사항 — notesData[team][id] = {date, inst, device, author, text, by, ts}
+// 일정(entry)과 완전히 다른 경로(/work-schedule/notes)에 저장하므로, 한쪽을 고쳐도
+// 다른 쪽이 지워지는 일이 구조적으로 불가능합니다. scheduleData 안에 넣지 않은 것도
+// 같은 이유입니다 — 전체 저장(saveStorage)이 특이사항을 건드릴 방법이 없습니다.
+let notesData = {};
+let _notesLoadedOnce = false;
+// 서버 데이터를 한 번이라도 정상으로 받아왔는지. 전체 저장(saveStorage)의 안전장치가
+// 이 값을 검사합니다. (설치일정표 index.html과 동일한 방어 장치)
+let _dataLoadedOnce = false;
 let currentTeam = 'west';
 let viewMode = 'week'; // 'month' | 'week'
 let _today = new Date();
@@ -783,6 +847,9 @@ async function loadStorage(){
       TEAM_ORDER.forEach(tk=>{ scheduleData[tk] = data[tk] || {}; });
       scheduleData.memberOrder = data.memberOrder || {};
       scheduleData.teamRoster = data.teamRoster || {};
+      notesData = data.notes || {};   // 특이사항 — 일정(entry)과 별도 경로라 서로 영향 없음
+      _notesLoadedOnce = true;
+      _dataLoadedOnce = true;
       applyTeamRoster();
       applyMemberOrder();
     }
@@ -862,6 +929,45 @@ async function saveEntryToServer(team, date, name, entry){
     return false;
   }
 }
+// ── 특이사항 저장/삭제 ──
+// 일정과 똑같은 원칙: 항목 하나당 경로 하나만 PUT/DELETE 합니다. 목록 전체를 다시
+// 올리지 않으므로, 이 화면이 모르는 다른 팀·다른 사람의 특이사항은 건드릴 수 없습니다.
+function noteUrl(team, id){
+  return FIREBASE_URL + '/work-schedule/notes/' + team + '/' + encodeURIComponent(id) + '.json';
+}
+function newNoteId(date){
+  return String(date||'').replace(/-/g,'') + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+}
+async function saveNoteToServer(team, id, note){
+  if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 설정되지 않았습니다'); return false; }
+  try{
+    const res = await fetchWithTimeout(noteUrl(team, id), {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(note)
+    }, 8000);
+    if(res.ok){ backupFullSnapshot(); return true; }
+    console.error('saveNoteToServer HTTP error', res.status, res.statusText);
+    showToast(res.status===401||res.status===403 ? '⚠ 접근 거부됨 — Firebase 규칙을 확인해주세요' : ('⚠ 저장 실패 (' + res.status + ')'));
+    return false;
+  }catch(err){
+    console.error('saveNoteToServer network error', err);
+    showToast(err.message==='TIMEOUT' ? '⚠ 서버 응답이 없습니다' : '⚠ 서버에 연결할 수 없습니다 (네트워크/방화벽 확인)');
+    return false;
+  }
+}
+async function deleteNoteFromServer(team, id){
+  if(!STORAGE_ENDPOINT){ showToast('⚠ 공유 저장소가 설정되지 않았습니다'); return false; }
+  try{
+    const res = await fetchWithTimeout(noteUrl(team, id), {method:'DELETE'}, 8000);
+    if(res.ok){ backupFullSnapshot(); return true; }
+    showToast(res.status===401||res.status===403 ? '⚠ 접근 거부됨 — Firebase 규칙을 확인해주세요' : ('⚠ 삭제 실패 (' + res.status + ')'));
+    return false;
+  }catch(err){
+    showToast('⚠ 서버에 연결할 수 없습니다 (네트워크/방화벽 확인)');
+    return false;
+  }
+}
+
 // 여러 항목(연쇄 입력 등)을 한 번에 저장하고, 결과에 따라 토스트 1개만 표시
 async function saveEntriesToServer(items){
   const results = await Promise.all(items.map(it=> saveEntryToServer(it.team, it.date, it.name, it.entry)));
@@ -1259,7 +1365,207 @@ function renderLegend(){
 }
 
 // ============================================================
-// 안내 가이드
+// 특이사항 — 사용법이 있던 자리에 표시됩니다.
+//  · 저장 경로: /work-schedule/notes/{팀}/{id}  (일정과 완전히 분리)
+//  · 항목 하나당 경로 하나만 PUT/DELETE  → 목록 전체를 덮어쓰는 일이 없습니다.
+//  · 주간계획서(weeklyreport.js)는 getScheduleNotes()로 읽어 '지난 주 보고'의
+//    [특이 사항] 칸에 날짜·기관·장비·내용 표로 채웁니다.
+// ============================================================
+function notesTeamsInView(){
+  return currentTeam === 'all' ? TEAM_ORDER.slice() : [currentTeam];
+}
+// 날짜 범위(from~to, 둘 다 포함)에 들어가는 특이사항을 날짜순으로 반환합니다.
+// weeklyreport.js에서도 이 함수를 그대로 씁니다.
+function getScheduleNotes(teams, from, to){
+  const keys = Array.isArray(teams) ? teams : (teams === 'all' || !teams ? TEAM_ORDER.slice() : [teams]);
+  const out = [];
+  keys.forEach(tk=>{
+    const bucket = notesData[tk] || {};
+    Object.keys(bucket).forEach(id=>{
+      const n = bucket[id];
+      if(!n || !n.date) return;
+      if(from && n.date < from) return;
+      if(to && n.date > to) return;
+      out.push({
+        team: tk, id: id,
+        date: String(n.date),
+        inst: String(n.inst || ''),
+        device: String(n.device || ''),
+        author: String(n.author || ''),
+        text: String(n.text || ''),
+        ts: n.ts || 0
+      });
+    });
+  });
+  out.sort((a,b)=> a.date===b.date ? (a.ts - b.ts) : (a.date < b.date ? -1 : 1));
+  return out;
+}
+function renderNotes(){
+  const body = document.getElementById('notesBody');
+  const sub = document.getElementById('notesSub');
+  const cnt = document.getElementById('notesCount');
+  if(!body) return;
+  const nDays = daysInMonth(viewYear, viewMonth);
+  const from = fmtDate(viewYear, viewMonth, 1);
+  const to = fmtDate(viewYear, viewMonth, nDays);
+  const teams = notesTeamsInView();
+  const list = getScheduleNotes(teams, from, to);
+  const scopeLabel = currentTeam === 'all' ? '전체 팀' : TEAMS[currentTeam].label;
+
+  cnt.textContent = list.length ? (list.length + '건') : '';
+  cnt.style.display = list.length ? '' : 'none';
+  sub.innerHTML = escapeHtml(viewYear + '년 ' + viewMonth + '월 · ' + scopeLabel) +
+    ' — 주간계획서 <b>지난 주 보고</b>의 [특이 사항] 칸에 그대로 들어갑니다.';
+
+  if(!list.length){
+    body.innerHTML = '<div class="notes-empty">등록된 특이사항이 없습니다.<br>' +
+      '<b>＋ 특이사항 등록</b>을 눌러 날짜 · 기관 · 장비 · 내용을 입력하세요.</div>';
+    return;
+  }
+  const showTeam = currentTeam === 'all';
+  body.innerHTML =
+    '<table class="notes-table"><thead><tr>' +
+      '<th style="width:86px;">날짜</th>' +
+      '<th style="width:21%;">기관</th>' +
+      '<th style="width:16%;">장비</th>' +
+      '<th style="width:76px;">작성자</th>' +
+      '<th>특이사항</th>' +
+      '<th style="width:54px;"></th>' +
+    '</tr></thead><tbody>' +
+    list.map(n=>{
+      const p = n.date.split('-');
+      const wk = weekdayKr(+p[0], +p[1], +p[2]);
+      const red = isWeekendDate(n.date) || !!HOLIDAYS_KR[n.date];
+      return '<tr>' +
+        '<td class="notes-date' + (red?' is-red':'') + '">' + escapeHtml(p[1] + '/' + p[2]) + ' (' + escapeHtml(wk) + ')</td>' +
+        '<td class="notes-inst">' + (showTeam ? '<span class="notes-team">' + escapeHtml(TEAMS[n.team].label.replace('FS ','')) + '</span>' : '') + escapeHtml(n.inst || '—') + '</td>' +
+        '<td class="notes-dev">' + escapeHtml(n.device || '—') + '</td>' +
+        '<td class="notes-by">' + escapeHtml(n.author || '—') + '</td>' +
+        '<td class="notes-text">' + escapeHtml(n.text) + '</td>' +
+        '<td class="notes-ops">' +
+          // onclick 안에 id를 문자열로 박아 넣으면 id에 따옴표가 섞였을 때 코드가 깨진다.
+          // 값은 data-* 로만 넘기고 핸들러는 아래에서 붙인다.
+          '<button title="수정" data-act="edit" data-team="' + escapeHtml(n.team) + '" data-id="' + escapeHtml(n.id) + '">✏️</button>' +
+          '<button title="삭제" data-act="del" data-team="' + escapeHtml(n.team) + '" data-id="' + escapeHtml(n.id) + '">🗑</button>' +
+        '</td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table>';
+
+  body.querySelectorAll('.notes-ops button').forEach(btn=>{
+    btn.onclick = ()=>{
+      const tk = btn.getAttribute('data-team'), id = btn.getAttribute('data-id');
+      if(btn.getAttribute('data-act') === 'edit') openNotePanel({team:tk, id:id});
+      else removeNote(tk, id);
+    };
+  });
+}
+
+async function removeNote(team, id){
+  const n = (notesData[team] || {})[id];
+  if(!n) return;
+  if(!confirm('이 특이사항을 삭제할까요?\n\n' + n.date + ' · ' + (n.inst||'') + '\n' + (n.text||''))) return;
+  const ok = await deleteNoteFromServer(team, id);
+  if(!ok) return;
+  if(notesData[team]) delete notesData[team][id];
+  renderNotes();
+  showToast('특이사항을 삭제했습니다');
+}
+
+// opts: {team, id}          → 기존 항목 수정
+//       {date, author, team} → 새 항목 (근무표 편집창에서 넘어온 경우 날짜·이름 미리 채움)
+function openNotePanel(opts){
+  opts = opts || {};
+  _panelDismissable = false; // 입력용 — 바깥을 눌러도 닫히지 않게 (입력 내용 보호)
+  const panel = document.getElementById('panel');
+  const editTeam = opts.team || (currentTeam === 'all' ? TEAM_ORDER[0] : currentTeam);
+  const existing = opts.id ? ((notesData[editTeam] || {})[opts.id] || null) : null;
+  const cur = {
+    date:   existing ? String(existing.date||'')   : (opts.date || todayISO()),
+    inst:   existing ? String(existing.inst||'')   : '',
+    device: existing ? String(existing.device||'') : '',
+    author: existing ? String(existing.author||'') : (opts.author || ''),
+    text:   existing ? String(existing.text||'')   : ''
+  };
+  const teamOpts = TEAM_ORDER.map(tk=>
+    '<option value="' + tk + '"' + (tk===editTeam?' selected':'') + '>' + escapeHtml(TEAMS[tk].label) + '</option>'
+  ).join('');
+
+  function memberOptions(tk){
+    const ms = (TEAMS[tk] && TEAMS[tk].members) ? TEAMS[tk].members : [];
+    return '<option value="">(선택 없음)</option>' + ms.map(m=>
+      '<option value="' + escapeHtml(m.name) + '"' + (m.name===cur.author?' selected':'') + '>' + escapeHtml(m.name) + '</option>'
+    ).join('');
+  }
+
+  panel.innerHTML =
+    '<button class="close" onclick="closePanel()">✕</button>' +
+    '<h3>' + (existing ? '특이사항 수정' : '특이사항 등록') + '</h3>' +
+    '<div class="sub">여기에 등록한 내용이 주간계획서 <b>지난 주 보고</b>의 [특이 사항] 칸에 날짜 · 기관 · 장비 · 내용으로 들어갑니다.</div>' +
+    '<div class="form-row form-grid2">' +
+      '<div><label>날짜</label><input type="date" id="nt-date" value="' + escapeHtml(cur.date) + '"></div>' +
+      '<div><label>팀</label><select id="nt-team">' + teamOpts + '</select></div>' +
+    '</div>' +
+    '<div class="form-row form-grid2">' +
+      '<div><label>기관</label><input type="text" id="nt-inst" placeholder="예: 서울대병원" autocomplete="off" value="' + escapeHtml(cur.inst) + '"></div>' +
+      '<div><label>장비</label><input type="text" id="nt-device" placeholder="예: XN-9100" autocomplete="off" value="' + escapeHtml(cur.device) + '"></div>' +
+    '</div>' +
+    '<div class="form-row"><label>작성자 (FSR)</label><select id="nt-author">' + memberOptions(editTeam) + '</select></div>' +
+    '<div class="form-row"><label>특이사항</label>' +
+      '<textarea id="nt-text" rows="4" placeholder="무슨 일이 있었고, 어떻게 조치했는지 / 후속 조치가 필요한지" style="width:100%;box-sizing:border-box;resize:vertical;">' + escapeHtml(cur.text) + '</textarea>' +
+    '</div>' +
+    '<div class="form-actions">' +
+      (existing ? '<button class="btn-clear" id="nt-del">삭제</button>' : '') +
+      '<button class="btn-cancel" id="nt-cancel">취소</button>' +
+      '<button class="btn-save" id="nt-save">저장</button>' +
+    '</div>';
+
+  document.getElementById('overlay').classList.add('show');
+
+  // 팀을 바꾸면 작성자 목록도 그 팀 사람으로 갈아끼웁니다.
+  panel.querySelector('#nt-team').onchange = (e)=>{
+    const keep = panel.querySelector('#nt-author').value;
+    cur.author = keep;
+    panel.querySelector('#nt-author').innerHTML = memberOptions(e.target.value);
+  };
+  panel.querySelector('#nt-cancel').onclick = closePanel;
+  const delBtn = panel.querySelector('#nt-del');
+  if(delBtn) delBtn.onclick = async ()=>{ closePanel(); await removeNote(editTeam, opts.id); };
+
+  panel.querySelector('#nt-save').onclick = async ()=>{
+    const date = panel.querySelector('#nt-date').value;
+    const text = panel.querySelector('#nt-text').value.trim();
+    if(!date){ alert('날짜를 선택해주세요.'); return; }
+    if(!text){ alert('특이사항 내용을 입력해주세요.'); return; }
+    const team = panel.querySelector('#nt-team').value;
+    const note = {
+      date: date,
+      inst: panel.querySelector('#nt-inst').value.trim(),
+      device: panel.querySelector('#nt-device').value.trim(),
+      author: panel.querySelector('#nt-author').value,
+      text: text,
+      ts: existing && existing.ts ? existing.ts : Date.now(),
+      updatedAt: new Date().toISOString()
+    };
+    // 팀을 바꿔 저장한 경우에는 옮기는 것이므로, 새 위치에 쓴 뒤 옛 위치를 지웁니다.
+    const id = opts.id || newNoteId(date);
+    const ok = await saveNoteToServer(team, id, note);
+    if(!ok) return;
+    if(opts.id && team !== editTeam){
+      await deleteNoteFromServer(editTeam, opts.id);
+      if(notesData[editTeam]) delete notesData[editTeam][opts.id];
+    }
+    notesData[team] = notesData[team] || {};
+    notesData[team][id] = note;
+    closePanel();
+    renderNotes();
+    showToast(existing ? '특이사항을 수정했습니다' : '특이사항을 등록했습니다 (팀 전체 공유)');
+  };
+}
+
+// ============================================================
+// 안내 가이드 — 화면 하단에 상시 표시하던 것을 [❔ 사용법] 버튼으로 옮겼습니다.
+// (그 자리에는 특이사항이 들어갑니다)
 // ============================================================
 const GUIDE_ITEMS = [
   {icon:'👆', h:'일정 입력', d:'달력 칸(이름 × 날짜) 클릭 → 편집창이 열립니다. 평일은 오전1·오전2·오후1·오후2·야간을, 주말·공휴일은 주말/휴일 구분(전화대기·당직·추가편성·기타)만 입력합니다. (당직은 주말·공휴일에만 선택 가능)'},
@@ -1269,11 +1575,20 @@ const GUIDE_ITEMS = [
   {icon:'✍️', h:'직접 입력', d:'오전1·오전2·오후1·오후2는 목록에서 고르거나 원하는 내용을 직접 입력할 수 있습니다. 회의·교육·병원명은 선택 후 콜론(:) 뒤에 세부 내용을 이어 쓸 수 있습니다.'},
   {icon:'📊', h:'Excel 내보내기', d:'개인별 요약·팀별 비교·형평성(당직·야간 색상 표시)·통계·상세, 5개 시트로 한번에 다운로드됩니다.'},
 ];
-function renderGuide(){
-  const el = document.getElementById('guideGrid');
-  el.innerHTML = GUIDE_ITEMS.map(g=>
-    '<div class="guide-item"><div class="guide-icon">' + g.icon + '</div><div class="guide-h">' + g.h + '</div><div class="guide-d">' + g.d + '</div></div>'
-  ).join('');
+function openGuidePanel(){
+  _panelDismissable = true; // 읽기용 — 바깥을 눌러 닫아도 잃을 입력이 없습니다
+  const panel = document.getElementById('panel');
+  panel.innerHTML =
+    '<button class="close" onclick="closePanel()">✕</button>' +
+    '<h3>사용법</h3>' +
+    '<div class="guide-grid" style="grid-template-columns:1fr;gap:10px;">' +
+      GUIDE_ITEMS.map(g=>
+        '<div class="guide-item"><div class="guide-icon">' + g.icon + '</div><div class="guide-h">' + g.h + '</div><div class="guide-d">' + g.d + '</div></div>'
+      ).join('') +
+      '<div class="guide-item"><div class="guide-icon">📌</div><div class="guide-h">특이사항</div>' +
+      '<div class="guide-d">화면 맨 아래 [＋ 특이사항 등록]에서 날짜 · 기관 · 장비 · 내용을 입력합니다. 편집창(야간·주말) 아래의 “📌 이 날짜 특이사항 등록”을 눌러도 날짜와 이름이 채워진 상태로 열립니다. 등록한 내용은 주간계획서 <b>지난 주 보고</b>의 [특이 사항] 칸에 자동으로 들어갑니다.</div></div>' +
+    '</div>';
+  document.getElementById('overlay').classList.add('show');
 }
 
 // ============================================================
@@ -1674,6 +1989,7 @@ function render(){
   renderStats();
   renderNightBanner();
   if(viewMode==='month') renderMonthGrid(); else renderWeekGrid();
+  renderNotes();
 }
 
 // ============================================================
@@ -1842,13 +2158,17 @@ function openEditor(team, date, name){
     '<div class="form-row" id="nightRow" style="' + (isOffDay?'display:none;':'') + '">' +
       '<label>야간</label>' +
       '<select id="f-night">' + nightOptions.map(s=>'<option value="' + s.key + '" ' + (nightParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
-      '<input type="text" id="f-night-detail" placeholder="세부내용 (선택)" style="margin-top:6px;" value="' + escapeHtml(nightParsed.detail) + '">' +
+      '<input type="text" id="f-night-detail" placeholder="특이사항" style="margin-top:6px;" value="' + escapeHtml(nightParsed.detail) + '">' +
     '</div>' +
 
     '<div class="form-row" id="weekendRow" style="' + (isOffDay?'':'display:none;') + '">' +
       '<label>주말/휴일 구분</label><select id="f-weekend">' + teamWeekendList.map(s=>'<option value="' + s.key + '" ' + (weekendParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
-      '<input type="text" id="f-weekend-detail" placeholder="세부내용 (선택)" style="margin-top:6px;" value="' + escapeHtml(weekendParsed.detail) + '">' +
+      '<input type="text" id="f-weekend-detail" placeholder="특이사항" style="margin-top:6px;" value="' + escapeHtml(weekendParsed.detail) + '">' +
     '</div>' +
+
+    // 위 '특이사항'은 그 칸(야간·주말)에 붙는 짧은 비고입니다. 기관·장비까지 적어
+    // 주간계획서 [특이 사항] 칸으로 보낼 내용은 아래 버튼으로 등록합니다.
+    '<button type="button" class="note-link" id="f-note">📌 이 날짜 특이사항 등록 (주간계획서 보고용)</button>' +
 
     '<div class="form-actions">' +
       '<button class="btn-clear" id="f-clear">비우기</button>' +
@@ -1973,6 +2293,10 @@ function openEditor(team, date, name){
     });
   }
 
+  panel.querySelector('#f-note').onclick = ()=>{
+    closePanel();
+    openNotePanel({team: team, date: date, author: name});
+  };
   panel.querySelector('#f-cancel').onclick = closePanel;
   panel.querySelector('#f-clear').onclick = async ()=>{
     setEntry(team, date, name, blankEntry());
@@ -2498,6 +2822,8 @@ document.getElementById('exportXlsxBtn').onclick = exportExcel;
 document.getElementById('refreshBtn').onclick = async ()=>{
   await loadStorage(); render(); showToast('최신 일정을 불러왔습니다');
 };
+document.getElementById('noteAddBtn').onclick = ()=> openNotePanel({});
+document.getElementById('guideBtn').onclick = openGuidePanel;
 
 // ============================================================
 // 초기화
@@ -2505,7 +2831,6 @@ document.getElementById('refreshBtn').onclick = async ()=>{
 (async function init(){
   renderTeamTabs();
   renderLegend();
-  renderGuide();
   render();
   await _authReady; // 인증 사용 중이면 토큰이 준비될 때까지(최대 4초) 대기 후 최초 데이터 요청
   const loadedOk = await loadStorage();
@@ -2569,6 +2894,6 @@ document.getElementById('refreshBtn').onclick = async ()=>{
 </script>
 <!-- 주간계획서/보고서 내보내기 애드온 (FSS팀 베타) — weeklyreport.js는 저장소에 이미 있었으나
      이 연결 태그가 빠져 있어서 실제로는 한 번도 로드된 적이 없었습니다. -->
-<script src="weeklyreport.js?v=17"></script>
+<script src="weeklyreport.js?v=18"></script>
 </body>
 </html>
