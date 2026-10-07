@@ -2203,7 +2203,7 @@ function renderProd(){
       labels:{'이번 년도':S.label,'직전 년도':S.cmpLabel,'전체 누적':'전체 기간'}});
     Object.assign(PROD,{no_att:!RAW.some(r=>r.att), raw_n:RAW.length, src:SRC.act, cmp_short:S.short, provisional:S.prov,
       trend_labels:S.trend.map(m=>m.slice(2,4)+'.'+m.slice(5)), trend_names:['최근 12개월','전년 동월'],
-      grade:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), promoted:Object.fromEntries(GRADE_HIST.filter(([n,d])=>Date.now()-Date.parse(d)<365*864e5).map(([n,d,prev])=>[n,prev+'→'+rosterMap[n].grade+' ('+d.slice(5).replace('-','/')+')'])), newbie:NEWBIE, ex_lead:$('pExLead').checked});
+      grade:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), promoted:Object.fromEntries(GRADE_HIST.filter(([n,d])=>S.sel.includes(d.slice(0,7))).map(([n,d,prev])=>[n,prev+'→'+rosterMap[n].grade+' ('+d.slice(5).replace('-','/')+')'])), newbie:NEWBIE, ex_lead:$('pExLead').checked});
     $('pCmp').innerHTML=`비교 기간: ${esc(S.cmpLabel)}<br>직급 표시: 현재 · 직급 가중치: 진급자는 시행일부터 새 직급`;
     $('prod').innerHTML=PROD_SKELETON; window.initProdDashboard(PROD); PROD_DIRTY=false;
   } else if(window.__prodRender) window.__prodRender();
