@@ -472,8 +472,8 @@ function buildProdData(RAW, ROSTER, opt){
   var TEAMS = opt.teams || ['FS WEST','FS EAST','FS CENTRAL','FS SOUTH'];
   var TEAM_SHORT = {}; TEAMS.forEach(function(t){ TEAM_SHORT[t] = t.replace(/^FS\s*/,''); });
   var EXCLUDED = new Set(opt.excluded || ['김민결']);
-  var GROUPS = ['CBC','COA','HISCL','Urine','A1c','RF-500'];
-  var GROUP_LABEL = {'CBC':'CBC','COA':'COA','HISCL':'Hiscl','Urine':'Urine','A1c':'A1c','RF-500':'RF-500'};
+  var GROUPS = ['CBC','COA','HISCL','Urine','A1c'];   // RF-500 그룹은 2026-10-07 제외(사용자 요청)
+  var GROUP_LABEL = {'CBC':'CBC','COA':'COA','HISCL':'Hiscl','Urine':'Urine','A1c':'A1c'};
   var PERIODS = ['이번 년도','직전 년도','전체 누적'];
   var BUCKETS = ['고장수리','PM','설치이전','Cal평가','기타'];
   var BUCKET_LABEL = {'고장수리':'고장 수리','PM':'PM','설치이전':'설치·이전','Cal평가':'Cal·평가','기타':'기타'};
@@ -505,7 +505,7 @@ function buildProdData(RAW, ROSTER, opt){
     return w + (GRADE_W[gradeAtMs(person, t)] || 0);
   }
   /* 장비 모델 → 그룹 */
-  var GROUP_RULES = [[/^HISCL/,'HISCL'],[/^HLC-?723/,'A1c'],[/^RF-500/,'RF-500'],[/^(CA|CS|CN)-/,'COA'],
+  var GROUP_RULES = [[/^HISCL/,'HISCL'],[/^HLC-?723/,'A1c'],[/^RF-500/,null],[/^(CA|CS|CN)-/,'COA'],
     [/^(UF|UC|UN|UD)-|^U-WAM/,'Urine'],[/^(XN|XR|XS|XT|XE|XP|XQ|KX|K-|SP|DI|CF|BT|SA|RU|DC|CV|TS)-?/,'CBC']];
   function groupOf(m){ if(!m) return null; for (var i=0;i<GROUP_RULES.length;i++) if (GROUP_RULES[i][0].test(m)) return GROUP_RULES[i][1]; return null; }
 
