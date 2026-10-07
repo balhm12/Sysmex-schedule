@@ -212,8 +212,20 @@
     font-family:inherit;color:var(--ink);background:white;box-sizing:border-box;
   }
   .form-row textarea{resize:vertical;line-height:1.55;}
+  /* iOS 사파리는 날짜 입력칸에 고유 너비를 적용해서 width:100%를 무시한다.
+     그대로 두면 칸이 옆 칸(팀 선택)을 덮어버린다. 기본 모양을 끄고 최소 너비를 0으로 풀어준다. */
+  .form-row input[type=date]{
+    -webkit-appearance:none;appearance:none;min-width:0;max-width:100%;
+    text-align:left;line-height:1.3;height:auto;
+  }
+  .form-row input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0;}
+  .form-row input[type=date]::-webkit-calendar-picker-indicator{margin-left:auto;}
   .form-row input:focus, .form-row select:focus, .form-row textarea:focus{outline:none;border-color:var(--blue);}
+  /* 그리드 칸은 기본적으로 내용보다 작아지지 않는다(min-width:auto).
+     안에 든 입력칸이 넓으면 칸이 밀려 서로 겹치므로 0으로 풀어준다. */
   .form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .form-grid2 > *{min-width:0;}
+  .form-grid2 > * > input, .form-grid2 > * > select{max-width:100%;}
   .field-hint{font-size:11px;color:var(--ink-soft);margin:-4px 0 12px;line-height:1.5;}
   .combo{position:relative;}
   .combo-input{padding-right:32px !important;}
@@ -339,6 +351,8 @@
     .panel{padding:18px 16px;border-radius:14px;}
     .form-row input[type=text], .form-row input[type=date], .form-row select, .form-row textarea{font-size:16px;padding:12px 10px;}
     .form-grid2{grid-template-columns:1fr 1fr;}
+    .app-nav{gap:6px;}
+    .app-nav a{padding:7px 10px;font-size:11.5px;}
     .guide{padding:18px 16px;margin-top:12px;}
 
     .scroll-hint{display:block;}
@@ -365,7 +379,8 @@
     .wbadge{font-size:9.5px;padding:2px 5px;}
   }
 
-  .app-nav{display:flex;gap:8px;margin-bottom:14px;}
+  /* 탭이 늘어나면(주간계획서 등) 휴대폰 폭을 넘어 페이지 전체가 좌우로 밀린다. 줄바꿈 허용. */
+  .app-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
   .app-nav a{
     flex:0 0 auto;padding:8px 16px;border-radius:10px;font-size:12.5px;font-weight:700;
     text-decoration:none;border:1.5px solid var(--line);color:var(--ink-soft);background:white;transition:.15s;
@@ -500,13 +515,16 @@ const TEAMS = {
   fss: { key:'fss', label:'FSS팀', hex:'#D6336C', members:[
     {name:'손흥민', role:'팀장'}, {name:'김용한', role:'T4'}, {name:'신관호', role:'T3'},
   ]},
+  fsom: { key:'fsom', label:'FSOM팀', hex:'#0E7C86', members:[
+    {name:'최근상', role:'T4'}, {name:'이원선', role:'T3'}, {name:'김근태', role:'T3'},
+  ]},
 };
-const TEAM_ORDER = ['west','east','central','south','fss'];
+const TEAM_ORDER = ['west','east','central','south','fss','fsom'];
 TEAMS.all = {
   key:'all', label:'전체', hex:'#16233F',
   members: TEAM_ORDER.reduce((acc, tk)=> acc.concat(TEAMS[tk].members.map(m=>Object.assign({}, m, {team:tk}))), [])
 };
-const TAB_ORDER = ['all','west','east','central','south','fss'];
+const TAB_ORDER = ['all','west','east','central','south','fss','fsom'];
 
 function rebuildAllTeam(){
   TEAMS.all.members = TEAM_ORDER.reduce((acc, tk)=> acc.concat(TEAMS[tk].members.map(m=>Object.assign({}, m, {team:tk}))), []);
@@ -672,7 +690,7 @@ const SEED_SCHEDULE_FY2026Q3_V3 = {"west":{"2026-06-29":{"이인구":{"night":"�
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 19; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
+const BUILD_VERSION = 21; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -764,7 +782,7 @@ const HOLIDAYS_KR = {
 // ============================================================
 // 상태
 // ============================================================
-let scheduleData = { west:{}, east:{}, central:{}, south:{}, fss:{}, memberOrder:{}, teamRoster:{} }; // scheduleData[team][date][name] = entry
+let scheduleData = { west:{}, east:{}, central:{}, south:{}, fss:{}, fsom:{}, memberOrder:{}, teamRoster:{} }; // scheduleData[team][date][name] = entry
 
 // 특이사항 — notesData[team][id] = {date, inst, device, author, text, by, ts}
 // 일정(entry)과 완전히 다른 경로(/work-schedule/notes)에 저장하므로, 한쪽을 고쳐도
@@ -2908,6 +2926,6 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
 </script>
 <!-- 주간계획서/보고서 내보내기 애드온 (FSS팀 베타) — weeklyreport.js는 저장소에 이미 있었으나
      이 연결 태그가 빠져 있어서 실제로는 한 번도 로드된 적이 없었습니다. -->
-<script src="weeklyreport.js?v=19"></script>
+<script src="weeklyreport.js?v=21"></script>
 </body>
 </html>
