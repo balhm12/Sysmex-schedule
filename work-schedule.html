@@ -48,12 +48,14 @@
   .stat .lbl{font-size:10px;color:#AFC3EF;}
 
   /* team tabs */
-  .team-tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:18px;}
+  /* 팀이 늘어도 한 줄에 다 들어가게. 칸 수를 고정(grid repeat(6))하면 팀이 추가될 때마다
+     줄이 넘어가므로, 남는 폭을 똑같이 나눠 갖는 방식으로 둔다. */
+  .team-tabs{display:flex;gap:8px;margin-top:18px;}
   .team-tab{
-    min-width:0;background:white;border:1.5px solid var(--line);border-radius:12px;
-    padding:10px 14px;cursor:pointer;transition:.15s;text-align:left;
+    flex:1 1 0;min-width:0;background:white;border:1.5px solid var(--line);border-radius:12px;
+    padding:10px 12px;cursor:pointer;transition:.15s;text-align:left;
   }
-  .team-tab .tt-name{font-size:13.5px;font-weight:800;color:var(--ink);}
+  .team-tab .tt-name{font-size:13.5px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .team-tab .tt-count{font-size:10.5px;color:var(--ink-soft);margin-top:1px;}
   .team-tab.active{border-color:var(--tc);box-shadow:0 0 0 2px var(--tc) inset;}
   .team-tab.active .tt-name{color:var(--tc);}
@@ -325,6 +327,11 @@
     .app{padding:16px 12px 40px;}
     .header{padding:12px 16px;}
     .right-controls{width:100%;}
+    /* 한 줄에 7개가 들어가면 칸이 좁아져 'FS CENTRAL' 같은 긴 이름이 잘린다 — 글자를 줄여 맞춘다 */
+    .team-tabs{gap:6px;}
+    .team-tab{padding:9px 8px;}
+    .team-tab .tt-name{font-size:11.5px;letter-spacing:-0.3px;}
+    .team-tab .tt-count{font-size:9.5px;}
   }
   @media(max-width:600px){
     .app{padding:6px 6px 24px;}
@@ -332,7 +339,10 @@
     .header .eyebrow{font-size:8.5px;margin-bottom:0;}
     .header h1{font-size:15px;}
     .header-stats{gap:10px;width:100%;justify-content:space-between;margin-top:4px;}
-    .team-tabs{margin-top:8px;gap:6px;grid-template-columns:repeat(3,1fr);}
+    /* 휴대폰에서는 한 줄에 다 넣으면 글자가 안 보이므로 3개씩 줄바꿈 */
+    .team-tabs{margin-top:8px;gap:6px;flex-wrap:wrap;}
+    /* 3개씩 줄바꿈. 늘어나지 않게 고정해야 마지막 줄에 혼자 남은 팀이 가로로 늘어지지 않는다. */
+    .team-tabs .team-tab{flex:0 0 calc((100% - 12px) / 3);}
     .night-band{margin-top:6px;font-size:11.5px;padding:6px 10px;line-height:1.4;}
     .controls{margin-top:8px;gap:6px;}
     .month-nav{width:100%;justify-content:space-between;padding:5px 8px;}
@@ -690,7 +700,7 @@ const SEED_SCHEDULE_FY2026Q3_V3 = {"west":{"2026-06-29":{"이인구":{"night":"�
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 21; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
+const BUILD_VERSION = 22; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -2926,6 +2936,6 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
 </script>
 <!-- 주간계획서/보고서 내보내기 애드온 (FSS팀 베타) — weeklyreport.js는 저장소에 이미 있었으나
      이 연결 태그가 빠져 있어서 실제로는 한 번도 로드된 적이 없었습니다. -->
-<script src="weeklyreport.js?v=21"></script>
+<script src="weeklyreport.js?v=22"></script>
 </body>
 </html>
