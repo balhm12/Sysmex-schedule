@@ -310,6 +310,8 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 #prodBar .chk{display:flex;gap:6px;align-items:center;font-size:13px;padding-bottom:7px;cursor:pointer}
 #prodBar .info{margin-left:auto;font-size:12px;color:var(--muted);padding-bottom:6px;text-align:right}
 @media (max-width:900px){#prodBar .info{margin-left:0;text-align:left}#prodBar{position:static}}
+#prod .more-btn{display:block;width:100%;margin-top:6px;padding:8px;border:1px solid var(--border-soft);border-radius:8px;background:var(--surface-2);color:var(--accent);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+#prod .more-btn:hover{background:var(--accent-soft)}
 #prod .gtag{display:inline-block;font-size:10.5px;font-weight:700;padding:0 5px;border-radius:3px;margin-left:5px;vertical-align:1px;background:var(--surface-2);color:var(--text-secondary)}
 #prod .gtag.lead{background:var(--tint);color:var(--primary)}
 #prod .gtag.new{background:var(--warning-soft);color:var(--warning)}
@@ -554,7 +556,7 @@ function buildProdData(RAW, ROSTER, opt){
   function nest(){ return {}; }
   var P = {}; // 사람별 누적
   function per(name){
-    return P[name] || (P[name] = {group:{}, mttr:{}, kase:{}, month:{}, acct:new Map(), score:{}, scoreG:{}});
+    return P[name] || (P[name] = {group:{}, mttr:{}, kase:{}, month:{}, acct:new Map(), acctP:{}, score:{}, scoreG:{}});
   }
   function inc(o, k, v){ o[k] = (o[k]||0) + (v==null?1:v); }
   function sub(o, k){ return o[k] || (o[k] = {}); }
@@ -582,6 +584,7 @@ function buildProdData(RAW, ROSTER, opt){
     if (isOwner && r.acct && (b === '고장수리' || b === 'PM')) p.acct.set(r.acct, (p.acct.get(r.acct)||0)+1);
     slots.forEach(function(period){
     inc(p.score, period, w);
+    if (r.acct) inc(sub(p.acctP, period), r.acct);   // 자주 방문한 병원: 모든 약속/활동(취소 제외), 기간별, 동행 포함
     if (g){
       inc(sub(p.scoreG, period), g, w);
       inc(sub(p.group, period), g);
@@ -644,7 +647,7 @@ function buildProdData(RAW, ROSTER, opt){
     if (Math.abs(r - 0.5) < 1e-9) return (f % 2 === 0 ? f : f + 1)/k; return Math.round(n)/k; }
   function r2(x){ return typeof x === 'number' ? rnd(x, 2) : x; }
   function personEntry(name, team){
-    var p = P[name] || {group:{}, mttr:{}, kase:{}, month:{}, acct:new Map(), score:{}, scoreG:{}};
+    var p = P[name] || {group:{}, mttr:{}, kase:{}, month:{}, acct:new Map(), acctP:{}, score:{}, scoreG:{}};
     var e = {team:team, group_case:{}, mttr:{}, case:{}, month:{}, total_case:{}, score:{}, score_group:{}};
     PERIODS.forEach(function(pr){
       var gc = p.group[pr] || {}, mt = p.mttr[pr] || {}, cs = p.kase[pr] || {}, sg = p.scoreG[pr] || {};
@@ -658,9 +661,10 @@ function buildProdData(RAW, ROSTER, opt){
       e.month[pr] = Object.assign({}, p.month[pr] || {});
       e.score[pr] = r2(p.score[pr] || 0);
     });
-    var acc = []; p.acct.forEach(function(v,k){ acc.push([k,v]); });
-    acc = acc.map(function(x,i){ return [x[0],x[1],i]; }).sort(function(a,b){ return b[1]-a[1] || a[2]-b[2]; }).slice(0,6).map(function(x){ return [x[0],x[1]]; });
-    e.top_accounts = acc;
+    e.accounts = {};
+    PERIODS.forEach(function(pr){ var o = p.acctP[pr] || {};
+      e.accounts[pr] = Object.keys(o).map(function(k){ return [k, o[k]]; }).sort(function(a,b){ return b[1]-a[1] || (a[0]<b[0]?-1:1); }); });
+    e.top_accounts = e.accounts['이번 년도'].slice(0,6);
     return e;
   }
   var person = {};
@@ -1400,12 +1404,22 @@ function renderPerson(){
     '</div>';
   html2 += '<div class="block">'+chartCard('p-trend-chart', '월별 처리 건수 추이', ''+(DATA.trend_names?DATA.trend_names.join(' vs '):'이번 년도 vs 직전 년도')+'')+'</div>';
 
-  html2 += '<div class="block"><div class="block-head"><h2>자주 방문한 병원 (Top 6)</h2><span class="hint">고장수리·PM 건수 기준 · 누적</span></div>'+
-    '<div class="card table-scroll" style="padding:6px;"><table class="data-table"><thead><tr><th>병원명</th><th class="num">방문 건수</th></tr></thead><tbody>'+
-    pe.top_accounts.map(function(a,i){ return '<tr><td><span class="rank-badge" style="margin-right:8px;">'+(i+1)+'</span>'+esc(a[0])+'</td><td class="num">'+fmt(a[1])+'</td></tr>'; }).join('')+
-    '</tbody></table></div></div>';
+  /* 자주 방문한 병원 — 보고 기간 기준, 6곳 먼저 보이고 '더보기'로 전체 */
+  var accAll = (pe.accounts && pe.accounts[period]) || [], accPrev = {};
+  ((pe.accounts && pe.accounts['직전 년도']) || []).forEach(function(a){ accPrev[a[0]] = a[1]; });
+  var accShow = state.accMore ? accAll : accAll.slice(0, 6);
+  html2 += '<div class="block"><div class="block-head"><h2>자주 방문한 병원 <span style="font-weight:500;font-size:13px;color:var(--text-muted)">'+accAll.length+'곳</span></h2><span class="hint">모든 약속/활동 건수 기준 (취소 제외·동행 포함) · '+PL(period)+'</span></div>'+
+    '<div class="card table-scroll" style="padding:6px;">'+(accAll.length ?
+    '<table class="data-table"><thead><tr><th>병원명</th><th class="num">방문 건수</th><th class="num">'+esc(DATA.cmp_short||'비교 기간')+'</th></tr></thead><tbody>'+
+    accShow.map(function(a,i){ var pv = accPrev[a[0]] || 0, d = a[1]-pv;
+      return '<tr><td><span class="rank-badge" style="margin-right:8px;">'+(i+1)+'</span>'+esc(a[0])+'</td><td class="num">'+fmt(a[1])+'</td><td class="num" style="color:var(--text-muted)">'+(d===0?'–':(d>0?'+':'')+fmt(d))+'</td></tr>'; }).join('')+
+    '</tbody></table>'+
+    (accAll.length > 6 ? '<button type="button" id="accMoreBtn" class="more-btn">'+(state.accMore ? '접기' : '더보기 ('+(accAll.length-6)+'곳 더)')+'</button>' : '')
+    : '<div class="empty-note">이 기간에 방문 기록이 없습니다.</div>')+'</div></div>';
 
   detail.innerHTML = html2;
+  var amb = document.getElementById('accMoreBtn');
+  if (amb) amb.addEventListener('click', function(){ state.accMore = !state.accMore; var y = window.scrollY; renderPerson(); window.scrollTo(0, y); });
 
   var scoreByGroup = pe.score_group[period] || {};
   var scoreVals = DATA.groups.map(function(g){ return scoreByGroup[g] || 0; });
