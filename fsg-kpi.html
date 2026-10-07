@@ -1744,6 +1744,15 @@ function render(){
       plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}}},
       scales:{x:axis({grid:{display:false}}),y:axis({beginAtZero:true}),y2:axis({position:'right',grid:{display:false},min:0,max:100,ticks:{color:css('--text'),callback:v=>v+'%'}})}}});
   const provIdx=tm.map(m=>isProvisional([m]));
+  /* 선이 그래프 가운데쯤 오도록 축 범위를 데이터에 맞춘다: 값(목표 포함)이 높이의 [a,b] 구간에 들어가게.
+     FTFR은 가운데 위(45~75%), MTTR은 가운데 아래(25~55%)에 두어 두 선이 덜 겹치게 한다. */
+  const band=(vals,target,a,b,minSpan,step)=>{ const v=vals.filter(x=>x!=null).concat([target]);
+    let lo=Math.min(...v), hi=Math.max(...v); if(hi-lo<minSpan){const c=(lo+hi)/2; lo=c-minSpan/2; hi=c+minSpan/2;}
+    const tot=(hi-lo)/(b-a); let mn=lo-a*tot, mx=mn+tot;
+    const raw=(mx-mn)/6, mag=Math.pow(10,Math.floor(Math.log10(raw))), st=Math.max(step,[1,2,5,10].map(k=>k*mag).find(x=>x>=raw));   // 눈금 간격(1·2·5 단위)
+    mn=Math.max(0,Math.floor(mn/st)*st); mx=Math.ceil(mx/st)*st; return {min:mn,max:mx,step:st}; };
+  const fR=band(ts.map(s=>s.hasData&&s.ftfr!=null?s.ftfr:null),TARGET_FTFR,.45,.75,6,5);
+  const mR=band(ts.map(s=>s.hasData&&s.mttr!=null?s.mttr:null),TARGET_MTTR,.25,.55,20,10);
   upsert('cQual',{type:'line',data:{labels:lab,datasets:[
     {label:'FTFR(%)',data:ts.map(s=>s.hasData&&s.ftfr!=null?+s.ftfr.toFixed(1):null),borderColor:'#005BAC',backgroundColor:'#005BAC',pointRadius:ts.map((s,i)=>provIdx[i]?5:3),pointStyle:ts.map((s,i)=>provIdx[i]?'rectRot':'circle'),tension:.25,yAxisID:'y',
       segment:{borderDash:c=>provIdx[c.p1DataIndex]?[4,4]:undefined}},
@@ -1752,8 +1761,8 @@ function render(){
     {label:`MTTR 목표 ${TARGET_MTTR}분`,data:tm.map(()=>TARGET_MTTR),borderColor:'#00B8EE',borderDash:[6,4],borderWidth:1,pointRadius:0,yAxisID:'y2'}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}},tooltip:{callbacks:{afterTitle:it=>provIdx[it[0].dataIndex]?'FTFR 잠정치':''}}},
-      scales:{x:axis({grid:{display:false}}),y:axis({min:40,max:100,ticks:{color:css('--text'),callback:v=>v+'%'},title:{display:true,text:'FTFR',color:css('--muted')}}),
-        y2:axis({position:'right',grid:{display:false},beginAtZero:true,title:{display:true,text:'MTTR(분)',color:css('--muted')}})}}});
+      scales:{x:axis({grid:{display:false}}),y:axis({min:fR.min,max:fR.max,ticks:{stepSize:fR.step,color:css('--text'),callback:v=>v>100?'':v+'%'},title:{display:true,text:'FTFR',color:css('--muted')}}),
+        y2:axis({position:'right',grid:{display:false},min:mR.min,max:mR.max,ticks:{stepSize:mR.step,color:css('--text')},title:{display:true,text:'MTTR(분)',color:css('--muted')}})}}});
 
   renderOrg(p, team);
   /* 시리즈 */
