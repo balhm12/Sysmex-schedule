@@ -280,7 +280,8 @@
 
   // ============================================================
   // 워크북 빌더
-  //  opts: { ExcelJS, teamLabel, members:[{name,nickname,role}], sunday, mode:'report'|'plan', memberRows, note }
+  //  opts: { ExcelJS, teamLabel, members:[{name,nickname,role}], sunday, mode:'report'|'plan', memberRows,
+  //          note, notes:[{date,inst,device,author,text}] }  ← notes가 오면 [특이 사항]을 표로 채운다
   // ============================================================
   async function buildWorkbook(opts) {
     var ExcelJS = opts.ExcelJS;
@@ -361,7 +362,7 @@
     function defName(it) { return it.replace(/[^0-9A-Za-z가-힣_]/g, '_'); } // 혈액_소 등 그대로
 
     // ===== 주간보고 요약 (report 모드) =====
-    if (!isPlan) buildSummary(wb, teamLabel, start, end, members, memberRows, opts.note, headFill, thin);
+    if (!isPlan) buildSummary(wb, teamLabel, start, end, members, memberRows, opts.note, headFill, thin, opts.notes, opts.notesLabel);
 
     // ===== 전체일정 (plan 모드) =====
     if (isPlan) buildOverview(wb, teamLabel, members, dates, memberRows, headFill, thin, outerBorder, dateCell, isRedDay);
@@ -376,7 +377,7 @@
   }
 
   // ---- 주간보고 요약 시트 (지난주 보고) ----
-  function buildSummary(wb, teamLabel, start, end, members, memberRows, note, headFill, thin) {
+  function buildSummary(wb, teamLabel, start, end, members, memberRows, note, headFill, thin, notes0, notesLabel) {
     var ws = wb.addWorksheet('주간보고');
     ws.properties.tabColor = { argb: 'FF003087' };
     var s = summarize(memberRows, members);
@@ -409,9 +410,45 @@
     var totOt = 0; members.forEach(function (m) { totOt += s.otByMember[m.name] || 0; });
     ws.getCell('A19').value = '연장근로 시간 (1주)'; ws.getCell('A19').font = { bold: true }; ws.getCell('B19').value = minutesToOt(totOt); ws.getCell('B19').font = { bold: true };
     members.forEach(function (m, i) { var r = 20 + i; ws.getCell('A' + r).value = m.nickname ? (m.name + ' (' + m.nickname + ')') : m.name; ws.getCell('B' + r).value = minutesToOt(s.otByMember[m.name] || 0); });
-    var nr = 20 + members.length + 1; ws.getCell('A' + nr).value = '특이 사항'; ws.getCell('A' + nr).font = { bold: true }; if (note) ws.getCell('A' + (nr + 1)).value = note;
+    // 보고 기간이 여러 주면 특이사항이 어느 주 것인지 라벨로 밝힌다.
+    var nr = 20 + members.length + 1;
+    ws.getCell('A' + nr).value = '특이 사항' + (notesLabel ? '  (' + notesLabel + ')' : '');
+    ws.getCell('A' + nr).font = { bold: true };
     [22, 12, 4, 22, 12].forEach(function (w, i) { ws.getColumn(i + 1).width = w; });
     thin(ws, 5, 1, 17, 5);
+
+    // 근무일정표 하단 [특이사항]에 등록된 항목을 표로 채운다.
+    // 한 건 = 두 줄(① 날짜·기관·장비·작성자 ② 내용)로 적는다. 내용까지 한 줄에 넣으려면
+    // 열을 더 붙여야 하는데, 그러면 시트가 인쇄 폭(A~E)을 넘어가 출력 때 내용이 잘린다.
+    // 기존 호환: notes가 없고 note(문자열)만 오면 예전처럼 한 칸에 그대로 쓴다.
+    var notes = (notes0 && notes0.length) ? notes0 : null;
+    if (notes) {
+      var hr = nr + 1;
+      ws.getCell('A' + hr).value = '날짜';
+      ws.mergeCells('B' + hr + ':C' + hr); ws.getCell('B' + hr).value = '기관';
+      ws.getCell('D' + hr).value = '장비';
+      ws.getCell('E' + hr).value = '작성자';
+      ['A', 'B', 'D', 'E'].forEach(function (col) { headFill(ws.getCell(col + hr)); });
+      notes.forEach(function (n, i) {
+        var r = hr + 1 + i * 2;
+        ws.getCell('A' + r).value = n.date || '';
+        ws.getCell('A' + r).alignment = { horizontal: 'center' };
+        ws.mergeCells('B' + r + ':C' + r); ws.getCell('B' + r).value = n.inst || '';
+        ws.getCell('D' + r).value = n.device || '';
+        ws.getCell('E' + r).value = n.author || '';
+        ws.getCell('E' + r).alignment = { horizontal: 'center' };
+        ['A', 'B', 'D', 'E'].forEach(function (col) { ws.getCell(col + r).font = { bold: true, size: 10 }; });
+        var tr = r + 1, txt = String(n.text || '');
+        ws.mergeCells('A' + tr + ':E' + tr);
+        ws.getCell('A' + tr).value = txt;
+        ws.getCell('A' + tr).alignment = { vertical: 'top', wrapText: true };
+        // 병합 셀은 엑셀이 높이를 자동으로 늘려주지 않아, 글자 수로 줄 수를 어림잡아 지정한다.
+        ws.getRow(tr).height = Math.min(90, Math.max(16, Math.ceil(txt.length / 42) * 15));
+      });
+      thin(ws, hr, 1, hr + notes.length * 2, 5);
+    } else if (note) {
+      ws.getCell('A' + (nr + 1)).value = note;
+    }
   }
 
   // ---- 전체일정 (다음주 계획) ----
@@ -666,6 +703,20 @@
     return out;
   }
 
+  // 근무일정표가 메모리에 들고 있는 특이사항을 그대로 읽어온다 (읽기 전용 — 근무표는 바뀌지 않음).
+  // 함수가 없는 환경(코어 단독 테스트 등)에서는 빈 배열을 반환해 조용히 비켜난다.
+  // 보고 기간이 4주·13주라도 특이사항은 '선택한 그 주(월~일)' 것만 넣는다.
+  // 주간보고의 [특이 사항]은 그 주에 무슨 일이 있었는지 적는 칸이라, 몇 주치를
+  // 한꺼번에 쌓으면 어느 주 이야기인지 알 수 없어진다.
+  function collectNotes(teamKey, weekMonday) {
+    if (typeof getScheduleNotes === 'undefined') return [];
+    try {
+      return getScheduleNotes([teamKey], weekMonday, WR.addDays(weekMonday, 6)).map(function (n) {
+        return { date: n.date, inst: n.inst, device: n.device, author: n.author, text: n.text };
+      });
+    } catch (e) { return []; }
+  }
+
   async function exportWorkbook(teamKey, sunday, mode, weeks) {
     if (typeof ExcelJS === 'undefined') { alert('엑셀 모듈(ExcelJS)을 불러오지 못했습니다.'); return; }
     // 기준 주차(sunday)는 "지금 주"를 가리킨다. 거기서
@@ -695,6 +746,10 @@
       // 근무표 공휴일 달력을 그대로 넘겨, 그날 일정이 없는 팀원 시트에서도 날짜가 붉게 표시되게 한다
       holidays: (typeof HOLIDAYS_KR !== 'undefined') ? HOLIDAYS_KR : null,
       note: '',
+      // 근무일정표 하단 [특이사항] 중, 이 팀의 '선택한 그 주' 것만.
+      // (계획 모드는 '앞으로 할 일'이라 특이사항 개념이 없어 비운다)
+      notes: (mode === 'plan') ? [] : collectNotes(teamKey, sunday),
+      notesLabel: (mode === 'plan' || weeks <= 1) ? '' : (sunday + ' ~ ' + WR.addDays(sunday, 6)),
     });
     var buffer = await wb.xlsx.writeBuffer();
     var blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
