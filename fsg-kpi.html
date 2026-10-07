@@ -473,7 +473,7 @@ function buildProdData(RAW, ROSTER, opt){
   var TEAM_SHORT = {}; TEAMS.forEach(function(t){ TEAM_SHORT[t] = t.replace(/^FS\s*/,''); });
   var EXCLUDED = new Set(opt.excluded || ['김민결']);
   var GROUPS = ['CBC','COA','HISCL','Urine','A1c'];   // RF-500 그룹은 2026-10-07 제외(사용자 요청)
-  var GROUP_LABEL = {'CBC':'CBC','COA':'COA','HISCL':'Hiscl','Urine':'Urine','A1c':'A1c'};
+  var GROUP_LABEL = {'CBC':'CBC','COA':'COA','HISCL':'Immuno','Urine':'Urine','A1c':'A1c'};
   var PERIODS = ['이번 년도','직전 년도','전체 누적'];
   var BUCKETS = ['고장수리','PM','설치이전','Cal평가','기타'];
   var BUCKET_LABEL = {'고장수리':'고장 수리','PM':'PM','설치이전':'설치·이전','Cal평가':'Cal·평가','기타':'기타'};
