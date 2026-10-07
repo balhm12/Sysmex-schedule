@@ -1563,11 +1563,20 @@ function ymd(ms){const d=new Date(ms);return d.getUTCFullYear()+'-'+String(d.get
 function monthEnd(mk){const [y,m]=mk.split('-').map(Number);return Date.UTC(y,m,1)-1;}
 function shiftMonth(mk,n){let [y,m]=mk.split('-').map(Number);m+=n;while(m<1){m+=12;y--;}while(m>12){m-=12;y++;}return y+'-'+String(m).padStart(2,'0');}
 
+/* CRM에는 앞으로 잡힌 약속(예정)도 들어 있다 → CRM 추출일(파일명) 끝까지만 쓴다.
+   파일명에서 날짜를 못 찾으면 올린 날, 그것도 없으면 오늘(한국 시간). t는 벽시계 시각을 UTC ms로 둔 값 */
+function dataCutoff(){
+  let m=String(SRC.act||'').match(/(20\d\d)[_\-.](\d{1,2})[_\-.](\d{1,2})/);
+  if(!m&&SRC.at) m=String(SRC.at).match(/(20\d\d)-(\d\d)-(\d\d)/);
+  if(m) return {t:Date.UTC(+m[1],+m[2]-1,+m[3]+1), d:`${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`};
+  const k=new Date(Date.now()+9*3600000); return {t:Date.UTC(k.getUTCFullYear(),k.getUTCMonth(),k.getUTCDate()+1), d:k.toISOString().slice(0,10)};
+}
 function prepare(){
+  const CUT=dataCutoff(); const RAWC=RAW.filter(r=>r.t==null||r.t<CUT.t);
   const assetAcct = SERIAL? new Set(SERIAL.filter(s=>s.state==='사용').map(s=>s.acct)) : null;
-  const rows=[], excl={internal:0, noasset:0, notime:0}; let maxT=-Infinity, minT=Infinity;
+  const rows=[], excl={internal:0, noasset:0, notime:0, future:RAW.length-RAWC.length, cut:CUT.d}; let maxT=-Infinity, minT=Infinity;
   const errDisp={};
-  for(const r of RAW){
+  for(const r of RAWC){
     if(r.t==null){excl.notime++;continue;}
     const internal=INTERNAL.has(r.acct); if(internal) excl.internal++;   // v44: 집계에는 포함, 기관 표에서만 제외
     const model=modelOf(r.prod,r.subj), rm=rosterMap[r.own];
@@ -1589,7 +1598,7 @@ function prepare(){
   const ed={}; for(const k in errDisp){ed[k]=Object.entries(errDisp[k]).sort((a,b)=>b[1]-a[1])[0][0];}
   ed['others']='Others'; ed['미기재']='미기재';
   const months=[...new Set(rows.map(o=>o.mk))].sort();
-  D={rows, excl, maxT, minT, months, errDisp:ed, rawN:RAW.length,
+  D={rows, raw:RAWC, excl, maxT, minT, months, errDisp:ed, rawN:RAW.length,
      unmapped:rows.filter(o=>!o.team&&o.ok).length, unmappedNames:[...new Set(rows.filter(o=>!o.team).map(o=>o.own))].length};
 }
 
@@ -1891,7 +1900,7 @@ function renderDQ(p){
   const rep=D.rows.filter(o=>o.ok&&o.purp==='고장 수리'&&ms.has(o.mk)); const unk=rep.filter(o=>o.ek==='미기재'||o.ek==='others').length;
   const noSn=rep.filter(o=>!o.sn).length;
   if(D.rawN>=40000) L.push(`<li><span class="tag b">확인</span>CRM 내보내기 상한(40,000행) 도달 — ${ymd(D.minT)} 이전 기록이 잘렸을 수 있음</li>`);
-  L.push(`<li><span class="tag i">범위</span>데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)}</li>`);
+  L.push(`<li><span class="tag i">범위</span>데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)} · CRM 추출일(${D.excl.cut}) 이후로 잡힌 예정 약속 ${fmt(D.excl.future)}건은 두 탭 모두 제외</li>`);
   L.push(`<li><span class="tag i">기준</span>보고서 데이터 시트(v44)와 같은 계산식 · 내부 기관 ${fmt(D.excl.internal)}건은 기관별 현황에서만 제외</li>`);
   if(rep.length) L.push(`<li><span class="tag w">주의</span>Error 1 미기재·Others ${(unk/rep.length*100).toFixed(0)}% · S/N 없는 고장 수리 ${fmt(noSn)}건(FTFR·재방문율에서 제외)</li>`);
   L.push(`<li><span class="tag w">주의</span>로스터 밖 담당자 ${fmt(D.unmappedNames)}명 · ${fmt(D.unmapped)}건은 팀별 보기에서 제외(전체에는 포함)</li>`);
@@ -2109,7 +2118,7 @@ async function initShare(){
 /* ===== 시작 ===== */
 function refresh(){
   prepare(); buildPeriods();
-  $('sub').textContent=`데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)}, 원본 ${SRC.act}`;
+  $('sub').textContent=`데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)} (CRM 추출일 ${D.excl.cut}까지${D.excl.future?`, 이후 예정 ${fmt(D.excl.future)}건 제외`:''}), 원본 ${SRC.act}`;
   $('info').innerHTML=`활동 ${fmt(D.rawN)}건${SERIAL?`, 자산대장 '사용' ${fmt(SERIAL.length)}대`:''}<br>최종 업데이트 ${SRC.at||'-'}`;
   render();
   buildProdPeriods(); PROD_DIRTY=true; if(VIEW==='prod'&&!$('prod').hidden) renderProd();
@@ -2167,7 +2176,7 @@ function renderProd(){
   if(!RAW||!D) return;
   if(PROD_DIRTY||!PROD){
     const S=prodSelection();
-    PROD=buildProdData(RAW, ROSTER, {teams:TEAMS, gradeHist:GRADE_HIST, sel:S.sel, cmp:S.cmp, trend:S.trend,
+    PROD=buildProdData(D.raw, ROSTER, {teams:TEAMS, gradeHist:GRADE_HIST, sel:S.sel, cmp:S.cmp, trend:S.trend,
       labels:{'이번 년도':S.label,'직전 년도':S.cmpLabel,'전체 누적':'전체 기간'}});
     Object.assign(PROD,{no_att:!RAW.some(r=>r.att), raw_n:RAW.length, src:SRC.act, cmp_short:S.short, provisional:S.prov,
       trend_labels:S.trend.map(m=>m.slice(2,4)+'.'+m.slice(5)), trend_names:['최근 12개월','전년 동월'],
