@@ -672,7 +672,7 @@ const SEED_SCHEDULE_FY2026Q3_V3 = {"west":{"2026-06-29":{"이인구":{"night":"�
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 18; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
+const BUILD_VERSION = 19; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -2908,6 +2908,6 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
 </script>
 <!-- 주간계획서/보고서 내보내기 애드온 (FSS팀 베타) — weeklyreport.js는 저장소에 이미 있었으나
      이 연결 태그가 빠져 있어서 실제로는 한 번도 로드된 적이 없었습니다. -->
-<script src="weeklyreport.js?v=18"></script>
+<script src="weeklyreport.js?v=19"></script>
 </body>
 </html>

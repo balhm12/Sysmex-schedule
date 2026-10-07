@@ -428,24 +428,30 @@
       ws.mergeCells('B' + hr + ':C' + hr); ws.getCell('B' + hr).value = '기관';
       ws.getCell('D' + hr).value = '장비';
       ws.getCell('E' + hr).value = '작성자';
-      ['A', 'B', 'D', 'E'].forEach(function (col) { headFill(ws.getCell(col + hr)); });
+      ws.getCell('F' + hr).value = '특이사항';
+      ['A', 'B', 'D', 'E', 'F'].forEach(function (col) { headFill(ws.getCell(col + hr)); });
       notes.forEach(function (n, i) {
-        var r = hr + 1 + i * 2;
+        var r = hr + 1 + i;
         ws.getCell('A' + r).value = n.date || '';
-        ws.getCell('A' + r).alignment = { horizontal: 'center' };
+        ws.getCell('A' + r).alignment = { horizontal: 'center', vertical: 'top' };
         ws.mergeCells('B' + r + ':C' + r); ws.getCell('B' + r).value = n.inst || '';
+        ws.getCell('B' + r).alignment = { vertical: 'top', wrapText: true };
         ws.getCell('D' + r).value = n.device || '';
+        ws.getCell('D' + r).alignment = { vertical: 'top', wrapText: true };
         ws.getCell('E' + r).value = n.author || '';
-        ws.getCell('E' + r).alignment = { horizontal: 'center' };
-        ['A', 'B', 'D', 'E'].forEach(function (col) { ws.getCell(col + r).font = { bold: true, size: 10 }; });
-        var tr = r + 1, txt = String(n.text || '');
-        ws.mergeCells('A' + tr + ':E' + tr);
-        ws.getCell('A' + tr).value = txt;
-        ws.getCell('A' + tr).alignment = { vertical: 'top', wrapText: true };
-        // 병합 셀은 엑셀이 높이를 자동으로 늘려주지 않아, 글자 수로 줄 수를 어림잡아 지정한다.
-        ws.getRow(tr).height = Math.min(90, Math.max(16, Math.ceil(txt.length / 42) * 15));
+        ws.getCell('E' + r).alignment = { horizontal: 'center', vertical: 'top' };
+        var txt = String(n.text || '');
+        ws.getCell('F' + r).value = txt;
+        ws.getCell('F' + r).alignment = { vertical: 'top', wrapText: true };
+        // 병합/줄바꿈 셀은 엑셀이 높이를 자동으로 늘려주지 않아, 글자 수로 줄 수를 어림잡아 지정한다.
+        // F열 너비 48 ≈ 한글 24자 정도가 한 줄.
+        ws.getRow(r).height = Math.min(90, Math.max(16, Math.ceil(txt.length / 24) * 15));
       });
-      thin(ws, hr, 1, hr + notes.length * 2, 5);
+      ws.getColumn(6).width = 48;
+      // 특이사항 열이 붙으면 시트가 기본 인쇄 폭(A~E)을 넘는다. 한 페이지 너비에 맞춰
+      // 자동 축소되게 해서, 한 줄로 적어도 출력 때 내용이 잘리지 않게 한다.
+      ws.pageSetup = { fitToPage: true, fitToWidth: 1, fitToHeight: 0, orientation: 'portrait' };
+      thin(ws, hr, 1, hr + notes.length, 6);
     } else if (note) {
       ws.getCell('A' + (nr + 1)).value = note;
     }
