@@ -463,6 +463,79 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 <main class="wrap" id="prod" role="tabpanel" aria-labelledby="vtProd" hidden></main>
 
 <script>
+/* ===== 두 탭 공통 KPI 기준 (2026-10-07 통일) =====
+   서비스 운영 KPI 탭과 부서원 KPI 탭, 월간보고 Apps Script(v45)가 모두 같은 규칙을 쓴다.
+   · 대상 행: 취소 제외, 온라인 정기점검 제외, 시작 시각 있는 행 (추출일 이후 예정은 호출 전에 잘라 둔다)
+   · 목적: '약속/활동 목적', 비어 있으면 주제의 4번째 칸
+   · 인정 인원(credits): 담당자 + 필수 참석자 중 로스터 인원(중복 1회) — 건수·MTTR·팀별 숫자는 사람 수만큼
+   · 재방문율·FTFR: 거래처 단위, 종료 시각 기준 직전 14일 같은 S/N
+       재방문 = 고장 수리 직전 14일에 고장 수리·PM / 분모 = 고장 수리 + PM
+       FTFR 실패 = 고장 수리 직전 14일에 같은 Error 1 고장 수리 / 분모 = 고장 수리
+     거래처별 비율(소수 1자리)을 구해, 전체 기간 방문 3건 이상 거래처의 평균. 거래처의 팀 = 가장 많이 방문한 담당자의 팀 */
+function kpiCore(RAW, ROSTER, opt){
+  opt = opt || {};
+  var TEAMS = opt.teams || ['FS WEST','FS EAST','FS CENTRAL','FS SOUTH'];
+  var EXCL = new Set(opt.excluded || ['김민결']);
+  var memberTeam = {};
+  ROSTER.forEach(function(r){ if (!EXCL.has(r[0]) && TEAMS.indexOf(r[1]) >= 0 && !memberTeam[r[0]]) memberTeam[r[0]] = r[1]; });
+  function purposeOf(r){ if (r.purp) return r.purp; if (!r.subj) return null; var p = r.subj.split('/');
+    if (p.length >= 4) return p.slice(3).join('/'); if (p.length === 2) return p[1]; return null; }
+  function mkOf(ms){ var d = new Date(ms); return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'); }
+  var rows = [];
+  RAW.forEach(function(r){
+    if (r.t == null || r.st === '취소됨') return;
+    var purpose = purposeOf(r); if (purpose === '온라인 정기점검') return;
+    var cr = [], seen = {};
+    [r.own].concat(r.att ? String(r.att).split(/[;,]/) : []).forEach(function(x){ x = (x||'').trim();
+      if (x && !seen[x] && memberTeam[x]){ seen[x] = 1; cr.push(x); } });
+    rows.push({r:r, t:r.t, e:r.e, mk:mkOf(r.t), purpose:purpose, credits:cr, acct:r.acct, sn:r.sn, own:r.own,
+      err:(r.err||'').trim().toLowerCase(), dur:(r.e != null && (r.e-r.t)/60000 >= 0 && (r.e-r.t)/60000 <= 500) ? (r.e-r.t)/60000 : null,
+      AD:null, AE:null, inRec:false});
+  });
+  /* 재방문·FTFR 플래그 (종료 시각 기준) */
+  var bySn = {}, W14 = 14*86400000;
+  rows.forEach(function(x){ if (x.e == null || !x.sn || !x.acct) return; x.inRec = true; (bySn[x.sn] = bySn[x.sn] || []).push(x); });
+  Object.keys(bySn).forEach(function(sn){
+    var l = bySn[sn].sort(function(a,b){ return a.e - b.e; });
+    l.forEach(function(x){
+      if (x.purpose !== '고장 수리') return;
+      var ws = x.e - W14, ad = 2, ae = 2;
+      for (var i=0;i<l.length;i++){ var o = l[i]; if (o === x || !(o.e >= ws && o.e < x.e)) continue;
+        if (o.purpose === '고장 수리' || o.purpose === 'PM') ad = 1;
+        if (o.purpose === '고장 수리' && o.err === x.err) ae = 1; }
+      x.AD = ad; x.AE = ae;
+    });
+  });
+  /* 거래처 → 팀 (담당자 기준 최다 방문 팀), 거래처별 기록 */
+  var ctr = new Map(), acctRecs = new Map();
+  rows.forEach(function(x){
+    if (x.acct && memberTeam[x.own]){ var c = ctr.get(x.acct); if (!c) ctr.set(x.acct, c = new Map()); var t = memberTeam[x.own]; c.set(t, (c.get(t)||0)+1); }
+    if (x.inRec){ var a = acctRecs.get(x.acct); if (!a) acctRecs.set(x.acct, a = []); a.push(x); }
+  });
+  var acctMap = opt.accountTeam || {};
+  function topKey(map){ var best=null, bn=-1; map.forEach(function(v,k){ if (v>bn){ bn=v; best=k; } }); return best; }
+  function acctTeam(a){ if (acctMap[a]) return acctMap[a]; var c = ctr.get(a); return c ? topKey(c) : null; }
+  function rnd(x, d){ var k = Math.pow(10, d), n = x*k, f = Math.floor(n), r = n - f;
+    if (Math.abs(r - 0.5) < 1e-9) return (f % 2 === 0 ? f : f + 1)/k; return Math.round(n)/k; }
+  function rates(list){ var dRv=0, nRv=0, dF=0, nB=0;
+    list.forEach(function(e){ if (e.purpose==='고장 수리'||e.purpose==='PM') dRv++; if (e.AD===1) nRv++; if (e.purpose==='고장 수리') dF++; if (e.AE===1) nB++; });
+    return {revisit: dRv ? nRv/dRv : null, ftfr: dF ? (dF-nB)/dF : null, n_rv: dRv}; }
+  var eligible = [];   // 전체 기간 방문 3건 이상 거래처
+  acctRecs.forEach(function(list, a){ if (rates(list).n_rv >= 3) eligible.push(a); });
+  function pct(v){ return v == null ? null : rnd(v*100, 1); }
+  function avg(vs){ vs = vs.filter(function(v){ return v != null; }); return vs.length ? rnd(vs.reduce(function(a,b){return a+b;},0)/vs.length, 1) : null; }
+  /* 팀(또는 FSG 전체: team=null) 재방문율·FTFR — inPeriod(x): 기록이 기간 안인지 */
+  function revisitAvg(inPeriod, team){
+    var rv = [], ft = [], n = 0;
+    eligible.forEach(function(a){ var t = acctTeam(a); if (!t || (team ? t !== team : TEAMS.indexOf(t) < 0)) return;
+      var rt = rates(acctRecs.get(a).filter(inPeriod)); if (rt.n_rv) n++; rv.push(pct(rt.revisit)); ft.push(pct(rt.ftfr)); });
+    return {revisit: avg(rv), ftfr: avg(ft), accounts: n};
+  }
+  function acctRates(a, inPeriod){ var rt = rates(acctRecs.get(a).filter(inPeriod)); return {revisit: pct(rt.revisit), ftfr: pct(rt.ftfr), n_rv: rt.n_rv}; }
+  return {rows:rows, memberTeam:memberTeam, teams:TEAMS, acctTeam:acctTeam, acctRecs:acctRecs, eligible:eligible,
+    revisitAvg:revisitAvg, acctRates:acctRates, rates:rates, pct:pct, avg:avg, rnd:rnd, purposeOf:purposeOf};
+}
+
 /* ===== 부서원 KPI (개인별 서비스 지수) 집계 =====
    김성민 FSG KPI 대시보드(scripts/extract.py + finalize.py)의 계산을 브라우저로 옮긴 것.
    입력: RAW 행 {st,t,e,own,err,acct,sn,prod,purp,subj,ft}  (t/e = 벽시계 시각을 UTC ms로 둔 값)
@@ -472,8 +545,8 @@ function buildProdData(RAW, ROSTER, opt){
   var TEAMS = opt.teams || ['FS WEST','FS EAST','FS CENTRAL','FS SOUTH'];
   var TEAM_SHORT = {}; TEAMS.forEach(function(t){ TEAM_SHORT[t] = t.replace(/^FS\s*/,''); });
   var EXCLUDED = new Set(opt.excluded || ['김민결']);
-  var GROUPS = ['CBC','COA','HISCL','Urine','A1c'];   // RF-500 그룹은 2026-10-07 제외(사용자 요청)
-  var GROUP_LABEL = {'CBC':'CBC','COA':'COA','HISCL':'Immuno','Urine':'Urine','A1c':'A1c'};
+  var GROUPS = ['CBC','COA','HISCL','Urine','A1c','기타'];   // RF-500·모델 없음·미분류 → 기타 (2026-10-07)
+  var GROUP_LABEL = {'CBC':'CBC','COA':'COA','HISCL':'Immuno','Urine':'Urine','A1c':'A1c','기타':'기타'};
   var PERIODS = ['이번 년도','직전 년도','전체 누적'];
   var BUCKETS = ['고장수리','PM','설치이전','Cal평가','기타'];
   var BUCKET_LABEL = {'고장수리':'고장 수리','PM':'PM','설치이전':'설치·이전','Cal평가':'Cal·평가','기타':'기타'};
@@ -507,7 +580,7 @@ function buildProdData(RAW, ROSTER, opt){
   /* 장비 모델 → 그룹 */
   var GROUP_RULES = [[/^HISCL/,'HISCL'],[/^HLC-?723/,'A1c'],[/^RF-500/,null],[/^(CA|CS|CN)-/,'COA'],
     [/^(UF|UC|UN|UD)-|^U-WAM/,'Urine'],[/^(XN|XR|XS|XT|XE|XP|XQ|KX|K-|SP|DI|CF|BT|SA|RU|DC|CV|TS)-?/,'CBC']];
-  function groupOf(m){ if(!m) return null; for (var i=0;i<GROUP_RULES.length;i++) if (GROUP_RULES[i][0].test(m)) return GROUP_RULES[i][1]; return null; }
+  function groupOf(m){ if(!m) return '기타'; for (var i=0;i<GROUP_RULES.length;i++) if (GROUP_RULES[i][0].test(m)) return GROUP_RULES[i][1] || '기타'; return '기타'; }
 
   /* 회계연도(4월 시작) */
   var nowK = new Date(Date.now() + 9*3600000);
@@ -546,7 +619,8 @@ function buildProdData(RAW, ROSTER, opt){
   }
   function modelFromSubj(s){ if(!s) return null; var p=s.split('/'); return p.length>=3 && p[1] ? p[1] : null; }
 
-  var rows = RAW.filter(function(r){ return r.t != null; });
+  var CORE = kpiCore(RAW, ROSTER, {teams:TEAMS, excluded:[...EXCLUDED], accountTeam:opt.accountTeam});
+  var rows = RAW.filter(function(r){ return r.t != null && r.st !== '취소됨' && purposeOf(r) !== '온라인 정기점검'; });
   // S/N → 가장 많이 나온 모델 (주제에 모델이 없는 행 보정)
   var snCtr = {};
   rows.forEach(function(r){ var m = modelFromSubj(r.subj); if (m && r.sn){ var c = snCtr[r.sn] || (snCtr[r.sn] = new Map()); c.set(m, (c.get(m)||0)+1); } });
@@ -598,48 +672,9 @@ function buildProdData(RAW, ROSTER, opt){
     }
   });
 
-  /* 재방문율 / FTFR (거래처 단위, 종료 시각 기준 직전 14일) */
-  var recs = [];
-  rows.forEach(function(r){
-    if (r.st === '취소됨' || r.e == null || !r.sn || !r.acct) return;
-    recs.push({acct:r.acct, sn:r.sn, err:(r.err||'').trim().toLowerCase(), end:r.e, purpose:purposeOf(r), slots:slotsOf(r.t)});
-  });
-  var bySn = {};
-  recs.forEach(function(x){ (bySn[x.sn] = bySn[x.sn] || []).push(x); });
-  var W14 = 14*86400000;
-  Object.keys(bySn).forEach(function(s){
-    var l = bySn[s].sort(function(a,b){ return a.end - b.end; });
-    l.forEach(function(x){
-      if (x.purpose !== '고장 수리'){ x.AD = null; x.AE = null; return; }
-      var ws = x.end - W14, ad = 2, ae = 2;
-      for (var i=0;i<l.length;i++){ var o = l[i]; if (o === x || !(o.end >= ws && o.end < x.end)) continue;
-        if (o.purpose === '고장 수리' || o.purpose === 'PM') ad = 1;
-        if (o.purpose === '고장 수리' && o.err === x.err) ae = 1; }
-      x.AD = ad; x.AE = ae;
-    });
-  });
-  var acctRecs = new Map();
-  recs.forEach(function(x){ var a = acctRecs.get(x.acct); if (!a) acctRecs.set(x.acct, a = []); a.push(x); });
-  function rates(list){
-    var out = {};
-    ['이번 년도','직전 년도','cum'].forEach(function(pr){
-      var s = pr === 'cum' ? list : list.filter(function(e){ return e.slots.indexOf(pr) >= 0; });
-      var dRv=0, nRv=0, dF=0, nB=0;
-      s.forEach(function(e){ if (e.purpose==='고장 수리'||e.purpose==='PM') dRv++; if (e.AD===1) nRv++; if (e.purpose==='고장 수리') dF++; if (e.AE===1) nB++; });
-      out[pr] = {revisit: dRv ? nRv/dRv : null, ftfr: dF ? (dF-nB)/dF : null, n_rv: dRv};
-    });
-    return out;
-  }
-  var acctTeamCtr = new Map();
-  rows.forEach(function(r){
-    if (r.st === '취소됨') return;
-    if (r.own && r.acct && !EXCLUDED.has(r.own) && memberTeam[r.own]){
-      var c = acctTeamCtr.get(r.acct); if (!c) acctTeamCtr.set(r.acct, c = new Map());
-      var t = memberTeam[r.own]; c.set(t, (c.get(t)||0)+1);
-    }
-  });
-  var acctMap = opt.accountTeam || {};
-  function acctTeam(a){ if (acctMap[a]) return acctMap[a]; var c = acctTeamCtr.get(a); return c ? topKey(c) : null; }
+  /* 재방문율 / FTFR — 두 탭 공통 기준(kpiCore) */
+  function inSlot(pr){ return function(x){ return pr === 'cum' || slotsOf(x.t).indexOf(pr) >= 0; }; }
+  var acctTeam = CORE.acctTeam;
 
   /* ---- finalize ---- */
   // 파이썬 round()와 같은 결과(정확히 .5면 짝수 쪽)로 맞춘다 — 원본 대시보드와 소수점까지 일치시키기 위해
@@ -694,25 +729,23 @@ function buildProdData(RAW, ROSTER, opt){
   function pct(v){ return v == null ? null : rnd(v*100, 1); }
   function avg(vs){ vs = vs.filter(function(v){ return v != null; }); return vs.length ? vs.reduce(function(a,b){return a+b;},0)/vs.length : null; }
   var revisit = {};
+  function teamTotals(t){
+    var c = CORE.revisitAvg(inSlot('cum'), t), th = CORE.revisitAvg(inSlot('이번 년도'), t), la = CORE.revisitAvg(inSlot('직전 년도'), t);
+    return {'재방문율':c.revisit, 'FTFR':c.ftfr, '이번년도재방문율':th.revisit, '이번년도FTFR':th.ftfr, '직전년도재방문율':la.revisit, '직전년도FTFR':la.ftfr};
+  }
   TEAMS.forEach(function(t){
     var hs = [];
-    acctRecs.forEach(function(list, a){
+    CORE.eligible.forEach(function(a){
       if (acctTeam(a) !== t) return;
-      var rt = rates(list), cum = rt.cum;
-      if ((cum.n_rv||0) < 3) return;
-      hs.push({name:a, n_rv:cum.n_rv, cum_revisit:pct(cum.revisit), cum_ftfr:pct(cum.ftfr),
-        this_revisit:pct(rt['이번 년도'].revisit), this_ftfr:pct(rt['이번 년도'].ftfr),
-        last_revisit:pct(rt['직전 년도'].revisit), last_ftfr:pct(rt['직전 년도'].ftfr)});
+      var cum = CORE.acctRates(a, inSlot('cum')), th = CORE.acctRates(a, inSlot('이번 년도')), la = CORE.acctRates(a, inSlot('직전 년도'));
+      hs.push({name:a, n_rv:cum.n_rv, cum_revisit:cum.revisit, cum_ftfr:cum.ftfr, this_revisit:th.revisit, this_ftfr:th.ftfr, last_revisit:la.revisit, last_ftfr:la.ftfr});
     });
-    var tt = {'재방문율':avg(hs.map(function(h){return h.cum_revisit;})), 'FTFR':avg(hs.map(function(h){return h.cum_ftfr;})),
-      '이번년도재방문율':avg(hs.map(function(h){return h.this_revisit;})), '이번년도FTFR':avg(hs.map(function(h){return h.this_ftfr;})),
-      '직전년도재방문율':avg(hs.map(function(h){return h.last_revisit;})), '직전년도FTFR':avg(hs.map(function(h){return h.last_ftfr;}))};
-    Object.keys(tt).forEach(function(k){ if (tt[k] != null) tt[k] = rnd(tt[k], 1); });
     var n = hs.length;
     hs = hs.map(function(h,i){ h._i=i; return h; }).sort(function(a,b){ return b.n_rv-a.n_rv || a._i-b._i; }).slice(0,40);
     hs.forEach(function(h){ delete h.n_rv; delete h._i; });
-    revisit[t] = {reliable:true, team_total:tt, hospitals:hs, total_hospital_count:n};
+    revisit[t] = {reliable:true, team_total:teamTotals(t), hospitals:hs, total_hospital_count:n};
   });
+  revisit.ALL = {team_total:teamTotals(null)};   // FSG 전체 = 4개 팀 거래처 전체 평균 (서비스 탭과 같은 값)
 
   var today = nowK.toISOString().slice(0,10);
   return {att_credits:ATT_N, teams:TEAMS, team_short:TEAM_SHORT, groups:GROUPS, group_label:GROUP_LABEL, periods:PERIODS,
@@ -1003,12 +1036,14 @@ function renderOverview(){
   var reliableTeams = DATA.teams.filter(function(t){ return DATA.revisit[t].reliable; });
   var rvVals = reliableTeams.map(function(t){ return teamRevisit(t, period).revisit; }).filter(function(v){return v!==null&&v!==undefined;});
   var ftfrVals = reliableTeams.map(function(t){ return teamRevisit(t, period).ftfr; }).filter(function(v){return v!==null&&v!==undefined;});
-  var avgRevisit = rvVals.length ? rvVals.reduce(function(a,b){return a+b;},0)/rvVals.length : null;
-  var avgFtfr = ftfrVals.length ? ftfrVals.reduce(function(a,b){return a+b;},0)/ftfrVals.length : null;
+  /* FSG 전체 = 4개 팀 거래처 전체의 평균(서비스 운영 KPI 탭과 같은 값) */
+  var allRv = DATA.revisit.ALL ? teamRevisit('ALL', period) : null;
+  var avgRevisit = allRv ? allRv.revisit : (rvVals.length ? rvVals.reduce(function(a,b){return a+b;},0)/rvVals.length : null);
+  var avgFtfr = allRv ? allRv.ftfr : (ftfrVals.length ? ftfrVals.reduce(function(a,b){return a+b;},0)/ftfrVals.length : null);
 
   var html = '';
   html += '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'+
-    '<div><b>KPI 종합 점수</b> = 건마다 (업무 가중치 + 직급 가중치)의 합계. 업무: 고장 수리·장비 설치·성능 평가/인증 지원 3, 장비 이전 설치 2, Calibration·PM·장비 철수·고객 요청 0.5, 기타 0.2 · 직급: T4·팀장 0.6, T3 0.4, T2 0.2, T1 0(진급자는 시행일부터 새 직급 적용). 그 밖의 목적(원격 Calibration·온라인 정기점검·GMCS·부품 등)은 기타(0.2)로 계산합니다. 담당자·필수 참석자 기준, 취소 건 제외. 재방문율·FTFR은 거래처별 비율의 팀 평균입니다.'+
+    '<div><b>KPI 종합 점수</b> = 건마다 (업무 가중치 + 직급 가중치)의 합계. 업무: 고장 수리·장비 설치·성능 평가/인증 지원 3, 장비 이전 설치 2, Calibration·PM·장비 철수·고객 요청 0.5, 기타 0.2 · 직급: T4·팀장 0.6, T3 0.4, T2 0.2, T1 0(진급자는 시행일부터 새 직급 적용). 그 밖의 목적(원격 Calibration·GMCS·부품 등)은 기타(0.2)로 계산하고, 온라인 정기점검은 건수·점수에서 뺍니다. 장비 그룹을 알 수 없는 건(모델 없음·미분류·RF-500)은 「기타」 그룹입니다. 담당자·필수 참석자 기준, 취소 건 제외. 재방문율·FTFR은 거래처별 비율의 팀 평균입니다.'+
     ' MTTR은 일정표 예약 시간 기준(참고용)입니다.'+(DATA.provisional ? ' <b>최근 14일은 FTFR 확인 기간이 끝나지 않아 잠정치</b>입니다.' : '')+(DATA.ex_lead ? ' 순위에서 팀장·신입을 뺐습니다(팀 합계·평균에는 포함).' : '')+
     ' <b>필수 참석자</b>도 담당자와 같은 가중치로 점수·건수에 들어갑니다(팀 합계는 동행 건이 사람 수만큼 반영).'+
     (DATA.no_att ? ' 지금 데이터에는 필수 참석자 열이 없어 담당자만 반영됐습니다. <b>CRM 파일을 다시 올리면 반영</b>됩니다.' : '')+'</div></div>';
@@ -1016,8 +1051,8 @@ function renderOverview(){
   html += '<div class="block grid grid-4">'+
     statTile('총 처리 건수', fmt(totalCase), '건', deltaBadge(totalCase, totalCasePrevYoY, null), DATA.period_label[period])+
     statTile('평균 MTTR (고장수리)', fmt1(mttr), '분', deltaBadge(mttr, mttrPrevYoY, false)+' '+targetPill(mttr, DATA.benchmarks.mttr_target, 'lower-better'), '목표 '+DATA.benchmarks.mttr_target+'분 이내 · 500분 초과 건 제외')+
-    statTile('평균 재방문율', pctStr(avgRevisit), '', targetPill(avgRevisit, DATA.benchmarks.revisit_target, 'lower-better'), '4개 팀 평균 (목표 '+DATA.benchmarks.revisit_target+'% 이하)')+
-    statTile('평균 FTFR', pctStr(avgFtfr), '', targetPill(avgFtfr, DATA.benchmarks.ftfr_target, 'higher-better'), '4개 팀 평균 (목표 '+DATA.benchmarks.ftfr_target+'% 이상)')+
+    statTile('평균 재방문율', pctStr(avgRevisit), '', targetPill(avgRevisit, DATA.benchmarks.revisit_target, 'lower-better'), 'FSG 전체 거래처 평균 (목표 '+DATA.benchmarks.revisit_target+'% 이하)')+
+    statTile('평균 FTFR', pctStr(avgFtfr), '', targetPill(avgFtfr, DATA.benchmarks.ftfr_target, 'higher-better'), 'FSG 전체 거래처 평균 (목표 '+DATA.benchmarks.ftfr_target+'% 이상)')+
     '</div>';
 
   html += '<div class="block"><div class="block-head"><h2>전 직원 KPI 종합 점수</h2><span class="hint">업무 종류별 가중치 적용 · 담당자·필수 참석자 기준 · 열 제목 클릭 시 정렬 · 행 클릭 시 개인별 상세로 이동 · '+PL(period)+'</span></div>'+
@@ -1590,30 +1625,27 @@ function prepare(){
   const assetAcct = SERIAL? new Set(SERIAL.filter(s=>s.state==='사용').map(s=>s.acct)) : null;
   const rows=[], excl={internal:0, noasset:0, notime:0, future:RAW.length-RAWC.length, cut:CUT.d}; let maxT=-Infinity, minT=Infinity;
   const errDisp={};
-  for(const r of RAWC){
-    if(r.t==null){excl.notime++;continue;}
-    const internal=INTERNAL.has(r.acct); if(internal) excl.internal++;   // v44: 집계에는 포함, 기관 표에서만 제외
-    const model=modelOf(r.prod,r.subj), rm=rosterMap[r.own];
+  /* 두 탭 공통 기준(kpiCore): 취소·온라인 정기점검 제외, 담당자+필수 참석자, 거래처 단위 재방문율·FTFR */
+  const CORE=kpiCore(RAWC, ROSTER, {teams:TEAMS});
+  excl.notime=RAWC.filter(r=>r.t==null).length; excl.cancel=RAWC.filter(r=>r.st==='취소됨').length;
+  excl.online=RAWC.filter(r=>r.t!=null&&r.st!=='취소됨'&&CORE.purposeOf(r)==='온라인 정기점검').length;
+  for(const x of CORE.rows){ const r=x.r;
+    const internal=INTERNAL.has(r.acct); if(internal) excl.internal++;   // 집계에는 포함, 기관 표에서만 제외
+    const model=modelOf(r.prod,r.subj);
     const ek=errKey(r.err);
     if(ek!=='미기재'&&ek!=='others'){const disp=r.err.trim().replace(/^\*+/,'');(errDisp[ek]=errDisp[ek]||{})[disp]=((errDisp[ek]||{})[disp]||0)+1;}
-    const o={t:r.t, dur:(r.e!=null&&r.e>=r.t&&(r.e-r.t)/60000<=MTTR_MAX)?(r.e-r.t)/60000:null, ok:OK.has(r.st), done:r.st==='완료됨', cancel:r.st==='취소됨', purp:r.purp||'미기재',
-      own:r.own, team:rm?rm.team:null, grade:rm?rm.grade:null, acct:r.acct, sn:r.sn, model, fam:famOf(model), ser:seriesOf(r.prod),
-      ek, err:(r.err||'').trim(), mk:mkey(r.t), fail:0, rv:0, internal};
+    const ct=x.credits.map(n=>CORE.memberTeam[n]);
+    const o={t:r.t, dur:x.dur, ok:true, done:r.st==='완료됨', purp:x.purpose||'미기재',
+      own:r.own, credits:x.credits, cteams:ct, team:CORE.memberTeam[r.own]||ct[0]||null, atm:CORE.acctTeam(r.acct),
+      acct:r.acct, sn:r.sn, model, fam:famOf(model), ser:seriesOf(r.prod),
+      ek, err:(r.err||'').trim(), mk:mkey(r.t), fail:x.AE===1?1:0, rv:x.AD===1?1:0, rec:x.inRec, internal};
     rows.push(o); if(r.t>maxT) maxT=r.t; if(r.t<minT) minT=r.t;
   }
-  /* FTFR 실패(fail): 고장 수리 후 14일 이내(0<Δ≤14일) 같은 S/N + 같은 Error 1로 다시 고장 수리
-     재방문(rv): 고장 수리 이전 14일 이내(0<Δ≤14일) 같은 S/N에 고장 수리 또는 PM 방문이 있었음 */
-  const bySn={};
-  for(const o of rows){ if(o.ok&&o.sn&&(o.purp==='고장 수리'||o.purp==='PM')){(bySn[o.sn]=bySn[o.sn]||[]).push(o);} }
-  for(const sn in bySn){ const a=bySn[sn].sort((x,y)=>x.t-y.t);
-    for(let i=0;i<a.length;i++){ const o=a[i]; if(o.purp!=='고장 수리') continue;
-      for(let j=i+1;j<a.length;j++){ const g=a[j].t-o.t; if(g<=0) continue; if(g>WIN) break; if(a[j].purp==='고장 수리'&&a[j].err===o.err){o.fail=1;break;} }
-      for(let j=i-1;j>=0;j--){ const g=o.t-a[j].t; if(g<=0) continue; if(g>WIN) break; o.rv=1; break; } } }
   const ed={}; for(const k in errDisp){ed[k]=Object.entries(errDisp[k]).sort((a,b)=>b[1]-a[1])[0][0];}
   ed['others']='Others'; ed['미기재']='미기재';
   const months=[...new Set(rows.map(o=>o.mk))].sort();
-  D={rows, raw:RAWC, excl, maxT, minT, months, errDisp:ed, rawN:RAW.length,
-     unmapped:rows.filter(o=>!o.team&&o.ok).length, unmappedNames:[...new Set(rows.filter(o=>!o.team).map(o=>o.own))].length};
+  D={rows, raw:RAWC, core:CORE, excl, maxT, minT, months, errDisp:ed, rawN:RAW.length,
+     unmapped:rows.filter(o=>!o.credits.length).length, unmappedNames:[...new Set(rows.filter(o=>!o.credits.length).map(o=>o.own))].length};
 }
 
 /* ===== 기간 ===== */
@@ -1673,26 +1705,29 @@ function prevPeriod(p){
 }
 
 /* ===== 집계 ===== */
-/* KPI 집계 — 보고서 데이터 도구(Apps Script v44)와 같은 정의
-   · 상태: 완료·시작(취소 제외) / 팀별 건수(D 접미사)는 v44 팀 실적과 같이 '완료됨'만
-   · FTFR 분모 = 고장 수리 전체(S/N 없는 건은 재방문 판정 불가 → 재방문 아님으로 계산)
-   · MTTR = 종료 시간이 있는 고장 수리의 (종료−시작) 평균
+/* KPI 집계 — 두 탭·월간보고 Apps Script(v45) 공통 기준(kpiCore 주석 참고)
+   · 상태: 취소 제외 / 온라인 정기점검 제외 / 건수·MTTR은 담당자+필수 참석자(로스터) 인원 수만큼
+   · MTTR = 고장 수리 (종료−시작) 0~500분, 인정 인원 수만큼 가중
    · Calibration = 목적 'Calibration'만 (원격 Calibration은 별도) */
 function stats(months, team){
-  const ms=new Set(months); const s={total:0,rep:0,pm:0,cal:0,calR:0,repSn:0,fail:0,rvN:0,rvF:0,durS:0,durN:0,repD:0,pmD:0,instD:0,calD:0};
+  /* 건수·MTTR = 인정 인원 수만큼(담당자+필수 참석자, 로스터 인원) — 부서원 탭과 같은 기준.
+     팀을 고르면 그 팀 인원 몫만 센다. 재방문율·FTFR = kpiCore 거래처 평균. */
+  const ms=new Set(months); const s={total:0,rep:0,pm:0,cal:0,calR:0,durS:0,durN:0,repD:0,pmD:0,instD:0,calD:0,repRows:0};
   for(const o of D.rows){
-    if(!ms.has(o.mk)) continue; if(team&&o.team!==team) continue;
-    if(o.done){ if(o.purp==='고장 수리') s.repD++; else if(o.purp==='PM') s.pmD++; else if(o.purp==='장비 설치'||o.purp==='장비 이전 설치') s.instD++; else if(o.purp==='Calibration') s.calD++; }
-    if(!o.ok) continue;
-    s.total++;
-    if(o.purp==='고장 수리'){ s.rep++; if(o.sn){ s.repSn++; s.fail+=o.fail; s.rvN++; s.rvF+=o.rv; } if(o.dur!=null){s.durS+=o.dur;s.durN++;} }
-    else if(o.purp==='PM'){ s.pm++; if(o.sn) s.rvN++; }
-    else if(o.purp==='Calibration') s.cal++;
-    else if(o.purp==='원격 Calibration') s.calR++;
+    if(!ms.has(o.mk)) continue;
+    const n=team? o.cteams.filter(t=>t===team).length : o.credits.length;
+    if(o.purp==='고장 수리'&&(!team||o.atm===team)) s.repRows++;
+    if(!n) continue;
+    if(o.done){ if(o.purp==='고장 수리') s.repD+=n; else if(o.purp==='PM') s.pmD+=n; else if(o.purp==='장비 설치'||o.purp==='장비 이전 설치') s.instD+=n; else if(o.purp==='Calibration') s.calD+=n; }
+    s.total+=n;
+    if(o.purp==='고장 수리'){ s.rep+=n; if(o.dur!=null){s.durS+=o.dur*n;s.durN+=n;} }
+    else if(o.purp==='PM') s.pm+=n;
+    else if(o.purp==='Calibration') s.cal+=n;
+    else if(o.purp==='원격 Calibration') s.calR+=n;
   }
   s.idx = s.pm+s.rep? s.pm/(s.pm+s.rep)*100 : null;
-  s.ftfr = s.repSn? (s.repSn-s.fail)/s.repSn*100 : null;   // 분모: S/N 있는 고장 수리
-  s.rev = s.rvN? s.rvF/s.rvN*100 : null;                    // 분모: S/N 있는 고장 수리 + PM
+  const rv=D.core.revisitAvg(x=>ms.has(mkey(x.t)), team);
+  s.ftfr = rv.ftfr; s.rev = rv.revisit; s.rvAccts = rv.accounts;
   s.mttr = s.durN? s.durS/s.durN : null;
   s.hasData = months.some(m=>D.months.includes(m));
   return s;
@@ -1805,7 +1840,7 @@ function calNote(p,team){   // Cal 시즌 월과 다음 달은 예방정비 지�
 }
 function renderOrg(p, team){
   const ms=new Set(p.months), active={};
-  for(const o of D.rows){ if(o.ok&&ms.has(o.mk)&&o.team) (active[o.team]=active[o.team]||new Set()).add(o.own); }
+  for(const o of D.rows){ if(!ms.has(o.mk)) continue; o.credits.forEach((n,i)=>{const t=o.cteams[i]; (active[t]=active[t]||new Set()).add(n);}); }
   const gbar=list=>{const n=list.length;return `<div class="gbar">${GRADES.map(g=>{const c=list.filter(r=>r[2]===g).length;return c?`<i style="width:${c/n*100}%;background:${GCOL[g]}" title="${g} ${c}명"></i>`:'';}).join('')}</div>
     <div class="glg">${GRADES.map(g=>{const c=list.filter(r=>r[2]===g).length;return c?`<span><b style="background:${GCOL[g]}"></b>${g} ${c}</span>`:'';}).join('')}</div>`;};
   const cards=TEAMS.map(t=>{const m=ROSTER.filter(r=>r[1]===t); const lead=m.find(r=>r[2]==='팀장'); const act=active[t]?active[t].size:0;
@@ -1819,16 +1854,16 @@ function renderOrg(p, team){
 }
 function serStats(months, team, sn){
   const ms=new Set(months); let n=0,f=0,d=0; const units=new Set();
-  for(const o of D.rows){ if(!o.ok||!ms.has(o.mk)) continue; if(o.purp!=='고장 수리'&&o.purp!=='PM') continue; if(team&&o.team!==team) continue; if(sn&&o.ser!==sn) continue;
-    if(o.sn) d++;
-    if(o.purp==='고장 수리'){ n++; if(o.sn){ f+=o.rv; units.add(o.sn+'|'+o.acct);} } }
+  for(const o of D.rows){ if(!ms.has(o.mk)) continue; if(o.purp!=='고장 수리'&&o.purp!=='PM') continue; if(team&&o.atm!==team) continue; if(sn&&o.ser!==sn) continue;
+    if(o.rec) d++;
+    if(o.purp==='고장 수리'){ n++; if(o.rec){ f+=o.rv; units.add(o.sn+'|'+o.acct);} } }
   return {n,f,u:units.size,r:d?f/d*100:null};
 }
 /* 시리즈 가동 대수 — 자산대장(모델 포함)이 있으면 '사용' ∩ 12개월 서비스 이력(S/N+기관),
    없으면 CRM 기준 최근 12개월 서비스 이력이 있는 장비 수 */
 function serFleet(end, team){
   const ms=last12Set(end), touched={}, all=new Set();
-  for(const o of D.rows){ if(!o.ok||!ms.has(o.mk)||!o.sn||!o.acct) continue; if(team&&o.team!==team) continue;
+  for(const o of D.rows){ if(!ms.has(o.mk)||!o.sn||!o.acct) continue; if(team&&o.atm!==team) continue;
     const k=o.sn+'|'+o.acct; all.add(k); if(o.ser) touched[k]=o.ser; }
   const useSer=SERIAL&&SERIAL.length&&SERIAL.some(s=>s.model);
   const res={src:useSer?'asset':'crm', count:{}, total:0};
@@ -1842,7 +1877,7 @@ function serFleet(end, team){
 function last12Set(end){const s=new Set();for(let i=0;i<12;i++)s.add(shiftMonth(end,-i));return s;}
 function renderHealth(end, p){
   const ms=last12Set(end); const pmM={}; const rep12={}, touched=new Set(), pmPairs=new Set();
-  for(const o of D.rows){ if(!o.ok||!ms.has(o.mk)) continue;
+  for(const o of D.rows){ if(!ms.has(o.mk)) continue;
     if(o.purp==='PM'&&o.done) pmM[o.mk]=(pmM[o.mk]||0)+1;
     if(!o.sn||!o.acct) continue; const k=o.sn+'|'+o.acct; touched.add(k);
     if(o.purp==='PM') pmPairs.add(k); if(o.purp==='고장 수리') rep12[k]=(rep12[k]||0)+1; }
@@ -1855,7 +1890,7 @@ function renderHealth(end, p){
     const used=new Set(SERIAL.filter(s=>s.state==='사용'&&s.sn&&s.acct).map(s=>s.sn+'|'+s.acct));
     const active=[...used].filter(k=>touched.has(k)); const A=active.length; const aset=new Set(active);
     const cov=A?[...pmPairs].filter(k=>aset.has(k)).length/A*100:null;
-    const curRep=stats(p.months,null).rep/p.months.length;
+    const curRep=stats(p.months,null).repRows/p.months.length;
     const chronic=chronicAll.filter(k=>aset.has(k)).length;
     h.push(hc('가동 장비(모수)', fmt(A)+'대', ''));
     h.push(hc('PM 커버리지율', f1(cov)+'%', ''));
@@ -1871,9 +1906,10 @@ function hc(l,v,c,good){return `<div class="hc ${v==null?'':good===true?'s-good'
 
 function renderErrors(p, team){
   const ms=new Set(p.months); const famC={};
-  const rows=D.rows.filter(o=>o.ok&&o.purp==='고장 수리'&&ms.has(o.mk)&&(!team||o.team===team));
-  rows.forEach(o=>{const f=famC[o.fam]=famC[o.fam]||{n:0,f:0,s:0};f.n++;if(o.sn){f.s++;f.f+=o.rv;}});
-  D.rows.forEach(o=>{ if(o.ok&&o.purp==='PM'&&o.sn&&ms.has(o.mk)&&(!team||o.team===team)&&famC[o.fam]) famC[o.fam].s++; });   // 재방문율 분모 = 고장 수리 + PM
+  // 장비군·에러는 방문 행 기준, 팀 = 거래처 담당 팀(재방문율과 같은 기준)
+  const rows=D.rows.filter(o=>o.purp==='고장 수리'&&ms.has(o.mk)&&(!team||o.atm===team));
+  rows.forEach(o=>{const f=famC[o.fam]=famC[o.fam]||{n:0,f:0,s:0};f.n++;if(o.rec){f.s++;f.f+=o.rv;}});
+  D.rows.forEach(o=>{ if(o.purp==='PM'&&o.rec&&ms.has(o.mk)&&(!team||o.atm===team)&&famC[o.fam]) famC[o.fam].s++; });   // 재방문율 분모 = 고장 수리 + PM
   const fk=FAM_ORDER.filter(f=>famC[f]);   // 정해진 장비군 순서
   $('errSub').textContent=`${p.label}, ${team||'FSG 전체'}`;
   upsert('cFam',{data:{labels:fk,datasets:[
@@ -1899,12 +1935,12 @@ function drawErr(rows){
 let instRows=[], sortKey='rep', sortDir=-1;
 function renderInst(p, team){
   const ms=new Set(p.months), m12=last12Set(p.months.filter(m=>m<=D.months[D.months.length-1]).pop()||D.months[D.months.length-1]); const a={}; const rep12={};
-  for(const o of D.rows){ if(!o.ok||o.internal) continue;
+  for(const o of D.rows){ if(o.internal) continue;
     if(m12.has(o.mk)&&o.purp==='고장 수리'&&o.sn){const k=o.acct; (rep12[k]=rep12[k]||{})[o.sn]=((rep12[k]||{})[o.sn]||0)+1;}
-    if(!ms.has(o.mk)) continue; if(team&&o.team!==team) continue;
+    if(!ms.has(o.mk)) continue; if(team&&o.atm!==team) continue;
     const x=a[o.acct]=a[o.acct]||{name:o.acct,rep:0,pm:0,fail:0,sn:0,den:0,tc:{},fc:{}};
-    if(o.team) x.tc[o.team]=(x.tc[o.team]||0)+1; x.fc[o.fam]=(x.fc[o.fam]||0)+1;
-    if(o.purp==='고장 수리'){x.rep++; if(o.sn){x.fail+=o.rv; x.den++;}} else if(o.purp==='PM'){x.pm++; if(o.sn) x.den++;} }
+    if(o.atm) x.tc[o.atm]=(x.tc[o.atm]||0)+1; x.fc[o.fam]=(x.fc[o.fam]||0)+1;
+    if(o.purp==='고장 수리'){x.rep++; if(o.rec){x.fail+=o.rv; x.den++;}} else if(o.purp==='PM'){x.pm++; if(o.rec) x.den++;} }
   const top=o=>{const e=Object.entries(o).sort((x,y)=>y[1]-x[1]);return e.length?e[0][0]:'-';};
   instRows=Object.values(a).map(x=>({name:x.name,team:top(x.tc),fam:top(x.fc),rep:x.rep,pm:x.pm,fail:x.fail,rate:x.den?x.fail/x.den*100:-1,
     chronic:Object.values(rep12[x.name]||{}).filter(n=>n>=3).length}));
@@ -1920,13 +1956,13 @@ function drawInst(){
 
 function renderDQ(p){
   const L=[], ms=new Set(p.months);
-  const rep=D.rows.filter(o=>o.ok&&o.purp==='고장 수리'&&ms.has(o.mk)); const unk=rep.filter(o=>o.ek==='미기재'||o.ek==='others').length;
+  const rep=D.rows.filter(o=>o.purp==='고장 수리'&&ms.has(o.mk)); const unk=rep.filter(o=>o.ek==='미기재'||o.ek==='others').length;
   const noSn=rep.filter(o=>!o.sn).length;
   if(D.rawN>=40000) L.push(`<li><span class="tag b">확인</span>CRM 내보내기 상한(40,000행) 도달 — ${ymd(D.minT)} 이전 기록이 잘렸을 수 있음</li>`);
   L.push(`<li><span class="tag i">범위</span>데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)} · CRM 추출일(${D.excl.cut}) 이후로 잡힌 예정 약속 ${fmt(D.excl.future)}건은 두 탭 모두 제외</li>`);
-  L.push(`<li><span class="tag i">기준</span>보고서 데이터 시트(v44)와 같은 계산식 · 내부 기관 ${fmt(D.excl.internal)}건은 기관별 현황에서만 제외</li>`);
-  if(rep.length) L.push(`<li><span class="tag w">주의</span>Error 1 미기재·Others ${(unk/rep.length*100).toFixed(0)}% · S/N 없는 고장 수리 ${fmt(noSn)}건(FTFR·재방문율에서 제외)</li>`);
-  L.push(`<li><span class="tag w">주의</span>로스터 밖 담당자 ${fmt(D.unmappedNames)}명 · ${fmt(D.unmapped)}건은 팀별 보기에서 제외(전체에는 포함)</li>`);
+  L.push(`<li><span class="tag i">기준</span>두 탭·월간보고(Apps Script v45) 공통 기준 · 취소 ${fmt(D.excl.cancel)}건·온라인 정기점검 ${fmt(D.excl.online)}건 제외 · 내부 기관 ${fmt(D.excl.internal)}건은 기관별 현황에서만 제외</li>`);
+  if(rep.length) L.push(`<li><span class="tag w">주의</span>Error 1 미기재·Others ${(unk/rep.length*100).toFixed(0)}% · S/N 없는 고장 수리 ${fmt(noSn)}건(FTFR·재방문율에서 제외) · 재방문율·FTFR은 거래처별 비율의 평균(전체 기간 3건 이상 거래처)</li>`);
+  L.push(`<li><span class="tag w">주의</span>로스터 밖 담당자 ${fmt(D.unmappedNames)}명 · 로스터 인원이 없는 ${fmt(D.unmapped)}건은 건수에서 제외(필수 참석자 포함 로스터 인원 기준)</li>`);
   L.push(`<li><span class="tag i">기준</span>MTTR은 일정표 예약 시간 기준(추이 비교용)</li>`);
   $('dq').innerHTML=L.join('');
   $('foot').textContent=`원본: ${SRC.act}${SRC.ser?`, ${SRC.ser}`:''}`;
