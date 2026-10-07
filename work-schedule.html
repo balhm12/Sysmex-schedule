@@ -315,7 +315,7 @@
   .notes-dev{color:var(--ink-soft);white-space:nowrap;}
   .notes-text{white-space:pre-wrap;word-break:break-word;}
   .notes-by{color:var(--ink-soft);white-space:nowrap;font-size:11.5px;}
-  .notes-team{display:inline-block;font-size:10px;font-weight:800;color:#fff;background:var(--blue);border-radius:6px;padding:1px 6px;margin-right:5px;vertical-align:1px;}
+  .notes-team{display:inline-block;font-size:10px;font-weight:800;color:#fff;background:var(--tc,var(--blue));border-radius:6px;padding:1px 6px;margin-right:5px;vertical-align:1px;}
   .notes-ops{white-space:nowrap;text-align:right;}
   .notes-ops button{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:6px;opacity:.55;}
   .notes-ops button:hover{opacity:1;background:var(--paper);}
@@ -475,6 +475,7 @@
       <div class="notes-actions">
         <span class="notes-count" id="notesCount"></span>
         <button class="add-btn" id="noteAddBtn" title="날짜·기관·장비·내용을 입력해 특이사항을 등록합니다">＋ 특이사항 등록</button>
+        <button class="add-btn" id="noteXlsxBtn" title="지금 화면에 보이는 특이사항을 엑셀로 내려받습니다">📊 Excel 내보내기</button>
         <button class="notes-help" id="guideBtn" title="근무일정표 사용법 보기">❔ 사용법</button>
       </div>
     </div>
@@ -718,7 +719,7 @@ const SEED_SCHEDULE_FY2026Q3_V3 = {"west":{"2026-06-29":{"이인구":{"night":"�
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 24; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
+const BUILD_VERSION = 25; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1538,7 +1539,7 @@ function renderNotes(){
       const red = isWeekendDate(n.date) || !!HOLIDAYS_KR[n.date];
       return '<tr>' +
         '<td class="notes-date' + (red?' is-red':'') + '">' + escapeHtml(p[1] + '/' + p[2]) + ' (' + escapeHtml(wk) + ')</td>' +
-        '<td class="notes-inst">' + (showTeam ? '<span class="notes-team">' + escapeHtml(TEAMS[n.team].label.replace('FS ','')) + '</span>' : '') + escapeHtml(n.inst || '—') + '</td>' +
+        '<td class="notes-inst">' + (showTeam ? '<span class="notes-team" style="--tc:' + (TEAMS[n.team] ? TEAMS[n.team].hex : '#009EE0') + ';">' + escapeHtml(TEAMS[n.team].label.replace('FS ','')) + '</span>' : '') + escapeHtml(n.inst || '—') + '</td>' +
         '<td class="notes-dev">' + escapeHtml(n.device || '—') + '</td>' +
         '<td class="notes-st"><span class="st-badge" style="' + noteStatusStyle(n.status) + '">' + escapeHtml(n.status) + '</span></td>' +
         '<td class="notes-by">' + escapeHtml(n.author || '—') + '</td>' +
@@ -1560,6 +1561,125 @@ function renderNotes(){
       else removeNote(tk, id);
     };
   });
+}
+
+// '#009EE0' → 'FF009EE0' (엑셀 색상 표기)
+function argbOf(hex){
+  const h = String(hex||'').replace('#','');
+  return 'FF' + (h.length === 3 ? h.split('').map(c=>c+c).join('') : h).toUpperCase();
+}
+// 팀 색을 흰색 쪽으로 섞어 옅게 만듭니다 (배경으로 쓰면 글자가 읽히도록). r=0이면 원색, 1이면 흰색.
+function argbTint(hex, r){
+  const h = String(hex||'').replace('#','');
+  const f = h.length === 3 ? h.split('').map(c=>c+c).join('') : h;
+  const mix = i => {
+    const v = parseInt(f.substr(i,2), 16);
+    return Math.round(v + (255 - v) * r).toString(16).padStart(2,'0');
+  };
+  return ('FF' + mix(0) + mix(2) + mix(4)).toUpperCase();
+}
+
+// 팀 색을 검정 쪽으로 섞어 진하게 만듭니다 (옅은 배경 위 글자색으로 씁니다).
+function argbShade(hex, r){
+  const h = String(hex||'').replace('#','');
+  const f = h.length === 3 ? h.split('').map(c=>c+c).join('') : h;
+  const mix = i => Math.round(parseInt(f.substr(i,2),16) * (1 - r)).toString(16).padStart(2,'0');
+  return ('FF' + mix(0) + mix(2) + mix(4)).toUpperCase();
+}
+
+// 지금 화면에 보이는 특이사항(보는 달 · 팀 · 선택한 상태)을 엑셀 한 장으로 내려받습니다.
+// 화면에서 걸러 본 그대로 나가는 것이 덜 헷갈려서, 상태 칩 선택도 그대로 따릅니다.
+async function exportNotesExcel(){
+  if(typeof ExcelJS === 'undefined'){ alert('엑셀 내보내기 모듈을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'); return; }
+  const nDays = daysInMonth(viewYear, viewMonth);
+  const from = fmtDate(viewYear, viewMonth, 1);
+  const to = fmtDate(viewYear, viewMonth, nDays);
+  const teams = notesTeamsInView();
+  const all = getScheduleNotes(teams, from, to);
+  const rows = notesFilter ? all.filter(n=>n.status===notesFilter) : all;
+  if(!rows.length){ alert('내보낼 특이사항이 없습니다.'); return; }
+
+  const NAVY = 'FF003087', WHITE = 'FFFFFFFF', LINE = 'FFDFE6F2';
+  const STATUS_FILL = {'진행중':'FFFEF3C7', '예정':'FFE0F2FE', '완료':'FFDCFCE7'};
+  const scopeLabel = currentTeam === 'all' ? '전체 팀' : TEAMS[currentTeam].label;
+  const ymLabel = viewYear + '년 ' + viewMonth + '월';
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Sysmex Korea FS Group';
+  const ws = wb.addWorksheet('특이사항');
+  ws.properties.tabColor = { argb: NAVY };
+
+  ws.mergeCells('A1:H1');
+  ws.getCell('A1').value = '특이사항 — ' + ymLabel + ' · ' + scopeLabel + (notesFilter ? ' · ' + notesFilter + '만' : '');
+  ws.getCell('A1').font = { bold:true, size:14, color:{argb:NAVY} };
+  ws.getCell('A1').alignment = { horizontal:'center' };
+
+  // 상태별 건수 (화면의 칩과 같은 숫자 — 필터와 무관하게 그 달 전체 기준)
+  const counts = {};
+  NOTE_STATUS.forEach(st=>{ counts[st.key] = 0; });
+  all.forEach(n=>{ counts[n.status] = (counts[n.status]||0) + 1; });
+  ws.mergeCells('A2:H2');
+  ws.getCell('A2').value = '전체 ' + all.length + '건  ·  ' +
+    NOTE_STATUS.map(st=> st.key + ' ' + counts[st.key]).join('  ·  ');
+  ws.getCell('A2').font = { bold:true, size:10, color:{argb:'FF4A5A78'} };
+  ws.getCell('A2').alignment = { horizontal:'center' };
+
+  const HEAD = ['날짜','요일','팀','기관','장비','상태','작성자','특이사항'];
+  const hr = 4;
+  HEAD.forEach((h,i)=>{
+    const c = ws.getCell(hr, i+1);
+    c.value = h;
+    c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:NAVY} };
+    c.font = { bold:true, color:{argb:WHITE}, size:10 };
+    c.alignment = { horizontal:'center', vertical:'middle' };
+  });
+  rows.forEach((n,i)=>{
+    const r = hr + 1 + i;
+    const p = n.date.split('-').map(Number);
+    const wk = weekdayKr(p[0], p[1], p[2]);
+    const red = isWeekendDate(n.date) || !!HOLIDAYS_KR[n.date];
+    const vals = [n.date, wk, TEAMS[n.team] ? TEAMS[n.team].label : n.team, n.inst, n.device, n.status, n.author, n.text];
+    vals.forEach((v,ci)=>{
+      const c = ws.getCell(r, ci+1);
+      c.value = sanitizeForExcel(v);
+      c.alignment = { vertical:'top', wrapText: ci===3 || ci===7 };
+      if(ci <= 2 || ci === 5 || ci === 6) c.alignment = { horizontal:'center', vertical:'top' };
+    });
+    if(red){ ws.getCell(r,1).font = { color:{argb:'FFDC2626'}, bold:true }; ws.getCell(r,2).font = { color:{argb:'FFDC2626'}, bold:true }; }
+    const tHex = TEAMS[n.team] ? TEAMS[n.team].hex : null;
+    if(tHex){
+      const tc = ws.getCell(r, 3);
+      // 배경은 팀 색을 옅게, 글자는 같은 색을 어둡게 — 옅은 배경에 원색 글자는 잘 안 읽힌다
+      tc.fill = { type:'pattern', pattern:'solid', fgColor:{argb: argbTint(tHex, 0.82)} };
+      tc.font = { bold:true, size:10, color:{argb: argbShade(tHex, 0.45)} };
+    }
+    const sc = ws.getCell(r, 6);
+    if(STATUS_FILL[n.status]){ sc.fill = { type:'pattern', pattern:'solid', fgColor:{argb:STATUS_FILL[n.status]} }; sc.font = { bold:true, size:10 }; }
+    ws.getRow(r).height = Math.min(90, Math.max(16, Math.ceil(String(n.text||'').length / 40) * 15));
+  });
+  [13, 7, 13, 24, 15, 9, 10, 58].forEach((w,i)=>{ ws.getColumn(i+1).width = w; });
+  for(let r = hr; r <= hr + rows.length; r++){
+    for(let c = 1; c <= 8; c++){
+      ws.getCell(r,c).border = {
+        top:{style:'thin',color:{argb:LINE}}, bottom:{style:'thin',color:{argb:LINE}},
+        left:{style:'thin',color:{argb:LINE}}, right:{style:'thin',color:{argb:LINE}}
+      };
+    }
+  }
+  ws.autoFilter = { from:{row:hr, column:1}, to:{row:hr + rows.length, column:8} };
+  ws.views = [{ state:'frozen', ySplit: hr }];
+  ws.pageSetup = { fitToPage:true, fitToWidth:1, fitToHeight:0, orientation:'landscape' };
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const teamTag = currentTeam === 'all' ? '전체' : TEAMS[currentTeam].label.replace(/\s/g,'');
+  a.href = url;
+  a.download = '특이사항_' + teamTag + '_' + viewYear + String(viewMonth).padStart(2,'0') + (notesFilter ? '_' + notesFilter : '') + '.xlsx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(rows.length + '건을 엑셀로 내려받았습니다');
 }
 
 async function removeNote(team, id){
@@ -1695,7 +1815,7 @@ function openGuidePanel(){
         '<div class="guide-item"><div class="guide-icon">' + g.icon + '</div><div class="guide-h">' + g.h + '</div><div class="guide-d">' + g.d + '</div></div>'
       ).join('') +
       '<div class="guide-item"><div class="guide-icon">📌</div><div class="guide-h">특이사항</div>' +
-      '<div class="guide-d">화면 맨 아래 [＋ 특이사항 등록]에서 날짜 · 기관 · 장비 · 상태(진행중 · 예정 · 완료) · 내용을 입력합니다. 상단의 상태 칩을 누르면 그 상태만 골라 볼 수 있고, 같은 칩을 다시 누르면 전체로 돌아옵니다. 편집창(야간·주말) 아래의 “📌 이 날짜 특이사항 등록”을 눌러도 날짜와 이름이 채워진 상태로 열립니다. 등록한 내용은 주간계획서 <b>지난 주 보고</b>의 [특이 사항] 칸에 자동으로 들어갑니다.</div></div>' +
+      '<div class="guide-d">화면 맨 아래 [＋ 특이사항 등록]에서 날짜 · 기관 · 장비 · 상태(진행중 · 예정 · 완료) · 내용을 입력합니다. 상단의 상태 칩을 누르면 그 상태만 골라 볼 수 있고, 같은 칩을 다시 누르면 전체로 돌아옵니다. [📊 Excel 내보내기]는 지금 화면에 보이는 그대로(보는 달 · 팀 · 고른 상태) 한 장으로 받습니다. 편집창(야간·주말) 아래의 “📌 이 날짜 특이사항 등록”을 눌러도 날짜와 이름이 채워진 상태로 열립니다. 등록한 내용은 주간계획서 <b>지난 주 보고</b>의 [특이 사항] 칸에 자동으로 들어갑니다.</div></div>' +
     '</div>';
   document.getElementById('overlay').classList.add('show');
 }
@@ -2933,6 +3053,7 @@ document.getElementById('refreshBtn').onclick = async ()=>{
 };
 document.getElementById('noteAddBtn').onclick = ()=> openNotePanel({});
 document.getElementById('guideBtn').onclick = openGuidePanel;
+document.getElementById('noteXlsxBtn').onclick = exportNotesExcel;
 // 화면(html)과 주간계획서(js) 버전을 같이 보여줍니다. 둘 다 v18이어야 특이사항이 보고서에 들어갑니다.
 // weeklyreport.js 태그는 이 스크립트보다 뒤에 있어서, 문서가 다 읽힌 뒤에 확인합니다.
 function renderBuildStamp(){
@@ -3013,6 +3134,6 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
 </script>
 <!-- 주간계획서/보고서 내보내기 애드온 (FSS팀 베타) — weeklyreport.js는 저장소에 이미 있었으나
      이 연결 태그가 빠져 있어서 실제로는 한 번도 로드된 적이 없었습니다. -->
-<script src="weeklyreport.js?v=24"></script>
+<script src="weeklyreport.js?v=25"></script>
 </body>
 </html>
