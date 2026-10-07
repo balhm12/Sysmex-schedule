@@ -367,13 +367,13 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
   <div class="vinfo"><div id="info"></div><button class="lbtn" id="changeCode">접근 코드 변경</button></div>
 </div></nav>
 <div class="bar" id="svcBar"><div class="wrap">
-  <div class="f"><label for="fPeriod">보고 기간</label><select id="fPeriod"></select></div>
-  <div class="f" id="fRange" hidden><label for="fFrom">기간 지정 (시작 월 ~ 끝 월)</label><div class="rng"><select id="fFrom"></select><span>~</span><select id="fTo"></select></div></div>
+  <div class="f"><label for="fPeriod">보고 기간</label><select id="fPeriod" autocomplete="off"></select></div>
+  <div class="f" id="fRange" hidden><label for="fFrom">기간 지정 (시작 월 ~ 끝 월)</label><div class="rng"><select id="fFrom" autocomplete="off"></select><span>~</span><select id="fTo" autocomplete="off"></select></div></div>
   <div class="f"><label for="fTeam">팀</label><select id="fTeam"></select></div>
 </div></div>
 <div class="bar" id="prodBar" hidden><div class="wrap">
-  <div class="f"><label for="pPeriod">보고 기간</label><select id="pPeriod"></select></div>
-  <div class="f" id="pRange" hidden><label for="pFrom">기간 지정 (시작 월 ~ 끝 월)</label><div class="rng"><select id="pFrom"></select><span>~</span><select id="pTo"></select></div></div>
+  <div class="f"><label for="pPeriod">보고 기간</label><select id="pPeriod" autocomplete="off"></select></div>
+  <div class="f" id="pRange" hidden><label for="pFrom">기간 지정 (시작 월 ~ 끝 월)</label><div class="rng"><select id="pFrom" autocomplete="off"></select><span>~</span><select id="pTo" autocomplete="off"></select></div></div>
   <label class="chk"><input type="checkbox" id="pExLead"> 순위에서 팀장·신입 제외</label>
   <div class="info" id="pCmp"></div>
 </div></div>
@@ -1595,6 +1595,7 @@ function prepare(){
 
 /* ===== 기간 ===== */
 function fyLabel(mk){const [y,m]=mk.split('-').map(Number);const fy=m>=4?y:y-1;const q=m>=4?Math.floor((m-4)/3)+1:4;return {fy,q,key:`FY${String(fy).slice(2)}Q${q}`};}
+let LAST_DEF=null;
 function buildPeriods(){
   /* 두 탭 공통 보고 기간: 연(회계연도) → 반기 → 분기 → 월. 회계연도는 4월 시작 */
   const ms=D.months, last=ms[ms.length-1], maxD=new Date(D.maxT), minD=new Date(D.minT);
@@ -1623,8 +1624,9 @@ function buildPeriods(){
   ['fFrom','pFrom'].forEach(id=>{ $(id).innerHTML=mo; $(id).value=df; });
   ['fTo','pTo'].forEach(id=>{ $(id).innerHTML=mo; $(id).value=dt; });
   const prev=$('fPeriod').value||$('pPeriod').value;
-  const def=(per.find(p=>p.kind==='m'&&!p.partial)||per.find(p=>p.kind==='m')||per[0]).id;
-  const v=(prev&&(prev==='custom'||per.some(p=>p.id===prev)))?prev:def;
+  const def=(per.find(p=>p.kind==='m')||per[0]).id;   // 접속·새로고침 시 데이터의 가장 최근 달(진행 중인 달)을 기본 선택
+  // 이전에 '최근 달'을 보고 있었으면 새 데이터의 최근 달로 따라간다
+  const v=(prev&&prev!==LAST_DEF&&(prev==='custom'||per.some(p=>p.id===prev)))?prev:def; LAST_DEF=def;
   ['fPeriod','pPeriod'].forEach(id=>{ $(id).innerHTML=html; $(id).value=v; });
   syncRange();
 }
