@@ -285,7 +285,24 @@
   .notes-count{font-size:11.5px;font-weight:800;color:var(--blue);background:#E0F2FE;border-radius:20px;padding:3px 10px;}
   .notes-help{background:none;border:none;color:var(--ink-soft);font-size:11.5px;font-weight:700;cursor:pointer;padding:4px 6px;border-radius:7px;}
   .notes-help:hover{background:var(--paper);color:var(--navy);}
-  .notes-sub{font-size:11.5px;color:var(--ink-soft);margin-bottom:12px;line-height:1.5;}
+  .notes-sub{font-size:11.5px;color:var(--ink-soft);margin-bottom:10px;line-height:1.5;}
+  /* 상태별 건수 칩 — 누르면 그 상태만 보여줍니다 */
+  .notes-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .nf-chip{
+    display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:1.5px solid var(--line);
+    background:white;border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:700;
+    color:var(--ink-soft);transition:.15s;
+  }
+  .nf-chip .nf-n{font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;}
+  .nf-chip:hover{border-color:var(--nc, var(--blue));}
+  .nf-chip.on{border-color:var(--nc, var(--blue));background:var(--nbg, #E0F2FE);color:var(--nc, var(--blue));}
+  .nf-chip.on .nf-n{color:var(--nc, var(--blue));}
+  .nf-chip.zero{opacity:.45;}
+  .nf-dot{width:7px;height:7px;border-radius:50%;background:var(--nc, var(--blue));}
+  .st-badge{
+    display:inline-block;font-size:10.5px;font-weight:800;border-radius:20px;padding:2px 8px;white-space:nowrap;
+    color:var(--nc);background:var(--nbg);border:1px solid var(--nc);
+  }
   .notes-empty{background:var(--paper);border:1px dashed var(--line);border-radius:12px;padding:22px 16px;text-align:center;color:var(--ink-soft);font-size:12px;line-height:1.6;}
   .notes-table{width:100%;border-collapse:collapse;font-size:12px;}
   .notes-table th{background:var(--paper);color:var(--navy);font-size:11px;font-weight:800;text-align:left;padding:8px 10px;border-bottom:1.5px solid var(--line);white-space:nowrap;}
@@ -317,9 +334,9 @@
     .notes-date{grid-area:1/1;}
     .notes-inst{grid-area:1/2;}
     .notes-ops{grid-area:1/3;}
-    .notes-dev{grid-area:2/1;font-size:11px;}
-    .notes-by{grid-area:2/2;font-size:11px;}
-    .notes-by::before{content:"· ";}
+    .notes-st{grid-area:2/1;}
+    .notes-dev{grid-area:2/2;font-size:11px;align-self:center;}
+    .notes-by{grid-area:2/3;font-size:11px;align-self:center;text-align:right;}
     .notes-text{grid-area:3/1/auto/4;margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);}
   }
 
@@ -462,6 +479,7 @@
       </div>
     </div>
     <div class="notes-sub" id="notesSub"></div>
+    <div class="notes-filter" id="notesFilter"></div>
     <div id="notesBody"></div>
     <!-- 깃허브 페이지는 화면 파일을 한동안 캐시해서, 올린 뒤에도 옛 화면이 보일 때가 있습니다.
          "지금 보고 있는 게 새 버전인가?"를 바로 확인할 수 있게 버전을 적어둡니다. -->
@@ -700,7 +718,7 @@ const SEED_SCHEDULE_FY2026Q3_V3 = {"west":{"2026-06-29":{"이인구":{"night":"�
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 23; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
+const BUILD_VERSION = 24; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1403,6 +1421,24 @@ function renderLegend(){
 //  · 주간계획서(weeklyreport.js)는 getScheduleNotes()로 읽어 '지난 주 보고'의
 //    [특이 사항] 칸에 날짜·기관·장비·내용 표로 채웁니다.
 // ============================================================
+// 특이사항 상태. 처리 순서대로 둡니다(손이 가야 하는 것부터).
+// 예전에 등록돼 상태가 없는 항목은 '진행중'으로 봅니다 — 아직 끝났다고 단정할 수 없기 때문입니다.
+const NOTE_STATUS = [
+  {key:'진행중', color:'#B45309', bg:'#FEF3C7'},
+  {key:'예정',   color:'#0369A1', bg:'#E0F2FE'},
+  {key:'완료',   color:'#15803D', bg:'#DCFCE7'},
+];
+const NOTE_STATUS_DEFAULT = '진행중';
+function noteStatusOf(v){
+  const k = String(v || '').trim();
+  return NOTE_STATUS.some(st=>st.key===k) ? k : NOTE_STATUS_DEFAULT;
+}
+function noteStatusStyle(k){
+  const st = NOTE_STATUS.find(x=>x.key===k) || NOTE_STATUS[0];
+  return '--nc:' + st.color + ';--nbg:' + st.bg + ';';
+}
+let notesFilter = null; // null이면 전체, 아니면 그 상태만 표시
+
 function notesTeamsInView(){
   return currentTeam === 'all' ? TEAM_ORDER.slice() : [currentTeam];
 }
@@ -1425,6 +1461,7 @@ function getScheduleNotes(teams, from, to){
         device: String(n.device || ''),
         author: String(n.author || ''),
         text: String(n.text || ''),
+        status: noteStatusOf(n.status),
         ts: n.ts || 0
       });
     });
@@ -1436,31 +1473,62 @@ function renderNotes(){
   const body = document.getElementById('notesBody');
   const sub = document.getElementById('notesSub');
   const cnt = document.getElementById('notesCount');
+  const filterEl = document.getElementById('notesFilter');
   if(!body) return;
   const nDays = daysInMonth(viewYear, viewMonth);
   const from = fmtDate(viewYear, viewMonth, 1);
   const to = fmtDate(viewYear, viewMonth, nDays);
   const teams = notesTeamsInView();
-  const list = getScheduleNotes(teams, from, to);
+  const all = getScheduleNotes(teams, from, to);
   const scopeLabel = currentTeam === 'all' ? '전체 팀' : TEAMS[currentTeam].label;
 
-  cnt.textContent = list.length ? (list.length + '건') : '';
-  cnt.style.display = list.length ? '' : 'none';
+  // 선택한 상태가 이번 달에 하나도 없으면 필터를 풀어줍니다 (빈 화면만 보이는 일이 없게)
+  if(notesFilter && !all.some(n=>n.status===notesFilter)) notesFilter = null;
+  const list = notesFilter ? all.filter(n=>n.status===notesFilter) : all;
+
+  cnt.textContent = all.length ? (all.length + '건') : '';
+  cnt.style.display = all.length ? '' : 'none';
   sub.innerHTML = escapeHtml(viewYear + '년 ' + viewMonth + '월 · ' + scopeLabel) +
     ' — 주간계획서 <b>지난 주 보고</b>의 [특이 사항] 칸에 그대로 들어갑니다.';
 
+  // ── 상태별 건수 칩 ──
+  const counts = {};
+  NOTE_STATUS.forEach(st=>{ counts[st.key] = 0; });
+  all.forEach(n=>{ counts[n.status] = (counts[n.status] || 0) + 1; });
+  filterEl.innerHTML =
+    '<button type="button" class="nf-chip' + (notesFilter===null?' on':'') + '" data-st="">' +
+      '전체 <span class="nf-n">' + all.length + '</span></button>' +
+    NOTE_STATUS.map(st=>
+      '<button type="button" class="nf-chip' + (notesFilter===st.key?' on':'') + (counts[st.key]?'':' zero') + '"' +
+      ' style="--nc:' + st.color + ';--nbg:' + st.bg + ';" data-st="' + escapeHtml(st.key) + '">' +
+        '<span class="nf-dot"></span>' + escapeHtml(st.key) + ' <span class="nf-n">' + counts[st.key] + '</span>' +
+      '</button>'
+    ).join('');
+  filterEl.querySelectorAll('.nf-chip').forEach(btn=>{
+    btn.onclick = ()=>{
+      const k = btn.getAttribute('data-st');
+      notesFilter = (k && notesFilter !== k) ? k : null; // 같은 칩을 다시 누르면 전체로
+      renderNotes();
+    };
+  });
+  filterEl.style.display = all.length ? '' : 'none';
+
   if(!list.length){
-    body.innerHTML = '<div class="notes-empty">등록된 특이사항이 없습니다.<br>' +
-      '<b>＋ 특이사항 등록</b>을 눌러 날짜 · 기관 · 장비 · 내용을 입력하세요.</div>';
+    body.innerHTML = '<div class="notes-empty">' +
+      (all.length
+        ? ('<b>' + escapeHtml(notesFilter) + '</b> 상태인 특이사항이 없습니다.<br>위 <b>전체</b>를 누르면 다시 모두 보입니다.')
+        : '등록된 특이사항이 없습니다.<br><b>＋ 특이사항 등록</b>을 눌러 날짜 · 기관 · 장비 · 내용을 입력하세요.') +
+      '</div>';
     return;
   }
   const showTeam = currentTeam === 'all';
   body.innerHTML =
     '<table class="notes-table"><thead><tr>' +
       '<th style="width:86px;">날짜</th>' +
-      '<th style="width:21%;">기관</th>' +
-      '<th style="width:16%;">장비</th>' +
-      '<th style="width:76px;">작성자</th>' +
+      '<th style="width:19%;">기관</th>' +
+      '<th style="width:14%;">장비</th>' +
+      '<th style="width:70px;">상태</th>' +
+      '<th style="width:70px;">작성자</th>' +
       '<th>특이사항</th>' +
       '<th style="width:54px;"></th>' +
     '</tr></thead><tbody>' +
@@ -1472,6 +1540,7 @@ function renderNotes(){
         '<td class="notes-date' + (red?' is-red':'') + '">' + escapeHtml(p[1] + '/' + p[2]) + ' (' + escapeHtml(wk) + ')</td>' +
         '<td class="notes-inst">' + (showTeam ? '<span class="notes-team">' + escapeHtml(TEAMS[n.team].label.replace('FS ','')) + '</span>' : '') + escapeHtml(n.inst || '—') + '</td>' +
         '<td class="notes-dev">' + escapeHtml(n.device || '—') + '</td>' +
+        '<td class="notes-st"><span class="st-badge" style="' + noteStatusStyle(n.status) + '">' + escapeHtml(n.status) + '</span></td>' +
         '<td class="notes-by">' + escapeHtml(n.author || '—') + '</td>' +
         '<td class="notes-text">' + escapeHtml(n.text) + '</td>' +
         '<td class="notes-ops">' +
@@ -1517,7 +1586,9 @@ function openNotePanel(opts){
     inst:   existing ? String(existing.inst||'')   : '',
     device: existing ? String(existing.device||'') : '',
     author: existing ? String(existing.author||'') : (opts.author || ''),
-    text:   existing ? String(existing.text||'')   : ''
+    text:   existing ? String(existing.text||'')   : '',
+    // 새로 등록할 때는 지금 보고 있는 상태 칩을 그대로 따라갑니다 (진행중만 보다가 추가하면 진행중)
+    status: existing ? noteStatusOf(existing.status) : (notesFilter || NOTE_STATUS_DEFAULT)
   };
   const teamOpts = TEAM_ORDER.map(tk=>
     '<option value="' + tk + '"' + (tk===editTeam?' selected':'') + '>' + escapeHtml(TEAMS[tk].label) + '</option>'
@@ -1542,7 +1613,12 @@ function openNotePanel(opts){
       '<div><label>기관</label><input type="text" id="nt-inst" placeholder="예: 서울대병원" autocomplete="off" value="' + escapeHtml(cur.inst) + '"></div>' +
       '<div><label>장비</label><input type="text" id="nt-device" placeholder="예: XN-9100" autocomplete="off" value="' + escapeHtml(cur.device) + '"></div>' +
     '</div>' +
-    '<div class="form-row"><label>작성자 (FSR)</label><select id="nt-author">' + memberOptions(editTeam) + '</select></div>' +
+    '<div class="form-row form-grid2">' +
+      '<div><label>상태</label><select id="nt-status">' +
+        NOTE_STATUS.map(st=>'<option value="' + escapeHtml(st.key) + '"' + (st.key===cur.status?' selected':'') + '>' + escapeHtml(st.key) + '</option>').join('') +
+      '</select></div>' +
+      '<div><label>작성자 (FSR)</label><select id="nt-author">' + memberOptions(editTeam) + '</select></div>' +
+    '</div>' +
     '<div class="form-row"><label>특이사항</label>' +
       '<textarea id="nt-text" rows="4" placeholder="무슨 일이 있었고, 어떻게 조치했는지 / 후속 조치가 필요한지" style="width:100%;box-sizing:border-box;resize:vertical;">' + escapeHtml(cur.text) + '</textarea>' +
     '</div>' +
@@ -1575,6 +1651,7 @@ function openNotePanel(opts){
       inst: panel.querySelector('#nt-inst').value.trim(),
       device: panel.querySelector('#nt-device').value.trim(),
       author: panel.querySelector('#nt-author').value,
+      status: noteStatusOf(panel.querySelector('#nt-status').value),
       text: text,
       ts: existing && existing.ts ? existing.ts : Date.now(),
       updatedAt: new Date().toISOString()
@@ -1618,7 +1695,7 @@ function openGuidePanel(){
         '<div class="guide-item"><div class="guide-icon">' + g.icon + '</div><div class="guide-h">' + g.h + '</div><div class="guide-d">' + g.d + '</div></div>'
       ).join('') +
       '<div class="guide-item"><div class="guide-icon">📌</div><div class="guide-h">특이사항</div>' +
-      '<div class="guide-d">화면 맨 아래 [＋ 특이사항 등록]에서 날짜 · 기관 · 장비 · 내용을 입력합니다. 편집창(야간·주말) 아래의 “📌 이 날짜 특이사항 등록”을 눌러도 날짜와 이름이 채워진 상태로 열립니다. 등록한 내용은 주간계획서 <b>지난 주 보고</b>의 [특이 사항] 칸에 자동으로 들어갑니다.</div></div>' +
+      '<div class="guide-d">화면 맨 아래 [＋ 특이사항 등록]에서 날짜 · 기관 · 장비 · 상태(진행중 · 예정 · 완료) · 내용을 입력합니다. 상단의 상태 칩을 누르면 그 상태만 골라 볼 수 있고, 같은 칩을 다시 누르면 전체로 돌아옵니다. 편집창(야간·주말) 아래의 “📌 이 날짜 특이사항 등록”을 눌러도 날짜와 이름이 채워진 상태로 열립니다. 등록한 내용은 주간계획서 <b>지난 주 보고</b>의 [특이 사항] 칸에 자동으로 들어갑니다.</div></div>' +
     '</div>';
   document.getElementById('overlay').classList.add('show');
 }
@@ -2936,6 +3013,6 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
 </script>
 <!-- 주간계획서/보고서 내보내기 애드온 (FSS팀 베타) — weeklyreport.js는 저장소에 이미 있었으나
      이 연결 태그가 빠져 있어서 실제로는 한 번도 로드된 적이 없었습니다. -->
-<script src="weeklyreport.js?v=23"></script>
+<script src="weeklyreport.js?v=24"></script>
 </body>
 </html>

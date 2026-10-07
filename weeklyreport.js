@@ -376,6 +376,9 @@
     return wb;
   }
 
+  // 특이사항 상태 색상 (근무일정표 화면과 같은 계열)
+  var STATUS_FILLS = { '진행중': 'FFFEF3C7', '예정': 'FFE0F2FE', '완료': 'FFDCFCE7' };
+
   // ---- 주간보고 요약 시트 (지난주 보고) ----
   function buildSummary(wb, teamLabel, start, end, members, memberRows, note, headFill, thin, notes0, notesLabel) {
     var ws = wb.addWorksheet('주간보고');
@@ -427,9 +430,10 @@
       ws.getCell('A' + hr).value = '날짜';
       ws.mergeCells('B' + hr + ':C' + hr); ws.getCell('B' + hr).value = '기관';
       ws.getCell('D' + hr).value = '장비';
-      ws.getCell('E' + hr).value = '작성자';
-      ws.getCell('F' + hr).value = '특이사항';
-      ['A', 'B', 'D', 'E', 'F'].forEach(function (col) { headFill(ws.getCell(col + hr)); });
+      ws.getCell('E' + hr).value = '상태';
+      ws.getCell('F' + hr).value = '작성자';
+      ws.getCell('G' + hr).value = '특이사항';
+      ['A', 'B', 'D', 'E', 'F', 'G'].forEach(function (col) { headFill(ws.getCell(col + hr)); });
       notes.forEach(function (n, i) {
         var r = hr + 1 + i;
         ws.getCell('A' + r).value = n.date || '';
@@ -438,20 +442,26 @@
         ws.getCell('B' + r).alignment = { vertical: 'top', wrapText: true };
         ws.getCell('D' + r).value = n.device || '';
         ws.getCell('D' + r).alignment = { vertical: 'top', wrapText: true };
-        ws.getCell('E' + r).value = n.author || '';
+        var st = String(n.status || '');
+        ws.getCell('E' + r).value = st;
         ws.getCell('E' + r).alignment = { horizontal: 'center', vertical: 'top' };
+        if (STATUS_FILLS[st]) {
+          ws.getCell('E' + r).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: STATUS_FILLS[st] } };
+          ws.getCell('E' + r).font = { bold: true, size: 10 };
+        }
+        ws.getCell('F' + r).value = n.author || '';
+        ws.getCell('F' + r).alignment = { horizontal: 'center', vertical: 'top' };
         var txt = String(n.text || '');
-        ws.getCell('F' + r).value = txt;
-        ws.getCell('F' + r).alignment = { vertical: 'top', wrapText: true };
-        // 병합/줄바꿈 셀은 엑셀이 높이를 자동으로 늘려주지 않아, 글자 수로 줄 수를 어림잡아 지정한다.
-        // F열 너비 48 ≈ 한글 24자 정도가 한 줄.
-        ws.getRow(r).height = Math.min(90, Math.max(16, Math.ceil(txt.length / 24) * 15));
+        ws.getCell('G' + r).value = txt;
+        ws.getCell('G' + r).alignment = { vertical: 'top', wrapText: true };
+        // 줄바꿈 셀은 엑셀이 높이를 자동으로 늘려주지 않아, 글자 수로 줄 수를 어림잡아 지정한다.
+        // G열 너비 46 ≈ 한글 23자 정도가 한 줄.
+        ws.getRow(r).height = Math.min(90, Math.max(16, Math.ceil(txt.length / 23) * 15));
       });
-      ws.getColumn(6).width = 48;
-      // 특이사항 열이 붙으면 시트가 기본 인쇄 폭(A~E)을 넘는다. 한 페이지 너비에 맞춰
-      // 자동 축소되게 해서, 한 줄로 적어도 출력 때 내용이 잘리지 않게 한다.
+      ws.getColumn(6).width = 12; ws.getColumn(7).width = 46;
+      // 열이 늘어 기본 인쇄 폭(A~E)을 넘으므로, 한 페이지 너비에 맞춰 자동 축소되게 한다.
       ws.pageSetup = { fitToPage: true, fitToWidth: 1, fitToHeight: 0, orientation: 'portrait' };
-      thin(ws, hr, 1, hr + notes.length, 6);
+      thin(ws, hr, 1, hr + notes.length, 7);
     } else if (note) {
       ws.getCell('A' + (nr + 1)).value = note;
     }
@@ -718,7 +728,7 @@
     if (typeof getScheduleNotes === 'undefined') return [];
     try {
       return getScheduleNotes([teamKey], weekMonday, WR.addDays(weekMonday, 6)).map(function (n) {
-        return { date: n.date, inst: n.inst, device: n.device, author: n.author, text: n.text };
+        return { date: n.date, inst: n.inst, device: n.device, author: n.author, status: n.status || '', text: n.text };
       });
     } catch (e) { return []; }
   }
