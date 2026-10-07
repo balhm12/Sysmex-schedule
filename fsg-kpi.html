@@ -1306,7 +1306,7 @@ function renderPerson(){
     members.forEach(function(m){
       var item = document.createElement('div');
       item.className = 'person-item' + (m===state.person?' active':'');
-      item.innerHTML = '<span class="person-main">'+esc(m)+'</span><span class="mini">'+fmt(DATA.person[m].total_case[period])+'건</span>';
+      item.innerHTML = '<span class="person-main">'+esc(m)+((DATA.promoted||{})[m]?'<span class="gtag" title="'+esc(DATA.promoted[m])+' 진급">진급</span>':'')+'</span><span class="mini">'+fmt(DATA.person[m].total_case[period])+'건</span>';
       item.addEventListener('click', function(){ state.person = m; renderPerson(); });
       g.appendChild(item);
     });
@@ -1335,7 +1335,9 @@ function renderPerson(){
   var reliable = DATA.revisit[team].reliable;
 
   var html2 = '<div class="person-header">'+
-    '<div><h2>'+esc(state.person)+'</h2><span class="team-tag" style="background:'+resolveVar('var(--accent-soft)')+';color:'+resolveVar(TEAM_COLOR[team])+'">'+team+'</span></div>'+
+    '<div><h2>'+esc(state.person)+'</h2><span class="team-tag" style="background:'+resolveVar('var(--accent-soft)')+';color:'+resolveVar(TEAM_COLOR[team])+'">'+team+'</span>'+
+    ((DATA.grade||{})[state.person]?'<span class="team-tag" style="background:var(--surface-2);color:var(--text-secondary);margin-left:6px">'+esc(DATA.grade[state.person])+'</span>':'')+
+    ((DATA.promoted||{})[state.person]?'<span class="gtag" title="'+esc(DATA.promoted[state.person])+' 진급">진급 '+esc(DATA.promoted[state.person])+'</span>':'')+'</div>'+
     '</div>';
 
   html2 += '<div class="block grid grid-5">'+
