@@ -64,17 +64,15 @@ h2.sec small{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:8px
 .up{color:var(--good)}.down{color:var(--bad)}.flat{color:var(--muted)}.neu{color:var(--muted)}
 .kpi.tg-good,.kpi.s-good{border-top-color:var(--good)}.kpi.tg-bad,.kpi.s-bad{border-top-color:var(--bad)}.kpi.s-warn{border-top-color:var(--warn)}
 /* 잘된 것 / 안 된 것 강조 */
-.kpi.s-good{background:var(--good-bg);border-color:color-mix(in srgb,var(--good) 35%,var(--border))}
-.kpi.s-bad{background:var(--bad-bg);border-color:color-mix(in srgb,var(--bad) 35%,var(--border))}
-.kpi.s-warn{background:var(--warn-bg)}
-.kpi.s-good .v{color:var(--good-t)}.kpi.s-bad .v{color:var(--bad-t)}
+/* 카드는 위쪽 띠 색만 바꾼다(사용자 요청 2026-10-07): 초록 = 잘됨, 빨강 = 안 됨 */
+.kpi.s-good,.kpi.s-bad,.kpi.s-warn,.hc.s-good,.hc.s-bad{border-top-width:4px}
 .kpi .l{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .chip{margin-left:auto;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap;line-height:1.6}
 .chip.good{background:var(--good);color:#fff}.chip.bad{background:var(--bad);color:#fff}.chip.warn{background:var(--warn);color:#fff}
 .chip.good::before{content:'✓ '}.chip.bad::before{content:'! '}
 .up{color:var(--good-t)}.down{color:var(--bad-t)}
 td.good{color:var(--good-t);font-weight:700}td.bad{color:var(--bad-t);font-weight:700;background:var(--bad-bg)}
-.hc.s-good{background:var(--good-bg)}.hc.s-good .v{color:var(--good-t)!important}.hc.s-bad{background:var(--bad-bg)}.hc.s-bad .v{color:var(--bad-t)}
+.hc.s-good{border-top:4px solid var(--good)}.hc.s-bad{border-top:4px solid var(--bad)}
 .rng{display:flex;gap:6px;align-items:center}.rng select{min-width:110px}
 .na{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:12.5px;color:var(--muted)}
 .na span{border:1px solid var(--border);border-radius:4px;padding:3px 8px;background:var(--surface)}
@@ -318,9 +316,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 #prod .dpos{color:var(--good-t);font-weight:700}#prod .dneg{color:var(--bad-t);font-weight:700}
 #prod td.dpos span,#prod td.dneg span{display:inline-block;padding:1px 7px;border-radius:10px}
 #prod td.dpos span{background:var(--good-bg)}#prod td.dneg span{background:var(--bad-bg)}
-#prod .stat.s-good{border-top-color:var(--good);background:var(--good-bg)}#prod .stat.s-good .stat-value{color:var(--good-t)}
-#prod .stat.s-bad{border-top-color:var(--bad);background:var(--bad-bg)}#prod .stat.s-bad .stat-value{color:var(--bad-t)}
-#prod .stat.s-warn{border-top-color:var(--warn);background:var(--warn-bg)}
+#prod .stat.s-good{border-top:4px solid var(--good)}#prod .stat.s-bad{border-top:4px solid var(--bad)}#prod .stat.s-warn{border-top:4px solid var(--warn)}
 #prod td.good{color:var(--good-t);font-weight:700}#prod td.bad{color:var(--bad-t);font-weight:700;background:var(--bad-bg)}
 #prod .delta-up{color:var(--bad-t)}#prod .delta-down{color:var(--good-t)}
 
@@ -1698,7 +1694,7 @@ function dirSt(cur, prev, better, unit){ if(cur==null||prev==null||!better) retu
   const small=unit==='%p'?Math.abs(d)<0.1:(prev?Math.abs(d/prev*100)<0.5:d===0); if(small) return {};
   return ((d>0)===(better>0))?{st:'good',chip:'개선'}:{st:'bad',chip:'악화'}; }
 function card(label, val, suffix, dl, cap, opt={}){
-  return `<div class="kpi ${opt.st?'s-'+opt.st:''}"><div class="l">${label}${opt.prov?'<span class="pv">잠정</span>':''}${opt.chip?`<span class="chip ${opt.st}">${opt.chip}</span>`:''}</div><div class="v">${val}${suffix?`<small>${suffix}</small>`:''}</div>${dl}${cap?`<div class="cap">${cap}</div>`:''}</div>`;
+  return `<div class="kpi ${opt.st?'s-'+opt.st:''}"><div class="l">${label}${opt.prov?'<span class="pv">잠정</span>':''}</div><div class="v">${val}${suffix?`<small>${suffix}</small>`:''}</div>${dl}${cap?`<div class="cap">${cap}</div>`:''}</div>`;
 }
 
 let charts={};
