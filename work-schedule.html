@@ -749,6 +749,11 @@ function setMe(name, team){
     localStorage.setItem(ME_ASKED_KEY, '1');
   }catch(e){}
 }
+// "한 번 물어봤다"는 기록만 남깁니다. 이름을 건드리지 않으므로, 이미 기억해 둔
+// 이름이 안내창을 닫는 것만으로 사라지는 일이 없습니다.
+function markMeAsked(){
+  try{ localStorage.setItem(ME_ASKED_KEY, '1'); }catch(e){}
+}
 function meAsked(){
   try{ return localStorage.getItem(ME_ASKED_KEY) === '1'; }catch(e){ return true; }
 }
@@ -858,7 +863,7 @@ const SEED_SCHEDULE_FY2026Q3_V3 = {"west":{"2026-06-29":{"이인구":{"night":"�
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 33; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
+const BUILD_VERSION = 34; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1003,7 +1008,10 @@ function scheduleRealtimeSync(){
   _syncDebounceTimer = setTimeout(async ()=>{
     // 편집 중엔 방해하지 않는다. 다만 입력값이 없는 안내성 패널(내 이름·사용법)은 막지 않는다 —
     // 그 창을 띄워 둔 채로 두면 자동 갱신이 영영 멈춰 옛 데이터를 보게 되기 때문이다.
-    if(document.getElementById('overlay').classList.contains('show') && !_panelAllowsSync) return;
+    if(document.getElementById('overlay').classList.contains('show') && !_panelAllowsSync){
+      _syncPending = true; // 버리지 않고 미뤄 둔다 — 창을 닫을 때 따라잡는다
+      return;
+    }
     await loadStorage();
     render();
   }, 400);
@@ -1167,7 +1175,15 @@ async function saveEntriesToServer(items){
   if(results.every(Boolean)){ showToast('저장되었습니다 (팀 전체 공유)'); }
 }
 // 전체 스냅샷을 가져와 매일 백업 경로에 저장 (읽기 전용이라 안전, 실패해도 무시)
-async function backupFullSnapshot(){
+// 한 번 저장에 여러 날짜가 올라갈 때(석/야 연쇄 입력 등) 저장마다 백업을 뜨면,
+// 아직 다 올라가지 않은 중간 상태가 백업으로 남을 수 있다. 마지막 저장 뒤
+// 한 번만 뜨도록 모아서 처리한다.
+let _backupTimer = null;
+function backupFullSnapshot(){
+  clearTimeout(_backupTimer);
+  _backupTimer = setTimeout(doBackupFullSnapshot, 1500);
+}
+async function doBackupFullSnapshot(){
   try{
     const res = await fetchWithTimeout(STORAGE_ENDPOINT, {cache:'no-store'}, 8000);
     if(res.ok){ writeDailyBackup(await res.json()); }
@@ -1993,6 +2009,9 @@ function openNotePanel(opts){
 function openMePanel(firstTime){
   // 이름만 고르는 창이라 뒤쪽 자동 갱신을 막을 이유가 없다 (첫 방문 때 떠 있어도 최신 데이터가 들어온다)
   _panelDismissable = false; _panelAllowsSync = true;
+  // 첫 방문 안내는 띄우는 순간 "물어봤다"로 기록합니다. ✕로 닫든 '나중에'를 누르든
+  // 다음 방문에 다시 뜨지 않습니다.
+  if(firstTime) markMeAsked();
   const panel = document.getElementById('panel');
   const me = getMe();
   const curTeam = (me && teamOfName(me.name)) || (me && me.team) || (currentTeam === 'all' ? TEAM_ORDER[0] : currentTeam);
@@ -2035,10 +2054,7 @@ function openMePanel(firstTime){
   teamSel.onchange = ()=>{ pick.innerHTML = memberOpts(teamSel.value, nameInput.value); };
   pick.onchange = ()=>{ if(pick.value) nameInput.value = pick.value; };
 
-  panel.querySelector('#me-cancel').onclick = ()=>{
-    if(firstTime) setMe('', ''); // '나중에'도 다시 묻지 않도록 기록만 남김
-    closePanel();
-  };
+  panel.querySelector('#me-cancel').onclick = ()=> closePanel();
   const clearBtn = panel.querySelector('#me-clear');
   if(clearBtn) clearBtn.onclick = ()=>{
     setMe('', '');
@@ -2675,7 +2691,25 @@ function openEditor(team, date, name){
   const teamWeekendList = weekendStatusListFor(team);
   const nightParsed = splitDetail(entry.night, teamNightList);
   const weekendParsed = splitDetail(entry.weekend, teamWeekendList);
-  const nightOptions = teamNightList.filter(s=> !s.key || s.weekdayOnly || s.key === nightParsed.key);
+  // 목록에 없는 옛 값(팀 편성이 바뀌기 전 데이터 등)은 선택지로 끼워 넣어 그대로 보존합니다.
+  // 예전에는 이런 값이 '-'로 보였고, 저장을 누르면 아무 말 없이 지워졌습니다.
+  const nightLegacy = (entry.night && !nightParsed.key) ? entry.night : '';
+  const weekendLegacy = (entry.weekend && !weekendParsed.key) ? entry.weekend : '';
+  if(nightLegacy) nightParsed.key = nightLegacy;
+  if(weekendLegacy) weekendParsed.key = weekendLegacy;
+  const legacyOpt = raw => ({key:raw, label:raw + ' (기존 값)'});
+  const nightList = nightLegacy ? teamNightList.concat([legacyOpt(nightLegacy)]) : teamNightList;
+  const weekendList = weekendLegacy ? teamWeekendList.concat([legacyOpt(weekendLegacy)]) : teamWeekendList;
+  const nightOptions = nightList.filter(s=> !s.key || s.weekdayOnly || s.key === nightParsed.key);
+  // 이 칸에 이미 들어 있는 내용을 사람이 읽을 수 있게 한 줄로 — 덮어쓰기/비우기 확인창에 씁니다.
+  function occupiedSummary(e){
+    if(!e) return '';
+    const out = [];
+    SLOT_KEYS.forEach(k=>{ if(e[k] && e[k] !== 'OFF') out.push(SLOT_LABELS[k] + ' ' + e[k]); });
+    if(e.night) out.push('야간 ' + e.night);
+    if(e.weekend) out.push('주말/휴일 ' + e.weekend);
+    return out.join(', ');
+  }
 
   panel.innerHTML =
     '<button class="close" onclick="closePanel()">✕</button>' +
@@ -2697,12 +2731,12 @@ function openEditor(team, date, name){
 
     '<div class="form-row" id="nightRow" style="' + (isOffDay?'display:none;':'') + '">' +
       slotLabel('야간','night') +
-      '<select id="f-night">' + nightOptions.map(s=>'<option value="' + s.key + '" ' + (nightParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
+      '<select id="f-night">' + nightOptions.map(s=>'<option value="' + escapeHtml(s.key) + '" ' + (nightParsed.key===s.key?'selected':'') + '>' + escapeHtml(s.label) + '</option>').join('') + '</select>' +
       clearableInput('f-night-detail', '야간 업무내역', nightParsed.detail, 'margin-top:6px;') +
     '</div>' +
 
     '<div class="form-row" id="weekendRow" style="' + (isOffDay?'':'display:none;') + '">' +
-      slotLabel('주말/휴일 구분','weekend') + '<select id="f-weekend">' + teamWeekendList.map(s=>'<option value="' + s.key + '" ' + (weekendParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
+      slotLabel('주말/휴일 구분','weekend') + '<select id="f-weekend">' + weekendList.map(s=>'<option value="' + escapeHtml(s.key) + '" ' + (weekendParsed.key===s.key?'selected':'') + '>' + escapeHtml(s.label) + '</option>').join('') + '</select>' +
       clearableInput('f-weekend-detail', '주말/휴일 업무내역', weekendParsed.detail, 'margin-top:6px;') +
     '</div>' +
 
@@ -2887,6 +2921,12 @@ function openEditor(team, date, name){
   };
   panel.querySelector('#f-cancel').onclick = closePanel;
   panel.querySelector('#f-clear').onclick = async ()=>{
+    // 되돌릴 수 없는 삭제라서 한 번 확인합니다 (칸 하나만 지우려면 각 칸의 ✕를 쓰면 됩니다).
+    const had = occupiedSummary(entry);
+    if(had && !confirm(
+      name + '님 ' + date + ' 일정을 모두 지웁니다.\n\n현재 내용: ' + had +
+      '\n\n되돌릴 수 없습니다. 지울까요?\n(한 칸만 지우려면 그 칸의 ✕를 누르세요)'
+    )) return;
     setEntry(team, date, name, blankEntry());
     closePanel(); render();
     await saveEntriesToServer([{team, date, name, entry: blankEntry()}]);
@@ -2913,13 +2953,18 @@ function openEditor(team, date, name){
       after.meta = meta;
       return after;
     }
+    // 화면에서 감춰진 칸은 "비우라는 뜻"이 아닙니다. 주말·공휴일에는 오전1~오후2가,
+    // 평일에는 주말/휴일 칸이 숨겨지는데, 예전에는 저장할 때 숨겨진 칸을 빈 값으로
+    // 덮어써서 — 토요일 칸을 한 번 저장하기만 해도 거기 있던 휴가·근무 내용이
+    // 통째로 사라졌습니다. 숨겨진 입력칸은 열었을 때의 값을 그대로 들고 있으므로
+    // 그냥 읽어서 다시 저장합니다.
     const updated = {
       night: combineDetail(panel.querySelector('#f-night').value, panel.querySelector('#f-night-detail').value),
-      weekend: isOffDay ? combineDetail(panel.querySelector('#f-weekend').value, panel.querySelector('#f-weekend-detail').value) : '',
-      am1: isOffDay ? '' : cleanSlot(panel.querySelector('#f-am1').value),
-      am2: isOffDay ? '' : cleanSlot(panel.querySelector('#f-am2').value),
-      pm1: isOffDay ? '' : cleanSlot(panel.querySelector('#f-pm1').value),
-      pm2: isOffDay ? '' : cleanSlot(panel.querySelector('#f-pm2').value),
+      weekend: combineDetail(panel.querySelector('#f-weekend').value, panel.querySelector('#f-weekend-detail').value),
+      am1: cleanSlot(panel.querySelector('#f-am1').value),
+      am2: cleanSlot(panel.querySelector('#f-am2').value),
+      pm1: cleanSlot(panel.querySelector('#f-pm1').value),
+      pm2: cleanSlot(panel.querySelector('#f-pm2').value),
       by: editorName,
       at: stampedAt,
     };
@@ -2928,44 +2973,57 @@ function openEditor(team, date, name){
     const toSave = [{team, date, name, entry: updated}];
     const nightSt = nightStatusOf(updated.night, team);
     const nightLabel = nightSt ? nightSt.label : '';
-    if(nightLabel === '석/야'){
-      // 석/야 선택 시: 다음 근무일 = 석간, 그다음 근무일 = OFF (주말·공휴일은 건너뜀)
-      const day1 = nextWorkday(date);
-      const prev1 = Object.assign({}, getEntry(team, day1, name));
-      const e1 = Object.assign(blankEntry(), prev1);
-      e1.by = editorName; e1.at = stampedAt;
-      e1.night = '석간';
-      e1.am1 = e1.am2 = e1.pm1 = e1.pm2 = 'OFF';
-      stampSlots(prev1, e1);
-      setEntry(team, day1, name, e1);
-      toSave.push({team, date:day1, name, entry:e1});
-
-      const day2 = nextWorkday(day1);
-      const prev2 = Object.assign({}, getEntry(team, day2, name));
-      const e2 = Object.assign(blankEntry(), prev2);
-      e2.by = editorName; e2.at = stampedAt;
-      e2.am1 = e2.am2 = e2.pm1 = e2.pm2 = 'OFF';
-      stampSlots(prev2, e2);
-      setEntry(team, day2, name, e2);
-      toSave.push({team, date:day2, name, entry:e2});
-    } else if(nightLabel === '석간'){
-      // 석간 단독 선택 시: 다음 근무일 = OFF (주말·공휴일은 건너뜀)
-      const nd = nextWorkday(date);
-      const prevNd = Object.assign({}, getEntry(team, nd, name));
-      const otherEntry = Object.assign(blankEntry(), prevNd);
-      otherEntry.by = editorName; otherEntry.at = stampedAt;
-      otherEntry.am1 = otherEntry.am2 = otherEntry.pm1 = otherEntry.pm2 = 'OFF';
-      stampSlots(prevNd, otherEntry);
-      setEntry(team, nd, name, otherEntry);
-      toSave.push({team, date:nd, name, entry:otherEntry});
+    const prevNightSt = nightStatusOf(entry.night, team);
+    const prevNightLabel = prevNightSt ? prevNightSt.label : '';
+    // 연쇄 입력(다음 근무일 자동 채움)은 야간 값이 "새로 바뀐 순간"에만 한 번 돕니다.
+    // 예전에는 현재 값만 보고 판단해서, 같은 칸을 다시 저장할 때마다(등록자 이름만
+    // 고쳐도) 다시 돌면서 다음 근무일에 적어 둔 휴가·일정을 OFF로 덮어썼습니다.
+    const nightChanged = nightLabel !== prevNightLabel;
+    let cascadeDays = [];
+    if(nightChanged && nightLabel === '석/야'){
+      const d1 = nextWorkday(date);
+      cascadeDays = [d1, nextWorkday(d1)];   // 다음 근무일 = 석간, 그다음 = OFF
+    }else if(nightChanged && nightLabel === '석간'){
+      cascadeDays = [nextWorkday(date)];     // 다음 근무일 = OFF
     }
+    if(cascadeDays.length){
+      // 자동으로 채울 날짜에 이미 다른 일정이 있으면, 말없이 덮어쓰지 않고 물어봅니다.
+      const conflicts = cascadeDays
+        .map(dy=> ({dy, what: occupiedSummary(getEntry(team, dy, name))}))
+        .filter(x=> x.what);
+      if(conflicts.length && !confirm(
+        nightLabel + '을 선택하셨으니 다음 근무일을 자동으로 채웁니다.\n' +
+        '그런데 아래 날짜에 이미 일정이 있습니다:\n\n' +
+        conflicts.map(c=> '· ' + c.dy + ' — ' + c.what).join('\n') +
+        '\n\n덮어쓸까요?\n[취소]를 누르면 ' + date + ' 칸만 저장하고 나머지는 그대로 둡니다.'
+      )) cascadeDays = [];
+    }
+    cascadeDays.forEach((dy, i)=>{
+      const prev = Object.assign({}, getEntry(team, dy, name));
+      const e = Object.assign(blankEntry(), prev);
+      e.by = editorName; e.at = stampedAt;
+      if(nightLabel === '석/야' && i === 0) e.night = '석간';
+      e.am1 = e.am2 = e.pm1 = e.pm2 = 'OFF';
+      stampSlots(prev, e);
+      setEntry(team, dy, name, e);
+      toSave.push({team, date:dy, name, entry:e});
+    });
     closePanel(); render();
     await saveEntriesToServer(toSave);
   };
 
   document.getElementById('overlay').classList.add('show');
 }
-function closePanel(){ document.getElementById('overlay').classList.remove('show'); clearCellHighlight(); }
+function closePanel(){
+  document.getElementById('overlay').classList.remove('show');
+  clearCellHighlight();
+  // 창을 닫으면 그 창의 설정값은 반드시 되돌린다. 안 그러면 마지막에 열린 창의
+  // 성격(바깥클릭 허용·자동갱신 허용)이 그대로 남아, 다음에 열리는 입력창에
+  // 잘못 적용된다.
+  _panelDismissable = false; _panelAllowsSync = false;
+  // 입력 중이라 미뤄 둔 갱신이 있으면 지금 처리한다 (그냥 버리면 옛 데이터가 남는다).
+  if(_syncPending){ _syncPending = false; scheduleRealtimeSync(); }
+}
 // 바깥(배경) 클릭으로 닫히는 동작은 패널 종류에 따라 다르게 한다.
 // - 입력용(근무 입력, 팀원 관리): 실수로 바깥을 터치하면(특히 모바일) 입력 내용이
 //   통째로 사라지므로 바깥 클릭으로는 닫히지 않고 ✕/취소 버튼으로만 닫는다.
@@ -2973,6 +3031,8 @@ function closePanel(){ document.getElementById('overlay').classList.remove('show
 let _panelDismissable = false;
 // true면 이 패널이 열려 있어도 뒤에서 자동 갱신이 계속된다 (입력값이 없는 안내성 패널)
 let _panelAllowsSync = false;
+// 입력 중이라 갱신을 건너뛴 적이 있으면 true — 창을 닫는 순간 한 번 따라잡는다.
+let _syncPending = false;
 document.getElementById('overlay').onclick = (ev)=>{
   if(ev.target.id==='overlay' && _panelDismissable) closePanel();
 };
@@ -3539,8 +3599,12 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
     }
   }
   render();
-  // 이름을 한 번도 묻지 않았으면 여기서 한 번만 묻습니다. ('나중에'를 누르면 다시 묻지 않음)
-  if(!meAsked()) setTimeout(()=> openMePanel(true), 400);
+  // 이름을 한 번도 묻지 않았으면 여기서 한 번만 묻습니다. (닫으면 다시 묻지 않음)
+  // 0.4초 사이에 사용자가 이미 다른 창(근무 입력 등)을 열었다면 그 창을 덮어쓰지 않습니다.
+  if(!meAsked()) setTimeout(()=>{
+    if(document.getElementById('overlay').classList.contains('show')) return;
+    openMePanel(true);
+  }, 400);
   startRealtimeSync();
   // 오래 열어둔 탭 대응.
   // 브라우저는 백그라운드 탭이나 절전 상태에서 타이머를 늦추거나 멈추고 실시간 연결도
@@ -3552,7 +3616,12 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
   window.addEventListener('focus', scheduleRealtimeSync);
   window.addEventListener('online', scheduleRealtimeSync);
   setInterval(async ()=>{
-    if(document.getElementById('overlay').classList.contains('show')) return;
+    // 입력창이 열려 있으면 건너뛰되, 안내성 창(내 이름·사용법)은 막지 않는다.
+    // 건너뛴 사실을 남겨 두어 창을 닫는 순간 따라잡게 한다.
+    if(document.getElementById('overlay').classList.contains('show') && !_panelAllowsSync){
+      _syncPending = true;
+      return;
+    }
     await loadStorage();
     render();
   }, 20000);
@@ -3560,6 +3629,6 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
 </script>
 <!-- 주간계획서/보고서 내보내기 애드온 (FSS팀 베타) — weeklyreport.js는 저장소에 이미 있었으나
      이 연결 태그가 빠져 있어서 실제로는 한 번도 로드된 적이 없었습니다. -->
-<script src="weeklyreport.js?v=33"></script>
+<script src="weeklyreport.js?v=34"></script>
 </body>
 </html>
