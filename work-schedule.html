@@ -230,6 +230,11 @@
   .form-grid2 > * > input, .form-grid2 > * > select{max-width:100%;}
   .field-hint{font-size:11px;color:var(--ink-soft);margin:-4px 0 12px;line-height:1.5;}
   /* 편집창 상단에 "누가 · 언제 등록했는지" 한 줄 */
+  .form-row label .slot-by{
+    float:right;font-size:9.5px;font-weight:700;color:#7C8AA5;background:var(--paper);
+    border:1px solid var(--line);border-radius:20px;padding:0 6px;max-width:60%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
   .entry-stamp{
     display:inline-block;margin-left:8px;font-size:10.5px;font-weight:700;color:#4A5A78;
     background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:2px 8px;vertical-align:1px;
@@ -437,7 +442,6 @@
     <a href="index.html">🏥 설치일정</a>
     <a href="work-schedule.html" class="active">📅 근무일정</a>
     <a href="voc-dashboard.html">📊 만족도</a>
-    <a href="fsg-kpi.html">📈 KPI</a>
   </div>
 
   <div class="header">
@@ -705,6 +709,29 @@ function entryStampText(entry){
   if(!entry || (!entry.by && !entry.at)) return '';
   return '등록: ' + (entry.by || '(이름 없음)') + (entry.at ? ' · ' + shortStamp(entry.at) : '');
 }
+// 하루 안에도 오전1~오후2·야간이 따로 있어, 서로 다른 사람이 각각 채우는 일이 흔합니다.
+// 그래서 등록자를 칸(하루) 단위가 아니라 슬롯 단위로 남깁니다 — entry.meta[슬롯] = {by, at}.
+// entry.by/at은 그 칸을 마지막으로 만진 사람으로 계속 두어, 예전 데이터도 그대로 읽힙니다.
+const ENTRY_SLOTS = ['am1','am2','pm1','pm2','night','weekend']; // 등록자 기록 대상 (야간·주말 포함)
+function slotMeta(entry, slot){
+  const m = entry && entry.meta && entry.meta[slot];
+  if(m && (m.by || m.at)) return m;
+  return null;
+}
+// 슬롯에 따로 기록이 없으면, 그 칸 전체의 등록자(예전 방식으로 저장된 건)를 대신 보여줍니다.
+function slotStampText(entry, slot, label){
+  if(!entry || !entry[slot]) return '';
+  const m = slotMeta(entry, slot) || ((entry.by || entry.at) ? {by:entry.by, at:entry.at} : null);
+  if(!m) return '';
+  return (label ? label + ' ' : '') + '등록: ' + (m.by || '(이름 없음)') + (m.at ? ' · ' + shortStamp(m.at) : '');
+}
+// 한 칸(하루) 전체의 슬롯별 등록자 — 월간 보기 툴팁처럼 여러 줄로 보여줄 때 씁니다.
+function entrySlotStamps(entry){
+  if(!entry) return [];
+  return ENTRY_SLOTS
+    .map(k => slotStampText(entry, k, SLOT_LABELS[k] || (k === 'night' ? '야간' : k === 'weekend' ? '주말/휴일' : k)))
+    .filter(Boolean);
+}
 
 // 값(val)이 어떤 상태와 일치하는지 판단 (교육/회의는 "교육: 내용" 형태의 접두 일치도 인정)
 function matchStatus(val){
@@ -757,7 +784,7 @@ const SEED_SCHEDULE_FY2026Q3_V3 = {"west":{"2026-06-29":{"이인구":{"night":"�
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 29; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
+const BUILD_VERSION = 30; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1884,7 +1911,7 @@ const GUIDE_ITEMS = [
   {icon:'🔎', h:'범례 필터', d:'상단 범례 클릭 → 해당 상태만 강조, 나머지는 흐리게 표시됩니다. "🌙 당직만 보기"를 누르면 야간·당직 관련 항목만 따로 볼 수 있습니다.'},
   {icon:'🗂️', h:'팀 전환 · 오늘 현황', d:'상단 팀 탭(East·West·Central·South·전체)으로 전환합니다. 배너에는 오늘 야간 근무자, 휴가자, 주말·공휴일 당직자가 바로 표시됩니다.'},
   {icon:'✍️', h:'직접 입력', d:'오전1·오전2·오후1·오후2는 목록에서 고르거나 원하는 내용을 직접 입력할 수 있습니다. 회의·교육·병원명은 선택 후 콜론(:) 뒤에 세부 내용을 이어 쓸 수 있습니다.'},
-  {icon:'🧾', h:'등록자 · 등록시각', d:'편집창 아래 [등록자]에서 팀원을 고르거나 이름을 직접 적습니다. 저장하면 등록 시각이 같이 남아, 편집창 제목 옆과 달력 칸에 마우스를 올렸을 때 "누가 · 언제"가 보입니다. 마지막에 쓴 이름은 이 브라우저가 기억해 다음 등록 때 미리 채워집니다.'},
+  {icon:'🧾', h:'등록자 · 등록시각', d:'편집창 아래 [등록자]에서 팀원을 고르거나 이름을 직접 적습니다. 저장하면 등록 시각이 같이 남습니다. 기록은 <b>슬롯 단위</b>라 오전1은 A가, 오후1은 B가 넣어도 서로 덮어쓰지 않습니다 — 편집창에서는 각 칸 이름 옆에, 달력에서는 그 칸에 마우스를 올렸을 때 "누가 · 언제"가 보입니다. 마지막에 쓴 이름은 이 브라우저가 기억해 다음 등록 때 미리 채워집니다.'},
   {icon:'📊', h:'Excel 내보내기', d:'개인별 요약·팀별 비교·형평성(당직·야간 색상 표시)·통계·상세, 5개 시트로 한번에 다운로드됩니다.'},
 ];
 function openGuidePanel(){
@@ -2053,8 +2080,8 @@ function fillDayCell(td, entry, tk){
     td.appendChild(badge);
     titleParts.push('주말/휴일 구분: ' + entry.weekend);
   }
-  const stamp = entryStampText(entry);
-  if(stamp) titleParts.push(stamp);
+  const stamps = entrySlotStamps(entry);
+  if(stamps.length) titleParts.push('─────', ...stamps);
   if(titleParts.length) td.title = titleParts.join('\n');
   if(!entryMatchesFilter(entry, tk)) td.classList.add('cell-dim');
 }
@@ -2095,8 +2122,8 @@ function fillDayCellDutyOnly(td, entry, tk){
     wrap.appendChild(dash);
   }
   td.appendChild(wrap);
-  const stamp2 = entryStampText(entry);
-  if(stamp2) titleParts.push(stamp2);
+  const stamps2 = entrySlotStamps(entry);
+  if(stamps2.length) titleParts.push('─────', ...stamps2);
   if(titleParts.length) td.title = titleParts.join('\n');
   if(!entryMatchesFilter(entry, tk)) td.classList.add('cell-dim');
 }
@@ -2210,10 +2237,7 @@ function renderWeekGrid(){
       td.className = 'wcell';
       td.dataset.date = dstr;
       td.dataset.name = m.name;
-      cellFn(td, m);
-      // 주간 보기는 칸이 시간대별로 쪼개져 있어 등록자를 띄울 자리가 없다. 마우스를 올리면 보이게 한다.
-      const stamp = entryStampText(getEntry(memberTeam(m), dstr, m.name));
-      if(stamp) td.title = td.title ? (td.title + '\n' + stamp) : stamp;
+      cellFn(td, m); // 등록자 툴팁은 각 슬롯 칸에서 직접 붙인다 (슬롯마다 등록자가 다를 수 있으므로)
       td.onclick = ()=>openEditor(memberTeam(m), dstr, m.name);
       tr.appendChild(td);
     });
@@ -2232,6 +2256,8 @@ function renderWeekGrid(){
       td.classList.add('empty'); td.textContent='';
     }
     if(!slotMatchesFilter(val)) td.classList.add('wcell-dim');
+    const stamp = slotStampText(e, slot);
+    if(stamp) td.title = stamp;
   }
   function badgeHtml(resolverFn, val, tk){
     const st = val ? resolverFn(val, tk) : null;
@@ -2260,6 +2286,8 @@ function renderWeekGrid(){
             td.innerHTML = html;
           } else { td.classList.add('empty'); td.textContent='-'; }
           if(!nightMatchesFilter(e.night, mtk)) td.classList.add('wcell-dim');
+          const ns = slotStampText(e, 'night');
+          if(ns) td.title = ns;
         });
       } else {
         addRow(dstr, '야간', (td,m)=>{
@@ -2444,6 +2472,16 @@ function openEditor(team, date, name){
   const isOffDay = weekend || !!HOLIDAYS_KR[date];
   const member = TEAMS[team].members.find(mm=>mm.name===name);
 
+  // 슬롯마다 "누가 · 언제" 넣었는지 라벨 옆에 작게 붙입니다.
+  // 오전1은 A가, 오후1은 B가 넣는 식으로 한 칸 안에서도 등록자가 갈리기 때문입니다.
+  function slotLabel(text, slot){
+    const m = slotMeta(entry, slot) || ((entry[slot] && (entry.by || entry.at)) ? {by:entry.by, at:entry.at} : null);
+    const tag = m
+      ? '<span class="slot-by" title="' + escapeHtml((m.by || '(이름 없음)') + (m.at ? ' · ' + m.at : '')) + '">' +
+          escapeHtml(m.by || '(이름 없음)') + (m.at ? ' · ' + escapeHtml(shortStamp(m.at)) : '') + '</span>'
+      : '';
+    return '<label>' + text + tag + '</label>';
+  }
   function slotInput(id, val){
     return '<div class="combo" id="wrap-' + id + '">' +
       '<input type="text" id="' + id + '" class="combo-input" value="' + escapeHtml(val) + '" placeholder="" autocomplete="off">' +
@@ -2467,23 +2505,23 @@ function openEditor(team, date, name){
 
     '<div id="ampmRows" style="' + (isOffDay?'display:none;':'') + '">' +
       '<div class="form-row form-grid2">' +
-        '<div><label>오전1</label>' + slotInput('f-am1', entry.am1) + '</div>' +
-        '<div><label>오전2</label>' + slotInput('f-am2', entry.am2) + '</div>' +
+        '<div>' + slotLabel('오전1','am1') + slotInput('f-am1', entry.am1) + '</div>' +
+        '<div>' + slotLabel('오전2','am2') + slotInput('f-am2', entry.am2) + '</div>' +
       '</div>' +
       '<div class="form-row form-grid2">' +
-        '<div><label>오후1</label>' + slotInput('f-pm1', entry.pm1) + '</div>' +
-        '<div><label>오후2</label>' + slotInput('f-pm2', entry.pm2) + '</div>' +
+        '<div>' + slotLabel('오후1','pm1') + slotInput('f-pm1', entry.pm1) + '</div>' +
+        '<div>' + slotLabel('오후2','pm2') + slotInput('f-pm2', entry.pm2) + '</div>' +
       '</div>' +
     '</div>' +
 
     '<div class="form-row" id="nightRow" style="' + (isOffDay?'display:none;':'') + '">' +
-      '<label>야간</label>' +
+      slotLabel('야간','night') +
       '<select id="f-night">' + nightOptions.map(s=>'<option value="' + s.key + '" ' + (nightParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
       '<input type="text" id="f-night-detail" placeholder="야간 업무내역" style="margin-top:6px;" value="' + escapeHtml(nightParsed.detail) + '">' +
     '</div>' +
 
     '<div class="form-row" id="weekendRow" style="' + (isOffDay?'':'display:none;') + '">' +
-      '<label>주말/휴일 구분</label><select id="f-weekend">' + teamWeekendList.map(s=>'<option value="' + s.key + '" ' + (weekendParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
+      slotLabel('주말/휴일 구분','weekend') + '<select id="f-weekend">' + teamWeekendList.map(s=>'<option value="' + s.key + '" ' + (weekendParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
       '<input type="text" id="f-weekend-detail" placeholder="주말/휴일 업무내역" style="margin-top:6px;" value="' + escapeHtml(weekendParsed.detail) + '">' +
     '</div>' +
 
@@ -2649,6 +2687,19 @@ function openEditor(team, date, name){
     const editorName = panel.querySelector('#f-by').value.trim();
     setLastEditor(editorName);
     const stampedAt = nowStamp();
+    // 바뀐 슬롯만 등록자를 새로 찍습니다. 손대지 않은 슬롯은 원래 등록자를 그대로 둬야
+    // "오전1은 A가, 오후1은 B가"가 유지됩니다.
+    function stampSlots(before, after){
+      const meta = Object.assign({}, (before && before.meta) || {});
+      ENTRY_SLOTS.forEach(k=>{
+        const was = (before && before[k]) || '', now = after[k] || '';
+        if(!now) delete meta[k];                                   // 비워진 슬롯은 기록도 지움
+        else if(was !== now) meta[k] = { by: editorName, at: stampedAt };
+        else if(!meta[k] && (before && (before.by || before.at))) meta[k] = { by: before.by || '', at: before.at || '' };
+      });
+      after.meta = meta;
+      return after;
+    }
     const updated = {
       night: combineDetail(panel.querySelector('#f-night').value, panel.querySelector('#f-night-detail').value),
       weekend: isOffDay ? combineDetail(panel.querySelector('#f-weekend').value, panel.querySelector('#f-weekend-detail').value) : '',
@@ -2659,6 +2710,7 @@ function openEditor(team, date, name){
       by: editorName,
       at: stampedAt,
     };
+    stampSlots(entry, updated);
     setEntry(team, date, name, updated);
     const toSave = [{team, date, name, entry: updated}];
     const nightSt = nightStatusOf(updated.night, team);
@@ -2666,25 +2718,31 @@ function openEditor(team, date, name){
     if(nightLabel === '석/야'){
       // 석/야 선택 시: 다음 근무일 = 석간, 그다음 근무일 = OFF (주말·공휴일은 건너뜀)
       const day1 = nextWorkday(date);
-      const e1 = Object.assign(blankEntry(), getEntry(team, day1, name));
+      const prev1 = Object.assign({}, getEntry(team, day1, name));
+      const e1 = Object.assign(blankEntry(), prev1);
       e1.by = editorName; e1.at = stampedAt;
       e1.night = '석간';
       e1.am1 = e1.am2 = e1.pm1 = e1.pm2 = 'OFF';
+      stampSlots(prev1, e1);
       setEntry(team, day1, name, e1);
       toSave.push({team, date:day1, name, entry:e1});
 
       const day2 = nextWorkday(day1);
-      const e2 = Object.assign(blankEntry(), getEntry(team, day2, name));
+      const prev2 = Object.assign({}, getEntry(team, day2, name));
+      const e2 = Object.assign(blankEntry(), prev2);
       e2.by = editorName; e2.at = stampedAt;
       e2.am1 = e2.am2 = e2.pm1 = e2.pm2 = 'OFF';
+      stampSlots(prev2, e2);
       setEntry(team, day2, name, e2);
       toSave.push({team, date:day2, name, entry:e2});
     } else if(nightLabel === '석간'){
       // 석간 단독 선택 시: 다음 근무일 = OFF (주말·공휴일은 건너뜀)
       const nd = nextWorkday(date);
-      const otherEntry = Object.assign(blankEntry(), getEntry(team, nd, name));
+      const prevNd = Object.assign({}, getEntry(team, nd, name));
+      const otherEntry = Object.assign(blankEntry(), prevNd);
       otherEntry.by = editorName; otherEntry.at = stampedAt;
       otherEntry.am1 = otherEntry.am2 = otherEntry.pm1 = otherEntry.pm2 = 'OFF';
+      stampSlots(prevNd, otherEntry);
       setEntry(team, nd, name, otherEntry);
       toSave.push({team, date:nd, name, entry:otherEntry});
     }
@@ -3269,6 +3327,6 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
 </script>
 <!-- 주간계획서/보고서 내보내기 애드온 (FSS팀 베타) — weeklyreport.js는 저장소에 이미 있었으나
      이 연결 태그가 빠져 있어서 실제로는 한 번도 로드된 적이 없었습니다. -->
-<script src="weeklyreport.js?v=29"></script>
+<script src="weeklyreport.js?v=30"></script>
 </body>
 </html>
