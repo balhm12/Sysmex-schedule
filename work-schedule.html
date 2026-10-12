@@ -437,7 +437,6 @@
     <a href="index.html">🏥 설치일정</a>
     <a href="work-schedule.html" class="active">📅 근무일정</a>
     <a href="voc-dashboard.html">📊 만족도</a>
-    <a href="fsg-kpi.html">📈 KPI</a>
   </div>
 
   <div class="header">
@@ -757,7 +756,7 @@ const SEED_SCHEDULE_FY2026Q3_V3 = {"west":{"2026-06-29":{"이인구":{"night":"�
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 28; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
+const BUILD_VERSION = 29; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1898,7 +1897,7 @@ function openGuidePanel(){
         '<div class="guide-item"><div class="guide-icon">' + g.icon + '</div><div class="guide-h">' + g.h + '</div><div class="guide-d">' + g.d + '</div></div>'
       ).join('') +
       '<div class="guide-item"><div class="guide-icon">📌</div><div class="guide-h">특이사항</div>' +
-      '<div class="guide-d">화면 맨 아래 [＋ 특이사항 등록]에서 날짜 · 기관 · 장비 · 상태(진행중 · 예정 · 완료) · 내용을 입력합니다. 목록은 달력이 보고 있는 기간을 따라갑니다 — 주간 보기면 그 주, 월간 보기면 그 달. 끝나지 않은 건(예정 · 진행중)은 기간이 지나도 맨 위에 <b>이월</b>로 남고, 완료된 건은 아래로 내려갑니다. 상단의 상태 칩을 누르면 그 상태만 골라 볼 수 있고, 같은 칩을 다시 누르면 전체로 돌아옵니다. [📊 Excel 내보내기]는 지금 화면에 보이는 그대로(보는 달 · 팀 · 고른 상태) 한 장으로 받습니다. 편집창의 <b>야간 업무내역</b>·<b>특이사항</b> 칸은 그 칸에 붙는 짧은 비고이고, 보고용 특이사항은 편집창 아래 “📌 이 날짜 특이사항 등록”으로 넣습니다(날짜·이름이 채워진 상태로 열립니다). 등록한 내용은 주간계획서 <b>지난 주 보고</b>의 [특이 사항] 칸에 자동으로 들어갑니다.</div></div>' +
+      '<div class="guide-d">화면 맨 아래 [＋ 특이사항 등록]에서 날짜 · 기관 · 장비 · 상태(진행중 · 예정 · 완료) · 내용을 입력합니다. 목록은 달력이 보고 있는 기간을 따라갑니다 — 주간 보기면 그 주, 월간 보기면 그 달. 끝나지 않은 건(예정 · 진행중)은 기간이 지나도 맨 위에 <b>이월</b>로 남고, 완료된 건은 아래로 내려갑니다. 상단의 상태 칩을 누르면 그 상태만 골라 볼 수 있고, 같은 칩을 다시 누르면 전체로 돌아옵니다. [📊 Excel 내보내기]는 지금 화면에 보이는 그대로(보는 달 · 팀 · 고른 상태) 한 장으로 받습니다. 편집창의 <b>야간 업무내역</b>·<b>주말/휴일 업무내역</b> 칸은 그 칸에 붙는 짧은 비고이고, 보고용 특이사항은 편집창 아래 “📌 이 날짜 특이사항 등록”으로 넣습니다(날짜·이름이 채워진 상태로 열립니다). 등록한 내용은 주간계획서 <b>지난 주 보고</b>의 [특이 사항] 칸에 자동으로 들어갑니다.</div></div>' +
     '</div>';
   document.getElementById('overlay').classList.add('show');
 }
@@ -2484,7 +2483,7 @@ function openEditor(team, date, name){
 
     '<div class="form-row" id="weekendRow" style="' + (isOffDay?'':'display:none;') + '">' +
       '<label>주말/휴일 구분</label><select id="f-weekend">' + teamWeekendList.map(s=>'<option value="' + s.key + '" ' + (weekendParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
-      '<input type="text" id="f-weekend-detail" placeholder="특이사항" style="margin-top:6px;" value="' + escapeHtml(weekendParsed.detail) + '">' +
+      '<input type="text" id="f-weekend-detail" placeholder="주말/휴일 업무내역" style="margin-top:6px;" value="' + escapeHtml(weekendParsed.detail) + '">' +
     '</div>' +
 
     // 누가 넣은 일정인지 남겨 둡니다. 팀원 목록에서 고르거나, 목록에 없는 사람은 직접 적습니다.
@@ -3269,6 +3268,6 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
 </script>
 <!-- 주간계획서/보고서 내보내기 애드온 (FSS팀 베타) — weeklyreport.js는 저장소에 이미 있었으나
      이 연결 태그가 빠져 있어서 실제로는 한 번도 로드된 적이 없었습니다. -->
-<script src="weeklyreport.js?v=28"></script>
+<script src="weeklyreport.js?v=29"></script>
 </body>
 </html>
