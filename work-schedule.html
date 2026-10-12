@@ -229,6 +229,11 @@
   .form-grid2 > *{min-width:0;}
   .form-grid2 > * > input, .form-grid2 > * > select{max-width:100%;}
   .field-hint{font-size:11px;color:var(--ink-soft);margin:-4px 0 12px;line-height:1.5;}
+  /* 편집창 상단에 "누가 · 언제 등록했는지" 한 줄 */
+  .entry-stamp{
+    display:inline-block;margin-left:8px;font-size:10.5px;font-weight:700;color:#4A5A78;
+    background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:2px 8px;vertical-align:1px;
+  }
   .combo{position:relative;}
   .combo-input{padding-right:32px !important;}
   .combo-toggle{
@@ -674,6 +679,32 @@ const SLOT_GROUP = {am1:'am', am2:'am', pm1:'pm', pm2:'pm'};
 const SLOT_LABELS = {am1:'오전1', am2:'오전2', pm1:'오후1', pm2:'오후2'};
 function blankEntry(){ return {night:'', weekend:'', am1:'', am2:'', pm1:'', pm2:''}; }
 
+// ── 등록자 · 등록시각 ──
+// 일정 한 칸에 by(등록자) · at(등록시각)을 같이 남깁니다. 여러 명이 같은 표를 고치다 보면
+// "이거 누가 바꿨지?"가 반드시 생기는데, 그때 되물을 곳이 없어서 넣었습니다.
+// 매번 이름을 다시 고르는 건 번거로우니, 마지막에 쓴 이름을 이 브라우저에 기억해 둡니다.
+const LAST_EDITOR_KEY = 'fsg_work_last_editor';
+function getLastEditor(){
+  try{ return localStorage.getItem(LAST_EDITOR_KEY) || ''; }catch(e){ return ''; }
+}
+function setLastEditor(name){
+  try{ if(name) localStorage.setItem(LAST_EDITOR_KEY, name); }catch(e){}
+}
+function nowStamp(){
+  const d = new Date();
+  return fmtDate(d.getFullYear(), d.getMonth()+1, d.getDate()) + ' ' +
+         String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+// '2026-10-12 09:12' → '10/12 09:12' (칸이 좁은 곳에서 쓰는 짧은 표기)
+function shortStamp(at){
+  const m = String(at||'').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2})/);
+  return m ? (Number(m[2]) + '/' + Number(m[3]) + ' ' + m[4]) : String(at||'');
+}
+function entryStampText(entry){
+  if(!entry || (!entry.by && !entry.at)) return '';
+  return '등록: ' + (entry.by || '(이름 없음)') + (entry.at ? ' · ' + shortStamp(entry.at) : '');
+}
+
 // 값(val)이 어떤 상태와 일치하는지 판단 (교육/회의는 "교육: 내용" 형태의 접두 일치도 인정)
 function matchStatus(val){
   if(!val) return null;
@@ -725,7 +756,7 @@ const SEED_SCHEDULE_FY2026Q3_V3 = {"west":{"2026-06-29":{"이인구":{"night":"�
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 26; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
+const BUILD_VERSION = 28; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1332,6 +1363,7 @@ function getEntry(team, date, name){
 function memberTeam(m){ return m.team || currentTeam; }
 function setEntry(team, date, name, entry){
   if(!scheduleData[team][date]) scheduleData[team][date] = {};
+  // by/at(등록자·등록시각)은 일정 내용이 아니므로, 그것만 남은 칸은 '빈 칸'으로 본다
   const isEmpty = !entry.night && !entry.weekend && !entry.am1 && !entry.am2 && !entry.pm1 && !entry.pm2;
   if(isEmpty){
     delete scheduleData[team][date][name];
@@ -1851,6 +1883,7 @@ const GUIDE_ITEMS = [
   {icon:'🔎', h:'범례 필터', d:'상단 범례 클릭 → 해당 상태만 강조, 나머지는 흐리게 표시됩니다. "🌙 당직만 보기"를 누르면 야간·당직 관련 항목만 따로 볼 수 있습니다.'},
   {icon:'🗂️', h:'팀 전환 · 오늘 현황', d:'상단 팀 탭(East·West·Central·South·전체)으로 전환합니다. 배너에는 오늘 야간 근무자, 휴가자, 주말·공휴일 당직자가 바로 표시됩니다.'},
   {icon:'✍️', h:'직접 입력', d:'오전1·오전2·오후1·오후2는 목록에서 고르거나 원하는 내용을 직접 입력할 수 있습니다. 회의·교육·병원명은 선택 후 콜론(:) 뒤에 세부 내용을 이어 쓸 수 있습니다.'},
+  {icon:'🧾', h:'등록자 · 등록시각', d:'편집창 아래 [등록자]에서 팀원을 고르거나 이름을 직접 적습니다. 저장하면 등록 시각이 같이 남아, 편집창 제목 옆과 달력 칸에 마우스를 올렸을 때 "누가 · 언제"가 보입니다. 마지막에 쓴 이름은 이 브라우저가 기억해 다음 등록 때 미리 채워집니다.'},
   {icon:'📊', h:'Excel 내보내기', d:'개인별 요약·팀별 비교·형평성(당직·야간 색상 표시)·통계·상세, 5개 시트로 한번에 다운로드됩니다.'},
 ];
 function openGuidePanel(){
@@ -1864,7 +1897,7 @@ function openGuidePanel(){
         '<div class="guide-item"><div class="guide-icon">' + g.icon + '</div><div class="guide-h">' + g.h + '</div><div class="guide-d">' + g.d + '</div></div>'
       ).join('') +
       '<div class="guide-item"><div class="guide-icon">📌</div><div class="guide-h">특이사항</div>' +
-      '<div class="guide-d">화면 맨 아래 [＋ 특이사항 등록]에서 날짜 · 기관 · 장비 · 상태(진행중 · 예정 · 완료) · 내용을 입력합니다. 목록은 달력이 보고 있는 기간을 따라갑니다 — 주간 보기면 그 주, 월간 보기면 그 달. 끝나지 않은 건(예정 · 진행중)은 기간이 지나도 맨 위에 <b>이월</b>로 남고, 완료된 건은 아래로 내려갑니다. 상단의 상태 칩을 누르면 그 상태만 골라 볼 수 있고, 같은 칩을 다시 누르면 전체로 돌아옵니다. [📊 Excel 내보내기]는 지금 화면에 보이는 그대로(보는 달 · 팀 · 고른 상태) 한 장으로 받습니다. 편집창(야간·주말) 아래의 “📌 이 날짜 특이사항 등록”을 눌러도 날짜와 이름이 채워진 상태로 열립니다. 등록한 내용은 주간계획서 <b>지난 주 보고</b>의 [특이 사항] 칸에 자동으로 들어갑니다.</div></div>' +
+      '<div class="guide-d">화면 맨 아래 [＋ 특이사항 등록]에서 날짜 · 기관 · 장비 · 상태(진행중 · 예정 · 완료) · 내용을 입력합니다. 목록은 달력이 보고 있는 기간을 따라갑니다 — 주간 보기면 그 주, 월간 보기면 그 달. 끝나지 않은 건(예정 · 진행중)은 기간이 지나도 맨 위에 <b>이월</b>로 남고, 완료된 건은 아래로 내려갑니다. 상단의 상태 칩을 누르면 그 상태만 골라 볼 수 있고, 같은 칩을 다시 누르면 전체로 돌아옵니다. [📊 Excel 내보내기]는 지금 화면에 보이는 그대로(보는 달 · 팀 · 고른 상태) 한 장으로 받습니다. 편집창의 <b>야간 업무내역</b>·<b>특이사항</b> 칸은 그 칸에 붙는 짧은 비고이고, 보고용 특이사항은 편집창 아래 “📌 이 날짜 특이사항 등록”으로 넣습니다(날짜·이름이 채워진 상태로 열립니다). 등록한 내용은 주간계획서 <b>지난 주 보고</b>의 [특이 사항] 칸에 자동으로 들어갑니다.</div></div>' +
     '</div>';
   document.getElementById('overlay').classList.add('show');
 }
@@ -2019,6 +2052,8 @@ function fillDayCell(td, entry, tk){
     td.appendChild(badge);
     titleParts.push('주말/휴일 구분: ' + entry.weekend);
   }
+  const stamp = entryStampText(entry);
+  if(stamp) titleParts.push(stamp);
   if(titleParts.length) td.title = titleParts.join('\n');
   if(!entryMatchesFilter(entry, tk)) td.classList.add('cell-dim');
 }
@@ -2059,6 +2094,8 @@ function fillDayCellDutyOnly(td, entry, tk){
     wrap.appendChild(dash);
   }
   td.appendChild(wrap);
+  const stamp2 = entryStampText(entry);
+  if(stamp2) titleParts.push(stamp2);
   if(titleParts.length) td.title = titleParts.join('\n');
   if(!entryMatchesFilter(entry, tk)) td.classList.add('cell-dim');
 }
@@ -2173,6 +2210,9 @@ function renderWeekGrid(){
       td.dataset.date = dstr;
       td.dataset.name = m.name;
       cellFn(td, m);
+      // 주간 보기는 칸이 시간대별로 쪼개져 있어 등록자를 띄울 자리가 없다. 마우스를 올리면 보이게 한다.
+      const stamp = entryStampText(getEntry(memberTeam(m), dstr, m.name));
+      if(stamp) td.title = td.title ? (td.title + '\n' + stamp) : stamp;
       td.onclick = ()=>openEditor(memberTeam(m), dstr, m.name);
       tr.appendChild(td);
     });
@@ -2420,7 +2460,9 @@ function openEditor(team, date, name){
   panel.innerHTML =
     '<button class="close" onclick="closePanel()">✕</button>' +
     '<h3>' + escapeHtml(name) + ' <span style="font-size:12px;color:var(--ink-soft);font-weight:600;">' + escapeHtml(member?member.role:'') + '</span></h3>' +
-    '<div class="sub">' + y + '년 ' + m + '월 ' + d + '일 (' + wk + ') · ' + TEAMS[team].label + '</div>' +
+    '<div class="sub">' + y + '년 ' + m + '월 ' + d + '일 (' + wk + ') · ' + TEAMS[team].label +
+      (entry.at || entry.by ? '<span class="entry-stamp">✍ ' + escapeHtml(entry.by || '(이름 없음)') + (entry.at ? ' · ' + escapeHtml(shortStamp(entry.at)) : '') + '</span>' : '') +
+    '</div>' +
 
     '<div id="ampmRows" style="' + (isOffDay?'display:none;':'') + '">' +
       '<div class="form-row form-grid2">' +
@@ -2436,12 +2478,24 @@ function openEditor(team, date, name){
     '<div class="form-row" id="nightRow" style="' + (isOffDay?'display:none;':'') + '">' +
       '<label>야간</label>' +
       '<select id="f-night">' + nightOptions.map(s=>'<option value="' + s.key + '" ' + (nightParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
-      '<input type="text" id="f-night-detail" placeholder="특이사항" style="margin-top:6px;" value="' + escapeHtml(nightParsed.detail) + '">' +
+      '<input type="text" id="f-night-detail" placeholder="야간 업무내역" style="margin-top:6px;" value="' + escapeHtml(nightParsed.detail) + '">' +
     '</div>' +
 
     '<div class="form-row" id="weekendRow" style="' + (isOffDay?'':'display:none;') + '">' +
       '<label>주말/휴일 구분</label><select id="f-weekend">' + teamWeekendList.map(s=>'<option value="' + s.key + '" ' + (weekendParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
       '<input type="text" id="f-weekend-detail" placeholder="특이사항" style="margin-top:6px;" value="' + escapeHtml(weekendParsed.detail) + '">' +
+    '</div>' +
+
+    // 누가 넣은 일정인지 남겨 둡니다. 팀원 목록에서 고르거나, 목록에 없는 사람은 직접 적습니다.
+    '<div class="form-row">' +
+      '<label>등록자</label>' +
+      '<div class="form-grid2">' +
+        '<select id="f-by-pick">' +
+          '<option value="">팀원 선택…</option>' +
+          TEAMS[team].members.map(mm=>'<option value="' + escapeHtml(mm.name) + '">' + escapeHtml(mm.name) + (mm.role ? ' (' + escapeHtml(mm.role) + ')' : '') + '</option>').join('') +
+        '</select>' +
+        '<input type="text" id="f-by" placeholder="또는 이름 직접 입력" autocomplete="off" value="' + escapeHtml(entry.by || getLastEditor()) + '">' +
+      '</div>' +
     '</div>' +
 
     // 위 '특이사항'은 그 칸(야간·주말)에 붙는 짧은 비고입니다. 기관·장비까지 적어
@@ -2571,6 +2625,10 @@ function openEditor(team, date, name){
     });
   }
 
+  panel.querySelector('#f-by-pick').onchange = (e)=>{
+    if(e.target.value) panel.querySelector('#f-by').value = e.target.value;
+    e.target.value = ''; // 다시 고를 수 있게 비워 둡니다 (입력칸이 실제 값)
+  };
   panel.querySelector('#f-note').onclick = ()=>{
     closePanel();
     openNotePanel({team: team, date: date, author: name});
@@ -2587,6 +2645,9 @@ function openEditor(team, date, name){
       const mm = v.match(/^(회의|교육):\s*$/);
       return mm ? mm[1] : v;
     }
+    const editorName = panel.querySelector('#f-by').value.trim();
+    setLastEditor(editorName);
+    const stampedAt = nowStamp();
     const updated = {
       night: combineDetail(panel.querySelector('#f-night').value, panel.querySelector('#f-night-detail').value),
       weekend: isOffDay ? combineDetail(panel.querySelector('#f-weekend').value, panel.querySelector('#f-weekend-detail').value) : '',
@@ -2594,6 +2655,8 @@ function openEditor(team, date, name){
       am2: isOffDay ? '' : cleanSlot(panel.querySelector('#f-am2').value),
       pm1: isOffDay ? '' : cleanSlot(panel.querySelector('#f-pm1').value),
       pm2: isOffDay ? '' : cleanSlot(panel.querySelector('#f-pm2').value),
+      by: editorName,
+      at: stampedAt,
     };
     setEntry(team, date, name, updated);
     const toSave = [{team, date, name, entry: updated}];
@@ -2603,6 +2666,7 @@ function openEditor(team, date, name){
       // 석/야 선택 시: 다음 근무일 = 석간, 그다음 근무일 = OFF (주말·공휴일은 건너뜀)
       const day1 = nextWorkday(date);
       const e1 = Object.assign(blankEntry(), getEntry(team, day1, name));
+      e1.by = editorName; e1.at = stampedAt;
       e1.night = '석간';
       e1.am1 = e1.am2 = e1.pm1 = e1.pm2 = 'OFF';
       setEntry(team, day1, name, e1);
@@ -2610,6 +2674,7 @@ function openEditor(team, date, name){
 
       const day2 = nextWorkday(day1);
       const e2 = Object.assign(blankEntry(), getEntry(team, day2, name));
+      e2.by = editorName; e2.at = stampedAt;
       e2.am1 = e2.am2 = e2.pm1 = e2.pm2 = 'OFF';
       setEntry(team, day2, name, e2);
       toSave.push({team, date:day2, name, entry:e2});
@@ -2617,6 +2682,7 @@ function openEditor(team, date, name){
       // 석간 단독 선택 시: 다음 근무일 = OFF (주말·공휴일은 건너뜀)
       const nd = nextWorkday(date);
       const otherEntry = Object.assign(blankEntry(), getEntry(team, nd, name));
+      otherEntry.by = editorName; otherEntry.at = stampedAt;
       otherEntry.am1 = otherEntry.am2 = otherEntry.pm1 = otherEntry.pm2 = 'OFF';
       setEntry(team, nd, name, otherEntry);
       toSave.push({team, date:nd, name, entry:otherEntry});
@@ -3077,13 +3143,32 @@ document.getElementById('nextBtn').onclick = ()=>{
 document.getElementById('todayBtn').onclick = ()=>{
   const t = new Date(); viewYear=t.getFullYear(); viewMonth=t.getMonth()+1; weekAnchor = todayISO(); render();
 };
+// 주간/월간은 각자 기준점(weekAnchor / viewYear·viewMonth)을 따로 갖고 있어서,
+// 그대로 두면 주간으로 11월까지 넘긴 뒤 월간을 눌렀을 때 10월로 되돌아간다.
+// 보기를 바꿀 때 서로의 기준점을 맞춰, 보고 있던 시점이 그대로 이어지게 한다.
+// (달력뿐 아니라 그 아래 특이사항도 같은 기간을 따라가므로 더 중요하다)
 document.getElementById('viewMonthBtn').onclick = ()=>{
+  // 한 주가 두 달에 걸칠 수 있다. 그 주의 목요일이 속한 달을 그 주의 달로 본다(ISO 주차 기준).
+  const thu = addDaysStr(getMonday(weekAnchor), 3).split('-').map(Number);
+  viewYear = thu[0]; viewMonth = thu[1];
   viewMode='month';
   document.getElementById('viewMonthBtn').classList.add('active');
   document.getElementById('viewWeekBtn').classList.remove('active');
   render();
 };
 document.getElementById('viewWeekBtn').onclick = ()=>{
+  // 보고 있던 달 안의 주로 들어간다 — 오늘이 그 달이면 이번 주, 아니면 그 달 1일이 든 주.
+  const t = todayISO();
+  const ym = viewYear + '-' + String(viewMonth).padStart(2,'0');
+  if(t.slice(0,7) === ym){
+    weekAnchor = t;
+  } else {
+    // 1일이 든 주는 목요일이 지난달일 수 있다(예: 11/1이 일요일이면 그 주는 10월 주차).
+    // 그런 경우 한 주 뒤로 밀어, 되돌아와도 같은 달에 머물게 한다.
+    let first = fmtDate(viewYear, viewMonth, 1);
+    if(addDaysStr(getMonday(first), 3).slice(0,7) !== ym) first = addDaysStr(first, 7);
+    weekAnchor = first;
+  }
   viewMode='week';
   document.getElementById('viewWeekBtn').classList.add('active');
   document.getElementById('viewMonthBtn').classList.remove('active');
@@ -3183,6 +3268,6 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
 </script>
 <!-- 주간계획서/보고서 내보내기 애드온 (FSS팀 베타) — weeklyreport.js는 저장소에 이미 있었으나
      이 연결 태그가 빠져 있어서 실제로는 한 번도 로드된 적이 없었습니다. -->
-<script src="weeklyreport.js?v=26"></script>
+<script src="weeklyreport.js?v=28"></script>
 </body>
 </html>
