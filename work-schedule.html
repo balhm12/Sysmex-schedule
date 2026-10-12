@@ -860,7 +860,7 @@ const INSTITUTION_LIST = ["(사)부산의료선교회세계로병원", "(사)한
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 35; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
+const BUILD_VERSION = 36; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1680,10 +1680,11 @@ function openNotePanel(opts){
     // 새로 등록할 때는 지금 보고 있는 상태 칩을 그대로 따라갑니다 (진행중만 보다가 추가하면 진행중)
     status: existing ? noteStatusOf(existing.status) : (notesFilter || NOTE_STATUS_DEFAULT)
   };
-  // 작성자도 내 이름으로 먼저 채웁니다 (그 팀 명단에 있을 때만)
+  // 작성자도 내 이름으로 먼저 채웁니다. 그 팀 명단에 없는 사람(타 부서·신규 입사자)도
+  // 이 표를 보고 등록하므로, 명단에 없으면 아래 직접 입력칸에 채워 줍니다.
   if(!cur.author && !existing){
     const me = getMe();
-    if(me && (TEAMS[editTeam].members || []).some(m=>m.name === me.name)) cur.author = me.name;
+    if(me && me.name) cur.author = me.name;
   }
   const teamOpts = TEAM_ORDER.map(tk=>
     '<option value="' + tk + '"' + (tk===editTeam?' selected':'') + '>' + escapeHtml(TEAMS[tk].label) + '</option>'
@@ -1691,7 +1692,7 @@ function openNotePanel(opts){
 
   function memberOptions(tk){
     const ms = (TEAMS[tk] && TEAMS[tk].members) ? TEAMS[tk].members : [];
-    return '<option value="">(선택 없음)</option>' + ms.map(m=>
+    return '<option value="">팀원 선택…</option>' + ms.map(m=>
       '<option value="' + escapeHtml(m.name) + '"' + (m.name===cur.author?' selected':'') + '>' + escapeHtml(m.name) + '</option>'
     ).join('');
   }
@@ -1712,7 +1713,11 @@ function openNotePanel(opts){
       '<div><label>상태</label><select id="nt-status">' +
         NOTE_STATUS.map(st=>'<option value="' + escapeHtml(st.key) + '"' + (st.key===cur.status?' selected':'') + '>' + escapeHtml(st.key) + '</option>').join('') +
       '</select></div>' +
-      '<div><label>작성자 (FSR)</label><select id="nt-author">' + memberOptions(editTeam) + '</select></div>' +
+      '<div><label>작성자</label><select id="nt-author-pick">' + memberOptions(editTeam) + '</select></div>' +
+    '</div>' +
+    '<div class="form-row">' +
+      '<label>목록에 없으면 직접 입력</label>' +
+      '<input type="text" id="nt-author" placeholder="예: 홍길동 (타 부서·신규 입사자)" autocomplete="off" value="' + escapeHtml(cur.author) + '">' +
     '</div>' +
     '<div class="form-row"><label>특이사항</label>' +
       '<textarea id="nt-text" rows="4" placeholder="무슨 일이 있었고, 어떻게 조치했는지 / 후속 조치가 필요한지" style="width:100%;box-sizing:border-box;resize:vertical;">' + escapeHtml(cur.text) + '</textarea>' +
@@ -1725,11 +1730,15 @@ function openNotePanel(opts){
 
   document.getElementById('overlay').classList.add('show');
 
-  // 팀을 바꾸면 작성자 목록도 그 팀 사람으로 갈아끼웁니다.
+  // 작성자: 팀원을 고르면 입력칸이 채워지고, 목록에 없는 사람은 직접 적습니다
+  // (저장되는 값은 항상 입력칸 쪽 — 일정 등록자 칸과 같은 방식).
+  const ntAuthorPick = panel.querySelector('#nt-author-pick');
+  const ntAuthor = panel.querySelector('#nt-author');
+  ntAuthorPick.onchange = ()=>{ if(ntAuthorPick.value) ntAuthor.value = ntAuthorPick.value; };
+  // 팀을 바꾸면 작성자 목록도 그 팀 사람으로 갈아끼웁니다 (적어 둔 이름은 그대로).
   panel.querySelector('#nt-team').onchange = (e)=>{
-    const keep = panel.querySelector('#nt-author').value;
-    cur.author = keep;
-    panel.querySelector('#nt-author').innerHTML = memberOptions(e.target.value);
+    cur.author = ntAuthor.value;
+    ntAuthorPick.innerHTML = memberOptions(e.target.value);
   };
   panel.querySelector('#nt-cancel').onclick = closePanel;
   const delBtn = panel.querySelector('#nt-del');
@@ -1745,7 +1754,7 @@ function openNotePanel(opts){
       date: date,
       inst: panel.querySelector('#nt-inst').value.trim(),
       device: panel.querySelector('#nt-device').value.trim(),
-      author: panel.querySelector('#nt-author').value,
+      author: panel.querySelector('#nt-author').value.trim(),
       status: noteStatusOf(panel.querySelector('#nt-status').value),
       text: text,
       ts: existing && existing.ts ? existing.ts : Date.now(),
@@ -1778,7 +1787,12 @@ function openMePanel(firstTime){
   const me = getMe();
   const curTeam = (me && teamOfName(me.name)) || (me && me.team) || (currentTeam === 'all' ? TEAM_ORDER[0] : currentTeam);
 
+  // 6개 팀 어디에도 속하지 않는 사람도 이 표를 봅니다 (타 부서, 아직 명단에 없는
+  // 신규 입사자 등). 그 사람에게 억지로 팀을 고르게 하면 엉뚱한 팀 탭이 열리고
+  // '내 팀'이 잘못 기억되므로, 팀을 비워 둘 수 있게 합니다.
+  const NO_TEAM = '__none__';
   function memberOpts(tk, sel){
+    if(!TEAMS[tk]) return '<option value="">(팀을 고르면 팀원 목록이 나옵니다)</option>';
     return '<option value="">팀원 선택…</option>' + (TEAMS[tk].members || []).map(mm=>
       '<option value="' + escapeHtml(mm.name) + '"' + (mm.name===sel?' selected':'') + '>' + escapeHtml(mm.name) + (mm.role ? ' (' + escapeHtml(mm.role) + ')' : '') + '</option>'
     ).join('');
@@ -1791,10 +1805,13 @@ function openMePanel(firstTime){
       (firstTime ? '처음이시네요. ' : '') +
       '이름을 기억해 두면 <b>내 팀 탭이 먼저 열리고</b>, 일정·특이사항을 등록할 때 <b>등록자가 자동으로 채워집니다</b>.' +
       '<br>로그인이 아니라 <b>이 브라우저에만</b> 저장되는 값입니다 (서버로 올라가지 않고, 다른 사람에게 보이지 않습니다).' +
+      '<br><b>여섯 팀에 속하지 않는 분</b>은 팀을 <b>「소속 팀 없음」</b>으로 두고 이름만 적으시면 됩니다. ' +
+      '그냥 보기만 하실 거면 <b>' + (firstTime ? '나중에' : '취소') + '</b>를 눌러도 됩니다.' +
     '</div>' +
     '<div class="form-row form-grid2">' +
       '<div><label>팀</label><select id="me-team">' +
         TEAM_ORDER.map(tk=>'<option value="' + tk + '"' + (tk===curTeam?' selected':'') + '>' + escapeHtml(TEAMS[tk].label) + '</option>').join('') +
+        '<option value="' + NO_TEAM + '"' + (me && !teamOfName(me.name) && !me.team ? ' selected' : '') + '>소속 팀 없음 (열람·등록만)</option>' +
       '</select></div>' +
       '<div><label>이름</label><select id="me-pick">' + memberOpts(curTeam, me && me.name) + '</select></div>' +
     '</div>' +
@@ -1802,6 +1819,7 @@ function openMePanel(firstTime){
       '<label>목록에 없으면 직접 입력</label>' +
       '<input type="text" id="me-name" placeholder="예: 홍길동" autocomplete="off" value="' + escapeHtml((me && me.name) || '') + '">' +
     '</div>' +
+    '<div class="sub" id="me-hint" style="display:none;">소속 팀 없이 이름만 기억합니다 — 팀 탭은 그대로 두고, 등록자 칸에 이 이름이 먼저 채워집니다.</div>' +
     '<div class="form-actions">' +
       (me ? '<button class="btn-clear" id="me-clear">기억 해제</button>' : '') +
       '<button class="btn-cancel" id="me-cancel">' + (firstTime ? '나중에' : '취소') + '</button>' +
@@ -1813,7 +1831,15 @@ function openMePanel(firstTime){
   const teamSel = panel.querySelector('#me-team');
   const pick = panel.querySelector('#me-pick');
   const nameInput = panel.querySelector('#me-name');
-  teamSel.onchange = ()=>{ pick.innerHTML = memberOpts(teamSel.value, nameInput.value); };
+  const hint = panel.querySelector('#me-hint');
+  function syncTeamUi(){
+    const none = teamSel.value === NO_TEAM;
+    pick.innerHTML = memberOpts(none ? '' : teamSel.value, nameInput.value);
+    pick.disabled = none;
+    hint.style.display = none ? '' : 'none';
+  }
+  syncTeamUi();
+  teamSel.onchange = syncTeamUi;
   pick.onchange = ()=>{ if(pick.value) nameInput.value = pick.value; };
 
   panel.querySelector('#me-cancel').onclick = ()=> closePanel();
@@ -1827,14 +1853,19 @@ function openMePanel(firstTime){
   panel.querySelector('#me-save').onclick = ()=>{
     const name = nameInput.value.trim();
     if(!name){ alert('이름을 선택하거나 입력해주세요.'); return; }
-    const tk = teamOfName(name) || teamSel.value;
+    // 명단에 있으면 명단의 팀이 우선. 없으면 고른 팀을 쓰되, '소속 팀 없음'이면 비워 둔다.
+    // 팀이 비면 팀 탭을 옮기지 않는다 — 속하지 않은 팀으로 끌려가지 않도록.
+    const picked = teamSel.value === NO_TEAM ? '' : teamSel.value;
+    const tk = teamOfName(name) || picked;
     setMe(name, tk);
     setLastEditor(name);
     closePanel();
     renderMeButton();
     if(TEAMS[tk]){ currentTeam = tk; renderTeamTabs(); }
     render();
-    showToast(name + '님으로 기억했습니다 — 등록자가 자동으로 채워집니다');
+    showToast(TEAMS[tk]
+      ? (name + '님으로 기억했습니다 — 등록자가 자동으로 채워집니다')
+      : (name + '님으로 기억했습니다 (소속 팀 없음) — 등록자가 자동으로 채워집니다'));
   };
 }
 function renderMeButton(){
@@ -3361,6 +3392,6 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
 </script>
 <!-- 주간계획서/보고서 내보내기 애드온 (FSS팀 베타) — weeklyreport.js는 저장소에 이미 있었으나
      이 연결 태그가 빠져 있어서 실제로는 한 번도 로드된 적이 없었습니다. -->
-<script src="weeklyreport.js?v=35"></script>
+<script src="weeklyreport.js?v=36"></script>
 </body>
 </html>
