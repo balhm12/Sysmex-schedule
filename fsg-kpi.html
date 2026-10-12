@@ -485,7 +485,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 
 <script>
 /* ===== 두 탭 공통 KPI 기준 (2026-10-07 통일) =====
-   서비스 운영 KPI 탭과 부서원 KPI 탭, 월간보고 Apps Script(v45)가 모두 같은 규칙을 쓴다.
+   서비스 운영 KPI 탭과 부서원 KPI 탭, 월간보고 Apps Script(v47)가 모두 같은 규칙을 쓴다.
    · 대상 행: 취소 제외, 온라인 정기점검 제외, 시작 시각 있는 행 (추출일 이후 예정은 호출 전에 잘라 둔다)
    · 목적: '약속/활동 목적', 비어 있으면 주제의 4번째 칸
    · 인정 인원(credits): 담당자 + 필수 참석자 중 로스터 인원(중복 1회) — 건수·MTTR·팀별 숫자는 사람 수만큼
@@ -1772,7 +1772,7 @@ function prevPeriod(p){
 }
 
 /* ===== 집계 ===== */
-/* KPI 집계 — 두 탭·월간보고 Apps Script(v45) 공통 기준(kpiCore 주석 참고)
+/* KPI 집계 — 두 탭·월간보고 Apps Script(v47) 공통 기준(kpiCore 주석 참고)
    · 상태: 취소 제외 / 온라인 정기점검 제외 / 건수·MTTR은 담당자+필수 참석자(로스터) 인원 수만큼
    · MTTR = 고장 수리 (종료−시작) 0~500분, 인정 인원 수만큼 가중
    · Calibration = 목적 'Calibration'만 (원격 Calibration은 별도) */
@@ -2036,7 +2036,7 @@ function renderDQ(p){
   const noSn=rep.filter(o=>!o.sn).length;
   if(D.rawN>=40000) L.push(`<li><span class="tag b">확인</span>CRM 내보내기 상한(40,000행) 도달 — ${ymd(D.minT)} 이전 기록이 잘렸을 수 있음</li>`);
   L.push(`<li><span class="tag i">범위</span>데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)} · CRM 추출일(${D.excl.cut}) 이후로 잡힌 예정 약속 ${fmt(D.excl.future)}건은 두 탭 모두 제외</li>`);
-  L.push(`<li><span class="tag i">기준</span>두 탭·월간보고(Apps Script v45) 공통 기준 · 취소 ${fmt(D.excl.cancel)}건·온라인 정기점검 ${fmt(D.excl.online)}건 제외 · 내부 기관 ${fmt(D.excl.internal)}건은 기관별 현황에서만 제외</li>`);
+  L.push(`<li><span class="tag i">기준</span>두 탭·월간보고(Apps Script v47) 공통 기준 · 취소 ${fmt(D.excl.cancel)}건·온라인 정기점검 ${fmt(D.excl.online)}건 제외 · 내부 기관 ${fmt(D.excl.internal)}건은 기관별 현황에서만 제외</li>`);
   if(rep.length) L.push(`<li><span class="tag w">주의</span>Error 1 미기재·Others ${(unk/rep.length*100).toFixed(0)}% · S/N 없는 고장 수리 ${fmt(noSn)}건(FTFR·재방문율에서 제외) · 재방문율·FTFR은 거래처별 비율의 평균(전체 기간 3건 이상 거래처)</li>`);
   L.push(`<li><span class="tag w">주의</span>로스터 밖 담당자 ${fmt(D.unmappedNames)}명 · 로스터 인원이 없는 ${fmt(D.unmapped)}건은 건수에서 제외(필수 참석자 포함 로스터 인원 기준)</li>`);
   L.push(`<li><span class="tag i">기준</span>MTTR은 일정표 예약 시간 기준(추이 비교용)</li>`);
