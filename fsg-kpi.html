@@ -33,6 +33,7 @@ main.wrap{padding-bottom:40px}
 .app-nav a.active{background:#003087;color:#fff;border-color:#003087}
 @media (max-width:600px){.app-nav{gap:6px}.app-nav a{padding:7px 10px;font-size:11.5px}}
 header.top{background:var(--head);color:#fff}
+.ptk{display:inline-flex;align-items:center;gap:4px;margin-left:4px;white-space:nowrap}.ptk i{width:8px;height:8px;border-radius:50%;display:inline-block}
 header.top .wrap{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-top:22px;padding-bottom:20px;flex-wrap:wrap}
 header.top img{height:26px;display:block;margin-bottom:12px}
 header.top h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.3px}
@@ -226,6 +227,12 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 #prod .legend .item{display:flex; align-items:center; gap:6px;}
 #prod .legend .swatch{width:10px; height:10px; border-radius:3px; flex:none;}
 #prod .legend .line-swatch{width:14px; height:2px; border-radius:2px; flex:none;}
+#prod .legend .dot-swatch{width:9px; height:9px; border-radius:50%; flex:none; box-shadow:0 0 0 3px var(--warn-bg);}
+#prod .legend .item.live{color:var(--warn-t); font-weight:600;}
+/* 진행 중인 달(월별 추이 마지막 점) — 은은한 맥박 표시, 동작 줄이기 설정이면 멈춤 */
+#prod .pt-live-halo{transform-box:fill-box; transform-origin:center; animation:ptLive 2s ease-out infinite;}
+@keyframes ptLive{0%{transform:scale(.6); opacity:.55} 70%{transform:scale(1.5); opacity:0} 100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#prod .pt-live-halo{animation:none; opacity:.25}}
 #prod svg.chart{width:100%; display:block; overflow:visible;}
 #prod svg.chart text{fill:var(--text-secondary); font-family:'IBM Plex Mono','Noto Sans KR',monospace;}
 #prod svg.chart .axis-label{fill:var(--text-muted);}
@@ -413,7 +420,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
     </section>
     <section class="panel">
       <h3>FTFR과 MTTR</h3>
-      <p class="d">점선 = 목표 (FTFR 90%, MTTR 120분)</p>
+      <p class="d">점선 = 목표 (FTFR 90%, MTTR 120분) · 점 색 <span class="ptk"><i style="background:var(--good)"></i>목표 달성</span> <span class="ptk"><i style="background:var(--bad)"></i>목표 미달</span> · ● FTFR ■ MTTR</p>
       <div class="cv"><canvas id="cQual"></canvas></div>
     </section>
   </div>
@@ -968,12 +975,21 @@ function lineChart(container, months, seriesArr, opts){
   }
   var n = months.length;
   var xFor = function(idx){ return n <= 1 ? padL+innerW/2 : padL + innerW*idx/(n-1); };
+  /* 진행 중인 달: opts.partial = {idx(월 키), month, cut} — 집계가 끝나지 않아 건수가 낮게 보이는 마지막 달 */
+  var live = opts.partial && months.indexOf(opts.partial.idx) >= 0 ? opts.partial : null;
+  var liveCol = resolveVar('var(--warn)'), liveTxt = resolveVar('var(--warn-t)'), liveBg = resolveVar('var(--warn-bg)');
+  var step = innerW / Math.max(1, n-1) < 34 ? 2 : 1;   /* 좁은 화면: 한 달 건너 표시(마지막 달은 항상 표시) */
   months.forEach(function(m, idx){
+    var isLive = live && m === live.idx;
+    if (step > 1 && (n-1-idx) % step !== 0) return;
     var lbl = svgEl('text', {class:'axis-label', x:xFor(idx), y:H-8, 'text-anchor':'middle', 'font-size':'10'});
+    if (isLive){ lbl.setAttribute('fill', liveTxt); lbl.setAttribute('font-weight', '700'); }
     lbl.textContent = MONTH_LABEL[m];
     svg.appendChild(lbl);
   });
-  seriesArr.forEach(function(s){
+  var livePt = null;
+  /* 진행 중 표시가 있는 계열은 마지막에 그려 다른 계열 점에 가리지 않게 한다 */
+  seriesArr.slice().sort(function(a,b){ return (a.partial?1:0)-(b.partial?1:0); }).forEach(function(s){
     var pts = [];
     months.forEach(function(m, idx){
       var v = s.values[m];
@@ -981,18 +997,55 @@ function lineChart(container, months, seriesArr, opts){
       pts.push([xFor(idx), padT + innerH - innerH*(v/maxV), v, idx]);
     });
     if (pts.length === 0) return;
-    var d = pts.map(function(p,i){ return (i===0?'M':'L')+p[0].toFixed(1)+' '+p[1].toFixed(1); }).join(' ');
-    svg.appendChild(svgEl('path', {d:d, fill:'none', stroke:resolveVar(s.color), 'stroke-width':2, 'stroke-linecap':'round', 'stroke-linejoin':'round'}));
-    pts.forEach(function(p){
-      var c = svgEl('circle', {cx:p[0], cy:p[1], r:3.4, fill:resolveVar('var(--surface)'), stroke:resolveVar(s.color), 'stroke-width':2});
+    var isLiveSeries = live && s.partial;
+    var lastLive = isLiveSeries && pts.length && months[pts[pts.length-1][3]] === live.idx;
+    var solid = lastLive ? pts.slice(0, -1) : pts;
+    var col = resolveVar(s.color);
+    if (solid.length > 1){
+      var d = solid.map(function(p,i){ return (i===0?'M':'L')+p[0].toFixed(1)+' '+p[1].toFixed(1); }).join(' ');
+      svg.appendChild(svgEl('path', {d:d, fill:'none', stroke:col, 'stroke-width':2, 'stroke-linecap':'round', 'stroke-linejoin':'round'}));
+    }
+    if (lastLive && pts.length > 1){   /* 진행 중인 달로 가는 마지막 구간은 점선 */
+      var a = pts[pts.length-2], b = pts[pts.length-1];
+      svg.appendChild(svgEl('path', {d:'M'+a[0].toFixed(1)+' '+a[1].toFixed(1)+' L'+b[0].toFixed(1)+' '+b[1].toFixed(1), fill:'none', stroke:col, 'stroke-width':2, 'stroke-dasharray':'4 4', 'stroke-linecap':'round', opacity:.85}));
+    }
+    pts.forEach(function(p, i){
+      var isLivePt = lastLive && i === pts.length-1;
+      var c;
+      if (isLivePt){
+        svg.appendChild(svgEl('circle', {class:'pt-live-halo', cx:p[0], cy:p[1], r:7, fill:liveCol}));
+        c = svgEl('circle', {cx:p[0], cy:p[1], r:5, fill:liveCol, stroke:resolveVar('var(--surface)'), 'stroke-width':2});
+        livePt = p;
+      } else {
+        c = svgEl('circle', {cx:p[0], cy:p[1], r:3.4, fill:resolveVar('var(--surface)'), stroke:col, 'stroke-width':2});
+      }
       c.style.cursor = 'pointer';
-      c.addEventListener('mousemove', function(e){ showTip(e, '<b>'+MONTH_LABEL[months[p[3]]]+'</b>'+esc(s.name)+': '+fmt(p[2])+(opts.unit||'')); });
+      c.addEventListener('mousemove', function(e){
+        var head = '<b>'+MONTH_LABEL[months[p[3]]]+(isLivePt?' · 진행 중':'')+'</b>';
+        var tail = isLivePt ? '<br><span style="opacity:.8">'+esc(live.cut.slice(5).replace('-','/'))+'까지 집계 · 월말까지 늘어납니다</span>' : '';
+        showTip(e, head+esc(s.name)+': '+fmt(p[2])+(opts.unit||'')+tail);
+      });
       c.addEventListener('mouseleave', hideTip);
       svg.appendChild(c);
     });
   });
   container.appendChild(svg);
-  renderLegend(container, seriesArr.map(function(s){return {label:s.name, color:s.color, line:true};}));
+  if (livePt){   /* 점 위에 「10월 진행 중」 꼬리표 — 오른쪽 끝을 넘지 않게 왼쪽으로 붙이고, 위가 좁으면 아래로 */
+    var g = svgEl('g', {'pointer-events':'none'});
+    var tx = svgEl('text', {'font-size':'10.5', 'font-weight':'700', fill:liveTxt});
+    tx.textContent = live.month+'월 진행 중';
+    g.appendChild(tx); svg.appendChild(g);
+    var tw = tx.getBBox ? tx.getBBox().width : 60; if (!tw) tw = 60;
+    var bw = tw + 16, bh = 20;
+    var bx = Math.min(livePt[0] - bw/2, W - padR - bw + 6); bx = Math.max(padL, bx);
+    var above = livePt[1] - 14 - bh >= padT - 6;
+    var by = above ? livePt[1] - 14 - bh : livePt[1] + 14;
+    g.insertBefore(svgEl('rect', {x:bx, y:by, width:bw, height:bh, rx:10, fill:liveBg, stroke:liveCol, 'stroke-width':1}), tx);
+    tx.setAttribute('x', bx + 8); tx.setAttribute('y', by + 14);
+  }
+  var legItems = seriesArr.map(function(s){return {label:s.name, color:s.color, line:true};});
+  if (livePt) legItems.push({label:live.month+'월 진행 중 ('+live.cut.slice(5).replace('-','/')+'까지 집계)', color:'var(--warn)', dot:true, live:true});
+  renderLegend(container, legItems);
 }
 
 function renderLegend(container, items){
@@ -1000,8 +1053,8 @@ function renderLegend(container, items){
   leg.className = 'legend';
   items.forEach(function(it){
     var el = document.createElement('span');
-    el.className = 'item';
-    el.innerHTML = '<span class="'+(it.line?'line-swatch':'swatch')+'" style="background:'+resolveVar(it.color)+'"></span>'+esc(it.label);
+    el.className = 'item'+(it.live?' live':'');
+    el.innerHTML = '<span class="'+(it.dot?'dot-swatch':it.line?'line-swatch':'swatch')+'" style="background:'+resolveVar(it.color)+'"></span>'+esc(it.label);
     leg.appendChild(el);
   });
   container.appendChild(leg);
@@ -1095,9 +1148,9 @@ function renderOverview(){
 
   var months = monthsUnion(company.month['이번 년도'], company.month['직전 년도']);
   lineChart(document.getElementById('trend-chart'), months, [
-    {name:(DATA.trend_names?DATA.trend_names[0]:'이번 년도'), color:'var(--accent)', values: mapMonthVals(company.month['이번 년도'])},
+    {name:(DATA.trend_names?DATA.trend_names[0]:'이번 년도'), color:'var(--accent)', values: mapMonthVals(company.month['이번 년도']), partial:true},
     {name:(DATA.trend_names?DATA.trend_names[1]:'직전 년도'), color:'var(--text-muted)', values: mapMonthVals(company.month['직전 년도'])},
-  ], {unit:'건'});
+  ], {unit:'건', partial:DATA.trend_partial});
 
   var cardsEl = document.getElementById('teamRevisitCards');
   DATA.teams.forEach(function(t){
@@ -1268,9 +1321,9 @@ function renderTeam(){
   barChart(document.getElementById('team-svc-chart'), DATA.buckets.map(function(b){return DATA.bucket_label[b];}), bucketCaseArr(teamData, period), DATA.buckets.map(function(b){return BUCKET_COLOR[b];}), {unit:'건'});
   var months = monthsUnion(teamData.month['이번 년도'], teamData.month['직전 년도']);
   lineChart(document.getElementById('team-trend-chart'), months, [
-    {name:(DATA.trend_names?DATA.trend_names[0]:'이번 년도'), color:'var(--accent)', values: mapMonthVals(teamData.month['이번 년도'])},
+    {name:(DATA.trend_names?DATA.trend_names[0]:'이번 년도'), color:'var(--accent)', values: mapMonthVals(teamData.month['이번 년도']), partial:true},
     {name:(DATA.trend_names?DATA.trend_names[1]:'직전 년도'), color:'var(--text-muted)', values: mapMonthVals(teamData.month['직전 년도'])},
-  ], {unit:'건'});
+  ], {unit:'건', partial:DATA.trend_partial});
 
   renderRankTable(team, period);
   renderHospTable(team);
@@ -1482,9 +1535,9 @@ function renderPerson(){
 
   var months = monthsUnion(pe.month['이번 년도'], pe.month['직전 년도']);
   lineChart(document.getElementById('p-trend-chart'), months, [
-    {name:(DATA.trend_names?DATA.trend_names[0]:'이번 년도'), color:'var(--accent)', values: mapMonthVals(pe.month['이번 년도'])},
+    {name:(DATA.trend_names?DATA.trend_names[0]:'이번 년도'), color:'var(--accent)', values: mapMonthVals(pe.month['이번 년도']), partial:true},
     {name:(DATA.trend_names?DATA.trend_names[1]:'직전 년도'), color:'var(--text-muted)', values: mapMonthVals(pe.month['직전 년도'])},
-  ], {unit:'건'});
+  ], {unit:'건', partial:DATA.trend_partial});
 }
 
 /* ================= APP SHELL ================= */
@@ -1816,14 +1869,23 @@ function render(){
     mn=Math.max(0,Math.floor(mn/st)*st); mx=Math.ceil(mx/st)*st; return {min:mn,max:mx,step:st}; };
   const fR=band(ts.map(s=>s.hasData&&s.ftfr!=null?s.ftfr:null),TARGET_FTFR,.45,.75,6,5);
   const mR=band(ts.map(s=>s.hasData&&s.mttr!=null?s.mttr:null),TARGET_MTTR,.25,.55,20,10);
+  /* 점 색 = 목표 대비: 초록 달성, 빨강 미달 (선 색은 지표 구분용으로 그대로) */
+  const GOOD=css('--good')||'#3FBA46', BAD=css('--bad')||'#E7413E', RING=css('--surface')||'#fff';
+  const fV=ts.map(s=>s.hasData&&s.ftfr!=null?+s.ftfr.toFixed(1):null), mV=ts.map(s=>s.hasData&&s.mttr!=null?+s.mttr.toFixed(1):null);
+  const fC=fV.map(v=>v==null?GOOD:v>=TARGET_FTFR?GOOD:BAD), mC=mV.map(v=>v==null?GOOD:v<=TARGET_MTTR?GOOD:BAD);
+  const okTxt=(v,ok)=>v==null?'':ok?' · 목표 달성':' · 목표 미달';
   upsert('cQual',{type:'line',data:{labels:lab,datasets:[
-    {label:'FTFR(%)',data:ts.map(s=>s.hasData&&s.ftfr!=null?+s.ftfr.toFixed(1):null),borderColor:'#005BAC',backgroundColor:'#005BAC',pointRadius:ts.map((s,i)=>provIdx[i]?5:3),pointStyle:ts.map((s,i)=>provIdx[i]?'rectRot':'circle'),tension:.25,yAxisID:'y',
+    {label:'FTFR(%)',data:fV,borderColor:'#005BAC',backgroundColor:'#005BAC',pointBackgroundColor:fC,pointHoverBackgroundColor:fC,pointBorderColor:RING,pointHoverBorderColor:RING,pointBorderWidth:1.5,
+      pointRadius:ts.map((s,i)=>provIdx[i]?6:4.5),pointHoverRadius:ts.map((s,i)=>provIdx[i]?7:6),pointStyle:ts.map((s,i)=>provIdx[i]?'rectRot':'circle'),tension:.25,yAxisID:'y',
       segment:{borderDash:c=>provIdx[c.p1DataIndex]?[4,4]:undefined}},
     {label:`FTFR 목표 ${TARGET_FTFR}%`,data:tm.map(()=>TARGET_FTFR),borderColor:'#3FBA46',borderDash:[6,4],borderWidth:1.5,pointRadius:0,yAxisID:'y'},
-    {label:'MTTR(분)',data:ts.map(s=>s.hasData&&s.mttr!=null?+s.mttr.toFixed(1):null),borderColor:'#00B8EE',backgroundColor:'#00B8EE',pointRadius:3,tension:.25,yAxisID:'y2'},
+    {label:'MTTR(분)',data:mV,borderColor:'#00B8EE',backgroundColor:'#00B8EE',pointBackgroundColor:mC,pointHoverBackgroundColor:mC,pointBorderColor:RING,pointHoverBorderColor:RING,pointBorderWidth:1.5,
+      pointStyle:'rectRounded',pointRadius:4.5,pointHoverRadius:6,tension:.25,yAxisID:'y2'},
     {label:`MTTR 목표 ${TARGET_MTTR}분`,data:tm.map(()=>TARGET_MTTR),borderColor:'#00B8EE',borderDash:[6,4],borderWidth:1,pointRadius:0,yAxisID:'y2'}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}},tooltip:{callbacks:{afterTitle:it=>provIdx[it[0].dataIndex]?'FTFR 잠정치':''}}},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}},tooltip:{callbacks:{afterTitle:it=>provIdx[it[0].dataIndex]?'FTFR 잠정치':'',
+        label:c=>{const v=c.parsed.y; let t=`${c.dataset.label}: ${v}`; if(c.datasetIndex===0) t+=okTxt(v,v>=TARGET_FTFR); if(c.datasetIndex===2) t+=okTxt(v,v<=TARGET_MTTR); return t;},
+        labelColor:c=>{const col=c.datasetIndex===0?fC[c.dataIndex]:c.datasetIndex===2?mC[c.dataIndex]:c.dataset.borderColor; return {borderColor:c.dataset.borderColor,backgroundColor:col};}}}},
       scales:{x:axis({grid:{display:false}}),y:axis({min:fR.min,max:fR.max,ticks:{stepSize:fR.step,color:css('--text'),callback:v=>v>100?'':v+'%'},title:{display:true,text:'FTFR',color:css('--muted')}}),
         y2:axis({position:'right',grid:{display:false},min:mR.min,max:mR.max,ticks:{stepSize:mR.step,color:css('--text')},title:{display:true,text:'MTTR(분)',color:css('--muted')}})}}});
 
@@ -2253,6 +2315,8 @@ function renderProd(){
       labels:{'이번 년도':S.label,'직전 년도':S.cmpLabel,'전체 누적':'전체 기간'}});
     Object.assign(PROD,{no_att:!RAW.some(r=>r.att), raw_n:RAW.length, src:SRC.act, cmp_short:S.short, provisional:S.prov,
       trend_labels:S.trend.map(m=>m.slice(2,4)+'.'+m.slice(5)), trend_names:['최근 12개월','전년 동월'],
+      /* 월별 추이 마지막 달이 CRM 추출일이 속한 달이면 아직 집계 중(진행 중) */
+      trend_partial:(()=>{const lm=S.trend[S.trend.length-1], c=D.excl&&D.excl.cut; return c&&lm&&c.slice(0,7)===lm?{idx:S.trend.length, month:+lm.slice(5), cut:c}:null;})(),
       grade:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), promoted:Object.fromEntries(GRADE_HIST.filter(([n,d])=>S.sel.includes(d.slice(0,7))).map(([n,d,prev])=>[n,prev+'→'+rosterMap[n].grade+' ('+d.slice(5).replace('-','/')+')'])), newbie:NEWBIE, ex_lead:$('pExLead').checked});
     $('pCmp').innerHTML=`비교 기간: ${esc(S.cmpLabel)}<br>직급 표시: 현재 · 직급 가중치: 진급자는 시행일부터 새 직급`;
     $('prod').innerHTML=PROD_SKELETON; window.initProdDashboard(PROD); PROD_DIRTY=false;
