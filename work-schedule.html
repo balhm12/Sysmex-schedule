@@ -247,6 +247,20 @@
     display:flex;align-items:center;justify-content:center;border-radius:6px;
   }
   .combo-toggle:hover{background:var(--paper);color:var(--blue);}
+  /* 칸 비우기 ✕ — 내용이 있을 때만 보입니다. 글자를 일일이 지우지 않고 한 번에 비웁니다. */
+  .clr-btn{
+    position:absolute;right:28px;top:50%;transform:translateY(-50%);width:26px;height:26px;
+    border:none;background:transparent;color:var(--ink-soft);cursor:pointer;font-size:17px;line-height:1;
+    display:none;align-items:center;justify-content:center;border-radius:6px;padding:0;
+  }
+  .has-val > .clr-btn{display:flex;}
+  .clr-btn:hover{background:#FDECEC;color:#C0392B;}
+  .has-val > .combo-input{padding-right:58px !important;}
+  /* 비고(업무내역)처럼 드롭다운이 없는 칸은 ✕가 오른쪽 끝에 붙습니다 */
+  .clr-wrap{position:relative;}
+  .clr-wrap > .clr-btn{right:4px;}
+  .clr-wrap.has-val > input{padding-right:32px;}
+  @media(max-width:600px){ .clr-btn{width:30px;height:30px;font-size:19px;} }
   /* 드롭다운을 화면 위에 띄우면(fixed/absolute) iOS에서 키보드가 올라올 때 좌표 기준이
      어긋나 입력칸을 덮는 문제가 반복됐다. 대신 입력칸 바로 아래에 자리를 차지하도록 두면
      원리적으로 어떤 요소도 가릴 수 없고, 패널 스크롤로 전체 목록을 볼 수 있다. */
@@ -333,8 +347,18 @@
   .notes-by{color:var(--ink-soft);white-space:nowrap;font-size:11.5px;}
   .notes-team{display:inline-block;font-size:10px;font-weight:800;color:#fff;background:var(--tc,var(--blue));border-radius:6px;padding:1px 6px;margin-right:5px;vertical-align:1px;}
   .notes-ops{white-space:nowrap;text-align:right;}
-  .notes-ops button{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:6px;opacity:.55;}
-  .notes-ops button:hover{opacity:1;background:var(--paper);}
+  .notes-ops button{
+    background:none;border:1px solid transparent;cursor:pointer;padding:6px;border-radius:8px;
+    display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;
+  }
+  .notes-ops button svg{width:18px;height:18px;display:block;}
+  .notes-ops .op-edit{color:var(--blue);}
+  .notes-ops .op-del{color:#C0392B;}
+  .notes-ops button:hover{background:var(--paper);border-color:var(--line);}
+  @media(max-width:600px){
+    .notes-ops button{padding:7px;}
+    .notes-ops button svg{width:20px;height:20px;}
+  }
   .note-link{display:inline-block;margin-top:2px;background:none;border:none;color:var(--blue);font-size:11.5px;font-weight:800;cursor:pointer;padding:4px 0;}
   .note-link:hover{text-decoration:underline;}
   /* 휴대폰: 표는 칸이 좁아 글자가 세로로 쪼개지므로, 한 건을 카드 한 장으로 쌓아 보여줍니다. */
@@ -785,7 +809,7 @@ const SEED_SCHEDULE_FY2026Q3_V3 = {"west":{"2026-06-29":{"이인구":{"night":"�
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 31; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
+const BUILD_VERSION = 32; // 화면 파일 버전 — weeklyreport.js의 ?v= 번호와 같이 올립니다
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1491,6 +1515,11 @@ function renderLegend(){
 // ============================================================
 // 특이사항 상태. 처리 순서대로 둡니다(손이 가야 하는 것부터).
 // 예전에 등록돼 상태가 없는 항목은 '진행중'으로 봅니다 — 아직 끝났다고 단정할 수 없기 때문입니다.
+// 아이콘은 이모지 대신 SVG로 그립니다. 이모지(✏️·🗑)는 윈도우/엣지에서 가느다란
+// 흑백 선으로 그려져 "잘 안 보인다"는 말이 나왔습니다. SVG는 어디서나 같은 굵기·색입니다.
+const ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+
 const NOTE_STATUS = [
   {key:'진행중', color:'#B45309', bg:'#FEF3C7'},
   {key:'예정',   color:'#0369A1', bg:'#E0F2FE'},
@@ -1624,7 +1653,7 @@ function renderNotes(){
       '<th style="width:70px;">상태</th>' +
       '<th style="width:70px;">작성자</th>' +
       '<th>특이사항</th>' +
-      '<th style="width:54px;"></th>' +
+      '<th style="width:80px;"></th>' +
     '</tr></thead><tbody>' +
     list.map(n=>{
       const p = n.date.split('-');
@@ -1642,8 +1671,8 @@ function renderNotes(){
         '<td class="notes-ops">' +
           // onclick 안에 id를 문자열로 박아 넣으면 id에 따옴표가 섞였을 때 코드가 깨진다.
           // 값은 data-* 로만 넘기고 핸들러는 아래에서 붙인다.
-          '<button title="수정" data-act="edit" data-team="' + escapeHtml(n.team) + '" data-id="' + escapeHtml(n.id) + '">✏️</button>' +
-          '<button title="삭제" data-act="del" data-team="' + escapeHtml(n.team) + '" data-id="' + escapeHtml(n.id) + '">🗑</button>' +
+          '<button class="op-edit" title="수정" aria-label="수정" data-act="edit" data-team="' + escapeHtml(n.team) + '" data-id="' + escapeHtml(n.id) + '">' + ICON_EDIT + '</button>' +
+          '<button class="op-del" title="삭제" aria-label="삭제" data-act="del" data-team="' + escapeHtml(n.team) + '" data-id="' + escapeHtml(n.id) + '">' + ICON_TRASH + '</button>' +
         '</td>' +
       '</tr>';
     }).join('') +
@@ -1911,7 +1940,7 @@ const GUIDE_ITEMS = [
   {icon:'⚡', h:'자동 채움', d:'OFF·휴가(전일)·당직·DP를 선택하면 오전1~오후2 전체가 자동으로 채워집니다. ON·내근은 오전1~오후2를 각각 따로 선택합니다. 야간에 "석/야"를 선택하면 다음 근무일들도 자동으로 이어서 채워집니다.'},
   {icon:'🔎', h:'범례 필터', d:'상단 범례 클릭 → 해당 상태만 강조, 나머지는 흐리게 표시됩니다. "🌙 당직만 보기"를 누르면 야간·당직 관련 항목만 따로 볼 수 있습니다.'},
   {icon:'🗂️', h:'팀 전환 · 오늘 현황', d:'상단 팀 탭(East·West·Central·South·전체)으로 전환합니다. 배너에는 오늘 야간 근무자, 휴가자, 주말·공휴일 당직자가 바로 표시됩니다.'},
-  {icon:'✍️', h:'직접 입력', d:'오전1·오전2·오후1·오후2는 목록에서 고르거나 원하는 내용을 직접 입력할 수 있습니다. 회의·교육·병원명은 선택 후 콜론(:) 뒤에 세부 내용을 이어 쓸 수 있습니다.'},
+  {icon:'✍️', h:'직접 입력', d:'오전1·오전2·오후1·오후2는 목록에서 고르거나 원하는 내용을 직접 입력할 수 있습니다. 회의·교육·병원명은 선택 후 콜론(:) 뒤에 세부 내용을 이어 쓸 수 있습니다. 내용이 있는 칸에는 <b>✕</b>가 생기고, 누르면 그 칸만 한 번에 비워집니다(저장을 눌러야 반영되고, 취소로 되돌릴 수 있습니다). 그 날짜 일정을 통째로 지우려면 아래 <b>비우기</b>를 누릅니다.'},
   {icon:'🧾', h:'등록자 · 등록시각', d:'편집창 아래 [등록자]에서 팀원을 고르거나 이름을 직접 적습니다. 저장하면 등록 시각이 같이 남습니다. 기록은 <b>슬롯 단위</b>라 오전1은 A가, 오후1은 B가 넣어도 서로 덮어쓰지 않습니다 — 편집창에서는 각 칸 이름 옆에, 달력에서는 그 칸에 마우스를 올렸을 때 "누가 · 언제"가 보입니다. 마지막에 쓴 이름은 이 브라우저가 기억해 다음 등록 때 미리 채워집니다.'},
   {icon:'📊', h:'Excel 내보내기', d:'개인별 요약·팀별 비교·형평성(당직·야간 색상 표시)·통계·상세, 5개 시트로 한번에 다운로드됩니다.'},
 ];
@@ -2484,10 +2513,19 @@ function openEditor(team, date, name){
     return '<label>' + text + tag + '</label>';
   }
   function slotInput(id, val){
-    return '<div class="combo" id="wrap-' + id + '">' +
+    return '<div class="combo' + (val ? ' has-val' : '') + '" id="wrap-' + id + '">' +
       '<input type="text" id="' + id + '" class="combo-input" value="' + escapeHtml(val) + '" placeholder="" autocomplete="off">' +
+      '<button type="button" class="clr-btn" tabindex="-1" title="이 칸 비우기" aria-label="이 칸 비우기">&times;</button>' +
       '<button type="button" class="combo-toggle" tabindex="-1">▾</button>' +
       '<div class="combo-list"></div>' +
+    '</div>';
+  }
+  // 드롭다운이 없는 입력칸(업무내역)용 — 같은 ✕를 붙여 줍니다.
+  function clearableInput(id, placeholder, val, style){
+    return '<div class="clr-wrap' + (val ? ' has-val' : '') + '" id="wrap-' + id + '">' +
+      '<input type="text" id="' + id + '" placeholder="' + escapeHtml(placeholder) + '"' +
+        (style ? ' style="' + style + '"' : '') + ' value="' + escapeHtml(val) + '">' +
+      '<button type="button" class="clr-btn" tabindex="-1" title="이 칸 비우기" aria-label="이 칸 비우기">&times;</button>' +
     '</div>';
   }
 
@@ -2518,12 +2556,12 @@ function openEditor(team, date, name){
     '<div class="form-row" id="nightRow" style="' + (isOffDay?'display:none;':'') + '">' +
       slotLabel('야간','night') +
       '<select id="f-night">' + nightOptions.map(s=>'<option value="' + s.key + '" ' + (nightParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
-      '<input type="text" id="f-night-detail" placeholder="야간 업무내역" style="margin-top:6px;" value="' + escapeHtml(nightParsed.detail) + '">' +
+      clearableInput('f-night-detail', '야간 업무내역', nightParsed.detail, 'margin-top:6px;') +
     '</div>' +
 
     '<div class="form-row" id="weekendRow" style="' + (isOffDay?'':'display:none;') + '">' +
       slotLabel('주말/휴일 구분','weekend') + '<select id="f-weekend">' + teamWeekendList.map(s=>'<option value="' + s.key + '" ' + (weekendParsed.key===s.key?'selected':'') + '>' + s.label + '</option>').join('') + '</select>' +
-      '<input type="text" id="f-weekend-detail" placeholder="주말/휴일 업무내역" style="margin-top:6px;" value="' + escapeHtml(weekendParsed.detail) + '">' +
+      clearableInput('f-weekend-detail', '주말/휴일 업무내역', weekendParsed.detail, 'margin-top:6px;') +
     '</div>' +
 
     // 누가 넣은 일정인지 남겨 둡니다. 팀원 목록에서 고르거나, 목록에 없는 사람은 직접 적습니다.
@@ -2611,11 +2649,41 @@ function openEditor(team, date, name){
   // 목록이 패널 안에서 함께 스크롤되므로, 예전처럼 스크롤 시 닫을 필요가 없다
   // (떠 있는 방식일 때만 위치가 어긋나서 닫아야 했다).
 
+  // ── 칸 비우기 ✕ ──
+  // 내용이 있을 때만 보이게 하고, 누르면 그 칸만 즉시 비웁니다(다른 칸·저장값은 그대로).
+  // 바로 저장하지는 않습니다 — [저장]을 눌러야 반영되므로 잘못 눌러도 [취소]로 되돌릴 수 있습니다.
+  function syncClear(wrap){
+    if(!wrap) return;
+    const inp = wrap.querySelector('input');
+    wrap.classList.toggle('has-val', !!(inp && inp.value));
+  }
+  function bindClear(wrapId, onCleared){
+    const wrap = panel.querySelector('#'+wrapId);
+    if(!wrap) return;
+    const inp = wrap.querySelector('input');
+    const btn = wrap.querySelector('.clr-btn');
+    if(!inp || !btn) return;
+    inp.addEventListener('input', ()=> syncClear(wrap));
+    inp.addEventListener('change', ()=> syncClear(wrap));
+    // mousedown으로 처리해야 입력칸의 blur보다 먼저 동작합니다(모바일 키보드 깜빡임 방지).
+    btn.addEventListener('mousedown', (e)=>{ e.preventDefault(); e.stopPropagation(); });
+    btn.addEventListener('click', (e)=>{
+      e.preventDefault(); e.stopPropagation();
+      inp.value = '';
+      syncClear(wrap);
+      if(onCleared) onCleared();
+    });
+    syncClear(wrap);
+  }
+  bindClear('wrap-f-night-detail');
+  bindClear('wrap-f-weekend-detail');
+
   slotIds.forEach(id=>{
     const wrap = panel.querySelector('#wrap-'+id);
     const input = wrap.querySelector('.combo-input');
     const toggle = wrap.querySelector('.combo-toggle');
     const list = wrap.querySelector('.combo-list');
+    bindClear('wrap-'+id, ()=>{ list.classList.remove('show'); });
 
     toggle.onclick = (e)=>{
       e.stopPropagation();
@@ -2630,6 +2698,7 @@ function openEditor(team, date, name){
     input.addEventListener('input', function(){
       showComboList(input, list, this.value);
       applyCascade(id, this.value.trim());
+      slotIds.forEach(sid=> syncClear(panel.querySelector('#wrap-'+sid))); // 자동 채움된 칸까지 같이 갱신
     });
     list.addEventListener('mousedown', (e)=>{
       const item = e.target.closest('.combo-item');
@@ -2649,6 +2718,7 @@ function openEditor(team, date, name){
         list.classList.remove('show');
         applyCascade(id, val);
       }
+      slotIds.forEach(sid=> syncClear(panel.querySelector('#wrap-'+sid)));
     });
   });
   panel.addEventListener('click', (e)=>{
@@ -3328,6 +3398,6 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
 </script>
 <!-- 주간계획서/보고서 내보내기 애드온 (FSS팀 베타) — weeklyreport.js는 저장소에 이미 있었으나
      이 연결 태그가 빠져 있어서 실제로는 한 번도 로드된 적이 없었습니다. -->
-<script src="weeklyreport.js?v=31"></script>
+<script src="weeklyreport.js?v=32"></script>
 </body>
 </html>
