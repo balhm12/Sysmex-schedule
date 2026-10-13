@@ -1554,6 +1554,7 @@ function renderPerson(){
     chartCard('p-svc-chart', '서비스 유형별 처리 건수', PL(period))+
     chartCard('p-mttr-chart', 'MTTR by 장비 그룹 (고장수리)', PL(period)+' · 목표 '+DATA.benchmarks.mttr_target+'분')+
     '</div>';
+  html2 += '<div class="block">'+chartCard('p-trend-chart', '월별 처리 건수 추이', ''+(DATA.trend_names?DATA.trend_names.join(' vs '):'이번 년도 vs 직전 년도')+'')+'</div>';
   var po = DATA.ot && DATA.ot.person[state.person] ? DATA.ot.person[state.person].p : null;
   if (po){ var oc = po[period], op = period==='이번 년도' ? po['직전 년도'] : null;
     html2 += '<div class="block"><div class="block-head"><h2>야간·휴일 근무</h2><span class="hint">CRM 기록 기준 · '+PL(period)+' · 정의는 「야간·휴일 근무」 탭 참고</span></div><div class="grid grid-4">'+
@@ -1568,7 +1569,6 @@ function renderPerson(){
       chartCard('p-ot-ntype', '야간 OT 업무 형태', PL(period)+' · '+fmt(oc.nN)+'건')+
       chartCard('p-ot-htype', '휴일 근무 업무 형태', PL(period)+' · '+fmt(oc.hN)+'건')+
       '</div></div>'; }
-  html2 += '<div class="block">'+chartCard('p-trend-chart', '월별 처리 건수 추이', ''+(DATA.trend_names?DATA.trend_names.join(' vs '):'이번 년도 vs 직전 년도')+'')+'</div>';
 
   /* 자주 방문한 병원 — 보고 기간 기준, 6곳 먼저 보이고 '더보기'로 전체 */
   var accAll = (pe.accounts && pe.accounts[period]) || [], accPrev = {};
