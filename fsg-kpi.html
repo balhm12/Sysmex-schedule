@@ -770,11 +770,14 @@ function buildProdData(RAW, ROSTER, opt){
 
   /* ===== 야간·휴일 근무(OT) — CRM 기록 기준 (2026-10-13, 10-14 연속 기록 묶음) =====
      기준일 = 시작일(00~08시 시작은 전날 밤으로 봐 전날). 기준일이 토·일·공휴일이면 휴일 근무(시간대 무관),
-     평일이면 18:00 이후 또는 08:00 이전 시작 = 야간 OT. 평일 08~18시에 시작해 19:00 넘어 끝난 건 = 잔업(19:00부터 종료까지).
+     평일이면 근무 종료 시각(WEST·EAST 17시, CENTRAL·SOUTH 18시) 이후 또는 08:00 이전 시작 = 야간 OT.
+     평일 근무 중 시작해 종료 시각을 넘겨 끝난 건 = 잔업(종료 시각부터 끝날 때까지).
      야간·휴일은 사람별로 같은 기준일에 시간이 이어지거나 겹치는 기록을 1건으로 묶는다(장비별로 나눠 입력한 기록 대응).
      묶은 건의 시간 = 기록 구간의 합집합(겹친 시간은 한 번만), 업무 형태 = 그 안에서 시간이 가장 긴 업무.
      500분 초과·종료 없음 기록은 시간 0. 담당자 + 필수 참석자 각각. */
   var HOL = {}; (opt.holidays || []).forEach(function(d){ HOL[d] = 1; });
+  /* 근무시간(2026-10-14): WEST·EAST 08~17시, CENTRAL·SOUTH 09~18시 — 종료 시각 이후가 OT */
+  var OT_END_H = opt.otEndHour || {'FS WEST':17, 'FS EAST':17, 'FS CENTRAL':18, 'FS SOUTH':18};
   var OT_BUCKETS = ['고장수리','PM','설치','이전철수','Cal평가','기타'];
   var OT_BUCKET_LABEL = {'고장수리':'고장 수리','PM':'PM','설치':'설치','이전철수':'이전·철수','Cal평가':'Cal·평가','기타':'기타'};
   function otBucket(p){
@@ -796,20 +799,20 @@ function buildProdData(RAW, ROSTER, opt){
     var h = new Date(x.t).getUTCHours(), ref = h < 8 ? x.t - 86400000 : x.t, rd = new Date(ref), wd = rd.getUTCDay();
     var dkey = rd.toISOString().slice(0,10);
     var isHol = wd === 0 || wd === 6 || !!HOL[dkey];
-    var kind = isHol ? 'h' : (h >= 18 || h < 8) ? 'n' : null;
-    if (!kind){   /* 잔업은 기록 단위 */
-      if (x.dur == null) return;
-      var cut = Date.UTC(rd.getUTCFullYear(), rd.getUTCMonth(), rd.getUTCDate(), 19);
-      if (x.e <= cut) return;
-      var xm = (x.e - cut)/60000, slots0 = slotsOf(ref), mk0 = mkOf(ref);
-      x.credits.forEach(function(n){
-        slots0.forEach(function(pr){ var e = otP(n, pr); e.xN++; e.xM += xm; });
-        otMonth(n, mk0).forEach(function(c){ c.x++; c.xM += xm; });
-      });
-      return;
-    }
-    var ev = {kind:kind, day:dkey, ref:ref, s:x.t, e:(x.dur != null ? x.e : x.t), b:otBucket(x.purpose), a:x.acct || ''};
-    x.credits.forEach(function(n){ (OTEV[n] || (OTEV[n] = [])).push(ev); });
+    x.credits.forEach(function(n){
+      var endH = OT_END_H[memberTeam[n]] || 18;   /* 팀별 근무 종료 시각 */
+      var kind = isHol ? 'h' : (h >= endH || h < 8) ? 'n' : null;
+      if (!kind){   /* 잔업은 기록 단위: 근무 중 시작해 종료 시각을 넘긴 시간 */
+        if (x.dur == null) return;
+        var cut = Date.UTC(rd.getUTCFullYear(), rd.getUTCMonth(), rd.getUTCDate(), endH);
+        if (x.e <= cut) return;
+        var xm = (x.e - cut)/60000;
+        slotsOf(ref).forEach(function(pr){ var e = otP(n, pr); e.xN++; e.xM += xm; });
+        otMonth(n, mkOf(ref)).forEach(function(c){ c.x++; c.xM += xm; });
+        return;
+      }
+      (OTEV[n] || (OTEV[n] = [])).push({kind:kind, day:dkey, ref:ref, s:x.t, e:(x.dur != null ? x.e : x.t), b:otBucket(x.purpose), a:x.acct || ''});
+    });
   });
   /* 같은 사람·같은 기준일·같은 구분(야간/휴일)에서 이어지거나 겹치는 기록 → 1건 */
   Object.keys(OTEV).forEach(function(n){
@@ -1604,7 +1607,7 @@ function renderPerson(){
     html2 += '<div class="block"><div class="block-head"><h2>야간·휴일 근무</h2><span class="hint">CRM 기록 기준 · '+PL(period)+' · 정의는 「야간·휴일 근무」 탭 참고</span></div><div class="grid grid-4">'+
       statTile('야간 OT', fmt(oc.nN), '건', otDelta(oc.nN, op && op.nN), fmtH(oc.nM)+'시간')+
       statTile('휴일 근무', fmt(oc.hN), '건', otDelta(oc.hN, op && op.hN), fmtH(oc.hM)+'시간')+
-      statTile('잔업 (19시 이후)', fmtH(oc.xM), '시간', otDelta(oc.xM, op && op.xM, 1), fmt(oc.xN)+'건')+
+      statTile('잔업 (근무 종료 후)', fmtH(oc.xM), '시간', otDelta(oc.xM, op && op.xM, 1), fmt(oc.xN)+'건')+
       statTile('근무 외 시간 합계', fmtH(oc.nM+oc.hM+oc.xM), '시간', otDelta(oc.nM+oc.hM+oc.xM, op && (op.nM+op.hM+op.xM), 1), '야간+휴일+잔업')+
       '</div><div class="grid grid-2" style="margin-top:14px;">'+
       chartCard('p-ot-cnt', '월별 야간 OT · 휴일 근무 건수', '최근 12개월')+
@@ -1700,9 +1703,9 @@ function renderOT(){
 
   var html = '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'+
     '<div><b>CRM 약속/활동 기록으로 본 근무 시간 외 활동</b>입니다(근태 기록 아님). '+
-    '<b>야간 OT</b> = 평일에 18:00 이후 또는 08:00 이전에 시작한 건(00~08시 시작은 전날 밤으로 봄). <b>같은 날 시간이 이어지거나 겹치는 기록은 1건</b>으로 묶습니다(장비별로 나눠 입력한 경우). '+
+    '근무시간: <b>WEST·EAST 08~17시, CENTRAL·SOUTH 09~18시</b>. <b>야간 OT</b> = 평일에 근무 종료 시각(17시/18시) 이후 또는 08:00 이전에 시작한 건(00~08시 시작은 전날 밤으로 봄). <b>같은 날 시간이 이어지거나 겹치는 기록은 1건</b>으로 묶습니다(장비별로 나눠 입력한 경우). '+
     '<b>휴일 근무</b> = 토·일·공휴일의 모든 활동(주말 야간 포함). '+
-    '<b>잔업</b> = 평일 근무 시간에 시작해 19:00 넘어 끝난 건, 19:00부터 종료까지. '+
+    '<b>잔업</b> = 평일 근무 시간에 시작해 종료 시각(17시/18시)을 넘겨 끝난 건, 종료 시각부터 끝날 때까지. '+
     '시간은 CRM에 기록된 활동 시간의 합(겹친 시간은 한 번만)이라 실제보다 짧게 잡힐 수 있습니다. 업무 형태 막대에 마우스를 올리면 내역이 보입니다. 모든 업무 목적 포함 · 담당자·필수 참석자 각각 1건 · 취소·온라인 정기점검 제외.</div></div>';
 
   html += '<div class="controls" style="margin-bottom:14px;"><div class="control-group" style="flex-wrap:wrap;min-width:0;"><span class="control-label">범위</span><div class="segmented" id="otSeg" style="flex-wrap:wrap;max-width:100%;"></div></div></div>';
@@ -1710,7 +1713,7 @@ function renderOT(){
   html += '<div class="block grid grid-4">'+
     statTile('야간 OT', fmt(cur.nN), '건', otDelta(cur.nN, prev && prev.nN), fmtH(cur.nM)+'시간 · 1인당 '+fmt1(cur.nN/head)+'건')+
     statTile('휴일 근무', fmt(cur.hN), '건', otDelta(cur.hN, prev && prev.hN), fmtH(cur.hM)+'시간 · 1인당 '+fmt1(cur.hN/head)+'건')+
-    statTile('잔업 (19시 이후)', fmtH(cur.xM), '시간', otDelta(cur.xM, prev && prev.xM, 1), fmt(cur.xN)+'건 · 1인당 '+fmtH(cur.xM/head)+'시간')+
+    statTile('잔업 (근무 종료 후)', fmtH(cur.xM), '시간', otDelta(cur.xM, prev && prev.xM, 1), fmt(cur.xN)+'건 · 1인당 '+fmtH(cur.xM/head)+'시간')+
     statTile('근무 외 시간 합계', fmtH(cur.nM+cur.hM+cur.xM), '시간', otDelta(cur.nM+cur.hM+cur.xM, prev && (prev.nM+prev.hM+prev.xM), 1), '야간+휴일+잔업 · 1인당 '+fmtH((cur.nM+cur.hM+cur.xM)/head)+'시간')+
     '</div>';
 
