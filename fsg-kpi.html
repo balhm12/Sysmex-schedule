@@ -768,44 +768,85 @@ function buildProdData(RAW, ROSTER, opt){
   });
   revisit.ALL = {team_total:teamTotals(null)};   // FSG 전체 = 4개 팀 거래처 전체 평균 (서비스 탭과 같은 값)
 
-  /* ===== 야간·휴일 근무(OT) — CRM 기록 기준 (2026-10-13) =====
+  /* ===== 야간·휴일 근무(OT) — CRM 기록 기준 (2026-10-13, 10-14 연속 기록 묶음) =====
      기준일 = 시작일(00~08시 시작은 전날 밤으로 봐 전날). 기준일이 토·일·공휴일이면 휴일 근무(시간대 무관),
      평일이면 18:00 이후 또는 08:00 이전 시작 = 야간 OT. 평일 08~18시에 시작해 19:00 넘어 끝난 건 = 잔업(19:00부터 종료까지).
-     시간 = 기록된 활동 시간 합(500분 초과·종료 없음은 0). 담당자 + 필수 참석자 각각 1건. */
+     야간·휴일은 사람별로 같은 기준일에 시간이 이어지거나 겹치는 기록을 1건으로 묶는다(장비별로 나눠 입력한 기록 대응).
+     묶은 건의 시간 = 기록 구간의 합집합(겹친 시간은 한 번만), 업무 형태 = 그 안에서 시간이 가장 긴 업무.
+     500분 초과·종료 없음 기록은 시간 0. 담당자 + 필수 참석자 각각. */
   var HOL = {}; (opt.holidays || []).forEach(function(d){ HOL[d] = 1; });
+  var OT_BUCKETS = ['고장수리','PM','설치','이전철수','Cal평가','기타'];
+  var OT_BUCKET_LABEL = {'고장수리':'고장 수리','PM':'PM','설치':'설치','이전철수':'이전·철수','Cal평가':'Cal·평가','기타':'기타'};
+  function otBucket(p){
+    if (p === '장비 이전 설치' || p === '장비 철수' || p === '철수 및 폐기') return '이전철수';
+    if (p === '장비 설치' || p === '설치' || p === '설치/데모 평가') return '설치';
+    var b = bucket(p); return b === '설치이전' ? '설치' : b;
+  }
   function otE(){ return {nN:0,nM:0,hN:0,hM:0,xN:0,xM:0,nB:{},hB:{}}; }
-  var OTP = {}, OTM = {};
+  var OTP = {}, OTM = {}, OTEV = {};
   function otP(n, pr){ var a = OTP[n] || (OTP[n] = {}); return a[pr] || (a[pr] = otE()); }
+  function otMonth(n, mk){
+    var m = OTM[n] || (OTM[n] = {'이번 년도':{}, '직전 년도':{}}), out = [];
+    [['이번 년도', TR_CUR[mk]], ['직전 년도', TR_PREV[mk]]].forEach(function(z){ if (!z[1]) return;
+      out.push(m[z[0]][z[1]] || (m[z[0]][z[1]] = {n:0, h:0, x:0, nM:0, hM:0, xM:0})); });
+    return out;
+  }
   CORE.rows.forEach(function(x){
     if (!x.credits.length) return;
     var h = new Date(x.t).getUTCHours(), ref = h < 8 ? x.t - 86400000 : x.t, rd = new Date(ref), wd = rd.getUTCDay();
-    var isHol = wd === 0 || wd === 6 || !!HOL[rd.toISOString().slice(0,10)];
-    var kind = isHol ? 'h' : (h >= 18 || h < 8) ? 'n' : null, mins = x.dur || 0, xm = 0;
-    if (!kind){
+    var dkey = rd.toISOString().slice(0,10);
+    var isHol = wd === 0 || wd === 6 || !!HOL[dkey];
+    var kind = isHol ? 'h' : (h >= 18 || h < 8) ? 'n' : null;
+    if (!kind){   /* 잔업은 기록 단위 */
       if (x.dur == null) return;
       var cut = Date.UTC(rd.getUTCFullYear(), rd.getUTCMonth(), rd.getUTCDate(), 19);
       if (x.e <= cut) return;
-      kind = 'x'; xm = (x.e - cut)/60000;
-    }
-    var b = bucket(x.purpose), slots = slotsOf(ref), mk = mkOf(ref);
-    x.credits.forEach(function(n){
-      slots.forEach(function(pr){ var e = otP(n, pr);
-        if (kind === 'n'){ e.nN++; e.nM += mins; e.nB[b] = (e.nB[b]||0)+1; }
-        else if (kind === 'h'){ e.hN++; e.hM += mins; e.hB[b] = (e.hB[b]||0)+1; }
-        else { e.xN++; e.xM += xm; }
+      var xm = (x.e - cut)/60000, slots0 = slotsOf(ref), mk0 = mkOf(ref);
+      x.credits.forEach(function(n){
+        slots0.forEach(function(pr){ var e = otP(n, pr); e.xN++; e.xM += xm; });
+        otMonth(n, mk0).forEach(function(c){ c.x++; c.xM += xm; });
       });
-      var m = OTM[n] || (OTM[n] = {'이번 년도':{}, '직전 년도':{}});
-      [['이번 년도', TR_CUR[mk]], ['직전 년도', TR_PREV[mk]]].forEach(function(z){ if (!z[1]) return;
-        var c = m[z[0]][z[1]] || (m[z[0]][z[1]] = {n:0, h:0, x:0, nM:0, hM:0, xM:0});
-        c[kind]++; c[kind+'M'] += (kind === 'x' ? xm : mins); });
+      return;
+    }
+    var ev = {kind:kind, day:dkey, ref:ref, s:x.t, e:(x.dur != null ? x.e : x.t), b:otBucket(x.purpose), a:x.acct || ''};
+    x.credits.forEach(function(n){ (OTEV[n] || (OTEV[n] = [])).push(ev); });
+  });
+  /* 같은 사람·같은 기준일·같은 구분(야간/휴일)에서 이어지거나 겹치는 기록 → 1건 */
+  Object.keys(OTEV).forEach(function(n){
+    var list = OTEV[n].slice().sort(function(a,b){ return a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : a.day < b.day ? -1 : a.day > b.day ? 1 : a.s - b.s; });
+    var cur = null;
+    function flush(){
+      if (!cur) return;
+      var mins = cur.len/60000, top = null, tv = -1;
+      OT_BUCKETS.forEach(function(k){ var v = cur.bm[k]; if (v != null && v > tv){ tv = v; top = k; } });
+      var slots = slotsOf(cur.ref), mk = mkOf(cur.ref), K = cur.kind;
+      function hm(ms){ var d = new Date(ms); return String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0'); }
+      var sd = new Date(cur.start), item = {d:(sd.getUTCMonth()+1)+'/'+sd.getUTCDate()+' '+hm(cur.start)+'~'+hm(cur.end), a:cur.ac.join(', '), r:cur.n, m:Math.round(mins)};
+      slots.forEach(function(pr){ var e = otP(n, pr);
+        e[K+'N']++; e[K+'M'] += mins; e[K+'B'][top] = (e[K+'B'][top]||0) + 1;
+        var L = e[K+'L'] || (e[K+'L'] = {}); (L[top] || (L[top] = [])).push(item); });
+      otMonth(n, mk).forEach(function(c){ c[K]++; c[K+'M'] += mins; });
+      cur = null;
+    }
+    list.forEach(function(ev){
+      if (cur && cur.kind === ev.kind && cur.day === ev.day && ev.s <= cur.end){
+        if (ev.e > cur.end){ cur.len += ev.e - Math.max(ev.s, cur.end); cur.end = ev.e; }
+      } else {
+        flush();
+        cur = {kind:ev.kind, day:ev.day, ref:ev.ref, start:ev.s, end:ev.e, len:ev.e - ev.s, bm:{}, n:0, ac:[]};
+      }
+      cur.bm[ev.b] = (cur.bm[ev.b] || 0) + (ev.e - ev.s) + 1;   /* +1: 시간 0인 기록도 형태 후보로 */
+      cur.n++; if (ev.a && cur.ac.indexOf(ev.a) < 0) cur.ac.push(ev.a);
     });
+    flush();
   });
   function otSum(names){
     var o = {}, mo = {'이번 년도':{}, '직전 년도':{}};
     PERIODS.forEach(function(pr){ var s = otE();
       names.forEach(function(n){ var e = (OTP[n] || {})[pr]; if (!e) return;
         ['nN','nM','hN','hM','xN','xM'].forEach(function(k){ s[k] += e[k]; });
-        ['nB','hB'].forEach(function(k){ Object.keys(e[k]).forEach(function(bb){ s[k][bb] = (s[k][bb]||0) + e[k][bb]; }); }); });
+        ['nB','hB'].forEach(function(k){ Object.keys(e[k]).forEach(function(bb){ s[k][bb] = (s[k][bb]||0) + e[k][bb]; }); });
+        if (names.length === 1) ['nL','hL'].forEach(function(k){ if (e[k]) s[k] = e[k]; }); });   /* 내역 목록은 개인만 */
       o[pr] = s; });
     names.forEach(function(n){ var m = OTM[n]; if (!m) return;
       ['이번 년도','직전 년도'].forEach(function(pr){ Object.keys(m[pr]).forEach(function(i){
@@ -821,7 +862,7 @@ function buildProdData(RAW, ROSTER, opt){
   var today = nowK.toISOString().slice(0,10);
   return {att_credits:ATT_N, teams:TEAMS, team_short:TEAM_SHORT, groups:GROUPS, group_label:GROUP_LABEL, periods:PERIODS,
     period_label:FY_LABEL, fy_meta:{today:today, cur_fy:CUR_FY, prev_fy:PREV_FY, labels:FY_LABEL},
-    buckets:BUCKETS, bucket_label:BUCKET_LABEL,
+    buckets:BUCKETS, bucket_label:BUCKET_LABEL, ot_buckets:OT_BUCKETS, ot_bucket_label:OT_BUCKET_LABEL,
     benchmarks:{mttr_target:120, revisit_target:15.0, ftfr_target:90.0},
     person:person, team:team, company:company, revisit:revisit, ot:OT,
     revisit_snapshot_date:today, data_snapshot_date:today};
@@ -836,6 +877,7 @@ window.initProdDashboard = function(DATA){
 var TEAM_COLOR = { 'FS WEST':'var(--s1)', 'FS EAST':'var(--s2)', 'FS CENTRAL':'var(--s3)', 'FS SOUTH':'var(--s4)' };
 var GROUP_COLOR = { 'CBC':'var(--s1)', 'COA':'var(--s2)', 'HISCL':'var(--s3)', 'Urine':'var(--s4)', 'A1c':'var(--s5)', 'RF-500':'var(--s6)' };
 var BUCKET_COLOR = { '고장수리':'var(--s1)', 'PM':'var(--s3)', '설치이전':'var(--s4)', 'Cal평가':'var(--s5)', '기타':'var(--text-muted)' };
+var OT_BUCKET_COLOR = { '고장수리':'var(--s1)', 'PM':'var(--s3)', '설치':'var(--s4)', '이전철수':'var(--s2)', 'Cal평가':'var(--s5)', '기타':'var(--text-muted)' };
 var MONTH_LABEL = {}; if (DATA.trend_labels) DATA.trend_labels.forEach(function(l,i){ MONTH_LABEL[i+1] = l; }); else for (var _m=1;_m<=12;_m++) MONTH_LABEL[_m] = _m+'월';
 function PL(p){ return (DATA.period_label && DATA.period_label[p]) || p; }
 
@@ -898,9 +940,10 @@ function svgEl(tag, attrs){
 function showTip(evt, html){
   var tip = document.getElementById('tooltip');
   tip.innerHTML = html;
+  tip.style.maxWidth = html.length > 300 ? '360px' : '';   /* 내역 목록(야간·휴일 업무 형태)은 넓게 */
   tip.style.opacity = 1;
   var x = evt.clientX + 14, y = evt.clientY + 14;
-  var tw = 240, th = 80;
+  var tw = Math.max(240, tip.offsetWidth || 0), th = Math.max(80, tip.offsetHeight || 0);
   if (x + tw > window.innerWidth) x = evt.clientX - tw - 14;
   if (y + th > window.innerHeight) y = evt.clientY - th - 14;
   tip.style.left = x + 'px';
@@ -917,6 +960,7 @@ function barChart(container, cats, values, colors, opts){
   if (W < padL + padR + 80) W = 600;
   var innerW = W - padL - padR, innerH = H - padT - padB;
   var maxV = Math.max(1, opts.maxValue || Math.max.apply(null, values.concat([opts.targetLine||0])) * 1.18);
+  if (!opts.maxValue && maxV < 8) maxV = Math.max(4, Math.ceil(maxV/4)*4);   /* 작은 건수: 눈금이 1,1,2처럼 겹치지 않게 정수 눈금 */
   var svg = svgEl('svg', {class:'chart', viewBox:'0 0 '+W+' '+H, height:H});
   // gridlines
   var ticks = 4;
@@ -937,7 +981,7 @@ function barChart(container, cats, values, colors, opts){
     var color = resolveVar(colors[idx % colors.length]);
     var rect = svgEl('rect', {x:x, y:y, width:bw, height:Math.max(bh,1.5), rx:4, fill:color});
     rect.style.cursor='pointer';
-    rect.addEventListener('mousemove', function(e){ showTip(e, '<b>'+esc(cats[idx])+'</b>'+fmt(v)+(opts.unit||'')); });
+    rect.addEventListener('mousemove', function(e){ showTip(e, opts.tip ? opts.tip(idx) : '<b>'+esc(cats[idx])+'</b>'+fmt(v)+(opts.unit||'')); });
     rect.addEventListener('mouseleave', hideTip);
     svg.appendChild(rect);
     if (opts.showValues !== false){
@@ -1595,9 +1639,9 @@ function renderPerson(){
       {name:'야간', color:'var(--s1)', values:hn, partial:true},
       {name:'휴일', color:'var(--s4)', values:hh, partial:true},
       {name:'잔업', color:'var(--s5)', values:hx, partial:true}], {unit:'시간', partial:DATA.trend_partial});
-    var pbl = DATA.buckets.map(function(b){ return DATA.bucket_label[b]; }), pbc = DATA.buckets.map(function(b){ return BUCKET_COLOR[b]; }), poc = po[period];
-    barChart(document.getElementById('p-ot-ntype'), pbl, DATA.buckets.map(function(b){ return poc.nB[b] || 0; }), pbc, {unit:'건'});
-    barChart(document.getElementById('p-ot-htype'), pbl, DATA.buckets.map(function(b){ return poc.hB[b] || 0; }), pbc, {unit:'건'});
+    var POB = DATA.ot_buckets, pbl = POB.map(function(b){ return DATA.ot_bucket_label[b]; }), pbc = POB.map(function(b){ return OT_BUCKET_COLOR[b]; }), poc = po[period];
+    barChart(document.getElementById('p-ot-ntype'), pbl, POB.map(function(b){ return poc.nB[b] || 0; }), pbc, {unit:'건', tip:function(i){ return otTipPerson((poc.nL||{})[POB[i]], '야간 OT · '+pbl[i], poc.nB[POB[i]] || 0); }});
+    barChart(document.getElementById('p-ot-htype'), pbl, POB.map(function(b){ return poc.hB[b] || 0; }), pbc, {unit:'건', tip:function(i){ return otTipPerson((poc.hL||{})[POB[i]], '휴일 근무 · '+pbl[i], poc.hB[POB[i]] || 0); }});
   }
   var amb = document.getElementById('accMoreBtn');
   if (amb) amb.addEventListener('click', function(){ state.accMore = !state.accMore; var y = window.scrollY; renderPerson(); window.scrollTo(0, y); });
@@ -1627,6 +1671,25 @@ function otDelta(cur, prev, isMin){
   var d = cur - prev, v = isMin ? fmtH(Math.abs(d))+'시간' : fmt(Math.abs(d))+'건';
   return '<span class="stat-delta delta-flat">'+(d>0?'▲ +':d<0?'▼ −':'· ')+(d===0?'변화 없음':v)+' <span style="color:var(--text-muted);font-weight:500;">'+(DATA.cmp_short||'비교 기간')+'</span></span>';
 }
+function otTipPerson(list, label, total){
+  list = (list || []).slice().sort(function(a,b){ return a.d < b.d ? -1 : 1; });
+  var h = '<b>'+esc(label)+' · '+total+'건</b>';
+  if (!list.length) return h+'<span style="opacity:.8">내역 없음</span>';
+  var show = list.slice(0, 12);
+  h += show.map(function(it){ return '<div style="margin-top:3px;white-space:normal">'+esc(it.d)+' · '+esc(it.a || '거래처 없음')+
+    ' <span style="opacity:.75">(기록 '+it.r+'개 · '+fmtH(it.m)+'h)</span></div>'; }).join('');
+  if (list.length > 12) h += '<div style="opacity:.75;margin-top:3px">외 '+(list.length-12)+'건</div>';
+  return h;
+}
+function otTipGroup(names, period, K, b, label, total){
+  var rows = names.map(function(n){ var e = DATA.ot.person[n].p[period]; return [n, (e[K+'B']||{})[b] || 0]; })
+    .filter(function(r){ return r[1] > 0; }).sort(function(a,b2){ return b2[1]-a[1]; });
+  var h = '<b>'+esc(label)+' · '+total+'건</b>';
+  if (!rows.length) return h+'<span style="opacity:.8">내역 없음</span>';
+  h += rows.slice(0, 10).map(function(r){ return '<div style="margin-top:2px">'+esc(r[0])+' <span style="opacity:.75">'+DATA.team_short[DATA.person[r[0]].team]+'</span> · '+r[1]+'건</div>'; }).join('');
+  if (rows.length > 10) h += '<div style="opacity:.75;margin-top:3px">외 '+(rows.length-10)+'명</div>';
+  return h+'<div style="opacity:.75;margin-top:4px">개인별 상세에서 일자·거래처 확인</div>';
+}
 function renderOT(){
   var el = document.getElementById('panel-ot');
   var period = state.period, scope = state.otScope || 'ALL';
@@ -1637,10 +1700,10 @@ function renderOT(){
 
   var html = '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'+
     '<div><b>CRM 약속/활동 기록으로 본 근무 시간 외 활동</b>입니다(근태 기록 아님). '+
-    '<b>야간 OT</b> = 평일에 18:00 이후 또는 08:00 이전에 시작한 건(00~08시 시작은 전날 밤으로 봄). '+
+    '<b>야간 OT</b> = 평일에 18:00 이후 또는 08:00 이전에 시작한 건(00~08시 시작은 전날 밤으로 봄). <b>같은 날 시간이 이어지거나 겹치는 기록은 1건</b>으로 묶습니다(장비별로 나눠 입력한 경우). '+
     '<b>휴일 근무</b> = 토·일·공휴일의 모든 활동(주말 야간 포함). '+
     '<b>잔업</b> = 평일 근무 시간에 시작해 19:00 넘어 끝난 건, 19:00부터 종료까지. '+
-    '시간은 CRM에 기록된 활동 시간의 합이라 실제보다 짧게 잡힐 수 있습니다(대부분 30분 단위). 모든 업무 목적 포함 · 담당자·필수 참석자 각각 1건 · 취소·온라인 정기점검 제외.</div></div>';
+    '시간은 CRM에 기록된 활동 시간의 합(겹친 시간은 한 번만)이라 실제보다 짧게 잡힐 수 있습니다. 업무 형태 막대에 마우스를 올리면 내역이 보입니다. 모든 업무 목적 포함 · 담당자·필수 참석자 각각 1건 · 취소·온라인 정기점검 제외.</div></div>';
 
   html += '<div class="controls" style="margin-bottom:14px;"><div class="control-group" style="flex-wrap:wrap;min-width:0;"><span class="control-label">범위</span><div class="segmented" id="otSeg" style="flex-wrap:wrap;max-width:100%;"></div></div></div>';
 
@@ -1684,9 +1747,9 @@ function renderOT(){
     {name:'야간 OT', color:'var(--s1)', values:nv, partial:true},
     {name:'휴일 근무', color:'var(--s4)', values:hv, partial:true}
   ], {unit:'건', partial:DATA.trend_partial});
-  var bl = DATA.buckets.map(function(b){ return DATA.bucket_label[b]; }), bc = DATA.buckets.map(function(b){ return BUCKET_COLOR[b]; });
-  barChart(document.getElementById('ot-night-type'), bl, DATA.buckets.map(function(b){ return cur.nB[b] || 0; }), bc, {unit:'건'});
-  barChart(document.getElementById('ot-hol-type'), bl, DATA.buckets.map(function(b){ return cur.hB[b] || 0; }), bc, {unit:'건'});
+  var OB = DATA.ot_buckets, bl = OB.map(function(b){ return DATA.ot_bucket_label[b]; }), bc = OB.map(function(b){ return OT_BUCKET_COLOR[b]; });
+  barChart(document.getElementById('ot-night-type'), bl, OB.map(function(b){ return cur.nB[b] || 0; }), bc, {unit:'건', tip:function(i){ return otTipGroup(names, period, 'n', OB[i], '야간 OT · '+bl[i], cur.nB[OB[i]] || 0); }});
+  barChart(document.getElementById('ot-hol-type'), bl, OB.map(function(b){ return cur.hB[b] || 0; }), bc, {unit:'건', tip:function(i){ return otTipGroup(names, period, 'h', OB[i], '휴일 근무 · '+bl[i], cur.hB[OB[i]] || 0); }});
   renderOTTable(period, names);
 }
 function renderOTTable(period, names){
