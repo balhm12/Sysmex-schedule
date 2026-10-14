@@ -337,6 +337,7 @@
   .cat-seg{display:flex;gap:8px;}
   .cat-seg .nf-chip{flex:1;justify-content:center;padding:9px 12px;font-size:13px;}
   .cat-warn{margin-top:6px;font-size:11px;line-height:1.5;color:#B45309;}
+  .by-hint{margin-top:6px;font-size:11px;line-height:1.55;color:var(--ink-soft);}
   /* 구분별 작성 기준 — 고른 구분에 맞춰 바뀝니다 */
   .cat-guide{
     margin-top:8px;padding:9px 11px;border-radius:9px;background:var(--paper);
@@ -874,7 +875,7 @@ const INSTITUTION_LIST = ["(사)부산의료선교회세계로병원", "(사)한
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 38; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
+const BUILD_VERSION = 39; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -2605,6 +2606,20 @@ function openEditor(team, date, name){
     '</div>';
   }
 
+  // 등록자 기본값: 내 이름 > 마지막에 쓴 이름 > 이 칸에 남아 있던 이름
+  const byDefault = defaultEditorName() || entry.by || '';
+  function editorOptions(){
+    const ms = TEAMS[team].members || [];
+    const names = ms.map(m=>m.name);
+    // 그 팀 명단에 없는 이름(다른 팀·타 부서·신규 입사자)도 끼워 넣어 그대로 고를 수 있게
+    const extra = (byDefault && names.indexOf(byDefault) === -1)
+      ? '<option value="' + escapeHtml(byDefault) + '" selected>' + escapeHtml(byDefault) + '</option>'
+      : '';
+    return '<option value="">선택 안 함</option>' + extra + ms.map(mm=>
+      '<option value="' + escapeHtml(mm.name) + '"' + (mm.name===byDefault?' selected':'') + '>' +
+      escapeHtml(mm.name) + (mm.role ? ' (' + escapeHtml(mm.role) + ')' : '') + '</option>').join('');
+  }
+
   const teamNightList = nightStatusListFor(team);
   const teamWeekendList = weekendStatusListFor(team);
   const nightParsed = splitDetail(entry.night, teamNightList);
@@ -2633,7 +2648,7 @@ function openEditor(team, date, name){
     '<button class="close" onclick="closePanel()">✕</button>' +
     '<h3>' + escapeHtml(name) + ' <span style="font-size:12px;color:var(--ink-soft);font-weight:600;">' + escapeHtml(member?member.role:'') + '</span></h3>' +
     '<div class="sub">' + y + '년 ' + m + '월 ' + d + '일 (' + wk + ') · ' + TEAMS[team].label +
-      (entry.at || entry.by ? '<span class="entry-stamp">✍ ' + escapeHtml(entry.by || '(이름 없음)') + (entry.at ? ' · ' + escapeHtml(shortStamp(entry.at)) : '') + '</span>' : '') +
+      (entry.at || entry.by ? '<span class="entry-stamp" title="이 칸을 마지막으로 저장한 사람">✍ 마지막 저장 ' + escapeHtml(entry.by || '(이름 없음)') + (entry.at ? ' · ' + escapeHtml(shortStamp(entry.at)) : '') + '</span>' : '') +
     '</div>' +
 
     '<div id="ampmRows" style="' + (isOffDay?'display:none;':'') + '">' +
@@ -2658,16 +2673,17 @@ function openEditor(team, date, name){
       clearableInput('f-weekend-detail', '주말/휴일 업무내역', weekendParsed.detail, 'margin-top:6px;') +
     '</div>' +
 
-    // 누가 넣은 일정인지 남겨 둡니다. 팀원 목록에서 고르거나, 목록에 없는 사람은 직접 적습니다.
+    // 등록자 — '지금 고치는 사람'이 먼저 들어갑니다.
+    // 예전에는 기존 일정의 등록자가 그대로 들어 있어서, 그 상태로 저장하면 내가 바꾼
+    // 칸까지 그 사람이 넣은 것으로 기록됐습니다. 그래서 일정을 고치려면 먼저 비우고
+    // 다시 넣어야 했습니다. 이제는 지우지 않고 바로 고쳐도 바꾼 사람 이름이 남습니다.
     '<div class="form-row">' +
       '<label>등록자</label>' +
-      '<div class="form-grid2">' +
-        '<select id="f-by-pick">' +
-          '<option value="">팀원 선택…</option>' +
-          TEAMS[team].members.map(mm=>'<option value="' + escapeHtml(mm.name) + '">' + escapeHtml(mm.name) + (mm.role ? ' (' + escapeHtml(mm.role) + ')' : '') + '</option>').join('') +
-        '</select>' +
-        '<input type="text" id="f-by" placeholder="또는 이름 직접 입력" autocomplete="off" value="' + escapeHtml(entry.by || defaultEditorName()) + '">' +
-      '</div>' +
+      '<select id="f-by">' + editorOptions() + '</select>' +
+      (entry.by && entry.by !== byDefault
+        ? '<div class="by-hint">이 칸은 <b>' + escapeHtml(entry.by) + '</b>님이 마지막으로 저장했습니다. ' +
+          '지금 <b>바꾸는 칸</b>에만 위 이름이 기록되고, 손대지 않은 칸은 원래 등록자가 그대로 남습니다.</div>'
+        : '') +
     '</div>' +
 
     // 위 '특이사항'은 그 칸(야간·주말)에 붙는 짧은 비고입니다. 기관·장비까지 적어
@@ -2829,10 +2845,6 @@ function openEditor(team, date, name){
     });
   }
 
-  panel.querySelector('#f-by-pick').onchange = (e)=>{
-    if(e.target.value) panel.querySelector('#f-by').value = e.target.value;
-    e.target.value = ''; // 다시 고를 수 있게 비워 둡니다 (입력칸이 실제 값)
-  };
   panel.querySelector('#f-note').onclick = ()=>{
     closePanel();
     openNotePanel({team: team, date: date, author: name});
