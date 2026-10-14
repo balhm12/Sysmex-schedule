@@ -1713,10 +1713,17 @@ function renderOT(){
     '근무시간: <b>WEST·EAST 08~17시, CENTRAL·SOUTH 09~18시</b>. <b>야간 OT</b> = 평일에 근무 종료 시각(17시/18시) 이후 또는 06:00 이전에 시작한 건(00~06시 시작은 전날 밤으로 봄). 06~08시에 새로 시작한 작업은 이른 출근으로 보아 빼고, 06시 이전부터 이어진 작업만 넣습니다. <b>같은 날 시간이 이어지거나 겹치는 기록은 1건</b>으로 묶습니다(장비별로 나눠 입력한 경우). '+
     '<b>휴일 근무</b> = 토·일·공휴일의 모든 활동(주말 야간 포함). '+
     '<b>잔업</b> = 평일 근무 시간에 시작해 종료 시각(17시/18시)을 넘겨 끝난 건, 종료 시각부터 끝날 때까지. '+
-    '<b>시프트 근무</b> = WEST·EAST가 근무일정표에 석간·석/야로 입력된 날은 주간 업무가 저녁·야간으로 옮겨간 것이라 그날의 근무시간 외 활동을 야간 OT·잔업에서 빼고 따로 셉니다'+
-    (O.shift && O.shift.state==='ok' ? '(근무일정표 '+esc(O.shift.first||'')+' ~ '+esc(O.shift.last||'')+' 입력분). ' : O.shift && O.shift.state==='fail' ? ' — <b>근무일정표를 불러오지 못해 이번 화면에는 반영되지 않았습니다</b>. ' : ' — 근무일정표를 불러오는 중입니다. ')+
+    '<b>시프트 근무</b> = WEST·EAST가 근무일정표에 석간·석/야로 입력된 날은 주간 업무가 저녁·야간으로 옮겨간 것이라 그날의 근무시간 외 활동을 야간 OT·잔업에서 빼고 따로 셉니다(아래 근무일정표 연동 참고). '+
     '시간은 CRM에 기록된 활동 시간의 합(겹친 시간은 한 번만)이라 실제보다 짧게 잡힐 수 있습니다. 업무 형태 막대에 마우스를 올리면 내역이 보입니다. 모든 업무 목적 포함 · 담당자·필수 참석자 각각 1건 · 취소·온라인 정기점검 제외.</div></div>';
 
+  var SI = O.shift || {}, today = new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+  html += '<div style="margin:10px 0 14px;padding:9px 12px;border-radius:8px;font-size:12.5px;line-height:1.6;'+
+    (SI.state==='ok' ? 'background:var(--accent-soft);border-left:3px solid var(--accent);' : 'background:var(--warn-bg);border-left:3px solid var(--warn);')+'">'+
+    '<b>근무일정표 연동 (시프트 근무)</b> · '+
+    (SI.state==='ok' ? 'WEST·EAST 석간·석/야 입력 <b>'+esc(SI.first||'')+' ~ '+esc((SI.last && SI.last < today) ? SI.last : today)+'</b> 반영 · 이번 기간 시프트 근무 <b>'+fmt(cur.sN||0)+'건</b>('+fmtH(cur.sM||0)+'시간)을 야간 OT·잔업에서 뺐습니다.'+
+       (SI.first ? ' <span style="color:var(--text-muted)">'+esc(SI.first)+' 이전은 근무일정표 입력이 없어 시프트 근무도 야간 OT에 포함돼 있습니다.</span>' : '')
+     : SI.state==='fail' ? '<b>근무일정표를 불러오지 못했습니다</b> — 시프트 근무 구분 없이 계산했습니다. 새로고침해 보세요.'
+     : '근무일정표를 불러오는 중입니다…')+'</div>';
   html += '<div class="controls" style="margin-bottom:14px;"><div class="control-group" style="flex-wrap:wrap;min-width:0;"><span class="control-label">범위</span><div class="segmented" id="otSeg" style="flex-wrap:wrap;max-width:100%;"></div></div></div>';
 
   html += '<div class="block grid grid-4">'+
