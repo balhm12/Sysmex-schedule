@@ -1174,7 +1174,8 @@ function rankStripChart(container, rows, opts){
   opts = opts || {};
   container.innerHTML = '';
   var W = container.clientWidth || 560, rowH = 38, padT = 8, padB = 22, labW = 76, valW = 118;
-  if (W < 320) W = 320;
+  if (W < 260) W = 260;
+  if (W < 420){ labW = 56; valW = 92; }
   var H = padT + rows.length*rowH + padB, x0 = labW, x1 = W - valW, tw = x1 - x0;
   var svg = svgEl('svg', {class:'chart', viewBox:'0 0 '+W+' '+H, height:H});
   var col = resolveVar(opts.color || 'var(--accent)'), muted = resolveVar('var(--text-muted)'), track = resolveVar('var(--surface-2)') || '#eef1f5';
@@ -1184,10 +1185,14 @@ function rankStripChart(container, rows, opts){
     var cy = padT + i*rowH + rowH/2, mx = r.max || 0, X = function(v){ return x0 + (mx ? Math.min(v, mx)/mx : 0)*tw; };
     var lb = svgEl('text', {x:0, y:cy+4, class:'axis-label', 'font-size':'12', 'font-weight':'600'}); lb.textContent = r.label; svg.appendChild(lb);
     svg.appendChild(svgEl('rect', {x:x0, y:cy-7, width:tw, height:14, rx:7, fill:track}));
-    r.all.forEach(function(v){ if (v > 0) svg.appendChild(svgEl('line', {x1:X(v), x2:X(v), y1:cy-6, y2:cy+6, stroke:muted, 'stroke-opacity':0.35, 'stroke-width':1.5})); });
+    /* 직원 분포: 가운데 50%(25~75%) 구간을 진하게, 중앙값 세로선 */
+    var sv = r.all.slice().sort(function(a,b){ return a-b; }), q = function(p){ var k = (sv.length-1)*p, f = Math.floor(k); return sv.length ? sv[f] + (sv[Math.min(f+1, sv.length-1)] - sv[f])*(k-f) : 0; };
+    var q1 = X(q(0.25)), q3 = X(q(0.75)), md = X(q(0.5));
+    svg.appendChild(svgEl('rect', {x:q1, y:cy-7, width:Math.max(q3-q1, 2), height:14, rx:4, fill:muted, 'fill-opacity':0.28}));
+    svg.appendChild(svgEl('line', {x1:md, x2:md, y1:cy-7, y2:cy+7, stroke:muted, 'stroke-width':2}));
     if (r.team != null){ var tx = X(r.team); svg.appendChild(svgEl('line', {x1:tx, x2:tx, y1:cy-11, y2:cy+11, stroke:muted, 'stroke-width':2, 'stroke-dasharray':'3 2'})); }
     var px = X(r.me), dot = svgEl('circle', {cx:px, cy:cy, r:7, fill:col, stroke:resolveVar('var(--surface)'), 'stroke-width':2});
-    var tipHtml = '<b>'+esc(r.label)+'</b>본인 '+fmt1(r.me)+'점 · FSG '+r.rank+'위/'+r.n+'명'+(r.team!=null?'<br>소속팀 1인 평균 '+fmt1(r.team)+'점':'')+'<br>FSG 최고 '+fmt1(mx)+'점 · 1인 평균 '+fmt1(r.avg)+'점';
+    var tipHtml = '<b>'+esc(r.label)+'</b>본인 '+fmt1(r.me)+'점 · FSG '+r.rank+'위/'+r.n+'명'+(r.team!=null?'<br>소속팀 1인 평균 '+fmt1(r.team)+'점':'')+'<br>FSG 중앙값 '+fmt1(q(0.5))+'점 · 가운데 50% '+fmt1(q(0.25))+'~'+fmt1(q(0.75))+'점<br>FSG 최고 '+fmt1(mx)+'점';
     [dot].forEach(function(el){ el.style.cursor='pointer'; el.addEventListener('mousemove', function(e){ showTip(e, tipHtml); }); el.addEventListener('mouseleave', hideTip); });
     var hit = svgEl('rect', {x:x0, y:cy-rowH/2, width:tw, height:rowH, fill:'transparent'}); hit.addEventListener('mousemove', function(e){ showTip(e, tipHtml); }); hit.addEventListener('mouseleave', hideTip);
     svg.appendChild(hit); svg.appendChild(dot);
@@ -1196,7 +1201,7 @@ function rankStripChart(container, rows, opts){
     svg.appendChild(vt);
   });
   container.appendChild(svg);
-  renderLegend(container, [{label:'본인', color:opts.color||'var(--accent)', dot:true}, {label:'소속팀 1인 평균', color:'var(--text-muted)', line:true}, {label:'FSG 직원 분포', color:'var(--text-muted)', line:true}]);
+  renderLegend(container, [{label:'본인', color:opts.color||'var(--accent)', dot:true}, {label:'소속팀 1인 평균(점선)', color:'var(--text-muted)', line:true}, {label:'FSG 가운데 50%·중앙값', color:'var(--text-muted)'}]);
 }
 
 function renderLegend(container, items){
