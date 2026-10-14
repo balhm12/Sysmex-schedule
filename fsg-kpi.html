@@ -2650,7 +2650,15 @@ function withAuth(url){
   const tk=(ADMIN_TOKEN&&Date.now()<ADMIN_EXP)?ADMIN_TOKEN:_authToken;
   return tk? url+(url.includes('?')?'&':'?')+'auth='+tk : url;
 }
+/* 네트워크가 잠깐 끊겨 'Failed to fetch'가 나면 읽기는 두 번까지 다시 시도 */
 async function fb(path, opt={}, timeoutMs=60000){
+  const get=!opt.method||opt.method==='GET';
+  for(let i=0;;i++){
+    try{ return await fb1(path,opt,timeoutMs); }
+    catch(e){ if(!get||i>=2||!(e instanceof TypeError)) { e.step=path; throw e; } await new Promise(r=>setTimeout(r,1500*(i+1))); }
+  }
+}
+async function fb1(path, opt={}, timeoutMs=60000){
   await ensureAuth();
   const url=FIREBASE_URL.replace(/\/$/,'')+'/'+DATA_PATH+'/'+path+'.json'+(opt.query?'?'+opt.query:'');
   const ctl=new AbortController(); const tm=setTimeout(()=>ctl.abort(),timeoutMs);
@@ -2727,12 +2735,15 @@ async function loadAll(){
     const meta=await fb('meta');
     if(!meta||!meta.actRows){ showEmpty(ADMIN?'아직 올라온 데이터가 없습니다. 위 "CRM 데이터 올리기"로 첫 파일을 올려 주세요.':'아직 올라온 데이터가 없습니다. 담당자가 데이터를 올리면 표시됩니다.'); return; }
     if(!(await codeOk(CODE,meta))){ localStorage.removeItem(KEY_LS); CODE=null; showLock('접근 코드가 맞지 않습니다. 다시 입력해 주세요.'); return; }
-    const [a,s,hr]=await Promise.all([fb('act'), meta.serSrc?fb('ser'):Promise.resolve(null), meta.hrSrc?fb('hr'):Promise.resolve(null)]);
+    /* 자산대장·연장근무는 선택 자료 — 못 읽어도 CRM 화면은 연다 */
+    const opt=k=>fb(k).catch(e=>{ console.warn(k+' 불러오기 실패',e); return null; });
+    const [a,s,hr]=await Promise.all([fb('act'), meta.serSrc?opt('ser'):Promise.resolve(null), meta.hrSrc?opt('hr'):Promise.resolve(null)]);
     RAW=fixTz(decodeEmbed(await open_(a,CODE))); SERIAL=s?decodeSer(await open_(s,CODE)):null;
     HRDATA=null; if(hr){ try{ HRDATA=await open_(hr,CODE); }catch(e){ console.warn('hr decode',e); } }
     META=meta; SRC={act:meta.actSrc,ser:s?meta.serSrc:null,hr:HRDATA?meta.hrSrc:null,at:meta.updatedAt,embedded:false};
     $('empty').hidden=true; refresh(); showMain();
-  }catch(err){ showEmpty('데이터를 불러오지 못했습니다. '+(err.message||err)); }
+  }catch(err){ const net=err instanceof TypeError;
+    showEmpty('데이터를 불러오지 못했습니다'+(err.step?' ('+err.step+')':'')+'. '+(net?'네트워크 연결이 끊겼거나 회사 보안 프로그램이 저장소(firebaseio.com) 접속을 막았을 수 있습니다. 잠시 뒤 새로고침해 보세요. ':'')+'['+(err.message||err)+']'); }
   finally{ $('busy').classList.remove('on'); }
 }
 function showEmpty(msg){ $('mainArea').hidden=true; $('prod').hidden=true; $('svcBar').hidden=true; $('prodBar').hidden=true; $('vtabs').hidden=true; $('empty').hidden=false; $('emptyMsg').textContent=msg; }
