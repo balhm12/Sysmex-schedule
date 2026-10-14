@@ -841,7 +841,7 @@ function buildProdData(RAW, ROSTER, opt){
       OT_BUCKETS.forEach(function(k){ var v = cur.bm[k]; if (v != null && v > tv){ tv = v; top = k; } });
       var slots = slotsOf(cur.ref), mk = mkOf(cur.ref), K = cur.kind;
       function hm(ms){ var d = new Date(ms); return String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0'); }
-      var sd = new Date(cur.start), item = {d:(sd.getUTCMonth()+1)+'/'+sd.getUTCDate()+' '+hm(cur.start)+'~'+hm(cur.end), a:cur.ac.join(', '), r:cur.n, m:Math.round(mins)};
+      var sd = new Date(cur.start), item = {d:(sd.getUTCMonth()+1)+'/'+sd.getUTCDate()+' '+hm(cur.start)+'~'+hm(cur.end), a:cur.ac.join(', '), r:cur.n, m:Math.round(mins), s:cur.start};
       slots.forEach(function(pr){ var e = otP(n, pr);
         e[K+'N']++; e[K+'M'] += mins; e[K+'B'][top] = (e[K+'B'][top]||0) + 1;
         var L = e[K+'L'] || (e[K+'L'] = {}); (L[top] || (L[top] = [])).push(item); });
@@ -1739,7 +1739,7 @@ function otDelta(cur, prev, isMin){
   return '<span class="stat-delta delta-flat">'+(d>0?'▲ +':d<0?'▼ −':'· ')+(d===0?'변화 없음':v)+' <span style="color:var(--text-muted);font-weight:500;">'+(DATA.cmp_short||'비교 기간')+'</span></span>';
 }
 function otTipPerson(list, label, total){
-  list = (list || []).slice().sort(function(a,b){ return a.d < b.d ? -1 : 1; });
+  list = (list || []).slice().sort(function(a,b){ return (a.s||0) - (b.s||0); });   /* 날짜순 */
   var h = '<b>'+esc(label)+' · '+total+'건</b>';
   if (!list.length) return h+'<span style="opacity:.8">내역 없음</span>';
   var show = list.slice(0, 12);
