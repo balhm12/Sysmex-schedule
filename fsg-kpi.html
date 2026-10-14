@@ -770,7 +770,8 @@ function buildProdData(RAW, ROSTER, opt){
 
   /* ===== 야간·휴일 근무(OT) — CRM 기록 기준 (2026-10-13, 10-14 연속 기록 묶음) =====
      기준일 = 시작일(00~08시 시작은 전날 밤으로 봐 전날). 기준일이 토·일·공휴일이면 휴일 근무(시간대 무관),
-     평일이면 근무 종료 시각(WEST·EAST 17시, CENTRAL·SOUTH 18시) 이후 또는 08:00 이전 시작 = 야간 OT.
+     평일이면 근무 종료 시각(WEST·EAST 17시, CENTRAL·SOUTH 18시) 이후 또는 06:00 이전 시작 = 야간 OT.
+     06~08시에 새로 시작한 작업은 이른 출근으로 보아 제외(06시 이전부터 이어진 작업이면 포함).
      평일 근무 중 시작해 종료 시각을 넘겨 끝난 건 = 잔업(종료 시각부터 끝날 때까지).
      야간·휴일은 사람별로 같은 기준일에 시간이 이어지거나 겹치는 기록을 1건으로 묶는다(장비별로 나눠 입력한 기록 대응).
      묶은 건의 시간 = 기록 구간의 합집합(겹친 시간은 한 번만), 업무 형태 = 그 안에서 시간이 가장 긴 업무.
@@ -778,6 +779,7 @@ function buildProdData(RAW, ROSTER, opt){
   var HOL = {}; (opt.holidays || []).forEach(function(d){ HOL[d] = 1; });
   /* 근무시간(2026-10-14): WEST·EAST 08~17시, CENTRAL·SOUTH 09~18시 — 종료 시각 이후가 OT */
   var OT_END_H = opt.otEndHour || {'FS WEST':17, 'FS EAST':17, 'FS CENTRAL':18, 'FS SOUTH':18};
+  var SHIFT = opt.shift || {};   /* {성명: {'YYYY-MM-DD': '석간'|'석/야'}} — 근무일정표 시프트 근무일(석간·석/야) */
   var OT_BUCKETS = ['고장수리','PM','설치','이전철수','Cal평가','기타'];
   var OT_BUCKET_LABEL = {'고장수리':'고장 수리','PM':'PM','설치':'설치','이전철수':'이전·철수','Cal평가':'Cal·평가','기타':'기타'};
   function otBucket(p){
@@ -785,13 +787,13 @@ function buildProdData(RAW, ROSTER, opt){
     if (p === '장비 설치' || p === '설치' || p === '설치/데모 평가') return '설치';
     var b = bucket(p); return b === '설치이전' ? '설치' : b;
   }
-  function otE(){ return {nN:0,nM:0,hN:0,hM:0,xN:0,xM:0,nB:{},hB:{}}; }
+  function otE(){ return {nN:0,nM:0,hN:0,hM:0,xN:0,xM:0,sN:0,sM:0,nB:{},hB:{},sB:{}}; }
   var OTP = {}, OTM = {}, OTEV = {};
   function otP(n, pr){ var a = OTP[n] || (OTP[n] = {}); return a[pr] || (a[pr] = otE()); }
   function otMonth(n, mk){
     var m = OTM[n] || (OTM[n] = {'이번 년도':{}, '직전 년도':{}}), out = [];
     [['이번 년도', TR_CUR[mk]], ['직전 년도', TR_PREV[mk]]].forEach(function(z){ if (!z[1]) return;
-      out.push(m[z[0]][z[1]] || (m[z[0]][z[1]] = {n:0, h:0, x:0, nM:0, hM:0, xM:0})); });
+      out.push(m[z[0]][z[1]] || (m[z[0]][z[1]] = {n:0, h:0, x:0, s:0, nM:0, hM:0, xM:0, sM:0})); });
     return out;
   }
   CORE.rows.forEach(function(x){
@@ -802,6 +804,9 @@ function buildProdData(RAW, ROSTER, opt){
     x.credits.forEach(function(n){
       var endH = OT_END_H[memberTeam[n]] || 18;   /* 팀별 근무 종료 시각 */
       var kind = isHol ? 'h' : (h >= endH || h < 8) ? 'n' : null;
+      /* EAST·WEST 시프트 근무일(근무일정표 석간·석/야): 주간 업무가 저녁·야간으로 옮겨간 날이라 OT가 아니라 '시프트 근무'로 따로 */
+      var onShift = !isHol && SHIFT[n] && SHIFT[n][dkey];
+      if (onShift && (kind === 'n' || (!kind && x.dur != null && x.e > Date.UTC(rd.getUTCFullYear(), rd.getUTCMonth(), rd.getUTCDate(), endH)))) kind = 's';
       if (!kind){   /* 잔업은 기록 단위: 근무 중 시작해 종료 시각을 넘긴 시간 */
         if (x.dur == null) return;
         var cut = Date.UTC(rd.getUTCFullYear(), rd.getUTCMonth(), rd.getUTCDate(), endH);
@@ -811,7 +816,8 @@ function buildProdData(RAW, ROSTER, opt){
         otMonth(n, mkOf(ref)).forEach(function(c){ c.x++; c.xM += xm; });
         return;
       }
-      (OTEV[n] || (OTEV[n] = [])).push({kind:kind, day:dkey, ref:ref, s:x.t, e:(x.dur != null ? x.e : x.t), b:otBucket(x.purpose), a:x.acct || ''});
+      (OTEV[n] || (OTEV[n] = [])).push({kind:kind, day:dkey, ref:ref, s:x.t, e:(x.dur != null ? x.e : x.t), b:otBucket(x.purpose), a:x.acct || '',
+        early:(kind !== 'h' && h >= 6 && h < 8)});   /* 06~08시 시작 = 이른 출근(단, 06시 이전부터 이어진 작업이면 포함) */
     });
   });
   /* 같은 사람·같은 기준일·같은 구분(야간/휴일)에서 이어지거나 겹치는 기록 → 1건 */
@@ -820,6 +826,7 @@ function buildProdData(RAW, ROSTER, opt){
     var cur = null;
     function flush(){
       if (!cur) return;
+      if (cur.early){ cur = null; return; }   /* 06~08시에 새로 시작한 작업은 OT 아님 */
       var mins = cur.len/60000, top = null, tv = -1;
       OT_BUCKETS.forEach(function(k){ var v = cur.bm[k]; if (v != null && v > tv){ tv = v; top = k; } });
       var slots = slotsOf(cur.ref), mk = mkOf(cur.ref), K = cur.kind;
@@ -836,7 +843,7 @@ function buildProdData(RAW, ROSTER, opt){
         if (ev.e > cur.end){ cur.len += ev.e - Math.max(ev.s, cur.end); cur.end = ev.e; }
       } else {
         flush();
-        cur = {kind:ev.kind, day:ev.day, ref:ev.ref, start:ev.s, end:ev.e, len:ev.e - ev.s, bm:{}, n:0, ac:[]};
+        cur = {kind:ev.kind, day:ev.day, ref:ev.ref, start:ev.s, end:ev.e, len:ev.e - ev.s, bm:{}, n:0, ac:[], early:ev.early};
       }
       cur.bm[ev.b] = (cur.bm[ev.b] || 0) + (ev.e - ev.s) + 1;   /* +1: 시간 0인 기록도 형태 후보로 */
       cur.n++; if (ev.a && cur.ac.indexOf(ev.a) < 0) cur.ac.push(ev.a);
@@ -847,17 +854,17 @@ function buildProdData(RAW, ROSTER, opt){
     var o = {}, mo = {'이번 년도':{}, '직전 년도':{}};
     PERIODS.forEach(function(pr){ var s = otE();
       names.forEach(function(n){ var e = (OTP[n] || {})[pr]; if (!e) return;
-        ['nN','nM','hN','hM','xN','xM'].forEach(function(k){ s[k] += e[k]; });
-        ['nB','hB'].forEach(function(k){ Object.keys(e[k]).forEach(function(bb){ s[k][bb] = (s[k][bb]||0) + e[k][bb]; }); });
-        if (names.length === 1) ['nL','hL'].forEach(function(k){ if (e[k]) s[k] = e[k]; }); });   /* 내역 목록은 개인만 */
+        ['nN','nM','hN','hM','xN','xM','sN','sM'].forEach(function(k){ s[k] += e[k] || 0; });
+        ['nB','hB','sB'].forEach(function(k){ Object.keys(e[k] || {}).forEach(function(bb){ s[k][bb] = (s[k][bb]||0) + e[k][bb]; }); });
+        if (names.length === 1) ['nL','hL','sL'].forEach(function(k){ if (e[k]) s[k] = e[k]; }); });   /* 내역 목록은 개인만 */
       o[pr] = s; });
     names.forEach(function(n){ var m = OTM[n]; if (!m) return;
       ['이번 년도','직전 년도'].forEach(function(pr){ Object.keys(m[pr]).forEach(function(i){
-        var c = mo[pr][i] || (mo[pr][i] = {n:0, h:0, x:0, nM:0, hM:0, xM:0});
-        ['n','h','x','nM','hM','xM'].forEach(function(k){ c[k] += m[pr][i][k] || 0; }); }); }); });
+        var c = mo[pr][i] || (mo[pr][i] = {n:0, h:0, x:0, s:0, nM:0, hM:0, xM:0, sM:0});
+        ['n','h','x','s','nM','hM','xM','sM'].forEach(function(k){ c[k] += m[pr][i][k] || 0; }); }); }); });
     return {p:o, month:mo};
   }
-  var OT = {person:{}, team:{}, company:null, holidays:(opt.holidays||[]).length};
+  var OT = {person:{}, team:{}, company:null, holidays:(opt.holidays||[]).length, shift:opt.shiftInfo || null};
   Object.keys(memberTeam).forEach(function(n){ OT.person[n] = otSum([n]); });
   TEAMS.forEach(function(t){ OT.team[t] = otSum(teamMembers[t]); });
   OT.company = otSum(Object.keys(memberTeam));
@@ -1605,7 +1612,7 @@ function renderPerson(){
   var po = DATA.ot && DATA.ot.person[state.person] ? DATA.ot.person[state.person].p : null;
   if (po){ var oc = po[period], op = period==='이번 년도' ? po['직전 년도'] : null;
     html2 += '<div class="block"><div class="block-head"><h2>야간·휴일 근무</h2><span class="hint">CRM 기록 기준 · '+PL(period)+' · 정의는 「야간·휴일 근무」 탭 참고</span></div><div class="grid grid-4">'+
-      statTile('야간 OT', fmt(oc.nN), '건', otDelta(oc.nN, op && op.nN), fmtH(oc.nM)+'시간')+
+      statTile('야간 OT', fmt(oc.nN), '건', otDelta(oc.nN, op && op.nN), fmtH(oc.nM)+'시간'+(oc.sN ? ' · 시프트 근무 '+fmt(oc.sN)+'건('+fmtH(oc.sM)+'시간) 별도' : ''))+
       statTile('휴일 근무', fmt(oc.hN), '건', otDelta(oc.hN, op && op.hN), fmtH(oc.hM)+'시간')+
       statTile('잔업 (근무 종료 후)', fmtH(oc.xM), '시간', otDelta(oc.xM, op && op.xM, 1), fmt(oc.xN)+'건')+
       statTile('근무 외 시간 합계', fmtH(oc.nM+oc.hM+oc.xM), '시간', otDelta(oc.nM+oc.hM+oc.xM, op && (op.nM+op.hM+op.xM), 1), '야간+휴일+잔업')+
@@ -1703,15 +1710,17 @@ function renderOT(){
 
   var html = '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'+
     '<div><b>CRM 약속/활동 기록으로 본 근무 시간 외 활동</b>입니다(근태 기록 아님). '+
-    '근무시간: <b>WEST·EAST 08~17시, CENTRAL·SOUTH 09~18시</b>. <b>야간 OT</b> = 평일에 근무 종료 시각(17시/18시) 이후 또는 08:00 이전에 시작한 건(00~08시 시작은 전날 밤으로 봄). <b>같은 날 시간이 이어지거나 겹치는 기록은 1건</b>으로 묶습니다(장비별로 나눠 입력한 경우). '+
+    '근무시간: <b>WEST·EAST 08~17시, CENTRAL·SOUTH 09~18시</b>. <b>야간 OT</b> = 평일에 근무 종료 시각(17시/18시) 이후 또는 06:00 이전에 시작한 건(00~06시 시작은 전날 밤으로 봄). 06~08시에 새로 시작한 작업은 이른 출근으로 보아 빼고, 06시 이전부터 이어진 작업만 넣습니다. <b>같은 날 시간이 이어지거나 겹치는 기록은 1건</b>으로 묶습니다(장비별로 나눠 입력한 경우). '+
     '<b>휴일 근무</b> = 토·일·공휴일의 모든 활동(주말 야간 포함). '+
     '<b>잔업</b> = 평일 근무 시간에 시작해 종료 시각(17시/18시)을 넘겨 끝난 건, 종료 시각부터 끝날 때까지. '+
+    '<b>시프트 근무</b> = WEST·EAST가 근무일정표에 석간·석/야로 입력된 날은 주간 업무가 저녁·야간으로 옮겨간 것이라 그날의 근무시간 외 활동을 야간 OT·잔업에서 빼고 따로 셉니다'+
+    (O.shift && O.shift.state==='ok' ? '(근무일정표 '+esc(O.shift.first||'')+' ~ '+esc(O.shift.last||'')+' 입력분). ' : O.shift && O.shift.state==='fail' ? ' — <b>근무일정표를 불러오지 못해 이번 화면에는 반영되지 않았습니다</b>. ' : ' — 근무일정표를 불러오는 중입니다. ')+
     '시간은 CRM에 기록된 활동 시간의 합(겹친 시간은 한 번만)이라 실제보다 짧게 잡힐 수 있습니다. 업무 형태 막대에 마우스를 올리면 내역이 보입니다. 모든 업무 목적 포함 · 담당자·필수 참석자 각각 1건 · 취소·온라인 정기점검 제외.</div></div>';
 
   html += '<div class="controls" style="margin-bottom:14px;"><div class="control-group" style="flex-wrap:wrap;min-width:0;"><span class="control-label">범위</span><div class="segmented" id="otSeg" style="flex-wrap:wrap;max-width:100%;"></div></div></div>';
 
   html += '<div class="block grid grid-4">'+
-    statTile('야간 OT', fmt(cur.nN), '건', otDelta(cur.nN, prev && prev.nN), fmtH(cur.nM)+'시간 · 1인당 '+fmt1(cur.nN/head)+'건')+
+    statTile('야간 OT', fmt(cur.nN), '건', otDelta(cur.nN, prev && prev.nN), fmtH(cur.nM)+'시간 · 1인당 '+fmt1(cur.nN/head)+'건'+(cur.sN ? '<br>시프트 근무 '+fmt(cur.sN)+'건('+fmtH(cur.sM)+'시간) 별도' : ''))+
     statTile('휴일 근무', fmt(cur.hN), '건', otDelta(cur.hN, prev && prev.hN), fmtH(cur.hM)+'시간 · 1인당 '+fmt1(cur.hN/head)+'건')+
     statTile('잔업 (근무 종료 후)', fmtH(cur.xM), '시간', otDelta(cur.xM, prev && prev.xM, 1), fmt(cur.xN)+'건 · 1인당 '+fmtH(cur.xM/head)+'시간')+
     statTile('근무 외 시간 합계', fmtH(cur.nM+cur.hM+cur.xM), '시간', otDelta(cur.nM+cur.hM+cur.xM, prev && (prev.nM+prev.hM+prev.xM), 1), '야간+휴일+잔업 · 1인당 '+fmtH((cur.nM+cur.hM+cur.xM)/head)+'시간')+
@@ -1757,7 +1766,7 @@ function renderOT(){
 }
 function renderOTTable(period, names){
   var rows = names.map(function(n){ var e = DATA.ot.person[n].p[period], pv = DATA.ot.person[n].p['직전 년도'];
-    return {name:n, team:DATA.person[n].team, grade:(DATA.grade||{})[n]||'', nN:e.nN, nM:e.nM, hN:e.hN, hM:e.hM, xM:e.xM, tot:e.nM+e.hM+e.xM, cnt:e.nN+e.hN,
+    return {name:n, team:DATA.person[n].team, grade:(DATA.grade||{})[n]||'', nN:e.nN, nM:e.nM, hN:e.hN, hM:e.hM, xM:e.xM, sN:e.sN||0, tot:e.nM+e.hM+e.xM, cnt:e.nN+e.hN,
       d:(e.nN+e.hN)-(pv.nN+pv.hN)}; });
   var key = state.otSortKey || 'cnt', dir = state.otSortDir || 'desc';
   rows.sort(function(a,b){ var av=a[key], bv=b[key];
@@ -1767,7 +1776,7 @@ function renderOTTable(period, names){
   var cols = [{k:'rank',label:'#'},{k:'name',label:'이름'},{k:'team',label:'팀'},{k:'grade',label:'직급'},
     {k:'cnt',label:'야간+휴일 건수',num:true},{k:'d',label:(DATA.cmp_short||'증감'),num:true},
     {k:'nN',label:'야간 OT 건',num:true},{k:'nM',label:'야간 시간',num:true,h:1},{k:'hN',label:'휴일 건',num:true},{k:'hM',label:'휴일 시간',num:true,h:1},
-    {k:'xM',label:'잔업 시간',num:true,h:1},{k:'tot',label:'근무 외 합계(시간)',num:true,h:1}];
+    {k:'xM',label:'잔업 시간',num:true,h:1},{k:'tot',label:'근무 외 합계(시간)',num:true,h:1},{k:'sN',label:'시프트 근무 건',num:true}];
   var thead = '<thead><tr>'+cols.map(function(c){ if (c.k==='rank') return '<th>#</th>';
     var ar = key===c.k ? '<span class="arrow">'+(dir==='desc'?'▼':'▲')+'</span>' : '';
     return '<th class="'+(c.num?'num':'')+'" data-key="'+c.k+'">'+c.label+ar+'</th>'; }).join('')+'</tr></thead>';
@@ -1777,7 +1786,7 @@ function renderOTTable(period, names){
       '<td class="num"><div class="score-cell"><div class="score-bar-track"><div class="score-bar-fill" style="width:'+pct+'%;background:'+color+';"></div></div><span class="score-num">'+fmt(r.cnt)+'</span></div></td>'+
       '<td class="num" style="color:var(--text-muted)">'+(r.d===0?'–':(r.d>0?'+':'')+fmt(r.d))+'</td>'+
       '<td class="num">'+fmt(r.nN)+'</td><td class="num">'+fmtH(r.nM)+'</td><td class="num">'+fmt(r.hN)+'</td><td class="num">'+fmtH(r.hM)+'</td>'+
-      '<td class="num">'+fmtH(r.xM)+'</td><td class="num"><b>'+fmtH(r.tot)+'</b></td></tr>'; }).join('')+'</tbody>';
+      '<td class="num">'+fmtH(r.xM)+'</td><td class="num"><b>'+fmtH(r.tot)+'</b></td><td class="num" style="color:var(--text-muted)">'+(r.sN?fmt(r.sN):'–')+'</td></tr>'; }).join('')+'</tbody>';
   var t = document.getElementById('otTable'); t.innerHTML = thead+tbody;
   t.querySelectorAll('th[data-key]').forEach(function(th){ th.addEventListener('click', function(){ var k = th.getAttribute('data-key');
     if (state.otSortKey === k) state.otSortDir = (state.otSortDir||'desc')==='desc'?'asc':'desc'; else { state.otSortKey = k; state.otSortDir = 'desc'; }
@@ -2523,6 +2532,7 @@ $('changeCode').addEventListener('click',()=>{try{localStorage.removeItem(KEY_LS
 const VIEW_LS='fsg-kpi-view';
 let VIEW=(location.hash==='#people')?'prod':(()=>{try{return localStorage.getItem(VIEW_LS)||'svc';}catch(e){return 'svc';}})();
 let PROD=null, PROD_DIRTY=true;
+let SHIFT={}, SHIFT_INFO={state:'loading'}, _shiftLoading=null;   /* 근무일정표 시프트 근무일 — loadShifts() */
 const PROD_SKELETON=`<nav class="tabs" id="prodTabs">
     <button data-tab="overview" class="active">전체 개요</button>
     <button data-tab="team">팀별 비교</button>
@@ -2564,7 +2574,7 @@ function renderProd(){
   if(!RAW||!D) return;
   if(PROD_DIRTY||!PROD){
     const S=prodSelection();
-    PROD=buildProdData(D.raw, ROSTER, {teams:TEAMS, gradeHist:GRADE_HIST, holidays:KR_HOLIDAYS, sel:S.sel, cmp:S.cmp, trend:S.trend,
+    PROD=buildProdData(D.raw, ROSTER, {teams:TEAMS, gradeHist:GRADE_HIST, holidays:KR_HOLIDAYS, shift:SHIFT, shiftInfo:SHIFT_INFO, sel:S.sel, cmp:S.cmp, trend:S.trend,
       labels:{'이번 년도':S.label,'직전 년도':S.cmpLabel,'전체 누적':'전체 기간'}});
     Object.assign(PROD,{no_att:!RAW.some(r=>r.att), raw_n:RAW.length, src:SRC.act, cmp_short:S.short, provisional:S.prov,
       trend_labels:S.trend.map(m=>m.slice(2,4)+'.'+m.slice(5)), trend_names:['최근 12개월','전년 동월'],
@@ -2590,7 +2600,37 @@ function setView(v){
   if(history.replaceState) history.replaceState(null,'',location.pathname+location.search+(v==='prod'?'#people':''));
   if(v==='prod') renderProd(); else render();
 }
-function showMain(){ $('vtabs').hidden=false; setView(VIEW); }
+function showMain(){ $('vtabs').hidden=false; setView(VIEW); loadShifts(); }
+/* 근무일정표(같은 Firebase 프로젝트 work-schedule/{팀}/{날짜}/{성명}.night)에서 EAST·WEST 시프트 근무일(석간·석/야)을 읽는다.
+   시프트 근무는 주간 업무가 저녁·야간으로 옮겨간 것이라 그날 근무시간 외 활동은 야간 OT·잔업에서 빼고 '시프트 근무'로 따로 센다. 읽기만 한다. */
+const SHIFT_TEAMS=['east','west'], SHIFT_KEYS=['석간','석/야'];
+function loadShifts(){
+  if(_shiftLoading) return _shiftLoading;
+  _shiftLoading=(async()=>{
+    try{
+      await ensureAuth();
+      const map={}; let n=0, first=null, last=null;
+      for(const tk of SHIFT_TEAMS){
+        const ctl=new AbortController(); const tm=setTimeout(()=>ctl.abort(),30000);
+        let d=null;
+        try{ const r=await fetch(withAuth(FIREBASE_URL.replace(/\/$/,'')+'/work-schedule/'+tk+'.json'),{signal:ctl.signal,cache:'no-store'});
+          if(!r.ok) throw new Error('근무일정표 '+r.status); d=await r.json(); } finally{ clearTimeout(tm); }
+        Object.entries(d||{}).forEach(([date,people])=>{
+          if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!people||typeof people!=='object') return;
+          Object.entries(people).forEach(([name,e])=>{
+            const k=String((e&&e.night)||'').split(':')[0].trim();
+            if(!SHIFT_KEYS.includes(k)) return;
+            (map[name]||(map[name]={}))[date]=k; n++;
+            if(!first||date<first) first=date; if(!last||date>last) last=date;
+          });
+        });
+      }
+      SHIFT=map; SHIFT_INFO={state:'ok', n, first, last};
+    }catch(e){ SHIFT={}; SHIFT_INFO={state:'fail', msg:String(e.message||e)}; }
+    PROD_DIRTY=true; if(VIEW==='prod'&&!$('prod').hidden) renderProd();
+  })();
+  return _shiftLoading;
+}
 document.querySelectorAll('#vtabs .vt').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
 initShare();
 </script>
