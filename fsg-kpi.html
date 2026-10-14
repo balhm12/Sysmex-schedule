@@ -1855,7 +1855,7 @@ function renderOT(){
     '<b>휴일 근무</b> = 토·일·공휴일의 모든 활동(주말 야간 포함). '+
     '<b>잔업</b> = 평일 근무 시간에 시작해 종료 시각(17시/18시)을 넘겨 끝난 건, 종료 시각부터 끝날 때까지(같은 날 야간 활동과 이어지거나 같은 거래처면 야간 1건으로 합침). '+
     '<b>시프트 근무</b> = WEST·EAST가 당직근무표·근무일정표에 석간(17~25시)·석/야(석간+야간, 17~08시)로 잡힌 날은 주간 업무가 그 시간으로 옮겨간 것이라, 시프트 시간 안의 활동은 야간 OT·잔업에서 빼고 따로 셉니다. 시프트 시간 밖의 활동은 그대로 OT입니다(아래 근무일정표 연동 참고). '+
-    '시간은 CRM에 기록된 활동 시간의 합(겹친 시간은 한 번만)이라 실제보다 짧게 잡힐 수 있습니다. 업무 형태 막대에 마우스를 올리면 내역이 보입니다. 모든 업무 목적 포함 · 담당자·필수 참석자 각각 1건 · 취소·온라인 정기점검 제외.</div></div>';
+    '시간은 CRM에 기록된 활동 시간의 합(겹친 시간은 한 번만)이라 실제보다 짧게 잡힐 수 있습니다. 업무 형태 막대에 마우스를 올리면 내역이 보입니다. 모든 업무 목적 포함 · 담당자·필수 참석자 각각 1건 · 취소·온라인 정기점검 제외.'+(DATA.tz_fixed?' <b>2026-05-22 무렵까지 일부 인원의 CRM 시각이 9시간 늦게 저장된 기록 '+fmt(DATA.tz_fixed)+'건은 9시간 앞당겨 보정했습니다</b>(저장된 시작이 07~15시인 기록은 밤에 입력한 새벽 출동만 보정하고 나머지는 정상으로 보고 그대로 둠).':'')+'</div></div>';
 
   var SI = O.shift || {}, today = new Date(Date.now()+9*3600000).toISOString().slice(0,10);
   html += '<div style="margin:10px 0 14px;padding:9px 12px;border-radius:8px;font-size:12.5px;line-height:1.6;'+
@@ -2075,11 +2075,30 @@ function decodeEmbed(E){
   const out=new Array(E.n), c=E.c, d=E.d;
   for(let i=0;i<E.n;i++){
     out[i]={st:d.st[c.st[i]]||'',t:E.t[i]<0?null:E.t[i]*60000,e:E.e[i]<0?null:E.e[i]*60000,own:d.own[c.own[i]]||'',
-      err:d.err[c.err[i]]||'',acct:d.acct[c.acct[i]]||'',sn:d.sn[c.sn[i]]||'',prod:d.prod[c.prod[i]]||'',purp:d.purp[c.purp[i]]||'',subj:d.subj[c.subj[i]]||'',ft:d.ft?(d.ft[c.ft[i]]||''):'',att:d.att?(d.att[c.att[i]]||''):''};
+      err:d.err[c.err[i]]||'',acct:d.acct[c.acct[i]]||'',sn:d.sn[c.sn[i]]||'',prod:d.prod[c.prod[i]]||'',purp:d.purp[c.purp[i]]||'',subj:d.subj[c.subj[i]]||'',ft:d.ft?(d.ft[c.ft[i]]||''):'',att:d.att?(d.att[c.att[i]]||''):'',c:E.cr&&E.cr[i]>=0?E.cr[i]*60000:null};
   }
   return out;
 }
 
+/* CRM 시각 +9시간 오류 보정 (2026-10-14 사용자 요청)
+   2026-05-22 무렵까지 아래 인원이 웹에서 입력한 약속의 시작·종료가 실제보다 9시간 늦게 저장됨(개인 시간대 설정 오류 추정).
+   모바일 입력 등 정상 기록이 섞여 있어, 담당자가 아래 인원이고 · 만든 날짜(없으면 시작)가 기준일 전이고 ·
+   저장된 시작이 16시~06시(보정하면 07~21시)인 기록을 9시간 앞당긴다. 저장된 시작이 07~15시면 대개 정상(모바일 입력)이라 두되,
+   밤(21~06시)에 만든 기록이 시작보다 5~12시간 앞이면(새벽 출동을 웹으로 입력) 함께 보정한다(만든 날짜가 있을 때만). */
+const TZ_FIX = {cut:{'김동찬':'2026-05-22','백원욱':'2026-05-22'}, def:'2026-05-23',
+  names:['김동찬','안성무','이경민','백원욱','심구','박재우','서재훈','김회창','손혜린','이건우','김민결']};
+function fixTz(recs){
+  const H9=9*3600000, names=new Set(TZ_FIX.names); let n=0;
+  for(const r of recs){ if(r.t==null||!names.has(r.own)) continue;
+    const [y,m,dd]=(TZ_FIX.cut[r.own]||TZ_FIX.def).split('-').map(Number), cut=Date.UTC(y,m-1,dd);
+    if(!(r.c!=null ? r.c<cut : r.t<cut+H9)) continue;
+    const h=new Date(r.t).getUTCHours();
+    if(h>=7&&h<=15){   /* 저장 07~15시 = 대개 정상(모바일 입력). 단 밤(21~06시)에 만든 기록이 시작보다 5~12시간 앞이면 실제 새벽 출동이 +9시간으로 밀린 것 */
+      if(r.c==null) continue; const df=(r.t-r.c)/3600000, ch=new Date(r.c).getUTCHours();
+      if(!(df>=5&&df<=12&&(ch>=21||ch<=6))) continue; }
+    r.t0=r.t; r.e0=r.e; r.t-=H9; if(r.e!=null) r.e-=H9; r.tz=1; n++; }
+  recs.tzFixed=n; return recs;
+}
 function mkey(ms){const d=new Date(ms);return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}
 function ymd(ms){const d=new Date(ms);return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}
 function monthEnd(mk){const [y,m]=mk.split('-').map(Number);return Date.UTC(y,m,1)-1;}
@@ -2443,6 +2462,7 @@ function renderDQ(p){
   if(D.rawN>=40000) L.push(`<li><span class="tag b">확인</span>CRM 내보내기 상한(40,000행) 도달 — ${ymd(D.minT)} 이전 기록이 잘렸을 수 있음</li>`);
   L.push(`<li><span class="tag i">범위</span>데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)} · CRM 추출일(${D.excl.cut}) 이후로 잡힌 예정 약속 ${fmt(D.excl.future)}건은 두 탭 모두 제외</li>`);
   L.push(`<li><span class="tag i">기준</span>두 탭·월간보고(Apps Script v48) 공통 기준 · 취소 ${fmt(D.excl.cancel)}건·온라인 정기점검 ${fmt(D.excl.online)}건 제외 · 내부 기관 ${fmt(D.excl.internal)}건은 기관별 현황에서만 제외</li>`);
+  if(RAW&&RAW.tzFixed) L.push(`<li><span class="tag i">보정</span>CRM 시각 +9시간 저장 오류(2026-05-22 무렵까지, ${TZ_FIX.names.length}명) ${fmt(RAW.tzFixed)}건의 시작·종료를 9시간 앞당겨 계산</li>`);
   if(rep.length) L.push(`<li><span class="tag w">주의</span>Error 1 미기재·Others ${(unk/rep.length*100).toFixed(0)}% · S/N 없는 고장 수리 ${fmt(noSn)}건(FTFR·재방문율에서 제외) · 재방문율·FTFR은 거래처별 비율의 평균(전체 기간 3건 이상 거래처)</li>`);
   L.push(`<li><span class="tag w">주의</span>로스터 밖 담당자 ${fmt(D.unmappedNames)}명 · 로스터 인원이 없는 ${fmt(D.unmapped)}건은 건수에서 제외(필수 참석자 포함 로스터 인원 기준)</li>`);
   L.push(`<li><span class="tag i">기준</span>MTTR은 일정표 예약 시간 기준(추이 비교용)</li>`);
@@ -2471,10 +2491,10 @@ function col(h, names, fallback){ for(const n of names){const i=h.findIndex(c=>c
 function parseActivity(buf){
   const t=xlsxRows(buf,['약속/활동 목적']); if(!t) throw new Error("'약속/활동 목적' 열이 있는 시트를 찾지 못했습니다. CRM '모든 약속/활동' 내보내기 파일인지 확인해 주세요.");
   const h=t.h; const ix={st:col(h,['상태'],3),ft:col(h,['양식 타입'],4),t:col(h,['시작 시간'],5),e:col(h,['종료 시간'],6),own:col(h,['담당자'],7),subj:col(h,['주제'],8),err:col(h,['Error 1'],9),
-    acct:col(h,['거래처'],12),sn:col(h,['Serial No. (lookup)','Serial No'],14),prod:col(h,['Product'],15),purp:col(h,['약속/활동 목적'],16),att:col(h,['필수 참석자'],-1)};
+    acct:col(h,['거래처'],12),sn:col(h,['Serial No. (lookup)','Serial No'],14),prod:col(h,['Product'],15),purp:col(h,['약속/활동 목적'],16),att:col(h,['필수 참석자'],-1),cr:col(h,['만든 날짜'],-1)};
   const out=[]; for(const r of t.rows){ if(!r.length||r.every(v=>v==='')) continue;
     const g=k=>{const v=r[ix[k]];return v==null?'':String(v).trim();};
-    out.push({st:g('st'),ft:g('ft'),t:toMs(r[ix.t]),e:toMs(r[ix.e]),own:g('own'),err:g('err'),acct:g('acct'),sn:g('sn'),prod:g('prod'),purp:g('purp'),subj:g('subj'),att:g('att')}); }
+    out.push({st:g('st'),ft:g('ft'),t:toMs(r[ix.t]),e:toMs(r[ix.e]),own:g('own'),err:g('err'),acct:g('acct'),sn:g('sn'),prod:g('prod'),purp:g('purp'),subj:g('subj'),att:g('att'),c:ix.cr>=0?toMs(r[ix.cr]):null}); }
   if(!out.length) throw new Error('읽을 수 있는 행이 없습니다.');
   return out;
 }
@@ -2493,7 +2513,7 @@ async function handleFile(kind, file){
   try{
     const buf=new Uint8Array(await file.arrayBuffer());
     let msg;
-    if(kind==='act'){ RAW=parseActivity(buf); SRC.act=file.name; SRC.embedded=false; msg=`${file.name}: ${fmt(RAW.length)}행 읽음`; }
+    if(kind==='act'){ RAW=fixTz(parseActivity(buf)); SRC.act=file.name; SRC.embedded=false; msg=`${file.name}: ${fmt(RAW.length)}행 읽음`; }
     else { const all=parseSerial(buf); SERIAL=all.filter(x=>x.state==='사용'); SRC.ser=file.name; msg=`${file.name}: 장비 ${fmt(all.length)}대 중 '사용' ${fmt(SERIAL.length)}대`; }
     SRC.at=nowStr(); refresh();
     st.textContent=msg+', 저장소에 올리는 중';
@@ -2582,9 +2602,11 @@ function encodeAct(recs, src){
   const keys=['st','ft','own','att','err','acct','sn','prod','purp','subj'], d={}, c={}, idx={};
   keys.forEach(k=>{d[k]=[];c[k]=new Array(recs.length);idx[k]=new Map();});
   const t=new Array(recs.length), e=new Array(recs.length);
-  recs.forEach((r,i)=>{ t[i]=r.t==null?-1:Math.round(r.t/60000); e[i]=r.e==null?-1:Math.round(r.e/60000);
+  const cr=new Array(recs.length); let hasCr=false;
+  recs.forEach((r,i)=>{ const T=r.t0!==undefined?r.t0:r.t, Ee=r.e0!==undefined?r.e0:r.e;   /* 시각 보정 전 원본을 저장 */
+    t[i]=T==null?-1:Math.round(T/60000); e[i]=Ee==null?-1:Math.round(Ee/60000); cr[i]=r.c==null?-1:Math.round(r.c/60000); if(r.c!=null) hasCr=true;
     keys.forEach(k=>{const v=r[k]||''; let j=idx[k].get(v); if(j===undefined){j=d[k].length;d[k].push(v);idx[k].set(v,j);} c[k][i]=j;}); });
-  return {v:1,n:recs.length,t,e,d,c,src};
+  const o={v:1,n:recs.length,t,e,d,c,src}; if(hasCr) o.cr=cr; return o;
 }
 function encodeSer(list){ return {v:2,used:list.map(s=>[s.acct,s.sn,s.model||''])}; }
 function decodeSer(o){ return o.used.map(([acct,sn,model])=>({state:'사용',acct,sn,model:model||''})); }
@@ -2622,7 +2644,7 @@ async function loadAll(){
     if(!meta||!meta.actRows){ showEmpty(ADMIN?'아직 올라온 데이터가 없습니다. 위 "CRM 데이터 올리기"로 첫 파일을 올려 주세요.':'아직 올라온 데이터가 없습니다. 담당자가 데이터를 올리면 표시됩니다.'); return; }
     if(!(await codeOk(CODE,meta))){ localStorage.removeItem(KEY_LS); CODE=null; showLock('접근 코드가 맞지 않습니다. 다시 입력해 주세요.'); return; }
     const [a,s]=await Promise.all([fb('act'), meta.serSrc?fb('ser'):Promise.resolve(null)]);
-    RAW=decodeEmbed(await open_(a,CODE)); SERIAL=s?decodeSer(await open_(s,CODE)):null;
+    RAW=fixTz(decodeEmbed(await open_(a,CODE))); SERIAL=s?decodeSer(await open_(s,CODE)):null;
     META=meta; SRC={act:meta.actSrc,ser:s?meta.serSrc:null,at:meta.updatedAt,embedded:false};
     $('empty').hidden=true; refresh(); showMain();
   }catch(err){ showEmpty('데이터를 불러오지 못했습니다. '+(err.message||err)); }
@@ -2727,7 +2749,7 @@ function renderProd(){
     const S=prodSelection();
     PROD=buildProdData(D.raw, PROD_ROSTER, {teams:PROD_UNITS, teamGroups:PROD_GROUPS, gradeNow:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), exclAvg:ROSTER.filter(r=>r[2]==='팀장'||NEWBIE.includes(r[0])).map(r=>r[0]), otEndHour:PROD_END_H, gradeHist:GRADE_HIST, holidays:KR_HOLIDAYS, shift:SHIFT, shiftInfo:SHIFT_INFO, sel:S.sel, cmp:S.cmp, trend:S.trend,
       labels:{'이번 년도':S.label,'직전 년도':S.cmpLabel,'전체 누적':'전체 기간'}});
-    Object.assign(PROD,{no_att:!RAW.some(r=>r.att), raw_n:RAW.length, src:SRC.act, cmp_short:S.short, provisional:S.prov,
+    Object.assign(PROD,{no_att:!RAW.some(r=>r.att), raw_n:RAW.length, tz_fixed:RAW.tzFixed||0, src:SRC.act, cmp_short:S.short, provisional:S.prov,
       trend_labels:S.trend.map(m=>m.slice(2,4)+'.'+m.slice(5)), trend_names:['최근 12개월','전년 동월'],
       /* 월별 추이 마지막 달이 CRM 추출일이 속한 달이면 아직 집계 중(진행 중) */
       trend_partial:(()=>{const lm=S.trend[S.trend.length-1], c=D.excl&&D.excl.cut; return c&&lm&&c.slice(0,7)===lm?{idx:S.trend.length, month:+lm.slice(5), cut:c}:null;})(),
