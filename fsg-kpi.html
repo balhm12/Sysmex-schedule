@@ -901,7 +901,8 @@ if (typeof module !== 'undefined') module.exports = buildProdData;
 <script>
 window.initProdDashboard = function(DATA){
 "use strict";
-var TEAM_COLOR = { 'FS WEST':'var(--s1)', 'FS EAST':'var(--s2)', 'FS CENTRAL':'var(--s3)', 'FS SOUTH':'var(--s4)' };
+var TEAM_COLOR = { 'FS WEST':'var(--s1)', 'FS EAST':'var(--s2)', 'FS CENTRAL':'var(--s3)', 'FS SOUTH':'var(--s4)',
+  'FS CENTRAL 대전':'var(--s3)', 'FS CENTRAL 광주':'var(--s5)', 'FS SOUTH 부산':'var(--s4)', 'FS SOUTH 대구':'#B45309' };
 var GROUP_COLOR = { 'CBC':'var(--s1)', 'COA':'var(--s2)', 'HISCL':'var(--s3)', 'Urine':'var(--s4)', 'A1c':'var(--s5)', 'RF-500':'var(--s6)' };
 var BUCKET_COLOR = { '고장수리':'var(--s1)', 'PM':'var(--s3)', '설치이전':'var(--s4)', 'Cal평가':'var(--s5)', '기타':'var(--text-muted)' };
 var OT_BUCKET_COLOR = { '고장수리':'var(--s1)', 'PM':'var(--s3)', '설치':'var(--s4)', '이전철수':'var(--s2)', 'Cal평가':'var(--s5)', '기타':'var(--text-muted)' };
@@ -979,11 +980,22 @@ function showTip(evt, html){
 function hideTip(){ document.getElementById('tooltip').style.opacity = 0; }
 
 // single-series categorical bar chart
+/* 'CENTRAL 대전'처럼 공백 있는 범주명은 두 줄로(좁은 화면 겹침 방지) */
+function wrapCat(t){ t = String(t); return t.indexOf(' ') > 0 && t.length >= 8; }
+function catText(lbl, text, H, slot){
+  var t = String(text), i = t.indexOf(' ');
+  if (!wrapCat(t)) { lbl.textContent = t; return; }
+  if (slot && slot < 64) { lbl.textContent = t.slice(i+1); return; }   /* 좁은 화면: 사무소명만 */
+  lbl.setAttribute('y', H-20);
+  var a = svgEl('tspan', {x:lbl.getAttribute('x')}); a.textContent = t.slice(0,i);
+  var b = svgEl('tspan', {x:lbl.getAttribute('x'), dy:'12'}); b.textContent = t.slice(i+1);
+  lbl.appendChild(a); lbl.appendChild(b);
+}
 function barChart(container, cats, values, colors, opts){
   opts = opts || {};
   container.innerHTML = '';
   var W = container.clientWidth || 600, H = opts.height || 220;
-  var padL = 40, padR = 14, padT = 16, padB = 30;
+  var padL = 40, padR = 14, padT = 16, padB = (((opts&&opts.catLabels)||cats).some(wrapCat) ? 42 : 30);
   if (W < padL + padR + 80) W = 600;
   var innerW = W - padL - padR, innerH = H - padT - padB;
   var maxV = Math.max(1, opts.maxValue || Math.max.apply(null, values.concat([opts.targetLine||0])) * 1.18);
@@ -1017,7 +1029,7 @@ function barChart(container, cats, values, colors, opts){
       svg.appendChild(vl);
     }
     var lbl = svgEl('text', {class:'bar-label axis-label', x:cx, y:H-10, 'text-anchor':'middle'});
-    lbl.textContent = opts.catLabels ? opts.catLabels[idx] : cats[idx];
+    catText(lbl, opts.catLabels ? opts.catLabels[idx] : cats[idx], H, slot);
     svg.appendChild(lbl);
   });
   if (opts.targetLine){
@@ -1035,7 +1047,7 @@ function groupedBarChart(container, cats, seriesArr, opts){
   opts = opts || {};
   container.innerHTML = '';
   var W = container.clientWidth || 600, H = opts.height || 230;
-  var padL = 40, padR = 14, padT = 16, padB = 30;
+  var padL = 40, padR = 14, padT = 16, padB = (((opts&&opts.catLabels)||cats).some(wrapCat) ? 42 : 30);
   if (W < padL + padR + 80) W = 600;
   var innerW = W - padL - padR, innerH = H - padT - padB;
   var allVals = [];
@@ -1067,7 +1079,7 @@ function groupedBarChart(container, cats, seriesArr, opts){
       svg.appendChild(rect);
     });
     var lbl = svgEl('text', {class:'bar-label axis-label', x:padL+slot*ci+slot/2, y:H-10, 'text-anchor':'middle'});
-    lbl.textContent = cat;
+    catText(lbl, cat, H, slot);
     svg.appendChild(lbl);
   });
   container.appendChild(svg);
@@ -1920,6 +1932,14 @@ const GCOL = {'팀장':'#005BAC','T4':'#3378BD','T3':'#00B8EE','T2':'#66D4F5','T
 const REGION = {'FS WEST':'수도권(서울·경기·인천)·강원을 East와 분담','FS EAST':'수도권·강원 분담. 강원 전역, 서울 광진·노원, 경기 동두천·가평·여주',
   'FS CENTRAL':'대전·광주 사무소. 대전·세종·충남·충북·광주·전남·전북','FS SOUTH':'부산·대구 사무소. 부산·울산·경남·대구·경북'};                // 업무량 차이 계산에서 제외(신입)
 const TEAMS = ['FS WEST','FS EAST','FS CENTRAL','FS SOUTH'];
+/* 부서원 KPI 탭 조직 단위 — CENTRAL·SOUTH는 사무소별로 나눔(2026-10-14 사용자 요청, 거점: FSR 담당기관 관리표 「담당자 명단」) */
+const OFFICE = {'정근하':'대전','문유진':'대전','김재모':'대전','한승호':'대전','유재혁':'대전','강태은':'대전',
+  '이만식':'광주','이건석':'광주','손혜린':'광주','이건우':'광주',
+  '성기홍':'부산','박석영':'부산','박동민':'부산','이준민':'부산','김태현':'부산','조수호':'부산',
+  '문창수':'대구','이승직':'대구','이도협':'대구','윤진성':'대구','김성학':'대구'};
+const PROD_UNITS = ['FS WEST','FS EAST','FS CENTRAL 대전','FS CENTRAL 광주','FS SOUTH 부산','FS SOUTH 대구'];
+const PROD_ROSTER = ROSTER.map(r=>[r[0], OFFICE[r[0]]?r[1]+' '+OFFICE[r[0]]:r[1], r[2]]);
+const PROD_END_H = {'FS WEST':17,'FS EAST':17,'FS CENTRAL 대전':18,'FS CENTRAL 광주':18,'FS SOUTH 부산':18,'FS SOUTH 대구':18};
 const OK = new Set(['완료됨','시작됨']);
 const INTERNAL = new Set(['시스멕스코리아주식회사','시스멕스코리아','기타','-','']);
 /* 목표 — FSG KPI 대시보드(김성민)와 같은 기준 */
@@ -2638,7 +2658,7 @@ function renderProd(){
   if(!RAW||!D) return;
   if(PROD_DIRTY||!PROD){
     const S=prodSelection();
-    PROD=buildProdData(D.raw, ROSTER, {teams:TEAMS, gradeHist:GRADE_HIST, holidays:KR_HOLIDAYS, shift:SHIFT, shiftInfo:SHIFT_INFO, sel:S.sel, cmp:S.cmp, trend:S.trend,
+    PROD=buildProdData(D.raw, PROD_ROSTER, {teams:PROD_UNITS, otEndHour:PROD_END_H, gradeHist:GRADE_HIST, holidays:KR_HOLIDAYS, shift:SHIFT, shiftInfo:SHIFT_INFO, sel:S.sel, cmp:S.cmp, trend:S.trend,
       labels:{'이번 년도':S.label,'직전 년도':S.cmpLabel,'전체 누적':'전체 기간'}});
     Object.assign(PROD,{no_att:!RAW.some(r=>r.att), raw_n:RAW.length, src:SRC.act, cmp_short:S.short, provisional:S.prov,
       trend_labels:S.trend.map(m=>m.slice(2,4)+'.'+m.slice(5)), trend_names:['최근 12개월','전년 동월'],
