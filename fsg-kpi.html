@@ -1929,7 +1929,7 @@ function renderOT(){
   html += '<div class="block grid grid-2">'+
     (O.hr ? chartCard('ot-team-chart', '팀별 1인당 연장근무 시간', PL(period)+' · 인사 연장근무 신청')
           : chartCard('ot-team-chart', '팀별 야간 OT · 휴일 근무 건수', PL(period)))+
-    (O.hr ? chartCard('ot-trend-chart', '월별 연장근무 시간', '최근 12개월 · '+(scope==='ALL'?'FSG 전체':DATA.team_short[scope])+' · 자료 없는 달은 비움')
+    (O.hr ? chartCard('ot-trend-chart', '월별 연장근무 시간 vs CRM 근무 외 시간', '최근 12개월 · '+(scope==='ALL'?'FSG 전체':DATA.team_short[scope])+' · 연장근무 자료 없는 달은 비움')
           : chartCard('ot-trend-chart', '월별 야간 OT · 휴일 근무 추이', '최근 12개월 · '+(scope==='ALL'?'FSG 전체':DATA.team_short[scope])))+
     '</div>';
   html += '<div class="block grid grid-2">'+
@@ -1951,9 +1951,10 @@ function renderOT(){
   ], {unit:'건'});
   var mo = src.month['이번 년도'], months = [];
   for (var i=1;i<=(DATA.trend_labels||[]).length;i++) months.push(i);
-  var nv = {}, hv = {}, rv = {}; months.forEach(function(m){ var c = mo[m] || {n:0,h:0,r:0}; nv[m] = c.n; hv[m] = c.h; if (hrHas(DATA.trend_labels[m-1])) rv[m] = Math.round(otH(c.r||0)*10)/10; });
+  var nv = {}, hv = {}, rv = {}, cv = {}; months.forEach(function(m){ var c = mo[m] || {n:0,h:0,r:0}; nv[m] = c.n; hv[m] = c.h; cv[m] = Math.round(otH((c.nM||0)+(c.hM||0)+(c.xM||0))*10)/10; if (hrHas(DATA.trend_labels[m-1])) rv[m] = Math.round(otH(c.r||0)*10)/10; });
   if (O.hr) lineChart(document.getElementById('ot-trend-chart'), months, [
-    {name:'연장근무 시간', color:'var(--s1)', values:rv}], {unit:'시간'});
+    {name:'연장근무 신청', color:'var(--s1)', values:rv},
+    {name:'CRM 근무 외(참고)', color:'var(--text-muted)', values:cv, partial:true}], {unit:'시간', partial:DATA.trend_partial});
   else lineChart(document.getElementById('ot-trend-chart'), months, [
     {name:'야간 OT', color:'var(--s1)', values:nv, partial:true},
     {name:'휴일 근무', color:'var(--s4)', values:hv, partial:true}
