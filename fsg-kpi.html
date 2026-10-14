@@ -536,6 +536,10 @@ function kpiCore(RAW, ROSTER, opt){
   var acctMap = opt.accountTeam || {};
   function topKey(map){ var best=null, bn=-1; map.forEach(function(v,k){ if (v>bn){ bn=v; best=k; } }); return best; }
   function acctTeam(a){ if (acctMap[a]) return acctMap[a]; var c = ctr.get(a); return c ? topKey(c) : null; }
+  /* 사무소로 나눈 팀의 합계(opt.unitGroup = {사무소 단위: 팀}) — 거래처 팀은 팀 단위 방문 수로 다시 정함(서비스 탭과 같은 값) */
+  var UG = opt.unitGroup || {};
+  function acctGroup(a){ var c = ctr.get(a); if (!c) return null; var g = new Map();
+    c.forEach(function(v,k){ var t = UG[k] || k; g.set(t, (g.get(t)||0) + v); }); return topKey(g); }
   function rnd(x, d){ var k = Math.pow(10, d), n = x*k, f = Math.floor(n), r = n - f;
     if (Math.abs(r - 0.5) < 1e-9) return (f % 2 === 0 ? f : f + 1)/k; return Math.round(n)/k; }
   function rates(list){ var dRv=0, nRv=0, dF=0, nB=0;
@@ -548,12 +552,12 @@ function kpiCore(RAW, ROSTER, opt){
   /* 팀(또는 FSG 전체: team=null) 재방문율·FTFR — inPeriod(x): 기록이 기간 안인지 */
   function revisitAvg(inPeriod, team){
     var rv = [], ft = [], n = 0;
-    eligible.forEach(function(a){ var t = acctTeam(a); if (!t || (team ? t !== team : TEAMS.indexOf(t) < 0)) return;
+    eligible.forEach(function(a){ var tm = team && team.group ? team.group : team, t = (tm && !UG[tm]) ? acctGroup(a) : acctTeam(a); if (!t || (tm ? t !== tm : TEAMS.indexOf(t) < 0)) return;
       var rt = rates(acctRecs.get(a).filter(inPeriod)); if (rt.n_rv) n++; rv.push(pct(rt.revisit)); ft.push(pct(rt.ftfr)); });
     return {revisit: avg(rv), ftfr: avg(ft), accounts: n};
   }
   function acctRates(a, inPeriod){ var rt = rates(acctRecs.get(a).filter(inPeriod)); return {revisit: pct(rt.revisit), ftfr: pct(rt.ftfr), n_rv: rt.n_rv}; }
-  return {rows:rows, memberTeam:memberTeam, teams:TEAMS, acctTeam:acctTeam, acctRecs:acctRecs, eligible:eligible,
+  return {rows:rows, memberTeam:memberTeam, teams:TEAMS, acctTeam:acctTeam, acctGroup:acctGroup, acctRecs:acctRecs, eligible:eligible,
     revisitAvg:revisitAvg, acctRates:acctRates, rates:rates, pct:pct, avg:avg, rnd:rnd, purposeOf:purposeOf};
 }
 
@@ -640,7 +644,8 @@ function buildProdData(RAW, ROSTER, opt){
   }
   function modelFromSubj(s){ if(!s) return null; var p=s.split('/'); return p.length>=3 && p[1] ? p[1] : null; }
 
-  var CORE = kpiCore(RAW, ROSTER, {teams:TEAMS, excluded:[...EXCLUDED], accountTeam:opt.accountTeam});
+  var UNIT_GROUP = {}; Object.keys(opt.teamGroups || {}).forEach(function(g){ opt.teamGroups[g].forEach(function(u){ UNIT_GROUP[u] = g; }); });
+  var CORE = kpiCore(RAW, ROSTER, {teams:TEAMS, excluded:[...EXCLUDED], accountTeam:opt.accountTeam, unitGroup:UNIT_GROUP});
   var rows = RAW.filter(function(r){ return r.t != null && r.st !== '취소됨' && purposeOf(r) !== '온라인 정기점검'; });
   // S/N → 가장 많이 나온 모델 (주제에 모델이 없는 행 보정)
   var snCtr = {};
@@ -746,6 +751,40 @@ function buildProdData(RAW, ROSTER, opt){
   var team = {};
   TEAMS.forEach(function(t){ team[t] = teamEntry(teamMembers[t]); team[t].members = teamMembers[t]; });
   var company = teamEntry([].concat.apply([], TEAMS.map(function(t){ return teamMembers[t]; })));
+  /* 팀 합계(사무소로 나눈 팀: CENTRAL = 대전+광주, SOUTH = 부산+대구) — 화면 순서 VIEW = 팀 합계 다음에 사무소 */
+  var GROUPS_T = opt.teamGroups || {}, VIEW = [];
+  TEAMS.forEach(function(t){
+    Object.keys(GROUPS_T).forEach(function(g){ if (GROUPS_T[g][0] === t){ VIEW.push(g);
+      var ms = [].concat.apply([], GROUPS_T[g].map(function(u){ return teamMembers[u] || []; }));
+      team[g] = teamEntry(ms); team[g].members = ms; team[g].units = GROUPS_T[g]; TEAM_SHORT[g] = g.replace(/^FS\s*/,''); } });
+    VIEW.push(t);
+  });
+  /* 화면 비교 단위(2026-10-14): 팀 4개(사무소로 나눈 팀은 합계), 사무소는 팀 안에서 참고로 */
+  var TOP = [], PARENT = {};
+  TEAMS.forEach(function(t){ var g = null; Object.keys(GROUPS_T).forEach(function(k){ if (GROUPS_T[k].indexOf(t) >= 0) g = k; });
+    if (g){ PARENT[t] = g; if (TOP.indexOf(g) < 0) TOP.push(g); } else TOP.push(t); });
+  /* 공정 비교(2026-10-14): 팀·사무소 비교는 팀장·신입을 뺀 1인당 값 + 직급 보정 지수
+     직급 보정 지수 = 개인 점수 ÷ FSG 같은 직급(현재 직급) 중앙값 × 100 — 팀장·신입은 계산에서 뺌 */
+  var EXA = {}; (opt.exclAvg || []).forEach(function(n){ EXA[n] = 1; });
+  var GNOW = opt.gradeNow || {};
+  function median(a){ a = a.slice().sort(function(x,y){ return x-y; }); var k = a.length; return k ? (k%2 ? a[(k-1)/2] : (a[k/2-1]+a[k/2])/2) : 0; }
+  var IDX = {};
+  Object.keys(person).forEach(function(n){ IDX[n] = {}; });
+  PERIODS.forEach(function(pr){
+    var byG = {}; Object.keys(person).forEach(function(n){ if (EXA[n]) return; var g = GNOW[n] || person[n].grade || '';
+      (byG[g] = byG[g] || []).push(person[n].score[pr] || 0); });
+    Object.keys(person).forEach(function(n){ if (EXA[n]) { IDX[n][pr] = null; return; }
+      var md = median(byG[GNOW[n] || person[n].grade || ''] || []); IDX[n][pr] = md > 0 ? r2((person[n].score[pr] || 0) / md * 100) : null; });
+  });
+  Object.keys(person).forEach(function(n){ person[n].grade_index = IDX[n]; });
+  Object.keys(team).forEach(function(t){ var core = team[t].members.filter(function(n){ return !EXA[n]; });
+    team[t].n_core = core.length; team[t].score_avg_core = {}; team[t].case_avg_core = {}; team[t].index_avg = {};
+    PERIODS.forEach(function(pr){
+      team[t].score_avg_core[pr] = core.length ? r2(core.reduce(function(a,n){ return a + (person[n].score[pr]||0); }, 0)/core.length) : 0;
+      team[t].case_avg_core[pr] = core.length ? r2(core.reduce(function(a,n){ return a + (person[n].total_case[pr]||0); }, 0)/core.length) : 0;
+      var iv = core.map(function(n){ return IDX[n][pr]; }).filter(function(v){ return v != null; });
+      team[t].index_avg[pr] = iv.length ? r2(iv.reduce(function(a,b){ return a+b; }, 0)/iv.length) : null;
+    }); });
 
   function pct(v){ return v == null ? null : rnd(v*100, 1); }
   function avg(vs){ vs = vs.filter(function(v){ return v != null; }); return vs.length ? vs.reduce(function(a,b){return a+b;},0)/vs.length : null; }
@@ -754,19 +793,23 @@ function buildProdData(RAW, ROSTER, opt){
     var c = CORE.revisitAvg(inSlot('cum'), t), th = CORE.revisitAvg(inSlot('이번 년도'), t), la = CORE.revisitAvg(inSlot('직전 년도'), t);
     return {'재방문율':c.revisit, 'FTFR':c.ftfr, '이번년도재방문율':th.revisit, '이번년도FTFR':th.ftfr, '직전년도재방문율':la.revisit, '직전년도FTFR':la.ftfr};
   }
-  TEAMS.forEach(function(t){
+  function hospList(match){
     var hs = [];
     CORE.eligible.forEach(function(a){
-      if (acctTeam(a) !== t) return;
+      if (!match(a)) return;
       var cum = CORE.acctRates(a, inSlot('cum')), th = CORE.acctRates(a, inSlot('이번 년도')), la = CORE.acctRates(a, inSlot('직전 년도'));
       hs.push({name:a, n_rv:cum.n_rv, cum_revisit:cum.revisit, cum_ftfr:cum.ftfr, this_revisit:th.revisit, this_ftfr:th.ftfr, last_revisit:la.revisit, last_ftfr:la.ftfr});
     });
     var n = hs.length;
     hs = hs.map(function(h,i){ h._i=i; return h; }).sort(function(a,b){ return b.n_rv-a.n_rv || a._i-b._i; }).slice(0,40);
     hs.forEach(function(h){ delete h.n_rv; delete h._i; });
-    revisit[t] = {reliable:true, team_total:teamTotals(t), hospitals:hs, total_hospital_count:n};
-  });
-  revisit.ALL = {team_total:teamTotals(null)};   // FSG 전체 = 4개 팀 거래처 전체 평균 (서비스 탭과 같은 값)
+    return {hs:hs, n:n};
+  }
+  TEAMS.forEach(function(t){ var h = hospList(function(a){ return (UNIT_GROUP[t] ? acctTeam(a) : CORE.acctGroup(a)) === t; });
+    revisit[t] = {reliable:true, team_total:teamTotals(t), hospitals:h.hs, total_hospital_count:h.n}; });
+  revisit.ALL = {team_total:teamTotals(null)};
+  Object.keys(GROUPS_T).forEach(function(g){ var h = hospList(function(a){ return CORE.acctGroup(a) === g; });
+    revisit[g] = {reliable:true, team_total:teamTotals({group:g}), hospitals:h.hs, total_hospital_count:h.n}; });   // FSG 전체 = 4개 팀 거래처 전체 평균 (서비스 탭과 같은 값)
 
   /* ===== 야간·휴일 근무(OT) — CRM 기록 기준 (2026-10-13, 10-14 연속 기록 묶음) =====
      기준일 = 시작일(00~08시 시작은 전날 밤으로 봐 전날). 기준일이 토·일·공휴일이면 휴일 근무(시간대 무관),
@@ -884,10 +927,11 @@ function buildProdData(RAW, ROSTER, opt){
   var OT = {person:{}, team:{}, company:null, holidays:(opt.holidays||[]).length, shift:opt.shiftInfo || null};
   Object.keys(memberTeam).forEach(function(n){ OT.person[n] = otSum([n]); });
   TEAMS.forEach(function(t){ OT.team[t] = otSum(teamMembers[t]); });
+  Object.keys(GROUPS_T).forEach(function(g){ OT.team[g] = otSum(team[g].members); });
   OT.company = otSum(Object.keys(memberTeam));
 
   var today = nowK.toISOString().slice(0,10);
-  return {att_credits:ATT_N, teams:TEAMS, team_short:TEAM_SHORT, groups:GROUPS, group_label:GROUP_LABEL, periods:PERIODS,
+  return {att_credits:ATT_N, teams:TEAMS, team_view:VIEW, team_top:TOP, team_parent:PARENT, team_groups:GROUPS_T, team_short:TEAM_SHORT, groups:GROUPS, group_label:GROUP_LABEL, periods:PERIODS,
     period_label:FY_LABEL, fy_meta:{today:today, cur_fy:CUR_FY, prev_fy:PREV_FY, labels:FY_LABEL},
     buckets:BUCKETS, bucket_label:BUCKET_LABEL, ot_buckets:OT_BUCKETS, ot_bucket_label:OT_BUCKET_LABEL,
     benchmarks:{mttr_target:120, revisit_target:15.0, ftfr_target:90.0},
@@ -901,7 +945,28 @@ if (typeof module !== 'undefined') module.exports = buildProdData;
 <script>
 window.initProdDashboard = function(DATA){
 "use strict";
-var TEAM_COLOR = { 'FS WEST':'var(--s1)', 'FS EAST':'var(--s2)', 'FS CENTRAL':'var(--s3)', 'FS SOUTH':'var(--s4)',
+var VIEW = DATA.team_top || DATA.teams;          /* 비교 차트·버튼 = 팀 4개 */
+var PARENT = DATA.team_parent || {}, TGROUPS = DATA.team_groups || {};
+function topOf(t){ return PARENT[t] || t; }
+/* 팀 버튼 + (사무소로 나눈 팀이면) 사무소 버튼 줄 */
+function teamButtons(seg, cur, allowAll, onPick){
+  var top = cur === 'ALL' ? 'ALL' : topOf(cur);
+  (allowAll ? ['ALL'] : []).concat(VIEW).forEach(function(t){
+    var b = document.createElement('button'); b.textContent = t === 'ALL' ? 'FSG 전체' : DATA.team_short[t];
+    b.className = t === top ? 'active' : ''; if (t === top && t !== 'ALL') b.style.color = resolveVar(TEAM_COLOR[t]);
+    b.addEventListener('click', function(){ onPick(t); }); seg.appendChild(b); });
+  var units = TGROUPS[top];
+  if (units){
+    var sub = document.createElement('div'); sub.className = 'segmented'; sub.style.marginLeft = '8px';
+    var lab = document.createElement('span'); lab.className = 'control-label'; lab.textContent = '사무소'; lab.style.marginLeft = '12px';
+    [top].concat(units).forEach(function(u){ var b = document.createElement('button');
+      b.textContent = u === top ? '전체' : u.split(' ').pop(); b.className = u === cur ? 'active' : '';
+      if (u === cur) b.style.color = resolveVar(TEAM_COLOR[u]);
+      b.addEventListener('click', function(){ onPick(u); }); sub.appendChild(b); });
+    seg.parentNode.appendChild(lab); seg.parentNode.appendChild(sub);
+  }
+}
+var TEAM_COLOR = { 'FS WEST':'var(--s1)', 'FS EAST':'var(--s2)', 'FS CENTRAL':'#2E8B34', 'FS SOUTH':'#8A5A00',
   'FS CENTRAL 대전':'var(--s3)', 'FS CENTRAL 광주':'var(--s5)', 'FS SOUTH 부산':'var(--s4)', 'FS SOUTH 대구':'#B45309' };
 var GROUP_COLOR = { 'CBC':'var(--s1)', 'COA':'var(--s2)', 'HISCL':'var(--s3)', 'Urine':'var(--s4)', 'A1c':'var(--s5)', 'RF-500':'var(--s6)' };
 var BUCKET_COLOR = { '고장수리':'var(--s1)', 'PM':'var(--s3)', '설치이전':'var(--s4)', 'Cal평가':'var(--s5)', '기타':'var(--text-muted)' };
@@ -981,10 +1046,11 @@ function hideTip(){ document.getElementById('tooltip').style.opacity = 0; }
 
 // single-series categorical bar chart
 /* 'CENTRAL 대전'처럼 공백 있는 범주명은 두 줄로(좁은 화면 겹침 방지) */
+var NARROW_CAT = {'CENTRAL':'CEN', 'SOUTH':'SOU'};
 function wrapCat(t){ t = String(t); return t.indexOf(' ') > 0 && t.length >= 8; }
 function catText(lbl, text, H, slot){
   var t = String(text), i = t.indexOf(' ');
-  if (!wrapCat(t)) { lbl.textContent = t; return; }
+  if (!wrapCat(t)) { lbl.textContent = (slot && slot < 64 && NARROW_CAT[t]) || t; return; }
   if (slot && slot < 64) { lbl.textContent = t.slice(i+1); return; }   /* 좁은 화면: 사무소명만 */
   lbl.setAttribute('y', H-20);
   var a = svgEl('tspan', {x:lbl.getAttribute('x')}); a.textContent = t.slice(0,i);
@@ -1036,7 +1102,7 @@ function barChart(container, cats, values, colors, opts){
     var ty = padT + innerH - innerH*(opts.targetLine/maxV);
     svg.appendChild(svgEl('line', {class:'target-line', x1:padL, x2:W-padR, y1:ty, y2:ty}));
     var tt = svgEl('text', {x:W-padR, y:ty-4, 'text-anchor':'end', 'font-size':'10', fill:resolveVar('var(--text-muted)')});
-    tt.textContent = '목표 '+opts.targetLine+(opts.unit||'');
+    tt.textContent = (opts.targetText || '목표')+' '+opts.targetLine+(opts.unit||'');
     svg.appendChild(tt);
   }
   container.appendChild(svg);
@@ -1279,7 +1345,7 @@ function renderOverview(){
   var html = '';
   html += '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'+
     '<div><b>KPI 종합 점수</b> = 건마다 (업무 가중치 + 직급 가중치)의 합계. 업무: 고장 수리·장비 설치·성능 평가/인증 지원 3, 장비 이전 설치 2, Calibration·PM·장비 철수·고객 요청 0.5, 기타 0.2 · 직급: T4·팀장 0.6, T3 0.4, T2 0.2, T1 0(진급자는 시행일부터 새 직급 적용). 그 밖의 목적(원격 Calibration·GMCS·부품 등)은 기타(0.2)로 계산하고, 온라인 정기점검은 건수·점수에서 뺍니다. 장비 그룹을 알 수 없는 건(모델 없음·미분류·RF-500)은 「기타」 그룹입니다. 담당자·필수 참석자 기준, 취소 건 제외. 재방문율·FTFR은 거래처별 비율의 팀 평균입니다.'+
-    ' MTTR은 일정표 예약 시간 기준(참고용)입니다.'+(DATA.provisional ? ' <b>최근 14일은 FTFR 확인 기간이 끝나지 않아 잠정치</b>입니다.' : '')+(DATA.ex_lead ? ' 순위에서 팀장·신입을 뺐습니다(팀 합계·평균에는 포함).' : '')+
+    ' MTTR은 일정표 예약 시간 기준(참고용)입니다.'+(DATA.provisional ? ' <b>최근 14일은 FTFR 확인 기간이 끝나지 않아 잠정치</b>입니다.' : '')+(DATA.ex_lead ? ' 순위에서 팀장·신입을 뺐습니다.' : '')+' 팀 비교의 <b>1인당 점수·직급 보정 지수</b>(개인 점수 ÷ FSG 같은 직급 중앙값 × 100)는 팀장·신입을 뺀 값입니다. CENTRAL·SOUTH의 사무소(대전·광주, 부산·대구)는 팀별 분석에서 참고로 봅니다.'+
     ' <b>필수 참석자</b>도 담당자와 같은 가중치로 점수·건수에 들어갑니다(팀 합계는 동행 건이 사람 수만큼 반영).'+
     (DATA.no_att ? ' 지금 데이터에는 필수 참석자 열이 없어 담당자만 반영됐습니다. <b>CRM 파일을 다시 올리면 반영</b>됩니다.' : '')+'</div></div>';
 
@@ -1310,7 +1376,7 @@ function renderOverview(){
 
   renderLeaderboardTable(period);
 
-  barChart(document.getElementById('team-cmp-chart'), DATA.teams.map(function(t){return DATA.team_short[t];}), DATA.teams.map(function(t){return DATA.team[t].total_case[period];}), DATA.teams.map(function(t){return TEAM_COLOR[t];}), {unit:'건'});
+  barChart(document.getElementById('team-cmp-chart'), VIEW.map(function(t){return DATA.team_short[t];}), VIEW.map(function(t){return DATA.team[t].total_case[period];}), VIEW.map(function(t){return TEAM_COLOR[t];}), {unit:'건'});
   barChart(document.getElementById('svc-type-chart'), DATA.buckets.map(function(b){return DATA.bucket_label[b];}), bucketCaseArr(company, period), DATA.buckets.map(function(b){return BUCKET_COLOR[b];}), {unit:'건'});
   barChart(document.getElementById('group-cmp-chart'), DATA.groups.map(function(g){return DATA.group_label[g];}), groupCaseArr(company, period), DATA.groups.map(function(g){return GROUP_COLOR[g];}), {unit:'건'});
 
@@ -1321,7 +1387,7 @@ function renderOverview(){
   ], {unit:'건', partial:DATA.trend_partial});
 
   var cardsEl = document.getElementById('teamRevisitCards');
-  DATA.teams.forEach(function(t){
+  VIEW.forEach(function(t){
     var rv = teamRevisit(t, period);
     var reliable = DATA.revisit[t].reliable;
     var card = document.createElement('div');
@@ -1434,11 +1500,11 @@ function renderTeam(){
   var teamData = DATA.team[team];
 
   var html = '<div class="controls" style="margin-bottom:18px;">'+
-    '<div class="control-group"><span class="control-label">팀</span><div class="segmented" id="teamSeg"></div></div></div>';
+    '<div class="control-group" style="flex-wrap:wrap;row-gap:6px;min-width:0;"><span class="control-label">팀</span><div class="segmented" id="teamSeg"></div></div></div>';
 
   html += '<div class="block grid grid-2">'+
-    chartCard('team-score-total-chart', '팀별 KPI 종합 점수', PL(period)+' · 팀원 점수 합계')+
-    chartCard('team-score-avg-chart', '팀별 평균 KPI 점수', PL(period)+' · 팀원 1인당 평균')+
+    chartCard('team-score-total-chart', '팀별 1인당 KPI 점수', PL(period)+' · 팀장·신입 제외')+
+    chartCard('team-score-avg-chart', '팀별 직급 보정 지수', '100 = FSG 같은 직급 중앙값 · 팀장·신입 제외')+
     '</div>';
 
   var mttr = mttrRepairAvg(teamData, period);
@@ -1452,6 +1518,8 @@ function renderTeam(){
     statTile('FTFR', pctStr(rv.ftfr), '', reliable?targetPill(rv.ftfr, DATA.benchmarks.ftfr_target,'higher-better'):'', reliable?('목표 '+DATA.benchmarks.ftfr_target+'% 이상'):'&nbsp;')+
     '</div>';
 
+  if (TGROUPS[topOf(team)]) html += '<div class="block"><div class="block-head"><h2>사무소 비교</h2><span class="hint">'+DATA.team_short[topOf(team)]+' · '+PL(period)+' · 1인당 값은 팀장·신입 제외 · 사무소는 인원이 4~5명이라 한두 사람의 변화가 크게 반영됩니다(참고용)</span></div>'+
+    '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="officeTable"></table></div></div>';
   html += '<div class="block grid grid-2">'+
     chartCard('team-group-chart', '비즈니스(장비 그룹)별 처리 건수', PL(period))+
     chartCard('team-svc-chart', '서비스 유형별 처리 건수', PL(period))+
@@ -1468,22 +1536,15 @@ function renderTeam(){
 
   el.innerHTML = html;
 
-  var seg = document.getElementById('teamSeg');
-  DATA.teams.forEach(function(t){
-    var b = document.createElement('button');
-    b.textContent = DATA.team_short[t];
-    b.className = t === team ? 'active' : '';
-    b.style.color = t===team ? resolveVar(TEAM_COLOR[t]) : '';
-    b.addEventListener('click', function(){ state.team = t; state.sortKey='total'; state.sortDir='desc'; renderTeam(); });
-    seg.appendChild(b);
-  });
+  teamButtons(document.getElementById('teamSeg'), team, false, function(t){ state.team = t; state.sortKey='total'; state.sortDir='desc'; renderTeam(); });
+  if (TGROUPS[topOf(team)]) renderOfficeCmp(topOf(team), period);
 
-  var teamLabels = DATA.teams.map(function(t){return DATA.team_short[t];});
-  var teamColors = DATA.teams.map(function(t){return TEAM_COLOR[t];});
-  var teamScoreTotal = DATA.teams.map(function(t){return DATA.team[t].score[period] || 0;});
-  var teamScoreAvg = DATA.teams.map(function(t){return DATA.team[t].score_avg[period] || 0;});
-  barChart(document.getElementById('team-score-total-chart'), teamLabels, teamScoreTotal, teamColors, {unit:'점'});
-  barChart(document.getElementById('team-score-avg-chart'), teamLabels, teamScoreAvg, teamColors, {unit:'점'});
+  var teamLabels = VIEW.map(function(t){return DATA.team_short[t];});
+  var teamColors = VIEW.map(function(t){return TEAM_COLOR[t];});
+  var teamScoreCore = VIEW.map(function(t){return DATA.team[t].score_avg_core ? DATA.team[t].score_avg_core[period] : (DATA.team[t].score_avg[period] || 0);});
+  var teamIndex = VIEW.map(function(t){return DATA.team[t].index_avg ? (DATA.team[t].index_avg[period] || 0) : 0;});
+  barChart(document.getElementById('team-score-total-chart'), teamLabels, teamScoreCore.map(function(v){ return Math.round(v*10)/10; }), teamColors, {unit:'점'});
+  barChart(document.getElementById('team-score-avg-chart'), teamLabels, teamIndex.map(function(v){ return Math.round(v*10)/10; }), teamColors, {unit:'', targetLine:100, targetText:'기준'});
 
   barChart(document.getElementById('team-group-chart'), DATA.groups.map(function(g){return DATA.group_label[g];}), groupCaseArr(teamData, period), DATA.groups.map(function(g){return GROUP_COLOR[g];}), {unit:'건'});
   barChart(document.getElementById('team-svc-chart'), DATA.buckets.map(function(b){return DATA.bucket_label[b];}), bucketCaseArr(teamData, period), DATA.buckets.map(function(b){return BUCKET_COLOR[b];}), {unit:'건'});
@@ -1497,6 +1558,16 @@ function renderTeam(){
   renderHospTable(team);
 }
 
+function renderOfficeCmp(g, period){
+  var rows = [g].concat(TGROUPS[g]).map(function(u){ var d = DATA.team[u], rv = teamRevisit(u, period);
+    return '<tr'+(u===g?' style="font-weight:600"':'')+'><td><span style="color:'+resolveVar(TEAM_COLOR[u])+';font-weight:600">'+(u===g?DATA.team_short[u]+' 전체':u.split(' ').pop())+'</span></td>'+
+      '<td class="num">'+d.members.length+' <span style="opacity:.6">('+d.n_core+')</span></td>'+
+      '<td class="num">'+fmt1(d.score_avg_core[period])+'</td>'+
+      '<td class="num">'+(d.index_avg[period]==null?'—':fmt1(d.index_avg[period]))+'</td>'+
+      '<td class="num">'+fmt1(d.case_avg_core[period])+'</td>'+
+      '<td class="num">'+pctStr(rv.revisit)+'</td><td class="num">'+pctStr(rv.ftfr)+'</td></tr>'; }).join('');
+  document.getElementById('officeTable').innerHTML = '<thead><tr><th>구분</th><th class="num">인원 (비교 인원)</th><th class="num">1인당 KPI 점수</th><th class="num">직급 보정 지수</th><th class="num">1인당 처리 건수</th><th class="num">재방문율</th><th class="num">FTFR</th></tr></thead><tbody>'+rows+'</tbody>';
+}
 function renderRankTable(team, period){
   var members = DATA.team[team].members;
   var rows = members.map(function(m){
@@ -1647,8 +1718,9 @@ function renderPerson(){
   var mttrPrevYoY = period==='이번 년도' ? mttrRepairAvg(pe, '직전 년도') : null;
   var score = pe.score[period] || 0;
   var scorePrevYoY = period==='이번 년도' ? (pe.score['직전 년도']||0) : null;
-  var rv = teamRevisit(team, period);
-  var reliable = DATA.revisit[team].reliable;
+  var rv = teamRevisit(topOf(team), period);
+  var reliable = DATA.revisit[topOf(team)].reliable;
+  var gi = pe.grade_index ? pe.grade_index[period] : null;
 
   var html2 = '<div class="person-header">'+
     '<div><h2>'+esc(state.person)+'</h2><span class="team-tag" style="background:'+resolveVar('var(--accent-soft)')+';color:'+resolveVar(TEAM_COLOR[team])+'">'+team+'</span>'+
@@ -1657,7 +1729,7 @@ function renderPerson(){
     '</div>';
 
   html2 += '<div class="block grid grid-5">'+
-    statTile('KPI 종합 점수', fmt1(score), '점', deltaBadge(score, scorePrevYoY, true), '업무 가중치 적용 · 담당자·필수 참석자 기준 · '+PL(period))+
+    statTile('KPI 종합 점수', fmt1(score), '점', deltaBadge(score, scorePrevYoY, true), (gi!=null?'직급 보정 지수 <b>'+fmt1(gi)+'</b> (100 = FSG 같은 직급 중앙값) · ':'')+PL(period))+
     statTile('총 처리 건수', fmt(total), '건', deltaBadge(total, totalPrevYoY, null), PL(period))+
     statTile('평균 MTTR (고장수리)', fmt1(mttr), '분', deltaBadge(mttr, mttrPrevYoY, false)+' '+targetPill(mttr, DATA.benchmarks.mttr_target,'lower-better'), '목표 '+DATA.benchmarks.mttr_target+'분 이내')+
     statTile('소속팀 재방문율', pctStr(rv.revisit), '', reliable?targetPill(rv.revisit, DATA.benchmarks.revisit_target,'lower-better'):'<span class="pill warn">확인필요</span>', '팀 평균 참고치 (개인별 데이터 아님)')+
@@ -1722,7 +1794,7 @@ function renderPerson(){
 
   var scoreByGroup = pe.score_group[period] || {};
   var scoreVals = DATA.groups.map(function(g){ return scoreByGroup[g] || 0; });
-  var tmData = DATA.team[team], tmN = (tmData.members || []).length || 1, tmSg = tmData.score_group[period] || {}, allNames = Object.keys(DATA.person);
+  var tmData = DATA.team[topOf(team)], tmN = (tmData.members || []).length || 1, tmSg = tmData.score_group[period] || {}, allNames = Object.keys(DATA.person);
   rankStripChart(document.getElementById('p-score-chart'), DATA.groups.map(function(g, gi){
     var all = allNames.map(function(n){ return ((DATA.person[n].score_group[period])||{})[g] || 0; }), me = scoreVals[gi];
     return {label:DATA.group_label[g], me:me, all:all, team:(tmSg[g]||0)/tmN, max:Math.max.apply(null, all.concat([me, 0.0001])),
@@ -1815,18 +1887,12 @@ function renderOT(){
     '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="otTable"></table></div></div>';
   el.innerHTML = html;
 
-  var seg = document.getElementById('otSeg');
-  ['ALL'].concat(DATA.teams).forEach(function(t){
-    var b = document.createElement('button'); b.textContent = t === 'ALL' ? 'FSG 전체' : DATA.team_short[t];
-    b.className = t === scope ? 'active' : '';
-    b.addEventListener('click', function(){ state.otScope = t; renderOT(); });
-    seg.appendChild(b);
-  });
+  teamButtons(document.getElementById('otSeg'), scope, true, function(t){ state.otScope = t; renderOT(); });
 
-  var tl = DATA.teams.map(function(t){ return DATA.team_short[t]; });
+  var tl = VIEW.map(function(t){ return DATA.team_short[t]; });
   groupedBarChart(document.getElementById('ot-team-chart'), tl, [
-    {name:'야간 OT', color:'var(--s1)', values:DATA.teams.map(function(t){ return O.team[t].p[period].nN; })},
-    {name:'휴일 근무', color:'var(--s4)', values:DATA.teams.map(function(t){ return O.team[t].p[period].hN; })}
+    {name:'야간 OT', color:'var(--s1)', values:VIEW.map(function(t){ return O.team[t].p[period].nN; })},
+    {name:'휴일 근무', color:'var(--s4)', values:VIEW.map(function(t){ return O.team[t].p[period].hN; })}
   ], {unit:'건'});
   var mo = src.month['이번 년도'], months = [];
   for (var i=1;i<=(DATA.trend_labels||[]).length;i++) months.push(i);
@@ -1939,6 +2005,7 @@ const OFFICE = {'정근하':'대전','문유진':'대전','김재모':'대전','
   '문창수':'대구','이승직':'대구','이도협':'대구','윤진성':'대구','김성학':'대구'};
 const PROD_UNITS = ['FS WEST','FS EAST','FS CENTRAL 대전','FS CENTRAL 광주','FS SOUTH 부산','FS SOUTH 대구'];
 const PROD_ROSTER = ROSTER.map(r=>[r[0], OFFICE[r[0]]?r[1]+' '+OFFICE[r[0]]:r[1], r[2]]);
+const PROD_GROUPS = {'FS CENTRAL':['FS CENTRAL 대전','FS CENTRAL 광주'], 'FS SOUTH':['FS SOUTH 부산','FS SOUTH 대구']};
 const PROD_END_H = {'FS WEST':17,'FS EAST':17,'FS CENTRAL 대전':18,'FS CENTRAL 광주':18,'FS SOUTH 부산':18,'FS SOUTH 대구':18};
 const OK = new Set(['완료됨','시작됨']);
 const INTERNAL = new Set(['시스멕스코리아주식회사','시스멕스코리아','기타','-','']);
@@ -2658,7 +2725,7 @@ function renderProd(){
   if(!RAW||!D) return;
   if(PROD_DIRTY||!PROD){
     const S=prodSelection();
-    PROD=buildProdData(D.raw, PROD_ROSTER, {teams:PROD_UNITS, otEndHour:PROD_END_H, gradeHist:GRADE_HIST, holidays:KR_HOLIDAYS, shift:SHIFT, shiftInfo:SHIFT_INFO, sel:S.sel, cmp:S.cmp, trend:S.trend,
+    PROD=buildProdData(D.raw, PROD_ROSTER, {teams:PROD_UNITS, teamGroups:PROD_GROUPS, gradeNow:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), exclAvg:ROSTER.filter(r=>r[2]==='팀장'||NEWBIE.includes(r[0])).map(r=>r[0]), otEndHour:PROD_END_H, gradeHist:GRADE_HIST, holidays:KR_HOLIDAYS, shift:SHIFT, shiftInfo:SHIFT_INFO, sel:S.sel, cmp:S.cmp, trend:S.trend,
       labels:{'이번 년도':S.label,'직전 년도':S.cmpLabel,'전체 누적':'전체 기간'}});
     Object.assign(PROD,{no_att:!RAW.some(r=>r.att), raw_n:RAW.length, src:SRC.act, cmp_short:S.short, provisional:S.prov,
       trend_labels:S.trend.map(m=>m.slice(2,4)+'.'+m.slice(5)), trend_names:['최근 12개월','전년 동월'],
