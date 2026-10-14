@@ -1164,6 +1164,36 @@ function lineChart(container, months, seriesArr, opts){
   renderLegend(container, legItems);
 }
 
+// 그룹별 FSG 내 위치: 행마다 전 직원 점수 분포(회색 눈금), 소속팀 1인 평균(점선), 본인(점) — 행마다 그 그룹 FSG 최고점을 오른쪽 끝으로
+function rankStripChart(container, rows, opts){
+  opts = opts || {};
+  container.innerHTML = '';
+  var W = container.clientWidth || 560, rowH = 38, padT = 8, padB = 22, labW = 76, valW = 118;
+  if (W < 320) W = 320;
+  var H = padT + rows.length*rowH + padB, x0 = labW, x1 = W - valW, tw = x1 - x0;
+  var svg = svgEl('svg', {class:'chart', viewBox:'0 0 '+W+' '+H, height:H});
+  var col = resolveVar(opts.color || 'var(--accent)'), muted = resolveVar('var(--text-muted)'), track = resolveVar('var(--surface-2)') || '#eef1f5';
+  [0, 0.5, 1].forEach(function(f){ var gx = x0 + tw*f; svg.appendChild(svgEl('line', {class:'grid-line', x1:gx, x2:gx, y1:padT, y2:H-padB+4}));
+    var t = svgEl('text', {x:gx, y:H-6, 'text-anchor':f===0?'start':f===1?'end':'middle', 'font-size':'10', fill:muted}); t.textContent = f===1 ? 'FSG 최고' : f===0 ? '0' : '최고의 50%'; svg.appendChild(t); });
+  rows.forEach(function(r, i){
+    var cy = padT + i*rowH + rowH/2, mx = r.max || 0, X = function(v){ return x0 + (mx ? Math.min(v, mx)/mx : 0)*tw; };
+    var lb = svgEl('text', {x:0, y:cy+4, class:'axis-label', 'font-size':'12', 'font-weight':'600'}); lb.textContent = r.label; svg.appendChild(lb);
+    svg.appendChild(svgEl('rect', {x:x0, y:cy-7, width:tw, height:14, rx:7, fill:track}));
+    r.all.forEach(function(v){ if (v > 0) svg.appendChild(svgEl('line', {x1:X(v), x2:X(v), y1:cy-6, y2:cy+6, stroke:muted, 'stroke-opacity':0.35, 'stroke-width':1.5})); });
+    if (r.team != null){ var tx = X(r.team); svg.appendChild(svgEl('line', {x1:tx, x2:tx, y1:cy-11, y2:cy+11, stroke:muted, 'stroke-width':2, 'stroke-dasharray':'3 2'})); }
+    var px = X(r.me), dot = svgEl('circle', {cx:px, cy:cy, r:7, fill:col, stroke:resolveVar('var(--surface)'), 'stroke-width':2});
+    var tipHtml = '<b>'+esc(r.label)+'</b>본인 '+fmt1(r.me)+'점 · FSG '+r.rank+'위/'+r.n+'명'+(r.team!=null?'<br>소속팀 1인 평균 '+fmt1(r.team)+'점':'')+'<br>FSG 최고 '+fmt1(mx)+'점 · 1인 평균 '+fmt1(r.avg)+'점';
+    [dot].forEach(function(el){ el.style.cursor='pointer'; el.addEventListener('mousemove', function(e){ showTip(e, tipHtml); }); el.addEventListener('mouseleave', hideTip); });
+    var hit = svgEl('rect', {x:x0, y:cy-rowH/2, width:tw, height:rowH, fill:'transparent'}); hit.addEventListener('mousemove', function(e){ showTip(e, tipHtml); }); hit.addEventListener('mouseleave', hideTip);
+    svg.appendChild(hit); svg.appendChild(dot);
+    var vt = svgEl('text', {x:W, y:cy+4, 'text-anchor':'end', 'font-size':'12'});
+    vt.innerHTML = '<tspan font-weight="700" fill="'+col+'">'+fmt1(r.me)+'점</tspan><tspan fill="'+muted+'" font-size="11"> '+(r.me>0 ? r.rank+'위/'+r.n : '–')+'</tspan>';
+    svg.appendChild(vt);
+  });
+  container.appendChild(svg);
+  renderLegend(container, [{label:'본인', color:opts.color||'var(--accent)', dot:true}, {label:'소속팀 1인 평균', color:'var(--text-muted)', line:true}, {label:'FSG 직원 분포', color:'var(--text-muted)', line:true}]);
+}
+
 function renderLegend(container, items){
   var leg = document.createElement('div');
   leg.className = 'legend';
@@ -1613,7 +1643,7 @@ function renderPerson(){
     '</div>';
 
   html2 += '<div class="block grid grid-2">'+
-    chartCard('p-score-chart', '비즈니스(장비 그룹)별 KPI 점수', '가중치 적용 · '+PL(period))+
+    chartCard('p-score-chart', '비즈니스(장비 그룹)별 KPI 점수 · FSG 내 위치', PL(period)+' · 그룹마다 FSG 최고점 = 오른쪽 끝')+
     chartCard('p-group-chart', '비즈니스(장비 그룹)별 처리 건수', PL(period))+
     '</div>';
   html2 += '<div class="block grid grid-2">'+
@@ -1670,7 +1700,12 @@ function renderPerson(){
 
   var scoreByGroup = pe.score_group[period] || {};
   var scoreVals = DATA.groups.map(function(g){ return scoreByGroup[g] || 0; });
-  barChart(document.getElementById('p-score-chart'), DATA.groups.map(function(g){return DATA.group_label[g];}), scoreVals, DATA.groups.map(function(g){return GROUP_COLOR[g];}), {unit:'점'});
+  var tmData = DATA.team[team], tmN = (tmData.members || []).length || 1, tmSg = tmData.score_group[period] || {}, allNames = Object.keys(DATA.person);
+  rankStripChart(document.getElementById('p-score-chart'), DATA.groups.map(function(g, gi){
+    var all = allNames.map(function(n){ return ((DATA.person[n].score_group[period])||{})[g] || 0; }), me = scoreVals[gi];
+    return {label:DATA.group_label[g], me:me, all:all, team:(tmSg[g]||0)/tmN, max:Math.max.apply(null, all.concat([me, 0.0001])),
+      avg:all.reduce(function(a,b){return a+b;},0)/(all.length||1), rank:1+all.filter(function(v){ return v > me; }).length, n:all.length};
+  }), {color:TEAM_COLOR[team]});
   barChart(document.getElementById('p-group-chart'), DATA.groups.map(function(g){return DATA.group_label[g];}), groupCaseArr(pe, period), DATA.groups.map(function(g){return GROUP_COLOR[g];}), {unit:'건'});
   barChart(document.getElementById('p-svc-chart'), DATA.buckets.map(function(b){return DATA.bucket_label[b];}), bucketCaseArr(pe, period), DATA.buckets.map(function(b){return BUCKET_COLOR[b];}), {unit:'건'});
 
