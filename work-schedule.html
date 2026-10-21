@@ -334,8 +334,8 @@
   @media (max-width:560px){ .nf-sep{display:none;} }
   .notes-cat{white-space:nowrap;}
   /* 입력창의 구분 선택 — 둘 중 하나를 누르는 방식 (모바일에서 드롭다운보다 빠름) */
-  .cat-seg{display:flex;gap:8px;}
-  .cat-seg .nf-chip{flex:1;justify-content:center;padding:9px 12px;font-size:13px;}
+  .cat-seg{display:flex;gap:8px;flex-wrap:wrap;}
+  .cat-seg .nf-chip{flex:1 1 90px;justify-content:center;padding:9px 10px;font-size:13px;}
   .cat-warn{margin-top:6px;font-size:11px;line-height:1.5;color:#B45309;}
   .by-hint{margin-top:6px;font-size:11px;line-height:1.55;color:var(--ink-soft);}
   /* 구분별 작성 기준 — 고른 구분에 맞춰 바뀝니다 */
@@ -875,7 +875,7 @@ const INSTITUTION_LIST = ["(사)부산의료선교회세계로병원", "(사)한
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 39; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
+const BUILD_VERSION = 40; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1391,6 +1391,9 @@ const NOTE_CAT = [
   {key:'고객', color:'#9333EA', bg:'#F3E8FF',
    guide:'고객 미팅, VOC, 현장 대응 등 주요 활동을 6하 원칙에 따라 구체적으로 작성하고, 주요 협의 내용과 조치 결과 또는 향후 계획을 포함',
    ph:'누가 · 언제 · 어디서 · 무엇을 · 왜 · 어떻게 / 주요 협의 내용 / 조치 결과 또는 향후 계획'},
+  {key:'일반', color:'#C2410C', bg:'#FFEDD5',
+   guide:'기술·고객 어느 쪽에도 해당하지 않는 그 밖의 사항을 적습니다. 무슨 일이 있었고 어떻게 처리했는지, 후속 조치가 필요하면 무엇을 언제까지 할지를 포함',
+   ph:'무슨 일이 있었는지 / 어떻게 처리했는지 / 후속 조치가 필요하면 무엇을 언제까지'},
 ];
 function noteCatGuide(k){ const c = NOTE_CAT.find(x=>x.key===k); return c ? c.guide : ''; }
 function noteCatPlaceholder(k){
@@ -1494,7 +1497,7 @@ function renderNotes(){
   cnt.style.display = all.length ? '' : 'none';
   sub.innerHTML = escapeHtml(pr.label + ' · ' + scopeLabel) +
     (carriedN ? ' <b style="color:#B45309;">이월 ' + carriedN + '건</b>' : '') +
-    ' — <b>기술</b>·<b>고객</b>으로 나눠 기록합니다. 위 칩을 누르면 그 건만 모아 봅니다.';
+    ' — <b>기술</b>·<b>고객</b>·<b>일반</b>으로 나눠 기록합니다. 위 칩을 누르면 그 건만 모아 봅니다.';
 
   // ── 구분(장비·고객)별 건수 칩 + 상태별 건수 칩 ──
   const counts = {};
@@ -1675,7 +1678,7 @@ async function exportNotesExcel(){
   ws.getCell('A2').alignment = { horizontal:'center' };
 
   const HEAD = ['날짜','요일','팀','구분','기관','장비','상태','작성자','특이사항'];
-  const CAT_FILL = {'기술':'FFCCFBF1', '고객':'FFF3E8FF'};
+  const CAT_FILL = {'기술':'FFCCFBF1', '고객':'FFF3E8FF', '일반':'FFFFEDD5'};
   const hr = 4;
   HEAD.forEach((h,i)=>{
     const c = ws.getCell(hr, i+1);
@@ -1818,7 +1821,7 @@ function openNotePanel(opts){
           '</button>'
         ).join('') +
       '</div>' +
-      (cur.cat ? '' : '<div class="cat-warn">구분을 넣기 전에 등록된 건입니다 — 기술·고객 중 하나를 눌러 주세요 (안 고르면 미분류로 남습니다).</div>') +
+      (cur.cat ? '' : '<div class="cat-warn">구분을 넣기 전에 등록된 건입니다 — 기술·고객·일반 중 하나를 눌러 주세요 (안 고르면 미분류로 남습니다).</div>') +
       '<div class="cat-guide" id="nt-cat-guide"' + (cur.cat ? '' : ' style="display:none;"') + '>' +
         escapeHtml(noteCatGuide(cur.cat)) + '</div>' +
     '</div>' +
@@ -2030,7 +2033,7 @@ function openGuidePanel(){
         '<div class="guide-item"><div class="guide-icon">' + g.icon + '</div><div class="guide-h">' + g.h + '</div><div class="guide-d">' + g.d + '</div></div>'
       ).join('') +
       '<div class="guide-item"><div class="guide-icon">📌</div><div class="guide-h">특이사항</div>' +
-      '<div class="guide-d">화면 맨 아래 [＋ 특이사항 등록]에서 <b>구분(기술 · 고객)</b> · 날짜 · 기관 · 장비 · 상태(진행중 · 예정 · 완료) · 내용을 입력합니다. 구분을 고르면 그 구분의 <b>작성 기준</b>이 입력창에 그대로 표시됩니다 — 기술은 발생 현상 · 원인 분석 · 조치 내용과 결과를, 고객은 6하 원칙에 따라 주요 협의 내용과 조치 결과 또는 향후 계획을 적습니다. 목록은 달력이 보고 있는 기간을 따라갑니다 — 주간 보기면 그 주, 월간 보기면 그 달. 끝나지 않은 건(예정 · 진행중)은 기간이 지나도 맨 위에 <b>이월</b>로 남고, 완료된 건은 아래로 내려갑니다. 상단의 구분 칩과 상태 칩을 누르면 그것만 골라 볼 수 있고(둘을 겹쳐서도 됩니다), 같은 칩을 다시 누르면 풀립니다. [📊 Excel 내보내기]는 지금 화면에 보이는 그대로(보는 달 · 팀 · 고른 구분 · 고른 상태) 한 장으로 받습니다. 편집창의 <b>야간 업무내역</b>·<b>주말/휴일 업무내역</b> 칸은 그 칸에 붙는 짧은 비고이고, 기록으로 남길 특이사항은 편집창 아래 “📌 이 날짜 특이사항 등록”으로 넣습니다(날짜·이름이 채워진 상태로 열립니다).</div></div>' +
+      '<div class="guide-d">화면 맨 아래 [＋ 특이사항 등록]에서 <b>구분(기술 · 고객 · 일반)</b> · 날짜 · 기관 · 장비 · 상태(진행중 · 예정 · 완료) · 내용을 입력합니다. 구분을 고르면 그 구분의 <b>작성 기준</b>이 입력창에 그대로 표시됩니다 — 기술은 발생 현상 · 원인 분석 · 조치 내용과 결과를, 고객은 6하 원칙에 따라 주요 협의 내용과 조치 결과 또는 향후 계획을, 일반은 그 밖의 사항을 적습니다. 목록은 달력이 보고 있는 기간을 따라갑니다 — 주간 보기면 그 주, 월간 보기면 그 달. 끝나지 않은 건(예정 · 진행중)은 기간이 지나도 맨 위에 <b>이월</b>로 남고, 완료된 건은 아래로 내려갑니다. 상단의 구분 칩과 상태 칩을 누르면 그것만 골라 볼 수 있고(둘을 겹쳐서도 됩니다), 같은 칩을 다시 누르면 풀립니다. [📊 Excel 내보내기]는 지금 화면에 보이는 그대로(보는 달 · 팀 · 고른 구분 · 고른 상태) 한 장으로 받습니다. 편집창의 <b>야간 업무내역</b>·<b>주말/휴일 업무내역</b> 칸은 그 칸에 붙는 짧은 비고이고, 기록으로 남길 특이사항은 편집창 아래 “📌 이 날짜 특이사항 등록”으로 넣습니다(날짜·이름이 채워진 상태로 열립니다).</div></div>' +
     '</div>';
   document.getElementById('overlay').classList.add('show');
 }
@@ -2688,7 +2691,7 @@ function openEditor(team, date, name){
 
     // 위 '특이사항'은 그 칸(야간·주말)에 붙는 짧은 비고입니다. 기관·장비까지 적어
     // 기관·장비까지 적어 기록으로 남길 내용은 아래 버튼으로 등록합니다.
-    '<button type="button" class="note-link" id="f-note">📌 이 날짜 특이사항 등록 (기술 · 고객)</button>' +
+    '<button type="button" class="note-link" id="f-note">📌 이 날짜 특이사항 등록 (기술 · 고객 · 일반)</button>' +
 
     '<div class="form-actions">' +
       '<button class="btn-clear" id="f-clear">비우기</button>' +
