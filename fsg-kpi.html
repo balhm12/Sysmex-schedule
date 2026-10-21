@@ -377,8 +377,8 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
       <div class="st" id="stSer">선택된 파일 없음</div>
     </div>
     <div class="drop" id="dropHr" tabindex="0" role="button" aria-label="연장근무현황 파일 선택">
-      <b>직원 월별 연장근무현황 (선택)</b>
-      <p>인사 연장근무 신청 시간(사번·성명·1월~12월, 시간.분). 넣으면 부서원 KPI의 OT 시간이 이 파일 기준이 됩니다. 파일명에 연도(YYYY)가 있어야 합니다.</p>
+      <b>연장근무 (선택)</b>
+      <p>인사 「직원 월별 연장근무현황」(성명·1월~12월, 시간.분, 파일명에 연도) 또는 「연장근로」 월별 시트 파일(Apr-26 …, 시간만 읽고 수당·금액 열은 읽지 않음). 넣으면 부서원 KPI의 OT 시간이 이 자료 기준이 됩니다. 올린 달만 바뀌고 다른 달은 그대로 합쳐지며, 월별 연장근로 파일이 있는 달은 신청 현황으로 덮지 않습니다.</p>
       <div class="st" id="stHr">선택된 파일 없음</div>
     </div>
   </div>
@@ -923,12 +923,13 @@ function buildProdData(RAW, ROSTER, opt){
     /* 자료가 있는 달 = 5명 이상 값이 있는 첫 달 ~ 파일명 날짜의 달(없으면 5명 이상인 마지막 달). 2026년 파일은 1~3월이 거의 비어 있음 */
     var cnt = {}; Object.keys(HR.h).forEach(function(n){ Object.keys(HR.h[n]).forEach(function(mk){ if (HR.h[n][mk] > 0) cnt[mk] = (cnt[mk]||0) + 1; }); });
     var mks = Object.keys(cnt).filter(function(mk){ return cnt[mk] >= 5; }).sort(), firstMk = mks[0] || null, lastMk = HR.upto || mks[mks.length-1] || null;
-    if (firstMk && lastMk){ for (var hm = firstMk; hm <= lastMk; hm = shiftMk(hm, 1)) HRCOV[hm] = 1; }
+    if (HR.ms){ Object.keys(HR.ms).forEach(function(mk){ HRCOV[mk] = 1; }); var cks = Object.keys(HRCOV).sort(); firstMk = cks[0] || null; lastMk = cks[cks.length-1] || null; }   /* 월별 연장근로 + 연장근무 신청 합본: 달마다 출처 */
+    else if (firstMk && lastMk){ for (var hm = firstMk; hm <= lastMk; hm = shiftMk(hm, 1)) HRCOV[hm] = 1; }
     var perMonths = {'이번 년도': opt.sel || [], '직전 년도': opt.cmp || [], '전체 누적': Object.keys(HRCOV)};
     Object.keys(memberTeam).forEach(function(n){ var hh = HR.h[n] || {};
       PERIODS.forEach(function(pr){ var e = otP(n, pr); perMonths[pr].forEach(function(mk){ if (HRCOV[mk]) e.rM += Math.round((hh[mk] || 0) * 60); }); });
       Object.keys(HRCOV).forEach(function(mk){ otMonth(n, mk).forEach(function(c){ c.r += Math.round((hh[mk] || 0) * 60); }); }); });
-    HRM = {src: HR.src || '', asof: HR.asof || null, first: firstMk, last: lastMk, missing: Object.keys(memberTeam).filter(function(n){ return !HR.h[n]; }),
+    HRM = {src: HR.src || '', asof: HR.asof || null, first: firstMk, last: lastMk, covm: Object.keys(HRCOV).sort(), srcs: HR.srcs || null, missing: Object.keys(memberTeam).filter(function(n){ return !HR.h[n]; }),
       cov: {'이번 년도': (opt.sel||[]).filter(function(mk){ return HRCOV[mk]; }).length, '직전 년도': (opt.cmp||[]).filter(function(mk){ return HRCOV[mk]; }).length, '전체 누적': Object.keys(HRCOV).length},
       months: {'이번 년도': (opt.sel||[]).length, '직전 년도': (opt.cmp||[]).length}};
   }
@@ -1770,14 +1771,14 @@ function renderPerson(){
   var po = DATA.ot && DATA.ot.person[state.person] ? DATA.ot.person[state.person].p : null;
   if (po){ var oc = po[period], op = period==='이번 년도' ? po['직전 년도'] : null;
     var HRP = !!DATA.ot.hr, hrn = hrNote(period);
-    if (HRP) html2 += '<div class="block"><div class="block-head"><h2>야간·휴일 근무</h2><span class="hint">시간 = 인사 연장근무 신청 · 건수·업무 형태 = CRM 기록 · '+PL(period)+'</span></div><div class="grid grid-4">'+
-      statTile('연장근무 시간', fmtH(oc.rM), '시간', otDelta(oc.rM, op && op.rM, 1), '인사 연장근무 신청'+(hrn?'<br><span style="color:var(--warn)">'+hrn+'</span>':''))+
+    if (HRP) html2 += '<div class="block"><div class="block-head"><h2>야간·휴일 근무</h2><span class="hint">시간 = 인사 연장근무 · 건수·업무 형태 = CRM 기록 · '+PL(period)+'</span></div><div class="grid grid-4">'+
+      statTile('연장근무 시간', fmtH(oc.rM), '시간', otDelta(oc.rM, hrCmpOk() && op ? op.rM : null, 1), '인사 연장근무'+(hrn?'<br><span style="color:var(--warn)">'+hrn+'</span>':''))+
       statTile('야간 OT (CRM)', fmt(oc.nN), '건', otDelta(oc.nN, op && op.nN), 'CRM 기록'+(oc.sN ? ' · 시프트 근무 '+fmt(oc.sN)+'건 별도' : ''))+
       statTile('휴일 근무 (CRM)', fmt(oc.hN), '건', otDelta(oc.hN, op && op.hN), 'CRM 기록')+
       statTile('CRM 근무 외 시간 (참고)', fmtH(oc.nM+oc.hM+oc.xM), '시간', '', '야간+휴일+잔업 활동 시간')+
       '</div><div class="grid grid-2" style="margin-top:14px;">'+
       chartCard('p-ot-cnt', '월별 야간 OT · 휴일 근무 건수', '최근 12개월 · CRM')+
-      chartCard('p-ot-hrs', '월별 연장근무 시간', '최근 12개월 · 인사 연장근무 신청 (CRM 근무 외 시간 참고)')+
+      chartCard('p-ot-hrs', '월별 연장근무 시간', '최근 12개월 · 인사 연장근무 (CRM 근무 외 시간 참고)')+
       '</div><div class="grid grid-2" style="margin-top:14px;">'+
       chartCard('p-ot-ntype', '야간 OT 업무 형태', PL(period)+' · '+fmt(oc.nN)+'건')+
       chartCard('p-ot-htype', '휴일 근무 업무 형태', PL(period)+' · '+fmt(oc.hN)+'건')+
@@ -1818,7 +1819,7 @@ function renderPerson(){
       {name:'야간 OT', color:'var(--s1)', values:cn, partial:true},
       {name:'휴일 근무', color:'var(--s4)', values:ch, partial:true}], {unit:'건', partial:DATA.trend_partial});
     if (DATA.ot.hr) lineChart(document.getElementById('p-ot-hrs'), om, [
-      {name:'연장근무 신청', color:'var(--s1)', values:hr},
+      {name:'연장근무 (인사)', color:'var(--s1)', values:hr},
       {name:'CRM 근무 외(참고)', color:'var(--text-muted)', values:ht, partial:true}], {unit:'시간', partial:DATA.trend_partial});
     else lineChart(document.getElementById('p-ot-hrs'), om, [
       {name:'야간', color:'var(--s1)', values:hn, partial:true},
@@ -1857,7 +1858,12 @@ function renderPerson(){
 function otH(m){ return m ? m/60 : 0; }
 function fmtH(m){ return fmt1(otH(m)); }
 /* 연장근무(인사) 자료가 있는 달인지 — 추이 라벨 'YY.MM' */
-function hrHas(lbl){ var H = DATA.ot && DATA.ot.hr; if (!H || !H.first) return false; var mk = '20'+lbl.slice(0,2)+'-'+lbl.slice(3); return mk >= H.first && mk <= H.last; }
+function hrHas(lbl){ var H = DATA.ot && DATA.ot.hr; if (!H || !H.first) return false; var mk = '20'+lbl.slice(0,2)+'-'+lbl.slice(3); return H.covm ? H.covm.indexOf(mk) >= 0 : (mk >= H.first && mk <= H.last); }
+/* 출처별 달 범위: 월별 연장근로 25.09~26.04 · 연장근무 신청 26.05~26.10 */
+function hrSrcText(srcs){ return srcs.map(function(x){ var r = x.first ? (x.first.slice(2).replace('-','.')+(x.last!==x.first?'~'+x.last.slice(2).replace('-','.'):'')) : '';
+  return (x.kind==='mon' ? '월별 연장근로 ' : '연장근무 신청 현황 ')+r+(x.kind!=='mon' && x.asof ? ' — '+esc(x.asof)+' 기준, 마지막 달 진행 중' : ''); }).join(' + '); }
+/* 비교 기간도 연장근무 자료가 다 있을 때만 증감 표시(일부 달만 있으면 증감이 부풀려짐) */
+function hrCmpOk(){ var H = DATA.ot && DATA.ot.hr; return !H || !H.months || H.cov['직전 년도'] >= H.months['직전 년도']; }
 function hrNote(period){ var H = DATA.ot && DATA.ot.hr; if (!H) return '';
   var c = H.cov[period], m = H.months[period];
   return (m && c < m) ? (c ? '선택 기간 '+m+'개월 중 '+c+'개월만 연장근무 자료가 있음' : '선택 기간에 연장근무 자료 없음') : ''; }
@@ -1894,7 +1900,7 @@ function renderOT(){
   var head = names.length || 1;
 
   var html = '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'+
-    '<div>'+(O.hr ? '<b>OT 시간은 인사 「직원 월별 연장근무현황」(연장근무 신청) 기준</b>입니다('+esc(O.hr.src||'')+', 자료 '+esc(O.hr.first||'')+' ~ '+esc(O.hr.last||'')+(O.hr.asof?' ('+esc(O.hr.asof)+' 기준, 마지막 달은 진행 중)':'')+', 월 단위). 아래 야간·휴일 <b>건수와 업무 형태는 CRM 기록</b>으로 본 참고값입니다. ' : '')+
+    '<div>'+(O.hr ? (O.hr.srcs ? '<b>OT 시간은 인사 연장근무 자료 기준</b>입니다('+hrSrcText(O.hr.srcs)+', 월 단위). ' : '<b>OT 시간은 인사 「직원 월별 연장근무현황」(연장근무 신청) 기준</b>입니다('+esc(O.hr.src||'')+', 자료 '+esc(O.hr.first||'')+' ~ '+esc(O.hr.last||'')+(O.hr.asof?' ('+esc(O.hr.asof)+' 기준, 마지막 달은 진행 중)':'')+', 월 단위). ')+'아래 야간·휴일 <b>건수와 업무 형태는 CRM 기록</b>으로 본 참고값입니다. ' : '')+
     '<b>CRM 약속/활동 기록으로 본 근무 시간 외 활동</b>'+(O.hr?'(건수·업무 형태)':'')+'입니다(근태 기록 아님). '+
     '근무시간: <b>WEST·EAST 08~17시, CENTRAL·SOUTH 09~18시</b>. <b>야간 OT</b> = 평일에 근무 종료 시각(17시/18시) 이후 또는 06:00 이전에 시작한 건(00~06시 시작은 전날 밤으로 봄). 06~08시에 새로 시작한 작업은 이른 출근으로 보아 빼고, 06시 이전부터 이어진 작업만 넣습니다. <b>야간은 같은 날 60분 이내로 이어진 활동(거래처를 옮겨도)과 같은 거래처 기록을 1건</b>으로, <b>휴일은 거래처(방문)마다 1건</b>으로 셉니다. '+
     '<b>휴일 근무</b> = 토·일·공휴일의 모든 활동(주말 야간 포함). '+
@@ -1914,7 +1920,7 @@ function renderOT(){
 
   var HRN = hrNote(period);
   if (O.hr) html += '<div class="block grid grid-4">'+
-    statTile('연장근무 시간', fmtH(cur.rM), '시간', otDelta(cur.rM, prev && prev.rM, 1), '인사 연장근무 신청 · 1인당 '+fmtH(cur.rM/head)+'시간'+(HRN?'<br><span style="color:var(--warn)">'+HRN+'</span>':''))+
+    statTile('연장근무 시간', fmtH(cur.rM), '시간', otDelta(cur.rM, hrCmpOk() && prev ? prev.rM : null, 1), '인사 연장근무 · 1인당 '+fmtH(cur.rM/head)+'시간'+(HRN?'<br><span style="color:var(--warn)">'+HRN+'</span>':''))+
     statTile('야간 OT (CRM)', fmt(cur.nN), '건', otDelta(cur.nN, prev && prev.nN), 'CRM 기록 · 1인당 '+fmt1(cur.nN/head)+'건'+(cur.sN ? '<br>시프트 근무 '+fmt(cur.sN)+'건 별도' : ''))+
     statTile('휴일 근무 (CRM)', fmt(cur.hN), '건', otDelta(cur.hN, prev && prev.hN), 'CRM 기록 · 1인당 '+fmt1(cur.hN/head)+'건')+
     statTile('CRM 근무 외 시간 (참고)', fmtH(cur.nM+cur.hM+cur.xM), '시간', '', '야간+휴일+잔업 활동 시간'+(cur.rM ? ' · 연장근무의 '+Math.round((cur.nM+cur.hM+cur.xM)/cur.rM*100)+'%' : ''))+
@@ -1927,7 +1933,7 @@ function renderOT(){
     '</div>';
 
   html += '<div class="block grid grid-2">'+
-    (O.hr ? chartCard('ot-team-chart', '팀별 1인당 연장근무 시간', PL(period)+' · 인사 연장근무 신청')
+    (O.hr ? chartCard('ot-team-chart', '팀별 1인당 연장근무 시간', PL(period)+' · 인사 연장근무')
           : chartCard('ot-team-chart', '팀별 야간 OT · 휴일 근무 건수', PL(period)))+
     (O.hr ? chartCard('ot-trend-chart', '월별 연장근무 시간 vs CRM 근무 외 시간', '최근 12개월 · '+(scope==='ALL'?'FSG 전체':DATA.team_short[scope])+' · 연장근무 자료 없는 달은 비움')
           : chartCard('ot-trend-chart', '월별 야간 OT · 휴일 근무 추이', '최근 12개월 · '+(scope==='ALL'?'FSG 전체':DATA.team_short[scope])))+
@@ -1953,7 +1959,7 @@ function renderOT(){
   for (var i=1;i<=(DATA.trend_labels||[]).length;i++) months.push(i);
   var nv = {}, hv = {}, rv = {}, cv = {}; months.forEach(function(m){ var c = mo[m] || {n:0,h:0,r:0}; nv[m] = c.n; hv[m] = c.h; cv[m] = Math.round(otH((c.nM||0)+(c.hM||0)+(c.xM||0))*10)/10; if (hrHas(DATA.trend_labels[m-1])) rv[m] = Math.round(otH(c.r||0)*10)/10; });
   if (O.hr) lineChart(document.getElementById('ot-trend-chart'), months, [
-    {name:'연장근무 신청', color:'var(--s1)', values:rv},
+    {name:'연장근무 (인사)', color:'var(--s1)', values:rv},
     {name:'CRM 근무 외(참고)', color:'var(--text-muted)', values:cv, partial:true}], {unit:'시간', partial:DATA.trend_partial});
   else lineChart(document.getElementById('ot-trend-chart'), months, [
     {name:'야간 OT', color:'var(--s1)', values:nv, partial:true},
@@ -1988,7 +1994,7 @@ function renderOTTable(period, names){
     if (HRT) return '<tr data-person="'+esc(r.name)+'"><td><span class="rank-badge">'+(i+1)+'</span></td><td>'+esc(r.name)+(r.grade==='팀장'?'<span class="gtag lead">팀장</span>':'')+'</td>'+
       '<td><span style="color:'+color+';font-weight:600;font-size:11.5px;">'+DATA.team_short[r.team]+'</span></td><td>'+esc(r.grade)+'</td>'+
       '<td class="num"><div class="score-cell"><div class="score-bar-track"><div class="score-bar-fill" style="width:'+pct+'%;background:'+color+';"></div></div><span class="score-num">'+fmtH(r.rM)+'</span></div></td>'+
-      '<td class="num" style="color:var(--text-muted)">'+(Math.abs(r.dr)<6?'–':(r.dr>0?'+':'')+fmtH(r.dr))+'</td>'+
+      '<td class="num" style="color:var(--text-muted)">'+(!hrCmpOk()||Math.abs(r.dr)<6?'–':(r.dr>0?'+':'')+fmtH(r.dr))+'</td>'+
       '<td class="num">'+fmt(r.nN)+'</td><td class="num">'+fmt(r.hN)+'</td><td class="num" style="color:var(--text-muted)">'+fmtH(r.tot)+'</td><td class="num" style="color:var(--text-muted)">'+(r.sN?fmt(r.sN):'–')+'</td></tr>';
     return '<tr data-person="'+esc(r.name)+'"><td><span class="rank-badge">'+(i+1)+'</span></td><td>'+esc(r.name)+(r.grade==='팀장'?'<span class="gtag lead">팀장</span>':'')+'</td>'+
       '<td><span style="color:'+color+';font-weight:600;font-size:11.5px;">'+DATA.team_short[r.team]+'</span></td><td>'+esc(r.grade)+'</td>'+
@@ -2566,7 +2572,39 @@ function parseActivity(buf){
   return out;
 }
 /* 직원 월별 연장근무현황: 성명 + 1월~12월(시간.분 — 33.30 = 33시간 30분) → {h:{성명:{'YYYY-MM':시간}}, src} */
+/* 월별 연장근로(시트 'Apr-26'…, 1행 'YYYY년 M월 연장근로', 2행 머리글 Name (KOR)·Business day·Holiday·Nomal TTL, 5행부터 사람, 값은 시간(일 단위 숫자)). 시간 열만 읽고 수당·금액·배율 열(당직 수당, SW수당, 1.5배 등)은 읽지도 저장하지도 않음.
+   월 OT = 평일 Normal+Midnight + 휴일 Normal+Midnight(= SUB Total). 팀장 등 보상휴가 행(Nomal TTL 비어 있음)은 '당월 OT' 열. 숨긴 시트 제외, 로스터 인원만 저장 */
+function parseOtMonthly(wb, fname){
+  const keep=new Set(ROSTER.map(r=>r[0])), h={}, cov=[]; const hidden=n=>{const w=(wb.Workbook&&wb.Workbook.Sheets||[]).find(x=>x.name===n); return !!(w&&w.Hidden);};
+  for(const name of wb.SheetNames){ if(hidden(name)) continue;
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:''}); const hi=rows.slice(0,6).findIndex(r=>r.some(c=>String(c).trim()==='Name (KOR)')); if(hi<0) continue;
+    const hd=rows[hi].map(c=>String(c).trim()), iN=hd.indexOf('Name (KOR)'), iL=hd.indexOf('Business day'), iQ=hd.indexOf('Nomal TTL'); if(iL<0) continue;
+    const tm=String(rows[0][0]||'').match(/(20\d{2})\s*년\s*(\d{1,2})\s*월/); if(!tm) continue; const mk=tm[1]+'-'+String(+tm[2]).padStart(2,'0');
+    const num=v=>{const x=parseFloat(v); return isFinite(x)&&x>0?x*24:0;}; let n=0;
+    for(const r of rows.slice(hi+3)){ const nm=String(r[iN]??'').trim(); if(!keep.has(nm)) continue;
+      const comp = r[iQ]==='' && (r[iL]!==''||r[iL+1]!=='');
+      const v = comp ? num(r[iL+1]) : num(r[iL])+num(r[iL+1])+num(r[iL+2])+num(r[iL+3]);
+      const o=h[nm]||(h[nm]={}); if(v>0) o[mk]=Math.round(((o[mk]||0)+v)*100)/100; n++; }
+    if(n) cov.push(mk); }
+  if(!cov.length) return null; cov.sort();
+  return {h, src:fname, kind:'mon', cov, asof:null};
+}
+/* 같은 달은 새 파일이 덮어씀. 단 월별 연장근로(mon)가 있는 달은 연장근무 신청(req)으로 덮지 않음(신청 현황 초반 달은 일부만 입력) */
+function hrCovOf(H){ if(H.cov) return H.cov; const cnt={}; Object.values(H.h).forEach(o=>Object.keys(o).forEach(mk=>{ if(o[mk]>0) cnt[mk]=(cnt[mk]||0)+1; }));
+  const mks=Object.keys(cnt).filter(mk=>cnt[mk]>=5).sort(), f=mks[0], l=H.upto||mks[mks.length-1], out=[]; if(f&&l){ for(let m=f;m<=l;){ out.push(m); let y=+m.slice(0,4), mo=+m.slice(5)+1; if(mo>12){mo=1;y++;} m=y+'-'+String(mo).padStart(2,'0'); } } return out; }
+function mergeHr(old, nw){
+  const per={}, info={};   /* per[mk] = {kind, src, asof, vals:{성명:시간}} */
+  const put=(H,force)=>{ const kind=H.kind||'req'; hrCovOf(H).forEach(mk=>{ if(!force && per[mk] && per[mk].kind==='mon' && kind!=='mon') return;
+    const vals={}; Object.keys(H.h).forEach(n=>{ if(H.h[n][mk]>0) vals[n]=H.h[n][mk]; }); per[mk]={kind, src:H.src, asof:H.asof||null, vals}; }); };
+  if(old && old.h){ if(old.ms){ Object.keys(old.ms).forEach(mk=>{ const vals={}; Object.keys(old.h).forEach(n=>{ if(old.h[n][mk]>0) vals[n]=old.h[n][mk]; }); per[mk]={...old.ms[mk], vals}; }); } else put(old,true); }
+  put(nw,false);
+  const h={}, ms={}; Object.keys(per).sort().forEach(mk=>{ const p=per[mk]; ms[mk]={kind:p.kind, src:p.src, asof:p.asof}; Object.keys(p.vals).forEach(n=>{ (h[n]||(h[n]={}))[mk]=p.vals[n]; }); });
+  ROSTER.forEach(r=>{ if(!h[r[0]] && Object.values(per).some(p=>p.kind==='mon')) h[r[0]]={}; });   /* 월별 연장근로 파일에 있었는데 값 0인 사람도 '자료 없음'으로 보이지 않게 */
+  const srcs=[]; Object.keys(ms).sort().forEach(mk=>{ const x=ms[mk], last=srcs[srcs.length-1]; if(last && last.src===x.src) last.last=mk; else srcs.push({kind:x.kind, src:x.src, asof:x.asof, first:mk, last:mk}); });
+  return {h, ms, srcs, src:srcs.map(x=>x.src).join(' + '), asof:(srcs.filter(x=>x.kind!=='mon').pop()||{}).asof||null};
+}
 function parseHr(buf, fname){
+  { const wb=XLSX.read(buf,{type:'array',cellDates:false,dense:true}); const p=parseOtMonthly(wb, fname); if(p) return p; }
   const t=xlsxRows(buf,['성명']); if(!t) throw new Error("'성명' 열이 있는 시트를 찾지 못했습니다. 직원 월별 연장근무현황 파일인지 확인해 주세요.");
   const ym=String(fname||'').match(/(20\d{2})/); if(!ym) throw new Error('파일명에서 연도(YYYY)를 찾지 못했습니다. 예: 직원 월별연장근무현황_2026_10_7.xlsx');
   const year=ym[1], h=t.h, iN=h.findIndex(c=>c==='성명'), mc={};
@@ -2578,7 +2616,7 @@ function parseHr(buf, fname){
       o[mc[i]]=(o[mc[i]]||0)+hh+(mm<60?mm/60:mm/100); } }
   if(!Object.keys(out).length) throw new Error('읽을 수 있는 행이 없습니다.');
   const dt=String(fname||'').match(/(20\d{2})[_.\-](\d{1,2})[_.\-](\d{1,2})/);
-  return {h:out, src:fname, upto:dt?dt[1]+'-'+String(+dt[2]).padStart(2,'0'):null, asof:dt?dt[1]+'-'+String(+dt[2]).padStart(2,'0')+'-'+String(+dt[3]).padStart(2,'0'):null};
+  return {h:out, src:fname, kind:'req', upto:dt?dt[1]+'-'+String(+dt[2]).padStart(2,'0'):null, asof:dt?dt[1]+'-'+String(+dt[2]).padStart(2,'0')+'-'+String(+dt[3]).padStart(2,'0'):null};
 }
 function parseSerial(buf){
   const t=xlsxRows(buf,null); if(!t) throw new Error('시트를 읽지 못했습니다.');
@@ -2596,14 +2634,15 @@ async function handleFile(kind, file){
     const buf=new Uint8Array(await file.arrayBuffer());
     let msg;
     if(kind==='act'){ RAW=fixTz(parseActivity(buf)); SRC.act=file.name; SRC.embedded=false; msg=`${file.name}: ${fmt(RAW.length)}행 읽음`; }
-    else if(kind==='hr'){ HRDATA=parseHr(buf,file.name); SRC.hr=file.name; msg=`${file.name}: ${fmt(Object.keys(HRDATA.h).length)}명 읽음`; }
+    else if(kind==='hr'){ const nw=parseHr(buf,file.name), c=hrCovOf(nw); HRDATA=mergeHr(HRDATA, nw); SRC.hr=HRDATA.src;
+      msg=`${file.name}: ${nw.kind==='mon'?'월별 연장근로':'연장근무 신청'} ${fmt(Object.keys(nw.h).length)}명, ${c[0]||''}~${c[c.length-1]||''} 읽음(기존 자료와 합침: ${HRDATA.srcs.map(x=>(x.kind==='mon'?'월별 ':'신청 ')+x.first+'~'+x.last).join(' + ')})`; }
     else { const all=parseSerial(buf); SERIAL=all.filter(x=>x.state==='사용'); SRC.ser=file.name; msg=`${file.name}: 장비 ${fmt(all.length)}대 중 '사용' ${fmt(SERIAL.length)}대`; }
     SRC.at=nowStr(); if(RAW){ refresh(); } else PROD_DIRTY=true;
     st.textContent=msg+', 저장소에 올리는 중';
     $('busy').textContent='암호화해서 올리는 중입니다'; if(RAW){ $('empty').hidden=true; showMain(); }
     const ok = kind==='act'
       ? await pushShared('act', encodeAct(RAW,file.name), {actSrc:file.name, actRows:RAW.length})
-      : kind==='hr' ? await pushShared('hr', HRDATA, {hrSrc:file.name})
+      : kind==='hr' ? await pushShared('hr', HRDATA, {hrSrc:HRDATA.src})
       : await pushShared('ser', encodeSer(SERIAL), {serSrc:file.name});
     st.innerHTML = ok ? msg+', <span class="good">올리기 완료. 팀장 화면은 새로고침하거나 5분 안에 자동 반영됩니다</span>' : msg+'. <span class="bad">공유 저장소에 연결되지 않아 이 화면에만 반영됐습니다</span>';
   }catch(err){ st.innerHTML=`<span class="bad">${esc(err.code?('공유 저장 실패 ('+err.code+'). 잠시 후 다시 올려 주세요.'):(err.message||err))}</span>`; }
