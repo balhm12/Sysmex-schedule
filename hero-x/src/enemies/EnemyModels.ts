@@ -27,15 +27,93 @@ export interface EnemyModel {
 /**
  * 종류별 임시 모델 생성. 새 종류를 추가하면 여기에 분기를 더한다.
  * - rusher(돌진 로봇): 상자 몸통 + 눈 하나 + 바퀴. 공격 예고 때 눈이 커지고 붉게 변한다.
+ * - shooter(포격 드론): 떠다니는 둥근 몸통 + 포신. 예고 때 포신 끝이 밝아진다.
+ * - tank(철벽 로봇): 큰 몸통 + 방패. 예고 때 방패를 들어 올린다. 밀려남 저항이 크다.
  */
 export function createEnemyModel(type: string, def: EnemyTypeConfig): EnemyModel {
   switch (type) {
+    case 'tank':
+      return createTankModel(def);
     case 'shooter':
       return createShooterModel(def);
     case 'rusher':
     default:
       return createRusherModel(def);
   }
+}
+
+/** 철벽 로봇: 넓은 몸통 + 앞에 든 방패 + 두 눈. 예고 때 방패를 들어 올렸다가 내려찍는다 */
+function createTankModel(def: EnemyTypeConfig): EnemyModel {
+  const root = new THREE.Group();
+  root.name = `Enemy-${def.name}`;
+  const r = def.radius;
+
+  const bodyMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(def.color) });
+  const darkMat = new THREE.MeshLambertMaterial({ color: 0x2a2f3d });
+  const steelMat = new THREE.MeshLambertMaterial({ color: 0x9aa3b2 });
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffd23f });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(r * 1.7, r * 1.5, r * 1.4), bodyMat);
+  body.position.y = r * 1.1;
+  body.castShadow = true;
+  root.add(body);
+  for (const sx of [-1, 1]) {
+    const tread = new THREE.Mesh(new THREE.BoxGeometry(r * 0.5, r * 0.6, r * 1.7), darkMat);
+    tread.position.set(sx * r * 0.85, r * 0.3, 0);
+    tread.castShadow = true;
+    root.add(tread);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(r * 0.13, 8, 6), eyeMat);
+    eye.position.set(sx * r * 0.35, r * 1.5, r * 0.72);
+    root.add(eye);
+  }
+  // 방패: 어깨를 축으로 들어 올린다
+  const shieldPivot = new THREE.Group();
+  shieldPivot.position.set(0, r * 1.7, r * 0.6);
+  const shield = new THREE.Mesh(new THREE.BoxGeometry(r * 1.9, r * 1.6, r * 0.2), steelMat);
+  shield.position.set(0, -r * 0.7, r * 0.3);
+  shield.castShadow = true;
+  shieldPivot.add(shield);
+  root.add(shieldPivot);
+
+  let flashTimer = 0;
+  let t = Math.random() * 10;
+
+  return {
+    root,
+    update(dt, s) {
+      t += dt;
+      if (s.state === 'dead') {
+        const k = Math.max(0, 1 - s.death);
+        root.scale.setScalar(k);
+        root.position.y = -(1 - k) * r;
+        root.rotation.y += dt * 6;
+        return;
+      }
+      body.position.y = r * 1.1 + (s.moving ? Math.abs(Math.sin(t * 8)) * 0.04 : 0);
+      // 예고: 방패를 뒤로 들어 올림 (progress 1 에서 내려찍기 직전)
+      shieldPivot.rotation.x = -s.windup * 1.3;
+      eyeMat.color.setRGB(1, 0.82 - s.windup * 0.6, 0.25 - s.windup * 0.2);
+      if (flashTimer > 0) {
+        flashTimer -= dt;
+        bodyMat.emissive.setScalar(flashTimer > 0 ? 0.9 : 0);
+      }
+    },
+    flash() {
+      flashTimer = 0.09;
+      bodyMat.emissive.setScalar(0.9);
+    },
+    dispose() {
+      root.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.isMesh) {
+          mesh.geometry.dispose();
+          const m = mesh.material;
+          if (Array.isArray(m)) m.forEach((x) => x.dispose());
+          else m.dispose();
+        }
+      });
+    },
+  };
 }
 
 /** 포격 드론: 둥근 몸통 + 앞으로 난 포신 + 떠다니는 느낌. 예고 때 포신 끝이 밝아진다 */

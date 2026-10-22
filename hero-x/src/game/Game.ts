@@ -11,11 +11,13 @@ import { PlayerController } from '../player/PlayerController';
 import { createPlaceholderModel } from '../player/models/PlaceholderModel';
 import type { Vec2 } from '../player/movement';
 import { ControlsGuide } from '../ui/ControlsGuide';
+import { DamageNumbers } from '../ui/DamageNumbers';
 import { HUD } from '../ui/HUD';
 import { ResultUI } from '../ui/ResultUI';
 import { Logger } from '../utils/Logger';
 import { CameraController } from './CameraController';
-import { GameConfig, sanitizeGameConfig } from './GameConfig';
+import { getDifficultyPreset, loadDifficulty, saveDifficulty } from './Difficulty';
+import { GameConfig, sanitizeGameConfig, type DifficultyLevel } from './GameConfig';
 
 /** 테스트·디버그용으로 밖에서 읽을 수 있는 상태 */
 export interface GameDebugState {
@@ -30,6 +32,7 @@ export interface GameDebugState {
   aliveEnemies: number;
   projectiles: number;
   playerY: number;
+  difficulty: string;
   kills: number;
   score: number;
   input: { pointerX: number; pointerY: number; pointerHas: boolean; pressed: string[] };
@@ -55,6 +58,9 @@ export class Game {
   private readonly guide: ControlsGuide;
   private readonly hud: HUD;
   private readonly result: ResultUI;
+  private readonly damageNumbers: DamageNumbers;
+  private difficulty: DifficultyLevel = loadDifficulty();
+  private readonly projTmp = new THREE.Vector3();
 
   private readonly raycaster = new THREE.Raycaster();
   private readonly groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -98,13 +104,26 @@ export class Game {
     this.effects = new Effects(this.scene);
     this.projectiles = new ProjectileSystem(this.scene);
     this.spawner = new EnemySpawner(this.scene);
+    this.applyDifficultyToSpawner();
     this.spawner.spawnFromConfig();
-    this.combat = new CombatSystem(this.player, this.input, () => this.spawner.getEnemies(), () => this.getAimPoint(), this.effects, this.projectiles);
+    this.combat = new CombatSystem(
+      this.player, this.input, () => this.spawner.getEnemies(), () => this.getAimPoint(), this.effects, this.projectiles,
+      (enemy, damage, killed) => {
+        if (!GameConfig.hud.showDamageNumbers) return;
+        this.projTmp.set(enemy.position.x, 1.6, enemy.position.z);
+        this.damageNumbers.show(this.projTmp, killed ? enemy.def.score : damage, killed ? 'kill' : 'enemy');
+      },
+    );
 
     // UI
-    this.guide = new ControlsGuide(uiRoot, () => this.canvas.focus());
+    this.damageNumbers = new DamageNumbers(uiRoot, (pos) => this.projectToScreen(pos));
+    this.guide = new ControlsGuide(uiRoot, () => this.canvas.focus(), {
+      get: () => this.difficulty,
+      set: (level) => this.setDifficulty(level),
+    });
     this.hud = new HUD(uiRoot);
     this.result = new ResultUI(uiRoot, () => this.restart());
+    this.applyDifficulty();
 
     // 입력 연결
     this.input.attach(window, canvas);
@@ -132,11 +151,36 @@ export class Game {
     cancelAnimationFrame(this.rafId);
   }
 
+  /** 난이도 변경: 저장하고 전투를 다시 시작한다 (적 체력 배율이 생성 시 적용되기 때문) */
+  setDifficulty(level: DifficultyLevel): void {
+    if (level === this.difficulty) return;
+    this.difficulty = level;
+    saveDifficulty(level);
+    this.applyDifficulty();
+    this.restart();
+    Logger.info(`난이도: ${getDifficultyPreset(level).label}`);
+  }
+
+  getDifficulty(): DifficultyLevel {
+    return this.difficulty;
+  }
+
+  private applyDifficultyToSpawner(): void {
+    const p = getDifficultyPreset(this.difficulty);
+    this.spawner.multipliers = { hp: p.enemyHp, speed: p.enemySpeed };
+  }
+
+  private applyDifficulty(): void {
+    this.applyDifficultyToSpawner();
+    this.guide?.refreshDifficulty();
+  }
+
   /** 전투 재시작: 플레이어 회복·복귀, 적 재배치, 기록 초기화 */
   restart(): void {
     this.spawner.clear();
     this.spawner.spawnFromConfig();
     this.projectiles.clear();
+    this.damageNumbers.clear();
     this.player.reset(GameConfig.player.startPosition);
     this.controller.reset();
     this.combat.reset();
@@ -180,10 +224,18 @@ export class Game {
       aliveEnemies: this.spawner.aliveCount,
       projectiles: this.projectiles.count,
       playerY: this.player.jumpY,
+      difficulty: this.difficulty,
       kills: this.combat.kills,
       score: this.combat.score,
       input: { pointerX: pointer.x, pointerY: pointer.y, pointerHas: pointer.has, pressed: this.input.getPressedCodes() },
     };
+  }
+
+  /** 3D 좌표 → 화면 px 좌표 (카메라 뒤면 null) */
+  private projectToScreen(pos: THREE.Vector3): { x: number; y: number } | null {
+    const v = this.projTmp.copy(pos).project(this.camera);
+    if (v.z > 1) return null;
+    return { x: ((v.x + 1) / 2) * this.canvas.clientWidth, y: ((1 - v.y) / 2) * this.canvas.clientHeight };
   }
 
   /** 마우스가 가리키는 바닥 위 지점 (없으면 null) */
@@ -202,6 +254,7 @@ export class Game {
     const e = enemy.position;
     const len = Math.hypot(p.x - e.x, p.z - e.z) || 1;
     const toPlayer: Vec2 = { x: (p.x - e.x) / len, z: (p.z - e.z) / len };
+    damage = damage * getDifficultyPreset(this.difficulty).enemyDamage;
     if (enemy.def.attackKind === 'ranged') {
       this.projectiles.spawn(
         { x: e.x + toPlayer.x * (enemy.radius + 0.3), z: e.z + toPlayer.z * (enemy.radius + 0.3) },
@@ -221,6 +274,7 @@ export class Game {
     this.controller.applyKnockback({ x: (p.x - from.x) / len, z: (p.z - from.z) / len }, GameConfig.player.hitKnockback);
     this.effects.burst(new THREE.Vector3(p.x, 1, p.z), 0xff4f79, 6, 4);
     this.hud.flashHit();
+    if (GameConfig.hud.showDamageNumbers) this.damageNumbers.show(new THREE.Vector3(p.x, 2.0, p.z), damage, 'player');
     if (this.player.health.isDead) {
       this.ended = true;
       this.result.show('쓰러졌습니다', `처치 ${this.combat.kills} · 점수 ${this.combat.score}`);
@@ -268,6 +322,7 @@ export class Game {
     });
     this.player.update(dt);
     this.effects.update(dt);
+    this.damageNumbers.update(dt);
     // 카메라는 점프 높이를 따라가지 않도록 바닥 위치를 본다
     this.camTarget.set(p.x, 0, p.z);
     this.cameraCtrl.update(dt, this.camTarget);

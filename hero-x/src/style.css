@@ -236,3 +236,56 @@ body {
 .result-panel .guide-title {
   font-size: 34px;
 }
+
+/* ---- 피해 숫자 / 난이도 (2단계-c) ---- */
+.dmg-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.dmg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 900;
+  font-size: 20px;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+.dmg.player {
+  color: #ff6b90;
+  font-size: 24px;
+}
+.dmg.kill {
+  color: #ffd23f;
+  font-size: 18px;
+}
+.diff-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.diff-btn {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(238, 242, 255, 0.2);
+  background: #273055;
+  color: #eef2ff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.diff-btn[aria-pressed='true'] {
+  background: #ffc531;
+  color: #1a1f33;
+  border-color: transparent;
+}
+.diff-btn:focus-visible {
+  outline: 3px solid #5cf2d8;
+  outline-offset: 2px;
+}

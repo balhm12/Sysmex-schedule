@@ -9,7 +9,7 @@
 - 장르: 3인칭 3D 액션 RPG. Minecraft Dungeons 의 진행 방식을 참고하되 캐릭터·맵·아이템·음악·텍스처는 독자 제작 또는 적법한 에셋만 사용한다.
 - 실행 환경: Windows PC 웹 브라우저(Chrome/Edge). 기본 게임은 외부 API·유료 서비스 없이 실행된다.
 - 최우선 원칙: **실제로 실행되는 게임**을 단계적으로 완성한다. 그래픽 품질보다 안정성·유지보수성이 먼저다.
-- 현재 상태: **1단계(기반 구축) 완료, 2단계(전투) 진행 중** — 2-a(돌진형 적, 체력·피해, 근접 공격, 결과 화면)와 2-b(원거리 공격, 포격 드론, 점프) 완료. 다음: 2-c 방어형 적 + 피해 숫자 표시 + 난이도 선택·밸런스(사용자 피드백: 현재 '쉬움').
+- 현재 상태: **1단계(기반 구축) 완료, 2단계(전투) 진행 중** — **2단계(전투) 완료 (v0.2.0)** — 근접·원거리 공격, 적 3종(돌진·포격·철벽), AI, 체력·피해, 점프, 난이도 선택, 피해 숫자. 다음: 3단계 아이템과 성장(드롭, 경험치·레벨, 장비 인벤토리·교체, 능력치 반영).
 
 ## 2. 기술 스택
 
@@ -37,6 +37,7 @@ hero-x/
 │  ├─ game/
 │  │  ├─ Game.ts           게임 본체: 렌더러·씬·루프, 시스템 연결
 │  │  ├─ GameConfig.ts     ★ 설정 데이터 + 허용 범위(CONFIG_LIMITS) + 보정 함수
+│  │  ├─ Difficulty.ts     난이도 배율 조회·저장(localStorage, 실패해도 동작)
 │  │  └─ CameraController.ts  3인칭 추적 카메라
 │  ├─ input/InputManager.ts   키보드·마우스 입력 (키 설정은 GameConfig.controls, 마우스는 'Mouse0' 등)
 │  ├─ player/
@@ -59,10 +60,11 @@ hero-x/
 │  ├─ ui/
 │  │  ├─ ControlsGuide.ts  조작 안내 화면 + 하단 상태 표시
 │  │  ├─ HUD.ts            체력바·남은 적·처치·점수·피격 번쩍임
+│  │  ├─ DamageNumbers.ts  피해 숫자 (3D 좌표 → 화면 투영은 Game 이 함수로 제공)
 │  │  ├─ ResultUI.ts       결과 화면(쓰러짐/승리)과 다시 시작
 │  │  └─ ErrorOverlay.ts   화면 오류 표시
 │  └─ utils/Logger.ts      [HERO X] 접두어 로그
-└─ tests/                  단위 테스트 (movement, config, health, enemyAI, melee)
+└─ tests/                  단위 테스트 (movement, config, health, enemyAI, melee, difficulty)
 ```
 
 앞으로 추가될 폴더(지시서 9장 기준): `combat/Projectile.ts`, `items/`, `save/`, `audio/`, `ui/SettingsUI.ts`, `ui/InventoryUI.ts` 등. 새 기능은 **새 파일**로 만들고 `Game.ts` 에서 연결한다.
@@ -130,12 +132,14 @@ hero-x/
 - "점프를 더 높게" → `player.jumpSpeed` 올리기 (또는 `player.gravity` 내리기).
 - 주의: 3D 효과의 방향을 바꿀 때는 `node -e` 로 벡터에 회전을 적용해 보고 확인한다 (2-b 의 부채꼴 반대 방향 버그 참고). 키를 '누르는 순간' 반응해야 하는 동작(점프 등)은 폴링이 아니라 `InputManager.onPress` 로 받는다 (낮은 FPS 에서 짧은 탭을 놓침).
 - 새 적 종류 → `enemies.types` 에 능력치 추가 + `EnemyModels.ts` 에 외형 분기 + (행동이 다르면) `EnemyAI.ts` 확장.
+- "더 어렵게/쉽게" → 먼저 난이도 버튼 안내. 전체 조정은 `difficulty.presets` 배율, 특정 적만이면 `enemies.types.<종류>`.
+- 난이도 배율은 적 생성 시(체력·속도)와 피해 계산 시(공격력, `Game.onEnemyAttack`)에 적용된다. 새 적 능력치를 추가하면 배율 적용 위치를 함께 확인한다.
 - 새 기능(무기, 아이템…) → 새 파일을 만들고 `Game.ts` 의 루프에 `update()` 를 추가. 설정은 `GameConfig.ts` 에.
 
 ## 9. 개발 단계 (지시서 11장)
 
 1. 기반 구축 ✅ (v0.1.0)
-2. 전투 시스템 🔄 (2-a 돌진형 적·근접 공격 ✅ v0.2.0-a.1 / 2-b 원거리 공격·포격 드론·점프 ✅ v0.2.0-b.1 / 2-c 방어형 적·피해 숫자·난이도·밸런스)
+2. 전투 시스템 ✅ (v0.2.0: 적 3종, 근접·원거리, 점프, 난이도, 피해 숫자)
 3. 아이템과 성장
 4. 던전과 보스
 5. 설정 화면과 저장

@@ -47,6 +47,23 @@ export interface EnemyTypeConfig {
   retreatRange?: number;
   /** (원거리형) 투사체 속도 */
   projectileSpeed?: number;
+  /** 밀려남 저항: 받는 밀침에 곱하는 값 (1 = 보통, 0.3 = 거의 안 밀림) */
+  knockbackResist?: number;
+}
+
+/** 난이도 단계 */
+export type DifficultyLevel = 'easy' | 'normal' | 'hard';
+
+/** 난이도 배율 */
+export interface DifficultyPreset {
+  /** 화면에 표시할 이름 */
+  label: string;
+  /** 적 체력 배율 */
+  enemyHp: number;
+  /** 적 공격력 배율 */
+  enemyDamage: number;
+  /** 적 이동 속도 배율 */
+  enemySpeed: number;
 }
 
 /** 적 배치 하나: 종류와 위치 */
@@ -171,6 +188,17 @@ export interface GameConfigType {
     antialias: boolean;
     shadowMapSize: number;
   };
+  /** 난이도 */
+  difficulty: {
+    /** 처음 실행할 때의 난이도 */
+    default: DifficultyLevel;
+    presets: Record<DifficultyLevel, DifficultyPreset>;
+  };
+  /** 화면 표시 */
+  hud: {
+    /** 피해 숫자 표시 */
+    showDamageNumbers: boolean;
+  };
   /** 디버그 */
   debug: {
     /** 화면 아래에 FPS 표시 */
@@ -179,7 +207,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.2.0-b.1' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.2.0' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -257,6 +285,20 @@ export const GameConfig: GameConfigType = {
         retreatRange: 4.5,
         projectileSpeed: 11,
       },
+      tank: {
+        name: '철벽 로봇',
+        hp: 90,
+        speed: 1.9,
+        radius: 0.9,
+        damage: 18,
+        attackRange: 2.0,
+        attackWindup: 0.6,
+        attackCooldown: 2.0,
+        aggroRange: 16,
+        color: '#5b7bd6',
+        score: 30,
+        knockbackResist: 0.25,
+      },
     },
     spawns: [
       { type: 'rusher', x: 12, z: -12 },
@@ -268,6 +310,8 @@ export const GameConfig: GameConfigType = {
       { type: 'shooter', x: 18, z: -2 },
       { type: 'shooter', x: -6, z: -22 },
       { type: 'shooter', x: 20, z: 18 },
+      { type: 'tank', x: -22, z: 12 },
+      { type: 'tank', x: 10, z: -22 },
     ],
     separation: 2.5,
     deathDuration: 0.6,
@@ -314,6 +358,19 @@ export const GameConfig: GameConfigType = {
     maxPixelRatio: 2,
     antialias: true,
     shadowMapSize: 2048,
+  },
+
+  difficulty: {
+    default: 'normal',
+    presets: {
+      easy: { label: '쉬움', enemyHp: 0.8, enemyDamage: 0.7, enemySpeed: 0.9 },
+      normal: { label: '보통', enemyHp: 1.3, enemyDamage: 1.3, enemySpeed: 1.0 },
+      hard: { label: '어려움', enemyHp: 1.8, enemyDamage: 1.8, enemySpeed: 1.15 },
+    },
+  },
+
+  hud: {
+    showDamageNumbers: true,
   },
 
   debug: {
@@ -403,7 +460,19 @@ export function sanitizeGameConfig(config: GameConfigType): ConfigWarning[] {
     }
   }
 
-  // 2) 적 종류별 능력치
+  // 2) 난이도 배율 (0.1~5)
+  for (const [level, preset] of Object.entries(config.difficulty.presets)) {
+    for (const key of ['enemyHp', 'enemyDamage', 'enemySpeed'] as const) {
+      const value = preset[key];
+      const fixed = clampNumber(value, 0.1, 5);
+      if (fixed !== value) {
+        preset[key] = fixed;
+        warnings.push({ path: `difficulty.presets.${level}.${key}`, from: typeof value === 'number' ? value : NaN, to: fixed });
+      }
+    }
+  }
+
+  // 3) 적 종류별 능력치
   for (const [typeName, def] of Object.entries(config.enemies.types)) {
     for (const [key, { min, max }] of Object.entries(ENEMY_TYPE_LIMITS)) {
       const k = key as EnemyNumericKey;

@@ -11,6 +11,9 @@ import { Enemy, type EnemyContext } from './Enemy';
 export class EnemySpawner {
   private readonly enemies: Enemy[] = [];
 
+  /** 적 생성에 적용할 난이도 배율 (Game 이 난이도 변경 시 갱신) */
+  multipliers = { hp: 1, speed: 1 };
+
   constructor(private readonly scene: THREE.Scene) {}
 
   /** 설정 목록대로 적 생성 */
@@ -29,7 +32,7 @@ export class EnemySpawner {
   spawn(type: string, x: number, z: number): Enemy | null {
     const def = GameConfig.enemies.types[type];
     if (!def) return null;
-    const enemy = new Enemy(type, def, { x, z });
+    const enemy = new Enemy(type, def, { x, z }, { ...this.multipliers });
     this.scene.add(enemy.object3d);
     this.enemies.push(enemy);
     return enemy;

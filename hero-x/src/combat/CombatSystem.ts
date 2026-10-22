@@ -32,6 +32,8 @@ export class CombatSystem {
     private readonly getAimPoint: () => Vec2 | null,
     private readonly effects: Effects,
     private readonly projectiles: ProjectileSystem,
+    /** 적이 피해를 받았을 때 알림 (피해 숫자 표시용). killed 는 이 타격으로 처치됐는지 */
+    private readonly onEnemyDamaged: (enemy: Enemy, damage: number, killed: boolean) => void = () => {},
   ) {}
 
   /** 재시작 시 기록 초기화 */
@@ -67,6 +69,7 @@ export class CombatSystem {
       this.kills++;
       this.score += enemy.def.score;
     }
+    this.onEnemyDamaged(enemy, damage, !enemy.alive);
     return true;
   }
 

@@ -35,9 +35,11 @@ export class Enemy {
     readonly type: string,
     def: EnemyTypeConfig,
     pos: Vec2,
+    /** 난이도 배율 (체력·속도). 없으면 1 */
+    private readonly mul: { hp: number; speed: number } = { hp: 1, speed: 1 },
   ) {
     this.def = def;
-    this.health = new Health(def.hp, 0);
+    this.health = new Health(Math.max(1, Math.round(def.hp * mul.hp)), 0);
     this.model = createEnemyModel(type, def);
     this.object3d.name = `Enemy-${type}`;
     this.object3d.add(this.model.root);
@@ -66,8 +68,9 @@ export class Enemy {
   /** 피해를 입힌다. 실제로 맞았으면 true */
   hit(damage: number, fromDir: Vec2, knockback: number): boolean {
     if (!this.health.takeDamage(damage)) return false;
-    this.knock.x += fromDir.x * knockback;
-    this.knock.z += fromDir.z * knockback;
+    const resist = this.def.knockbackResist ?? 1;
+    this.knock.x += fromDir.x * knockback * resist;
+    this.knock.z += fromDir.z * knockback * resist;
     this.model.flash();
     if (this.health.isDead) this.ai.kill();
     else this.ai.onHurt();
@@ -87,8 +90,8 @@ export class Enemy {
 
     // 이동 + 밀림
     let next: Vec2 = {
-      x: p.x + decision.move.x * this.def.speed * dt + this.knock.x * dt,
-      z: p.z + decision.move.z * this.def.speed * dt + this.knock.z * dt,
+      x: p.x + decision.move.x * this.def.speed * this.mul.speed * dt + this.knock.x * dt,
+      z: p.z + decision.move.z * this.def.speed * this.mul.speed * dt + this.knock.z * dt,
     };
     const decay = Math.exp(-8 * dt);
     this.knock.x *= decay;
