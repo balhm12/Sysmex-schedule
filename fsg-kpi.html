@@ -51,7 +51,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,th:focus-visible,.
 #upl{display:none;background:var(--surface);border-bottom:1px solid var(--border)}
 #upl.open{display:block}
 #upl .wrap{padding-top:16px;padding-bottom:18px}
-.drops{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.drops{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .drop{border:2px dashed var(--border);border-radius:6px;padding:16px 18px;cursor:pointer;background:var(--card)}
 .drop.over{border-color:var(--primary);background:var(--tint)}
 .drop b{color:var(--primary);font-size:15px}
@@ -383,10 +383,16 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
       <p>인사 「직원 월별 연장근무현황」(성명·1월~12월, 시간.분, 파일명에 연도) 또는 「연장근로」 월별 시트 파일(Apr-26 …, 시간만 읽고 수당·금액 열은 읽지 않음). 넣으면 부서원 KPI의 OT 시간이 이 자료 기준이 됩니다. 올린 달만 바뀌고 다른 달은 그대로 합쳐지며, 월별 연장근로 파일이 있는 달은 신청 현황으로 덮지 않습니다.</p>
       <div class="st" id="stHr">선택된 파일 없음</div>
     </div>
+    <div class="drop" id="dropGeo" tabindex="0" role="button" aria-label="이동거리 좌표 파일 선택">
+      <b>이동거리 좌표 (선택)</b>
+      <p>「FSG_이동거리_좌표_날짜.json」 — 기관 좌표(자산대장 주소 → 행정동 중심)와 직원 거주지 좌표(동·구 단위). 넣으면 부서원 KPI에 「이동거리」 탭이 계산됩니다. 거주지가 들어 있어 암호화해서만 올라갑니다.</p>
+      <div class="st" id="stGeo">선택된 파일 없음</div>
+    </div>
   </div>
   <input type="file" id="fAct" accept=".xlsx,.xls,.csv" hidden>
   <input type="file" id="fSer" accept=".xlsx,.xls,.csv" hidden>
   <input type="file" id="fHr" accept=".xlsx,.xls,.csv" hidden>
+  <input type="file" id="fGeo" accept=".json" hidden>
   <div class="uplfoot">
     <span>엑셀은 이 브라우저에서 읽어 집계에 필요한 열만 정리한 뒤, 접근 코드로 암호화해서 저장소에 올립니다. 팀장 화면은 5분 안에(또는 새로고침 시) 자동 반영됩니다.</span>
   </div>
@@ -2035,12 +2041,66 @@ function renderOTTable(period, names){
   t.querySelectorAll('tbody tr').forEach(function(tr){ tr.addEventListener('click', function(){ state.person = tr.getAttribute('data-person'); switchTab('person'); }); });
 }
 
+/* ================= RENDER: 이동거리 ================= */
+function renderMove(){
+  var el = document.getElementById('panel-move'), M = DATA.move;
+  var info = '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div>';
+  if (!M){ el.innerHTML = info+'<b>이동거리 좌표가 아직 없습니다.</b> 관리자가 「이동거리 좌표」 파일을 올리면 표시됩니다.</div></div>'; return; }
+  var period = state.period, scope = state.mvScope || 'ALL';
+  var monthsOf = function(p){ return p === '직전 년도' ? DATA.cmp_months : p === '전체 누적' ? null : DATA.sel_months; };
+  var sum = function(n, months){ var m = M.per[n] || {}, o = {km:0, days:0, vis:0};
+    Object.keys(m).forEach(function(mk){ if (!months || months.indexOf(mk) >= 0){ o.km += m[mk].km; o.days += m[mk].days; o.vis += m[mk].vis; } }); return o; };
+  var hasHome = function(n){ return M.homes.indexOf(n) >= 0; };
+  var all = DATA.teams.reduce(function(a,t){ return a.concat(DATA.team[t].members); }, []).filter(hasHome);
+  var names = (scope === 'ALL' ? all : DATA.team[scope].members.filter(hasHome));
+  var cm = monthsOf(period), pm = period === '이번 년도' ? DATA.cmp_months : null;
+  var agg = function(list, months){ return list.reduce(function(o,n){ var s = sum(n, months); o.km += s.km; o.days += s.days; o.vis += s.vis; return o; }, {km:0, days:0, vis:0}); };
+  var cur = agg(names, cm), prv = pm ? agg(names, pm) : null, head = names.length || 1;
+  var missN = Object.keys(M.miss).reduce(function(a,k){ return a + M.miss[k]; }, 0);
+  var html = info+'<b>이동거리 = 그날 거주지 → 방문 기관 → 거주지 최단경로의 직선거리 × 1.3</b>(가까운 순서 + 2-opt). 담당자 기준 · 장비 설치·이전 설치·고장 수리·PM·Calibration · 취소·제주 제외 · 하루 같은 기관은 한 번. '+
+    '기관 위치 = 자산대장 주소의 행정동 중심(동을 못 찾으면 시·군·구 중심), 거주지 = 동 또는 구 중심이라 <b>실제 도로 거리와 다를 수 있는 추정치</b>입니다. '+
+    '좌표 파일: '+esc(M.src||'')+(M.made?' ('+esc(M.made)+')':'')+' · 기관 좌표가 없어 뺀 방문 '+fmt(missN)+'건 · 제주 '+fmt(M.jeju)+'건 제외 · 팀장·신입은 거주지 자료가 없어 제외.</div></div>';
+  html += '<div class="controls" style="margin-bottom:14px;"><div class="control-group" style="flex-wrap:wrap;min-width:0;"><span class="control-label">범위</span><div class="segmented" id="mvSeg" style="flex-wrap:wrap;max-width:100%;"></div></div></div>';
+  var dl = function(c, p){ if (p == null) return ''; var d = c - p; return '<span class="stat-delta delta-flat">'+(d>0?'▲ +':d<0?'▼ −':'· ')+fmt(Math.round(Math.abs(d)))+'km <span style="color:var(--text-muted);font-weight:500;">'+(DATA.cmp_short||'비교 기간')+'</span></span>'; };
+  html += '<div class="block grid grid-4">'+
+    statTile('이동거리 합계', fmt(Math.round(cur.km)), 'km', dl(cur.km, prv && prv.km), fmt(names.length)+'명 · 방문일 '+fmt(cur.days)+'일')+
+    statTile('1인당 이동거리', fmt(Math.round(cur.km/head)), 'km', dl(cur.km/head, prv && prv.km/head), PL(period))+
+    statTile('방문일 1일 평균', cur.days ? fmt1(cur.km/cur.days) : '-', 'km', dl(cur.days?cur.km/cur.days:0, prv && prv.days ? prv.km/prv.days : null), '하루 평균 '+(cur.days?fmt1(cur.vis/cur.days):'-')+'곳 방문')+
+    statTile('기관 좌표 없음', fmt(missN), '건', '', '전체 기간 · 계산에서 뺀 방문(자산대장에 주소가 없는 기관)')+
+    '</div>';
+  html += '<div class="block grid grid-2">'+chartCard('mv-team-chart', '팀별 1인당 이동거리', PL(period))+
+    chartCard('mv-trend-chart', '월별 1인당 이동거리', '최근 12개월 · '+(scope==='ALL'?'FSG 전체':DATA.team_short[scope]))+'</div>';
+  html += '<div class="block"><div class="block-head"><h2>개인별 이동거리</h2><span class="hint">열 제목 클릭 시 정렬 · '+PL(period)+'</span></div>'+
+    '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="mvTable"></table></div></div>';
+  el.innerHTML = html;
+  teamButtons(document.getElementById('mvSeg'), scope, true, function(t){ state.mvScope = t; renderMove(); });
+  var tl = VIEW.map(function(t){ return DATA.team_short[t]; });
+  barChart(document.getElementById('mv-team-chart'), tl, VIEW.map(function(t){ var L = DATA.team[t].members.filter(hasHome); return L.length ? Math.round(agg(L, cm).km / L.length) : 0; }), VIEW.map(function(t){ return TEAM_COLOR[t]; }), {unit:'km'});
+  var TM = DATA.trend_months || [], idx = [], vals = {};
+  TM.forEach(function(mk, i){ idx.push(i+1); vals[i+1] = Math.round(agg(names, [mk]).km / head); });
+  lineChart(document.getElementById('mv-trend-chart'), idx, [{name:'1인당 이동거리', color:'var(--s1)', values:vals, partial:true}], {unit:'km', partial:DATA.trend_partial});
+  var rows = names.map(function(n){ var c = sum(n, cm), p = pm ? sum(n, pm) : null;
+    return {name:n, team:DATA.person[n].team, grade:(DATA.grade||{})[n]||'', days:c.days, km:c.km, per:c.days?c.km/c.days:0, vis:c.days?c.vis/c.days:0, d:p?c.km-p.km:null, lv:M.homeLv[n]||''}; });
+  var key = state.mvSort || 'km', dir = state.mvDir || -1;
+  rows.sort(function(a,b){ var x = a[key], y = b[key]; return (typeof x === 'string' ? x.localeCompare(y,'ko') : (x||0)-(y||0)) * dir; });
+  var mx = Math.max(1, Math.max.apply(null, rows.map(function(r){ return r.km; })));
+  var cols = [['#',null],['이름','name'],['팀','team'],['직급','grade'],['방문일','days'],['이동거리(km)','km'],['1일 평균(km)','per'],['1일 방문 기관','vis']].concat(pm?[[DATA.cmp_short||'증감','d']]:[]).concat([['거주지 기준','lv']]);
+  var T = document.getElementById('mvTable');
+  T.innerHTML = '<thead><tr>'+cols.map(function(c){ return '<th'+(c[1]?' data-k="'+c[1]+'" style="cursor:pointer"':'')+(['days','km','per','vis','d'].indexOf(c[1])>=0?' class="num"':'')+'>'+c[0]+(c[1]===key?(dir<0?' ▼':' ▲'):'')+'</th>'; }).join('')+'</tr></thead><tbody>'+
+    rows.map(function(r,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(r.name)+'</td><td><span style="color:'+TEAM_COLOR[r.team]+';font-weight:700">'+esc(DATA.team_short[r.team]||r.team)+'</span></td><td>'+esc(r.grade)+'</td>'+
+      '<td class="num">'+fmt(r.days)+'</td><td class="num"><span style="display:inline-block;width:70px;height:6px;border-radius:3px;background:var(--border);margin-right:8px;vertical-align:middle;overflow:hidden"><i style="display:block;height:100%;width:'+(r.km/mx*100)+'%;background:'+TEAM_COLOR[r.team]+'"></i></span>'+fmt(Math.round(r.km))+'</td>'+
+      '<td class="num">'+(r.days?fmt1(r.per):'-')+'</td><td class="num">'+(r.days?fmt1(r.vis):'-')+'</td>'+(pm?'<td class="num" style="color:var(--text-muted)">'+(r.d==null?'-':(r.d>0?'+':'')+fmt(Math.round(r.d)))+'</td>':'')+
+      '<td style="color:var(--text-muted)">'+esc(r.lv)+'</td></tr>'; }).join('')+'</tbody>';
+  T.querySelectorAll('th[data-k]').forEach(function(th){ th.addEventListener('click', function(){ var k = th.getAttribute('data-k'); if (state.mvSort === k) state.mvDir = -(state.mvDir||-1); else { state.mvSort = k; state.mvDir = -1; } renderMove(); }); });
+}
+
 /* ================= APP SHELL ================= */
 function render(){
   if (state.tab === 'overview') renderOverview();
   else if (state.tab === 'team') renderTeam();
   else if (state.tab === 'person') renderPerson();
   else if (state.tab === 'ot') renderOT();
+  else if (state.tab === 'move') renderMove();
 }
 
 function switchTab(tab){
@@ -2167,6 +2227,7 @@ function errKey(e){
 }
 
 /* ===== 상태 ===== */
+let GEO=null;   /* 이동거리 좌표 — 관리자 업로드(암호화) */
 let RAW=null, SERIAL=null, HRDATA=null, SRC={act:'', ser:null, hr:null, at:null, embedded:false};
 let D=null;   // 가공 결과
 
@@ -2534,6 +2595,42 @@ function drawErr(rows){
       scales:{x:axis({beginAtZero:true}),y:axis({grid:{display:false},ticks:{color:css('--text'),autoSkip:false}})}}});
 }
 
+
+/* ===== 이동거리 (2026-10-22, 부하도 스킬 기준) =====
+   일자별 거주지 → 그날 방문 기관 → 거주지 최단경로(가까운 순 + 2-opt), 직선거리 × 1.3. 담당자 기준, 장비 설치·이전 설치·고장 수리·PM·Calibration, 취소 제외, 제주 제외, 하루 같은 기관 1번.
+   좌표 = 관리자가 올린 이동거리 좌표 파일 {acct:{거래처:[위도,경도,정밀도('동'|'구'),제주?]}, home:{성명:[위도,경도,정밀도]}} — 기관은 자산대장 주소의 행정동 중심(없으면 시군구 중심). */
+const MOVE_PURP=new Set(['장비 설치','장비 이전 설치','고장 수리','PM','Calibration']);
+function parseGeo(buf, fname){
+  let g; try{ g=JSON.parse(new TextDecoder().decode(buf)); }catch(e){ throw new Error('이동거리 좌표 파일(JSON)이 아닙니다.'); }
+  if(!g||!g.acct||!g.home) throw new Error("acct·home 항목이 없습니다. 「FSG_이동거리_좌표」 파일인지 확인해 주세요.");
+  g.src=fname; return g;
+}
+function hvKm(a,b){ const R=6371, r=Math.PI/180, dLa=(b[0]-a[0])*r, dLo=(b[1]-a[1])*r;
+  const x=Math.sin(dLa/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(x)); }
+function routeKm(home, pts){
+  if(!pts.length) return 0; const rem=pts.slice(), order=[]; let cur=home;
+  while(rem.length){ let bi=0, bd=Infinity; rem.forEach((p,i)=>{ const d=hvKm(cur,p); if(d<bd){bd=d;bi=i;} }); cur=rem.splice(bi,1)[0]; order.push(cur); }
+  const path=[home].concat(order,[home]); let imp=true;
+  while(imp){ imp=false;
+    for(let i=1;i<path.length-2;i++) for(let k=i+1;k<path.length-1;k++){
+      if(hvKm(path[i-1],path[k])+hvKm(path[i],path[k+1]) < hvKm(path[i-1],path[i])+hvKm(path[k],path[k+1])-1e-9){ const seg=path.slice(i,k+1).reverse(); path.splice(i,k-i+1,...seg); imp=true; } } }
+  let s=0; for(let i=0;i<path.length-1;i++) s+=hvKm(path[i],path[i+1]); return s*1.3;
+}
+let _moveC=null;
+function moveData(){
+  if(!GEO||!RAW) return null; if(_moveC&&_moveC.raw===RAW&&_moveC.geo===GEO) return _moveC.r;
+  const days={}, miss={}; let jeju=0;
+  for(const r of RAW){ if(r.t==null||r.st==='취소됨'||!MOVE_PURP.has(r.purp)||!GEO.home[r.own]) continue;
+    const g=GEO.acct[r.acct]; if(!g){ const k=r.acct||'(거래처 없음)'; miss[k]=(miss[k]||0)+1; continue; } if(g[3]){ jeju++; continue; }
+    const d=ymd(r.t), P=days[r.own]||(days[r.own]={}); (P[d]||(P[d]=new Set())).add(r.acct); }
+  const per={};
+  for(const n in days){ const h=GEO.home[n], m={};
+    for(const d in days[n]){ const pts=[...days[n][d]].map(a=>GEO.acct[a]), mk=d.slice(0,7), x=m[mk]||(m[mk]={km:0,days:0,vis:0});
+      x.km+=routeKm(h,pts); x.days++; x.vis+=pts.length; }
+    per[n]=m; }
+  const r={per, miss, jeju, homes:Object.keys(GEO.home), homeLv:Object.fromEntries(Object.entries(GEO.home).map(([k,v])=>[k,v[2]])), made:GEO.made||'', src:GEO.src||''};
+  _moveC={raw:RAW, geo:GEO, r}; return r;
+}
 /* ===== 장비군별 고장률·재방문율 추이 (2026-10-22) =====
    고장률 = 100대당 월 고장 수리 = 고장 수리 건수 ÷ (자료 있는 달 수) ÷ 가동 대수 × 100. 가동 대수 = 구간 끝 달 기준 최근 12개월 서비스 장비(자산대장이 있으면 그중 '사용' 장비).
    재방문율 = 장비군별 차트와 같은 기준(고장 수리 중 재방문 ÷ 기록 기준 고장 수리+PM). 팀 = 거래처 담당 팀 */
@@ -2782,7 +2879,7 @@ function parseSerial(buf){
 }
 const nowStr=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
 async function handleFile(kind, file){
-  if(!file) return; const st=$(kind==='act'?'stAct':kind==='hr'?'stHr':'stSer');
+  if(!file) return; const st=$(kind==='act'?'stAct':kind==='hr'?'stHr':kind==='geo'?'stGeo':'stSer');
   if(typeof XLSX==='undefined'){ st.innerHTML='<span class="bad">엑셀 읽기 라이브러리를 불러오지 못했습니다. 네트워크 연결을 확인해 주세요.</span>'; return; }
   $('busy').classList.add('on'); await new Promise(r=>setTimeout(r,30));
   try{
@@ -2791,6 +2888,7 @@ async function handleFile(kind, file){
     if(kind==='act'){ RAW=fixTz(parseActivity(buf)); SRC.act=file.name; SRC.embedded=false; msg=`${file.name}: ${fmt(RAW.length)}행 읽음`; }
     else if(kind==='hr'){ const nw=parseHr(buf,file.name), c=hrCovOf(nw); HRDATA=mergeHr(HRDATA, nw); SRC.hr=HRDATA.src;
       msg=`${file.name}: ${nw.kind==='mon'?'월별 연장근로':'연장근무 신청'} ${fmt(Object.keys(nw.h).length)}명, ${c[0]||''}~${c[c.length-1]||''} 읽음(기존 자료와 합침: ${HRDATA.srcs.map(x=>(x.kind==='mon'?'월별 ':'신청 ')+x.first+'~'+x.last).join(' + ')})`; }
+    else if(kind==='geo'){ GEO=parseGeo(buf,file.name); SRC.geo=file.name; PROD_DIRTY=true; msg=`${file.name}: 기관 ${fmt(Object.keys(GEO.acct).length)}곳 · 직원 ${fmt(Object.keys(GEO.home).length)}명 좌표 읽음`; }
     else { const all=parseSerial(buf); SERIAL=all.filter(x=>x.state==='사용'); SRC.ser=file.name; msg=`${file.name}: 장비 ${fmt(all.length)}대 중 '사용' ${fmt(SERIAL.length)}대`; }
     SRC.at=nowStr(); if(RAW){ refresh(); } else PROD_DIRTY=true;
     st.textContent=msg+', 저장소에 올리는 중';
@@ -2798,6 +2896,7 @@ async function handleFile(kind, file){
     const ok = kind==='act'
       ? await pushShared('act', encodeAct(RAW,file.name), {actSrc:file.name, actRows:RAW.length})
       : kind==='hr' ? await pushShared('hr', HRDATA, {hrSrc:HRDATA.src})
+      : kind==='geo' ? await pushShared('geo', GEO, {geoSrc:file.name})
       : await pushShared('ser', encodeSer(SERIAL), {serSrc:file.name});
     st.innerHTML = ok ? msg+', <span class="good">올리기 완료. 팀장 화면은 새로고침하거나 5분 안에 자동 반영됩니다</span>' : msg+'. <span class="bad">공유 저장소에 연결되지 않아 이 화면에만 반영됐습니다</span>';
   }catch(err){ st.innerHTML=`<span class="bad">${esc(err.code?('공유 저장 실패 ('+err.code+'). 잠시 후 다시 올려 주세요.'):(err.message||err))}</span>`; }
@@ -2931,9 +3030,10 @@ async function loadAll(){
     if(!(await codeOk(CODE,meta))){ localStorage.removeItem(KEY_LS); CODE=null; showLock('접근 코드가 맞지 않습니다. 다시 입력해 주세요.'); return; }
     /* 자산대장·연장근무는 선택 자료 — 못 읽어도 CRM 화면은 연다 */
     const opt=k=>fb(k).catch(e=>{ console.warn(k+' 불러오기 실패',e); return null; });
-    const [a,s,hr]=await Promise.all([fb('act'), meta.serSrc?opt('ser'):Promise.resolve(null), meta.hrSrc?opt('hr'):Promise.resolve(null)]);
+    const [a,s,hr,geo]=await Promise.all([fb('act'), meta.serSrc?opt('ser'):Promise.resolve(null), meta.hrSrc?opt('hr'):Promise.resolve(null), meta.geoSrc?opt('geo'):Promise.resolve(null)]);
     RAW=fixTz(decodeEmbed(await open_(a,CODE))); SERIAL=s?decodeSer(await open_(s,CODE)):null;
     HRDATA=null; if(hr){ try{ HRDATA=await open_(hr,CODE); }catch(e){ console.warn('hr decode',e); } }
+    GEO=null; if(geo){ try{ GEO=await open_(geo,CODE); GEO.src=GEO.src||meta.geoSrc; }catch(e){ console.warn('geo decode',e); } }
     META=meta; SRC={act:meta.actSrc,ser:s?meta.serSrc:null,hr:HRDATA?meta.hrSrc:null,at:meta.updatedAt,embedded:false};
     $('empty').hidden=true; refresh(); showMain();
   }catch(err){ const net=err instanceof TypeError;
@@ -2990,7 +3090,7 @@ document.querySelectorAll('#tInst th.s').forEach(th=>{const go=()=>{const k=th.d
   document.querySelectorAll('#tInst th').forEach(x=>x.removeAttribute('aria-sort'));th.setAttribute('aria-sort',sortDir<0?'descending':'ascending');drawInst();};
   th.addEventListener('click',go);th.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});});
 $('openUpl').addEventListener('click',()=>{const o=$('upl').classList.toggle('open');$('openUpl').setAttribute('aria-expanded',o);});
-bindDrop('dropAct','fAct','act'); bindDrop('dropSer','fSer','ser'); bindDrop('dropHr','fHr','hr');
+bindDrop('dropAct','fAct','act'); bindDrop('dropSer','fSer','ser'); bindDrop('dropHr','fHr','hr'); bindDrop('dropGeo','fGeo','geo');
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>render());
 if(typeof Chart!=='undefined'){Chart.defaults.font.family="'Malgun Gothic', Arial, sans-serif";Chart.defaults.font.size=12;}
 $('lockBtn').addEventListener('click',submitCode);
@@ -3007,6 +3107,7 @@ const PROD_SKELETON=`<nav class="tabs" id="prodTabs">
     <button data-tab="team">팀별 비교</button>
     <button data-tab="person">개인별 상세</button>
     <button data-tab="ot">야간·휴일 근무</button>
+    <button data-tab="move">이동거리</button>
   </nav>
   <div class="controls" id="globalControls">
     <div class="control-group"><span class="control-label">기간</span><div class="segmented" id="periodSeg"></div></div>
@@ -3015,6 +3116,7 @@ const PROD_SKELETON=`<nav class="tabs" id="prodTabs">
   <section class="panel" id="panel-team"></section>
   <section class="panel" id="panel-person"></section>
   <section class="panel" id="panel-ot"></section>
+  <section class="panel" id="panel-move"></section>
   <p class="pfoot" id="metaLine"></p>
   <div class="tooltip" id="tooltip"></div>`;
 /* 직급 표시는 현재 직급(ROSTER), 직급 가중치는 활동일 기준(GRADE_HIST 시행일부터 새 직급) · 신입은 업무량 비교에서 따로 표시 */
@@ -3049,6 +3151,7 @@ function renderProd(){
       trend_labels:S.trend.map(m=>m.slice(2,4)+'.'+m.slice(5)), trend_names:['최근 12개월','전년 동월'],
       /* 월별 추이 마지막 달이 CRM 추출일이 속한 달이면 아직 집계 중(진행 중) */
       trend_partial:(()=>{const lm=S.trend[S.trend.length-1], c=D.excl&&D.excl.cut; return c&&lm&&c.slice(0,7)===lm?{idx:S.trend.length, month:+lm.slice(5), cut:c}:null;})(),
+      move:GEO?moveData():null, sel_months:S.sel, cmp_months:S.cmp, trend_months:S.trend,
       grade:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), promoted:Object.fromEntries(GRADE_HIST.filter(([n,d])=>S.sel.includes(d.slice(0,7))).map(([n,d,prev])=>[n,prev+'→'+rosterMap[n].grade+' ('+d.slice(5).replace('-','/')+')'])), newbie:NEWBIE, ex_lead:$('pExLead').checked});
     $('pCmp').innerHTML=`비교 기간: ${esc(S.cmpLabel)}<br>직급 표시: 현재 · 직급 가중치: 진급자는 시행일부터 새 직급`;
     $('prod').innerHTML=PROD_SKELETON; window.initProdDashboard(PROD); PROD_DIRTY=false;
