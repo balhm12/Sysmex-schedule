@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CombatSystem } from '../combat/CombatSystem';
 import { Effects } from '../combat/Effects';
+import { ProjectileSystem } from '../combat/Projectile';
 import { Dungeon01 } from '../dungeon/Dungeon01';
 import type { Enemy } from '../enemies/Enemy';
 import { EnemySpawner } from '../enemies/EnemySpawner';
@@ -27,6 +28,8 @@ export interface GameDebugState {
   resultVisible: boolean;
   enemies: Array<{ type: string; x: number; z: number; hp: number; state: string }>;
   aliveEnemies: number;
+  projectiles: number;
+  playerY: number;
   kills: number;
   score: number;
   input: { pointerX: number; pointerY: number; pointerHas: boolean; pressed: string[] };
@@ -47,6 +50,7 @@ export class Game {
   private readonly cameraCtrl: CameraController;
   private readonly spawner: EnemySpawner;
   private readonly effects: Effects;
+  private readonly projectiles: ProjectileSystem;
   private readonly combat: CombatSystem;
   private readonly guide: ControlsGuide;
   private readonly hud: HUD;
@@ -55,6 +59,7 @@ export class Game {
   private readonly raycaster = new THREE.Raycaster();
   private readonly groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   private readonly aimHit = new THREE.Vector3();
+  private readonly camTarget = new THREE.Vector3();
 
   private running = false;
   /** 쓰러졌거나 모든 적을 처치해 전투가 끝난 상태 */
@@ -91,9 +96,10 @@ export class Game {
     this.cameraCtrl = new CameraController(this.camera);
     this.controller = new PlayerController(this.player, this.input, this.dungeon, () => this.cameraCtrl.getYaw());
     this.effects = new Effects(this.scene);
+    this.projectiles = new ProjectileSystem(this.scene);
     this.spawner = new EnemySpawner(this.scene);
     this.spawner.spawnFromConfig();
-    this.combat = new CombatSystem(this.player, this.input, () => this.spawner.getEnemies(), () => this.getAimPoint(), this.effects);
+    this.combat = new CombatSystem(this.player, this.input, () => this.spawner.getEnemies(), () => this.getAimPoint(), this.effects, this.projectiles);
 
     // UI
     this.guide = new ControlsGuide(uiRoot, () => this.canvas.focus());
@@ -130,6 +136,7 @@ export class Game {
   restart(): void {
     this.spawner.clear();
     this.spawner.spawnFromConfig();
+    this.projectiles.clear();
     this.player.reset(GameConfig.player.startPosition);
     this.controller.reset();
     this.combat.reset();
@@ -144,6 +151,7 @@ export class Game {
     this.input.detach();
     window.removeEventListener('resize', this.resize);
     this.spawner.dispose();
+    this.projectiles.dispose();
     this.effects.dispose();
     this.player.dispose();
     this.dungeon.dispose();
@@ -170,6 +178,8 @@ export class Game {
       resultVisible: this.result.visible,
       enemies: this.spawner.getEnemies().map((e) => ({ type: e.type, x: e.position.x, z: e.position.z, hp: e.health.hp, state: e.ai.state })),
       aliveEnemies: this.spawner.aliveCount,
+      projectiles: this.projectiles.count,
+      playerY: this.player.jumpY,
       kills: this.combat.kills,
       score: this.combat.score,
       input: { pointerX: pointer.x, pointerY: pointer.y, pointerHas: pointer.has, pressed: this.input.getPressedCodes() },
@@ -185,13 +195,30 @@ export class Game {
     return hit ? { x: hit.x, z: hit.z } : null;
   }
 
-  /** 적이 플레이어를 때렸을 때 */
+  /** 적이 공격을 실행했을 때: 근접이면 바로 피해, 원거리면 플레이어 쪽으로 탄 발사 */
   private onEnemyAttack(enemy: Enemy, damage: number): void {
     if (this.ended) return;
-    if (!this.player.health.takeDamage(damage)) return;
     const p = this.player.position;
-    const len = Math.hypot(p.x - enemy.position.x, p.z - enemy.position.z) || 1;
-    this.controller.applyKnockback({ x: (p.x - enemy.position.x) / len, z: (p.z - enemy.position.z) / len }, GameConfig.player.hitKnockback);
+    const e = enemy.position;
+    const len = Math.hypot(p.x - e.x, p.z - e.z) || 1;
+    const toPlayer: Vec2 = { x: (p.x - e.x) / len, z: (p.z - e.z) / len };
+    if (enemy.def.attackKind === 'ranged') {
+      this.projectiles.spawn(
+        { x: e.x + toPlayer.x * (enemy.radius + 0.3), z: e.z + toPlayer.z * (enemy.radius + 0.3) },
+        toPlayer,
+        { damage, speed: enemy.def.projectileSpeed ?? 10, lifetime: 3, radius: 0.2, knockback: 0, color: 0xff5577, friendly: false },
+      );
+      return;
+    }
+    this.damagePlayer(damage, { x: e.x, z: e.z });
+  }
+
+  /** 플레이어 피해 처리 (근접·투사체 공용). from: 피해가 온 위치 */
+  private damagePlayer(damage: number, from: Vec2): void {
+    if (this.ended || !this.player.health.takeDamage(damage)) return;
+    const p = this.player.position;
+    const len = Math.hypot(p.x - from.x, p.z - from.z) || 1;
+    this.controller.applyKnockback({ x: (p.x - from.x) / len, z: (p.z - from.z) / len }, GameConfig.player.hitKnockback);
     this.effects.burst(new THREE.Vector3(p.x, 1, p.z), 0xff4f79, 6, 4);
     this.hud.flashHit();
     if (this.player.health.isDead) {
@@ -228,9 +255,22 @@ export class Game {
       world: this.dungeon,
       onAttackPlayer: (enemy, damage) => this.onEnemyAttack(enemy, damage),
     });
+    this.projectiles.update(dt, {
+      world: this.dungeon,
+      enemies: this.spawner.getEnemies(),
+      playerPos: { x: p.x, z: p.z },
+      playerY: this.player.jumpY,
+      playerRadius: GameConfig.player.radius,
+      onHitEnemy: (enemy, spec, dir) => {
+        if (!this.ended) this.combat.damageEnemy(enemy, spec.damage, dir, spec.knockback);
+      },
+      onHitPlayer: (spec, _dir, from) => this.damagePlayer(spec.damage, from),
+    });
     this.player.update(dt);
     this.effects.update(dt);
-    this.cameraCtrl.update(dt, p);
+    // 카메라는 점프 높이를 따라가지 않도록 바닥 위치를 본다
+    this.camTarget.set(p.x, 0, p.z);
+    this.cameraCtrl.update(dt, this.camTarget);
     this.dungeon.updateLight(p);
     this.checkVictory();
 

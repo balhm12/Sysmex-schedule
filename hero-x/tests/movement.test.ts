@@ -3,6 +3,8 @@ import {
   clampToArena,
   computeMoveDirection,
   directionToFacing,
+  hitsObstacle,
+  integrateJump,
   lerpAngle,
   resolveCircleVsBoxes,
 } from '../src/player/movement';
@@ -73,5 +75,26 @@ describe('각도 계산', () => {
   it('directionToFacing: +Z 는 0, +X 는 90도', () => {
     expect(directionToFacing({ x: 0, z: 1 })).toBeCloseTo(0, 6);
     expect(directionToFacing({ x: 1, z: 0 })).toBeCloseTo(Math.PI / 2, 6);
+  });
+});
+
+describe('hitsObstacle / integrateJump (투사체·점프)', () => {
+  it('hitsObstacle: 장애물 안이나 영역 밖이면 true', () => {
+    const boxes = [{ x: 5, z: 0, w: 2, d: 2 }];
+    expect(hitsObstacle({ x: 5, z: 0 }, 0.2, boxes, 28)).toBe(true);
+    expect(hitsObstacle({ x: 0, z: 0 }, 0.2, boxes, 28)).toBe(false);
+    expect(hitsObstacle({ x: 29, z: 0 }, 0.2, boxes, 28)).toBe(true);
+  });
+
+  it('integrateJump: 올라갔다가 중력으로 내려와 땅(0)에서 멈춘다', () => {
+    let s = { y: 0.001, vy: 8 };
+    let maxY = 0;
+    for (let i = 0; i < 200; i++) {
+      s = integrateJump(s, 1 / 60, 24);
+      maxY = Math.max(maxY, s.y);
+    }
+    expect(maxY).toBeGreaterThan(1);
+    expect(s.y).toBe(0);
+    expect(s.vy).toBe(0);
   });
 });

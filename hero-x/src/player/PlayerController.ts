@@ -5,6 +5,7 @@ import {
   clampToArena,
   computeMoveDirection,
   directionToFacing,
+  integrateJump,
   lerpAngle,
   resolveCircleVsBoxes,
   type CollisionWorld,
@@ -15,17 +16,23 @@ import {
  * 플레이어 조작: 키 입력 → 이동 방향 → 충돌 처리 → 위치/방향 반영
  * - 이동 속도, 회전 속도, 충돌 반지름은 GameConfig.player 에서 매 프레임 읽는다 (설정 변경 즉시 반영).
  * - 카메라가 바라보는 방향(yaw)을 받아서 "화면 위쪽 = 앞으로" 가 되게 한다.
- * - 피격 시 밀려남(knockback)도 여기서 처리한다.
+ * - 피격 시 밀려남(knockback)과 점프(Space)도 여기서 처리한다.
  */
 export class PlayerController {
   private readonly knock: Vec2 = { x: 0, z: 0 };
+  /** 점프 키가 눌린 순간 기록 (프레임 사이에 아주 짧게 눌러도 놓치지 않도록 이벤트로 받는다) */
+  private jumpQueued = false;
 
   constructor(
     private readonly player: Player,
     private readonly input: InputManager,
     private readonly world: CollisionWorld,
     private readonly getCameraYaw: () => number,
-  ) {}
+  ) {
+    this.input.onPress(GameConfig.controls.jump, () => {
+      this.jumpQueued = true;
+    });
+  }
 
   /** 피격 등으로 밀려나게 한다 (dir: 길이 1, strength: 세기) */
   applyKnockback(dir: Vec2, strength: number): void {
@@ -37,6 +44,7 @@ export class PlayerController {
   reset(): void {
     this.knock.x = 0;
     this.knock.z = 0;
+    this.jumpQueued = false;
   }
 
   update(dt: number): void {
@@ -47,6 +55,18 @@ export class PlayerController {
       this.player.moving = false;
       this.player.speed = 0;
       return;
+    }
+
+    // 점프: 땅에 있을 때 점프 키를 누르면 떠오르고, 중력으로 내려온다 (공중에서 누른 입력은 버린다)
+    if (this.jumpQueued && !this.player.airborne) {
+      this.player.jumpVy = cfg.jumpSpeed;
+      this.player.jumpY = 0.001;
+    }
+    this.jumpQueued = false;
+    if (this.player.airborne) {
+      const j = integrateJump({ y: this.player.jumpY, vy: this.player.jumpVy }, dt, cfg.gravity);
+      this.player.jumpY = j.y;
+      this.player.jumpVy = j.vy;
     }
 
     const axis = this.input.getMoveAxis();

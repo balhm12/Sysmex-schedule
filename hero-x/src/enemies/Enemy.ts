@@ -11,7 +11,7 @@ export interface EnemyContext {
   world: CollisionWorld;
   /** 같은 던전의 다른 적들 (서로 겹치지 않게 밀어내기용) */
   others: Enemy[];
-  /** 적이 플레이어를 공격했을 때 호출 */
+  /** 적이 공격을 실행했을 때 호출 (근접이면 피해, 원거리면 투사체 발사는 Game 이 결정) */
   onAttackPlayer: (enemy: Enemy, damage: number) => void;
 }
 

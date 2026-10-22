@@ -84,3 +84,27 @@ describe('EnemyAI (돌진형 적 판단)', () => {
     expect(d.move).toEqual({ x: 0, z: 0 });
   });
 });
+
+describe('EnemyAI (원거리형)', () => {
+  const ranged: AIParams = { attackRange: 9, attackWindup: 0.5, attackCooldown: 2, aggroRange: 22, attackKind: 'ranged', retreatRange: 4.5 };
+
+  it('너무 가까우면 플레이어 반대쪽으로 물러난다', () => {
+    const ai = new EnemyAI();
+    ai.update(0.1, { x: 0, z: 0 }, { x: 2, z: 0 }, ranged); // idle → chase
+    const d = ai.update(0.1, { x: 0, z: 0 }, { x: 2, z: 0 }, ranged);
+    expect(d.state).toBe('chase');
+    expect(d.move.x).toBeCloseTo(-1, 6);
+  });
+
+  it('사거리 안이고 적당히 떨어져 있으면 멈춰서 예고 후 발사한다', () => {
+    const ai = new EnemyAI();
+    const self = { x: 0, z: 0 };
+    const player = { x: 7, z: 0 };
+    ai.update(0.1, self, player, ranged); // idle → chase
+    const w = ai.update(0.1, self, player, ranged); // chase → windup
+    expect(w.state).toBe('windup');
+    let fired = false;
+    for (let i = 0; i < 8; i++) if (ai.update(0.1, self, player, ranged).attackNow) fired = true;
+    expect(fired).toBe(true);
+  });
+});

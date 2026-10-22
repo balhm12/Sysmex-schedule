@@ -30,10 +30,11 @@ export class Effects {
     const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(origin.x, 0.5, origin.z);
-    // 바닥으로 눕힌 뒤(-90°), 바라보는 방향으로 회전
+    // 바닥으로 눕힌 뒤(+90°: 부채꼴 중심 +Y 가 앞쪽 +Z 를 향함), 바라보는 방향으로 회전
+    // (-90° 로 하면 부채꼴이 등 뒤로 그려진다 — v0.2.0-a.1 의 '반대 방향' 버그)
     mesh.rotation.order = 'YXZ';
     mesh.rotation.y = facing;
-    mesh.rotation.x = -Math.PI / 2;
+    mesh.rotation.x = Math.PI / 2;
     this.root.add(mesh);
     this.swings.push({ mesh, life: duration, max: duration });
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONFIG_LIMITS, ENEMY_TYPE_LIMITS, GameConfig, sanitizeGameConfig, type GameConfigType } from '../src/game/GameConfig';
+import { CONFIG_LIMITS, ENEMY_TYPE_LIMITS, GameConfig, sanitizeGameConfig, type EnemyNumericKey, type GameConfigType } from '../src/game/GameConfig';
 
 /** 설정 복사본 (테스트가 실제 설정을 건드리지 않도록) */
 const copy = (): GameConfigType => JSON.parse(JSON.stringify(GameConfig));
@@ -43,7 +43,7 @@ describe('GameConfig 기본값', () => {
   it('적 종류 능력치는 모두 허용 범위 안이다', () => {
     for (const def of Object.values(GameConfig.enemies.types)) {
       for (const [key, { min, max }] of Object.entries(ENEMY_TYPE_LIMITS)) {
-        const v = def[key as keyof typeof ENEMY_TYPE_LIMITS];
+        const v = def[key as EnemyNumericKey];
         expect(v).toBeGreaterThanOrEqual(min);
         expect(v).toBeLessThanOrEqual(max);
       }

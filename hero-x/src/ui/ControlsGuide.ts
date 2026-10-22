@@ -5,6 +5,7 @@ function keyLabel(code: string): string {
   if (code === 'Mouse0') return '마우스 왼쪽';
   if (code === 'Mouse2') return '마우스 오른쪽';
   if (code === 'Mouse1') return '마우스 가운데';
+  if (code === 'Space') return 'Space';
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Arrow')) return { Up: '↑', Down: '↓', Left: '←', Right: '→' }[code.slice(5)] ?? code;
   return code;
@@ -37,10 +38,12 @@ export class ControlsGuide {
           <li>${keys(c.left)} 왼쪽</li>
           <li>${keys(c.right)} 오른쪽</li>
           <li>${keys(c.attackMelee)} 근접 공격 (마우스가 가리키는 쪽으로)</li>
+          <li>${keys(c.attackRanged)} 원거리 공격 (에너지 탄 발사)</li>
+          <li>${keys(c.jump)} 점프 (떠 있는 동안 드론의 탄이 아래로 지나감)</li>
           <li>${keys(c.restart)} 결과 화면에서 다시 시작</li>
           <li>${keys(c.toggleGuide)} 이 안내 열기/닫기</li>
         </ul>
-        <p class="guide-note">돌진 로봇이 다가와 공격합니다. 눈이 붉어지면 공격 예고이니 피하세요. 모든 로봇을 처치하면 승리입니다.</p>
+        <p class="guide-note">돌진 로봇은 눈이 붉어진 뒤 덤벼들고, 포격 드론은 거리를 두고 포신이 밝아진 뒤 탄을 쏩니다. 모든 적을 처치하면 승리입니다.</p>
         <button class="btn" id="guide-start" type="button">시작하기</button>
       </div>`;
     root.appendChild(this.guide);

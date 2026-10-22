@@ -6,6 +6,8 @@ export interface PlayerModelState {
   speed: number;
   /** 공격 동작 진행도 0~1, 공격 중이 아니면 null */
   attack: number | null;
+  /** 점프 중 */
+  airborne: boolean;
   /** 쓰러진 상태 */
   dead: boolean;
 }
@@ -115,6 +117,16 @@ export function createPlaceholderModel(colors: PlaceholderColors): PlayerModel {
       }
       root.rotation.z = 0;
 
+      if (state.airborne) {
+        // 점프: 다리를 접고 팔을 벌린다
+        const k = 1 - Math.exp(-14 * dt);
+        legL.rotation.x += (-0.9 - legL.rotation.x) * k;
+        legR.rotation.x += (0.5 - legR.rotation.x) * k;
+        armL.rotation.x += (-2.2 - armL.rotation.x) * k;
+        if (state.attack === null) armR.rotation.x += (-2.2 - armR.rotation.x) * k;
+        root.position.y = 0;
+        return;
+      }
       // 걷는 동안 다리와 팔을 교차로 흔들고 몸을 살짝 들썩인다
       const amount = state.moving ? 1 : 0;
       walkT += dt * (state.speed > 0 ? state.speed * 1.6 : 0);

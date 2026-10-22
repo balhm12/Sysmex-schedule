@@ -30,10 +30,83 @@ export interface EnemyModel {
  */
 export function createEnemyModel(type: string, def: EnemyTypeConfig): EnemyModel {
   switch (type) {
+    case 'shooter':
+      return createShooterModel(def);
     case 'rusher':
     default:
       return createRusherModel(def);
   }
+}
+
+/** 포격 드론: 둥근 몸통 + 앞으로 난 포신 + 떠다니는 느낌. 예고 때 포신 끝이 밝아진다 */
+function createShooterModel(def: EnemyTypeConfig): EnemyModel {
+  const root = new THREE.Group();
+  root.name = `Enemy-${def.name}`;
+  const r = def.radius;
+
+  const bodyMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(def.color), flatShading: true });
+  const darkMat = new THREE.MeshLambertMaterial({ color: 0x2a2f3d });
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0xff5577 });
+
+  const hover = new THREE.Group();
+  root.add(hover);
+  const body = new THREE.Mesh(new THREE.IcosahedronGeometry(r * 0.9, 1), bodyMat);
+  body.position.y = r * 1.6;
+  body.castShadow = true;
+  hover.add(body);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(r * 1.1, r * 0.12, 8, 20), darkMat);
+  ring.position.y = r * 1.6;
+  ring.rotation.x = Math.PI / 2;
+  hover.add(ring);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.16, r * 0.2, r * 1.0, 10), darkMat);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.set(0, r * 1.6, r * 1.1);
+  hover.add(barrel);
+  const muzzle = new THREE.Mesh(new THREE.SphereGeometry(r * 0.2, 8, 6), glowMat);
+  muzzle.position.set(0, r * 1.6, r * 1.6);
+  hover.add(muzzle);
+
+  let flashTimer = 0;
+  let t = Math.random() * 10;
+
+  return {
+    root,
+    update(dt, s) {
+      t += dt;
+      if (s.state === 'dead') {
+        const k = Math.max(0, 1 - s.death);
+        root.scale.setScalar(k);
+        root.position.y = -(1 - k) * r;
+        root.rotation.y += dt * 8;
+        return;
+      }
+      // 둥실둥실 떠 있기
+      hover.position.y = Math.sin(t * 3) * 0.08;
+      ring.rotation.z += dt * 2;
+      // 예고: 포신 끝이 커지며 밝아진다
+      muzzle.scale.setScalar(1 + s.windup * 1.5);
+      glowMat.color.setRGB(1, 0.33 + s.windup * 0.6, 0.47 + s.windup * 0.5);
+      if (flashTimer > 0) {
+        flashTimer -= dt;
+        bodyMat.emissive.setScalar(flashTimer > 0 ? 0.9 : 0);
+      }
+    },
+    flash() {
+      flashTimer = 0.09;
+      bodyMat.emissive.setScalar(0.9);
+    },
+    dispose() {
+      root.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.isMesh) {
+          mesh.geometry.dispose();
+          const m = mesh.material;
+          if (Array.isArray(m)) m.forEach((x) => x.dispose());
+          else m.dispose();
+        }
+      });
+    },
+  };
 }
 
 function createRusherModel(def: EnemyTypeConfig): EnemyModel {

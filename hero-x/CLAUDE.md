@@ -9,7 +9,7 @@
 - 장르: 3인칭 3D 액션 RPG. Minecraft Dungeons 의 진행 방식을 참고하되 캐릭터·맵·아이템·음악·텍스처는 독자 제작 또는 적법한 에셋만 사용한다.
 - 실행 환경: Windows PC 웹 브라우저(Chrome/Edge). 기본 게임은 외부 API·유료 서비스 없이 실행된다.
 - 최우선 원칙: **실제로 실행되는 게임**을 단계적으로 완성한다. 그래픽 품질보다 안정성·유지보수성이 먼저다.
-- 현재 상태: **1단계(기반 구축) 완료, 2단계(전투) 진행 중** — 첫 묶음(돌진형 적, 체력·피해, 근접 공격, 처치, 결과 화면) 완료. 다음 묶음: 원거리 공격 + 원거리형 적(2-b), 방어형 적 + 피해 숫자 표시 + 밸런스(2-c).
+- 현재 상태: **1단계(기반 구축) 완료, 2단계(전투) 진행 중** — 2-a(돌진형 적, 체력·피해, 근접 공격, 결과 화면)와 2-b(원거리 공격, 포격 드론, 점프) 완료. 다음: 2-c 방어형 적 + 피해 숫자 표시 + 난이도 선택·밸런스(사용자 피드백: 현재 '쉬움').
 
 ## 2. 기술 스택
 
@@ -41,16 +41,17 @@ hero-x/
 │  ├─ input/InputManager.ts   키보드·마우스 입력 (키 설정은 GameConfig.controls, 마우스는 'Mouse0' 등)
 │  ├─ player/
 │  │  ├─ Player.ts         플레이어 상태(위치·방향·체력·공격 동작), 모델 교체 setModel()
-│  │  ├─ PlayerController.ts  입력 → 이동 → 충돌 → 위치 반영, 피격 밀림
+│  │  ├─ PlayerController.ts  입력 → 이동 → 충돌 → 위치 반영, 피격 밀림, 점프
 │  │  ├─ movement.ts       이동·충돌 순수 함수 (테스트 대상)
 │  │  └─ models/PlaceholderModel.ts  임시 캐릭터 모델 + PlayerModel 인터페이스
 │  ├─ combat/
 │  │  ├─ Health.ts         체력·무적·사망 (플레이어와 적 공용, 테스트 대상)
 │  │  ├─ melee.ts          근접 공격 부채꼴 판정 순수 함수 (테스트 대상)
-│  │  ├─ CombatSystem.ts   플레이어 공격 처리 (입력 → 조준 → 판정 → 피해·효과)
+│  │  ├─ CombatSystem.ts   플레이어 근접·원거리 공격 (입력 → 조준 → 판정/발사 → 피해·효과)
+│  │  ├─ Projectile.ts     투사체 시스템 (플레이어·적 공용, 장애물 충돌, 명중 콜백)
 │  │  └─ Effects.ts        휘두르기 부채꼴·파편 효과 (풀 재사용)
 │  ├─ enemies/
-│  │  ├─ EnemyAI.ts        적 상태 기계 (idle/chase/windup/hurt/dead, 테스트 대상)
+│  │  ├─ EnemyAI.ts        적 상태 기계 (idle/chase/windup/hurt/dead, 근접형·원거리형, 테스트 대상)
 │  │  ├─ EnemyModels.ts    종류별 임시 모델 + EnemyModel 인터페이스
 │  │  ├─ Enemy.ts          적 한 마리 (능력치·체력·AI·모델 연결, 이동·충돌)
 │  │  └─ EnemySpawner.ts   설정 기반 배치·갱신·정리
@@ -125,14 +126,16 @@ hero-x/
 - "장애물을 더 많이" → `GameConfig.world.obstacles` 배열에 항목 추가 (시작 위치와 겹치지 않게; `tests/config.test.ts` 가 확인).
 - "키를 방향키로만" → `GameConfig.controls` 수정.
 - "적을 두 배로" → `GameConfig.enemies.spawns` 에 항목 추가. "적 체력 30% 올려" → `enemies.types.rusher.hp` 조정.
-- "공격을 더 세게/넓게" → `GameConfig.combat.melee` 의 `damage`, `range`, `arcDegrees`.
+- "공격을 더 세게/넓게" → `GameConfig.combat.melee` 의 `damage`, `range`, `arcDegrees`. 원거리는 `combat.ranged`.
+- "점프를 더 높게" → `player.jumpSpeed` 올리기 (또는 `player.gravity` 내리기).
+- 주의: 3D 효과의 방향을 바꿀 때는 `node -e` 로 벡터에 회전을 적용해 보고 확인한다 (2-b 의 부채꼴 반대 방향 버그 참고). 키를 '누르는 순간' 반응해야 하는 동작(점프 등)은 폴링이 아니라 `InputManager.onPress` 로 받는다 (낮은 FPS 에서 짧은 탭을 놓침).
 - 새 적 종류 → `enemies.types` 에 능력치 추가 + `EnemyModels.ts` 에 외형 분기 + (행동이 다르면) `EnemyAI.ts` 확장.
 - 새 기능(무기, 아이템…) → 새 파일을 만들고 `Game.ts` 의 루프에 `update()` 를 추가. 설정은 `GameConfig.ts` 에.
 
 ## 9. 개발 단계 (지시서 11장)
 
 1. 기반 구축 ✅ (v0.1.0)
-2. 전투 시스템 🔄 (2-a 돌진형 적·근접 공격 ✅ v0.2.0-a.1 / 2-b 원거리 공격·원거리형 적 / 2-c 방어형 적·피해 숫자·밸런스)
+2. 전투 시스템 🔄 (2-a 돌진형 적·근접 공격 ✅ v0.2.0-a.1 / 2-b 원거리 공격·포격 드론·점프 ✅ v0.2.0-b.1 / 2-c 방어형 적·피해 숫자·난이도·밸런스)
 3. 아이템과 성장
 4. 던전과 보스
 5. 설정 화면과 저장

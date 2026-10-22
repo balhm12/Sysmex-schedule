@@ -41,6 +41,12 @@ export interface EnemyTypeConfig {
   color: string;
   /** 처치 점수 */
   score: number;
+  /** 공격 방식: 'melee'(근접, 기본) 또는 'ranged'(투사체) */
+  attackKind?: 'melee' | 'ranged';
+  /** (원거리형) 플레이어가 이 거리보다 가까우면 물러난다 */
+  retreatRange?: number;
+  /** (원거리형) 투사체 속도 */
+  projectileSpeed?: number;
 }
 
 /** 적 배치 하나: 종류와 위치 */
@@ -60,6 +66,8 @@ export interface GameConfigType {
     left: string[];
     right: string[];
     attackMelee: string[];
+    attackRanged: string[];
+    jump: string[];
     restart: string[];
     toggleGuide: string[];
   };
@@ -75,6 +83,10 @@ export interface GameConfigType {
     moveSpeed: number;
     /** 공격 중 이동 속도 비율 (0~1) */
     attackMoveFactor: number;
+    /** 점프 시작 속도 (클수록 높이 뜀) */
+    jumpSpeed: number;
+    /** 중력 (클수록 빨리 떨어짐) */
+    gravity: number;
     /** 몸을 돌리는 속도 (클수록 빠르게 회전) */
     turnSpeed: number;
     /** 충돌 반지름 */
@@ -99,6 +111,20 @@ export interface GameConfigType {
       knockback: number;
       /** 휘두르기 동작 시간(초) */
       swingTime: number;
+    };
+    /** 원거리 공격 (에너지 탄) */
+    ranged: {
+      damage: number;
+      /** 탄 속도 (유닛/초) */
+      speed: number;
+      /** 다음 발사까지 대기(초) */
+      cooldown: number;
+      /** 탄이 사라지기까지 시간(초) */
+      lifetime: number;
+      /** 탄 충돌 반지름 */
+      radius: number;
+      /** 맞은 적이 밀려나는 세기 */
+      knockback: number;
     };
   };
   /** 적 */
@@ -153,7 +179,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.2.0-a.1' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.2.0-b.1' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -161,6 +187,8 @@ export const GameConfig: GameConfigType = {
     left: ['KeyA', 'ArrowLeft'],
     right: ['KeyD', 'ArrowRight'],
     attackMelee: ['Mouse0', 'KeyJ'],
+    attackRanged: ['Mouse2', 'KeyK'],
+    jump: ['Space'],
     restart: ['KeyR'],
     toggleGuide: ['KeyH'],
   },
@@ -171,6 +199,8 @@ export const GameConfig: GameConfigType = {
     hitKnockback: 6,
     moveSpeed: 7,
     attackMoveFactor: 0.6,
+    jumpSpeed: 8,
+    gravity: 24,
     turnSpeed: 14,
     radius: 0.5,
     startPosition: { x: 0, z: 0 },
@@ -185,6 +215,14 @@ export const GameConfig: GameConfigType = {
       cooldown: 0.45,
       knockback: 7,
       swingTime: 0.22,
+    },
+    ranged: {
+      damage: 8,
+      speed: 22,
+      cooldown: 0.5,
+      lifetime: 1.6,
+      radius: 0.18,
+      knockback: 3,
     },
   },
 
@@ -203,6 +241,22 @@ export const GameConfig: GameConfigType = {
         color: '#ff7a45',
         score: 10,
       },
+      shooter: {
+        name: '포격 드론',
+        hp: 20,
+        speed: 3.2,
+        radius: 0.5,
+        damage: 8,
+        attackRange: 9,
+        attackWindup: 0.5,
+        attackCooldown: 2.2,
+        aggroRange: 22,
+        color: '#b06bff',
+        score: 15,
+        attackKind: 'ranged',
+        retreatRange: 4.5,
+        projectileSpeed: 11,
+      },
     },
     spawns: [
       { type: 'rusher', x: 12, z: -12 },
@@ -211,6 +265,9 @@ export const GameConfig: GameConfigType = {
       { type: 'rusher', x: -10, z: 16 },
       { type: 'rusher', x: 4, z: 20 },
       { type: 'rusher', x: -20, z: -18 },
+      { type: 'shooter', x: 18, z: -2 },
+      { type: 'shooter', x: -6, z: -22 },
+      { type: 'shooter', x: 20, z: 18 },
     ],
     separation: 2.5,
     deathDuration: 0.6,
@@ -271,6 +328,14 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'player.hitKnockback': { min: 0, max: 50 },
   'player.moveSpeed': { min: 1, max: 30 },
   'player.attackMoveFactor': { min: 0, max: 1 },
+  'player.jumpSpeed': { min: 1, max: 30 },
+  'player.gravity': { min: 1, max: 100 },
+  'combat.ranged.damage': { min: 1, max: 9999 },
+  'combat.ranged.speed': { min: 1, max: 100 },
+  'combat.ranged.cooldown': { min: 0.05, max: 5 },
+  'combat.ranged.lifetime': { min: 0.1, max: 10 },
+  'combat.ranged.radius': { min: 0.05, max: 2 },
+  'combat.ranged.knockback': { min: 0, max: 50 },
   'player.turnSpeed': { min: 1, max: 40 },
   'player.radius': { min: 0.2, max: 2 },
   'combat.melee.damage': { min: 1, max: 9999 },
@@ -289,8 +354,11 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'graphics.maxPixelRatio': { min: 1, max: 3 },
 };
 
+/** 적 종류 능력치 중 숫자 항목 */
+export type EnemyNumericKey = 'hp' | 'speed' | 'radius' | 'damage' | 'attackRange' | 'attackWindup' | 'attackCooldown' | 'aggroRange' | 'score';
+
 /** 적 종류 능력치의 허용 범위 (모든 종류에 같은 범위를 적용) */
-export const ENEMY_TYPE_LIMITS: Record<keyof Omit<EnemyTypeConfig, 'name' | 'color'>, { min: number; max: number }> = {
+export const ENEMY_TYPE_LIMITS: Record<EnemyNumericKey, { min: number; max: number }> = {
   hp: { min: 1, max: 99999 },
   speed: { min: 0, max: 30 },
   radius: { min: 0.2, max: 5 },
@@ -338,7 +406,7 @@ export function sanitizeGameConfig(config: GameConfigType): ConfigWarning[] {
   // 2) 적 종류별 능력치
   for (const [typeName, def] of Object.entries(config.enemies.types)) {
     for (const [key, { min, max }] of Object.entries(ENEMY_TYPE_LIMITS)) {
-      const k = key as keyof typeof ENEMY_TYPE_LIMITS;
+      const k = key as EnemyNumericKey;
       const value = def[k];
       const fixed = clampNumber(value, min, max);
       if (fixed !== value) {

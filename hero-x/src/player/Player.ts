@@ -20,6 +20,11 @@ export class Player {
   /** 현재 이동 속도 (유닛/초) */
   speed = 0;
 
+  /** 점프 높이 (0 이면 땅) */
+  jumpY = 0;
+  /** 점프 수직 속도 */
+  jumpVy = 0;
+
   private model: PlayerModel;
   private attackTimer = 0;
   private attackDuration = 0;
@@ -40,6 +45,11 @@ export class Player {
   /** 공격 동작 중인지 */
   get attacking(): boolean {
     return this.attackTimer > 0;
+  }
+
+  /** 공중에 떠 있는지 */
+  get airborne(): boolean {
+    return this.jumpY > 0;
   }
 
   /** 외형 모델 교체 (기존 모델은 정리한다) */
@@ -64,6 +74,8 @@ export class Player {
     this.moving = false;
     this.speed = 0;
     this.attackTimer = 0;
+    this.jumpY = 0;
+    this.jumpVy = 0;
     this.object3d.visible = true;
   }
 
@@ -72,10 +84,12 @@ export class Player {
     this.health.update(dt);
     if (this.attackTimer > 0) this.attackTimer -= dt;
     this.object3d.rotation.y = this.facing;
+    this.object3d.position.y = this.jumpY;
     this.model.update(dt, {
       moving: this.moving,
       speed: this.speed,
       attack: this.attackTimer > 0 ? 1 - this.attackTimer / this.attackDuration : null,
+      airborne: this.airborne,
       dead: this.health.isDead,
     });
     // 무적 시간 동안 깜빡여서 피격을 알린다

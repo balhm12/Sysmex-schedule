@@ -89,3 +89,31 @@ export function lerpAngle(from: number, to: number, t: number): number {
 export function directionToFacing(dir: Vec2): number {
   return Math.atan2(dir.x, dir.z);
 }
+
+/** 점(투사체 등)이 장애물이나 영역 밖에 닿았는지 */
+export function hitsObstacle(pos: Vec2, radius: number, boxes: Box[], halfSize: number): boolean {
+  if (Math.abs(pos.x) > halfSize || Math.abs(pos.z) > halfSize) return true;
+  for (const b of boxes) {
+    const cx = clamp(pos.x, b.x - b.w / 2, b.x + b.w / 2);
+    const cz = clamp(pos.z, b.z - b.d / 2, b.z + b.d / 2);
+    if ((pos.x - cx) ** 2 + (pos.z - cz) ** 2 < radius * radius) return true;
+  }
+  return false;
+}
+
+/** 점프 상태: 높이(y)와 수직 속도(vy) */
+export interface JumpState {
+  y: number;
+  vy: number;
+}
+
+/** 점프 한 프레임 적분. 땅(y=0)에 닿으면 멈춘다. */
+export function integrateJump(state: JumpState, dt: number, gravity: number): JumpState {
+  let vy = state.vy - gravity * dt;
+  let y = state.y + vy * dt;
+  if (y <= 0) {
+    y = 0;
+    vy = 0;
+  }
+  return { y, vy };
+}

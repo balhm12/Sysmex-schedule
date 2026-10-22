@@ -18,25 +18,29 @@ export interface AIParams {
   attackWindup: number;
   attackCooldown: number;
   aggroRange: number;
+  /** 'ranged' 면 사거리 안에서 멈춰 쏘고, retreatRange 보다 가까우면 물러난다 */
+  attackKind?: 'melee' | 'ranged';
+  retreatRange?: number;
 }
 
 /**
- * 적 AI (돌진형)
+ * 적 AI (돌진형·원거리형 공용)
  * - 상태: 대기(idle) → 추적(chase) → 공격 예고(windup) → 공격 → 추적 …, 피격(hurt), 사망(dead)
  * - 공격 전 예고 시간이 있어 플레이어가 피할 수 있다.
+ * - 원거리형은 사거리 안에서 멈춰서 쏘고, 너무 가까워지면 뒤로 물러난다.
  * - Three.js 에 의존하지 않는 순수 로직이라 단위 테스트가 쉽다.
  */
 export class EnemyAI {
   state: EnemyState = 'idle';
   private cooldown = 0;
   private windup = 0;
+  private windupTotal = 0;
   private hurtTimer = 0;
 
   /** 예고 진행도 0~1 (모델이 예고 동작을 보여줄 때 사용) */
   get windupProgress(): number {
     return this.state === 'windup' && this.windupTotal > 0 ? 1 - this.windup / this.windupTotal : 0;
   }
-  private windupTotal = 0;
 
   update(dt: number, self: Vec2, player: Vec2, p: AIParams): AIDecision {
     const dx = player.x - self.x;
@@ -46,6 +50,7 @@ export class EnemyAI {
     if (this.cooldown > 0) this.cooldown = Math.max(0, this.cooldown - dt);
 
     const none: Vec2 = { x: 0, z: 0 };
+    const ranged = p.attackKind === 'ranged';
 
     switch (this.state) {
       case 'dead':
@@ -60,10 +65,14 @@ export class EnemyAI {
         if (dist <= p.aggroRange) this.state = 'chase';
         return { move: none, attackNow: false, state: this.state };
 
-      case 'chase':
+      case 'chase': {
         if (dist > p.aggroRange * 1.5) {
           this.state = 'idle';
           return { move: none, attackNow: false, state: this.state };
+        }
+        // 원거리형: 너무 가까우면 물러난다
+        if (ranged && p.retreatRange !== undefined && dist < p.retreatRange) {
+          return { move: { x: -toPlayer.x, z: -toPlayer.z }, attackNow: false, state: this.state };
         }
         if (dist <= p.attackRange && this.cooldown <= 0) {
           this.state = 'windup';
@@ -72,15 +81,16 @@ export class EnemyAI {
         }
         // 사거리 안이면 멈춰서 대기, 밖이면 다가간다
         return { move: dist <= p.attackRange ? none : toPlayer, attackNow: false, state: this.state };
+      }
 
       case 'windup': {
         this.windup -= dt;
         if (this.windup > 0) return { move: none, attackNow: false, state: this.state };
-        // 예고가 끝나면 공격. 그 사이 플레이어가 멀어졌으면 헛스윙
+        // 예고가 끝나면 공격. 그 사이 플레이어가 멀어졌으면 헛스윙 (원거리형은 여유를 더 준다)
         this.cooldown = p.attackCooldown;
         this.state = 'chase';
-        const hit = dist <= p.attackRange + 0.4;
-        return { move: none, attackNow: hit, state: this.state };
+        const reach = ranged ? p.attackRange * 1.3 : p.attackRange + 0.4;
+        return { move: none, attackNow: dist <= reach, state: this.state };
       }
     }
   }
