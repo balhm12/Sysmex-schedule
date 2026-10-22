@@ -24,11 +24,12 @@ export class DamageNumbers {
     parent.appendChild(this.root);
   }
 
-  /** 숫자 띄우기. kind: 'enemy'(적이 맞음) | 'player'(플레이어가 맞음) | 'kill'(처치) */
-  show(pos: THREE.Vector3, amount: number, kind: 'enemy' | 'player' | 'kill' = 'enemy'): void {
+  /** 숫자 띄우기. kind: enemy(적 피해) | player(플레이어 피해) | kill(처치 점수) | heal(회복) | levelup(레벨) */
+  show(pos: THREE.Vector3, amount: number, kind: 'enemy' | 'player' | 'kill' | 'heal' | 'levelup' = 'enemy'): void {
     const el = document.createElement('div');
     el.className = `dmg ${kind}`;
-    el.textContent = kind === 'kill' ? `${amount} 처치!` : String(Math.round(amount));
+    const n = Math.round(amount);
+    el.textContent = kind === 'kill' ? `${n} 처치!` : kind === 'heal' ? `+${n}` : kind === 'levelup' ? `레벨 ${n}!` : String(n);
     this.root.appendChild(el);
     this.popups.push({ el, pos: pos.clone(), t: 0 });
     if (this.popups.length > 40) this.remove(0);

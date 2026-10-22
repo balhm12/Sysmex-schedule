@@ -1,5 +1,5 @@
 /**
- * 전투 중 화면 표시(HUD): 체력바, 남은 적, 처치 수, 점수
+ * 전투 중 화면 표시(HUD): 체력바, 레벨·경험치, 골드, 남은 적, 처치 수, 점수
  * - 값이 바뀔 때만 DOM 을 갱신한다.
  */
 export class HUD {
@@ -9,7 +9,11 @@ export class HUD {
   private readonly enemiesText: HTMLElement;
   private readonly killsText: HTMLElement;
   private readonly scoreText: HTMLElement;
-  private last = { hp: -1, maxHp: -1, enemies: -1, kills: -1, score: -1 };
+  private readonly levelText: HTMLElement;
+  private readonly xpFill: HTMLElement;
+  private readonly xpText: HTMLElement;
+  private readonly goldText: HTMLElement;
+  private last = { hp: -1, maxHp: -1, enemies: -1, kills: -1, score: -1, level: -1, xp: -1, xpToNext: -1, gold: -1 };
 
   constructor(parent: HTMLElement) {
     this.root = document.createElement('div');
@@ -19,6 +23,8 @@ export class HUD {
         <div class="hud-label">체력</div>
         <div class="hp-bar"><i id="hud-hp-fill"></i></div>
         <div class="hud-value" id="hud-hp-text">100 / 100</div>
+        <div class="hud-xp-row"><span class="hud-label">레벨 <b id="hud-level">1</b></span><div class="xp-bar"><i id="hud-xp-fill"></i></div><span class="hud-value" id="hud-xp-text">0 / 40</span></div>
+        <div class="hud-value"><span class="hud-label">골드</span><b id="hud-gold">0</b></div>
       </div>
       <div class="hud-panel hud-stats">
         <div><span class="hud-label">남은 적</span><b id="hud-enemies">0</b></div>
@@ -31,9 +37,27 @@ export class HUD {
     this.enemiesText = this.root.querySelector('#hud-enemies') as HTMLElement;
     this.killsText = this.root.querySelector('#hud-kills') as HTMLElement;
     this.scoreText = this.root.querySelector('#hud-score') as HTMLElement;
+    this.levelText = this.root.querySelector('#hud-level') as HTMLElement;
+    this.xpFill = this.root.querySelector('#hud-xp-fill') as HTMLElement;
+    this.xpText = this.root.querySelector('#hud-xp-text') as HTMLElement;
+    this.goldText = this.root.querySelector('#hud-gold') as HTMLElement;
   }
 
-  update(data: { hp: number; maxHp: number; enemies: number; kills: number; score: number }): void {
+  update(data: { hp: number; maxHp: number; enemies: number; kills: number; score: number; level: number; xp: number; xpToNext: number; gold: number }): void {
+    if (data.level !== this.last.level) {
+      this.levelText.textContent = String(data.level);
+      this.last.level = data.level;
+    }
+    if (data.xp !== this.last.xp || data.xpToNext !== this.last.xpToNext) {
+      this.xpFill.style.width = `${data.xpToNext > 0 ? Math.min(100, (data.xp / data.xpToNext) * 100) : 100}%`;
+      this.xpText.textContent = `${data.xp} / ${data.xpToNext}`;
+      this.last.xp = data.xp;
+      this.last.xpToNext = data.xpToNext;
+    }
+    if (data.gold !== this.last.gold) {
+      this.goldText.textContent = data.gold.toLocaleString('ko-KR');
+      this.last.gold = data.gold;
+    }
     const hp = Math.ceil(data.hp);
     if (hp !== this.last.hp || data.maxHp !== this.last.maxHp) {
       const ratio = data.maxHp > 0 ? Math.max(0, Math.min(1, data.hp / data.maxHp)) : 0;

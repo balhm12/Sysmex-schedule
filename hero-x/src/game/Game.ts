@@ -6,6 +6,9 @@ import { Dungeon01 } from '../dungeon/Dungeon01';
 import type { Enemy } from '../enemies/Enemy';
 import { EnemySpawner } from '../enemies/EnemySpawner';
 import { InputManager } from '../input/InputManager';
+import { LootSystem } from '../items/LootSystem';
+import type { Drop } from '../items/loot';
+import { PlayerStats } from '../player/PlayerStats';
 import { Player } from '../player/Player';
 import { PlayerController } from '../player/PlayerController';
 import { createPlaceholderModel } from '../player/models/PlaceholderModel';
@@ -33,6 +36,8 @@ export interface GameDebugState {
   projectiles: number;
   playerY: number;
   difficulty: string;
+  pickups: number;
+  stats: { level: number; xp: number; xpToNext: number; gold: number; maxHp: number };
   kills: number;
   score: number;
   input: { pointerX: number; pointerY: number; pointerHas: boolean; pressed: string[] };
@@ -59,6 +64,8 @@ export class Game {
   private readonly hud: HUD;
   private readonly result: ResultUI;
   private readonly damageNumbers: DamageNumbers;
+  private readonly loot: LootSystem;
+  readonly stats = new PlayerStats();
   private difficulty: DifficultyLevel = loadDifficulty();
   private readonly projTmp = new THREE.Vector3();
 
@@ -109,11 +116,14 @@ export class Game {
     this.combat = new CombatSystem(
       this.player, this.input, () => this.spawner.getEnemies(), () => this.getAimPoint(), this.effects, this.projectiles,
       (enemy, damage, killed) => {
+        if (killed) this.loot.dropFor(enemy.def.score, { x: enemy.position.x, z: enemy.position.z });
         if (!GameConfig.hud.showDamageNumbers) return;
         this.projTmp.set(enemy.position.x, 1.6, enemy.position.z);
         this.damageNumbers.show(this.projTmp, killed ? enemy.def.score : damage, killed ? 'kill' : 'enemy');
       },
+      () => this.stats.damageMultiplier,
     );
+    this.loot = new LootSystem(this.scene);
 
     // UI
     this.damageNumbers = new DamageNumbers(uiRoot, (pos) => this.projectToScreen(pos));
@@ -181,6 +191,9 @@ export class Game {
     this.spawner.spawnFromConfig();
     this.projectiles.clear();
     this.damageNumbers.clear();
+    this.loot.clear();
+    // 레벨·골드는 유지하고(성장), 체력은 레벨 보너스를 포함해 가득 채운다
+    this.player.health.reset(this.stats.maxHp);
     this.player.reset(GameConfig.player.startPosition);
     this.controller.reset();
     this.combat.reset();
@@ -196,6 +209,7 @@ export class Game {
     window.removeEventListener('resize', this.resize);
     this.spawner.dispose();
     this.projectiles.dispose();
+    this.loot.dispose();
     this.effects.dispose();
     this.player.dispose();
     this.dungeon.dispose();
@@ -225,6 +239,8 @@ export class Game {
       projectiles: this.projectiles.count,
       playerY: this.player.jumpY,
       difficulty: this.difficulty,
+      pickups: this.loot.count,
+      stats: { level: this.stats.level, xp: this.stats.xp, xpToNext: this.stats.xpToNext, gold: this.stats.gold, maxHp: this.stats.maxHp },
       kills: this.combat.kills,
       score: this.combat.score,
       input: { pointerX: pointer.x, pointerY: pointer.y, pointerHas: pointer.has, pressed: this.input.getPressedCodes() },
@@ -277,8 +293,34 @@ export class Game {
     if (GameConfig.hud.showDamageNumbers) this.damageNumbers.show(new THREE.Vector3(p.x, 2.0, p.z), damage, 'player');
     if (this.player.health.isDead) {
       this.ended = true;
-      this.result.show('쓰러졌습니다', `처치 ${this.combat.kills} · 점수 ${this.combat.score}`);
+      this.result.show('쓰러졌습니다', `처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}`);
       Logger.info('플레이어가 쓰러졌습니다.');
+    }
+  }
+
+  /** 아이템 획득: 회복·경험치·골드 반영, 레벨 업 처리 */
+  private onCollect(drop: Drop, at: Vec2): void {
+    const pos = new THREE.Vector3(at.x, 1.4, at.z);
+    if (drop.kind === 'heal') {
+      this.player.health.heal(drop.amount);
+      this.effects.burst(pos, 0xff4f79, 6, 3);
+      if (GameConfig.hud.showDamageNumbers) this.damageNumbers.show(pos, drop.amount, 'heal');
+    } else if (drop.kind === 'gold') {
+      this.stats.addGold(drop.amount);
+      this.effects.burst(pos, 0xffd23f, 4, 2);
+    } else {
+      const gained = this.stats.addXp(drop.amount);
+      this.effects.burst(pos, 0x5cf2d8, 4, 2);
+      if (gained > 0) {
+        // 레벨 업: 최대 체력을 올리고 일부 회복
+        const h = this.player.health;
+        h.maxHp = this.stats.maxHp;
+        h.heal(Math.round(h.maxHp * GameConfig.progression.levelUpHealRatio));
+        const p = this.player.position;
+        this.effects.burst(new THREE.Vector3(p.x, 1, p.z), 0xffd23f, 24, 7);
+        this.damageNumbers.show(new THREE.Vector3(p.x, 2.4, p.z), this.stats.level, 'levelup');
+        Logger.info(`레벨 업! 레벨 ${this.stats.level} (최대 체력 ${h.maxHp}, 공격력 ×${this.stats.damageMultiplier.toFixed(2)})`);
+      }
     }
   }
 
@@ -287,7 +329,7 @@ export class Game {
     if (this.ended || GameConfig.enemies.spawns.length === 0) return;
     if (this.spawner.aliveCount === 0) {
       this.ended = true;
-      this.result.show('모든 적 처치!', `처치 ${this.combat.kills} · 점수 ${this.combat.score}`);
+      this.result.show('모든 적 처치!', `처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}`);
       Logger.info('모든 적을 처치했습니다.');
     }
   }
@@ -320,6 +362,7 @@ export class Game {
       },
       onHitPlayer: (spec, _dir, from) => this.damagePlayer(spec.damage, from),
     });
+    this.loot.update(dt, { x: p.x, z: p.z }, (drop, at) => this.onCollect(drop, at));
     this.player.update(dt);
     this.effects.update(dt);
     this.damageNumbers.update(dt);
@@ -335,6 +378,10 @@ export class Game {
       enemies: this.spawner.aliveCount,
       kills: this.combat.kills,
       score: this.combat.score,
+      level: this.stats.level,
+      xp: this.stats.xp,
+      xpToNext: this.stats.xpToNext,
+      gold: this.stats.gold,
     });
 
     this.renderer.render(this.scene, this.camera);

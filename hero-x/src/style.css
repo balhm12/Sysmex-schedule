@@ -289,3 +289,32 @@ body {
   outline: 3px solid #5cf2d8;
   outline-offset: 2px;
 }
+
+/* ---- 성장 표시 (3단계) ---- */
+.hud-xp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.xp-bar {
+  flex: 1;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(238, 242, 255, 0.12);
+  overflow: hidden;
+}
+.xp-bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: #5cf2d8;
+  transition: width 0.15s;
+}
+.dmg.heal {
+  color: #7dffb0;
+}
+.dmg.levelup {
+  color: #ffd23f;
+  font-size: 28px;
+}

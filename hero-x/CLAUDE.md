@@ -9,7 +9,7 @@
 - 장르: 3인칭 3D 액션 RPG. Minecraft Dungeons 의 진행 방식을 참고하되 캐릭터·맵·아이템·음악·텍스처는 독자 제작 또는 적법한 에셋만 사용한다.
 - 실행 환경: Windows PC 웹 브라우저(Chrome/Edge). 기본 게임은 외부 API·유료 서비스 없이 실행된다.
 - 최우선 원칙: **실제로 실행되는 게임**을 단계적으로 완성한다. 그래픽 품질보다 안정성·유지보수성이 먼저다.
-- 현재 상태: **1단계(기반 구축) 완료, 2단계(전투) 진행 중** — **2단계(전투) 완료 (v0.2.0)** — 근접·원거리 공격, 적 3종(돌진·포격·철벽), AI, 체력·피해, 점프, 난이도 선택, 피해 숫자. 다음: 3단계 아이템과 성장(드롭, 경험치·레벨, 장비 인벤토리·교체, 능력치 반영).
+- 현재 상태: **1단계(기반 구축) 완료, 2단계(전투) 진행 중** — **2단계 완료, 3단계 진행 중** — 3-a(드롭, 경험치·레벨, 골드) 완료 v0.3.0-a.1. 다음: 3-b 장비(무기·방어구·장신구 데이터, 드롭, 인벤토리 화면, 교체 시 능력치 반영).
 
 ## 2. 기술 스택
 
@@ -43,6 +43,7 @@ hero-x/
 │  ├─ player/
 │  │  ├─ Player.ts         플레이어 상태(위치·방향·체력·공격 동작), 모델 교체 setModel()
 │  │  ├─ PlayerController.ts  입력 → 이동 → 충돌 → 위치 반영, 피격 밀림, 점프
+│  │  ├─ PlayerStats.ts     레벨·경험치·골드 (최대 체력·공격력 배율 계산, 테스트 대상)
 │  │  ├─ movement.ts       이동·충돌 순수 함수 (테스트 대상)
 │  │  └─ models/PlaceholderModel.ts  임시 캐릭터 모델 + PlayerModel 인터페이스
 │  ├─ combat/
@@ -56,6 +57,9 @@ hero-x/
 │  │  ├─ EnemyModels.ts    종류별 임시 모델 + EnemyModel 인터페이스
 │  │  ├─ Enemy.ts          적 한 마리 (능력치·체력·AI·모델 연결, 이동·충돌)
 │  │  └─ EnemySpawner.ts   설정 기반 배치·갱신·정리
+│  ├─ items/
+│  │  ├─ loot.ts           드롭 확률 계산 순수 함수 (테스트 대상)
+│  │  └─ LootSystem.ts     바닥 아이템 생성·끌림·획득 (효과 적용은 Game.onCollect)
 │  ├─ dungeon/Dungeon01.ts 바닥·조명·벽·장애물 (CollisionWorld 구현)
 │  ├─ ui/
 │  │  ├─ ControlsGuide.ts  조작 안내 화면 + 하단 상태 표시
@@ -64,7 +68,7 @@ hero-x/
 │  │  ├─ ResultUI.ts       결과 화면(쓰러짐/승리)과 다시 시작
 │  │  └─ ErrorOverlay.ts   화면 오류 표시
 │  └─ utils/Logger.ts      [HERO X] 접두어 로그
-└─ tests/                  단위 테스트 (movement, config, health, enemyAI, melee, difficulty)
+└─ tests/                  단위 테스트 (movement, config, health, enemyAI, melee, difficulty, progression)
 ```
 
 앞으로 추가될 폴더(지시서 9장 기준): `combat/Projectile.ts`, `items/`, `save/`, `audio/`, `ui/SettingsUI.ts`, `ui/InventoryUI.ts` 등. 새 기능은 **새 파일**로 만들고 `Game.ts` 에서 연결한다.
@@ -130,6 +134,8 @@ hero-x/
 - "적을 두 배로" → `GameConfig.enemies.spawns` 에 항목 추가. "적 체력 30% 올려" → `enemies.types.rusher.hp` 조정.
 - "공격을 더 세게/넓게" → `GameConfig.combat.melee` 의 `damage`, `range`, `arcDegrees`. 원거리는 `combat.ranged`.
 - "점프를 더 높게" → `player.jumpSpeed` 올리기 (또는 `player.gravity` 내리기).
+- "아이템이 더 자주/레벨이 빨리" → `loot.healChance/goldChance`, `progression.xpBase/xpGrowth`.
+- 플레이어 공격력 배율은 `CombatSystem` 이 함수로 받는다(`() => stats.damageMultiplier`). 장비 보너스를 추가할 때도 이 함수에 곱해 넣는다.
 - 주의: 3D 효과의 방향을 바꿀 때는 `node -e` 로 벡터에 회전을 적용해 보고 확인한다 (2-b 의 부채꼴 반대 방향 버그 참고). 키를 '누르는 순간' 반응해야 하는 동작(점프 등)은 폴링이 아니라 `InputManager.onPress` 로 받는다 (낮은 FPS 에서 짧은 탭을 놓침).
 - 새 적 종류 → `enemies.types` 에 능력치 추가 + `EnemyModels.ts` 에 외형 분기 + (행동이 다르면) `EnemyAI.ts` 확장.
 - "더 어렵게/쉽게" → 먼저 난이도 버튼 안내. 전체 조정은 `difficulty.presets` 배율, 특정 적만이면 `enemies.types.<종류>`.
@@ -140,7 +146,7 @@ hero-x/
 
 1. 기반 구축 ✅ (v0.1.0)
 2. 전투 시스템 ✅ (v0.2.0: 적 3종, 근접·원거리, 점프, 난이도, 피해 숫자)
-3. 아이템과 성장
+3. 아이템과 성장 🔄 (3-a 드롭·경험치·레벨·골드 ✅ v0.3.0-a.1 / 3-b 장비·인벤토리·능력치 반영)
 4. 던전과 보스
 5. 설정 화면과 저장
 6. 콘텐츠 확장

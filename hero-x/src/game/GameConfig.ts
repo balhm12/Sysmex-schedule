@@ -194,6 +194,41 @@ export interface GameConfigType {
     default: DifficultyLevel;
     presets: Record<DifficultyLevel, DifficultyPreset>;
   };
+  /** 아이템 드롭 */
+  loot: {
+    /** 체력 회복 아이템 확률 0~1 */
+    healChance: number;
+    /** 회복량 */
+    healAmount: number;
+    /** 골드 확률 0~1 */
+    goldChance: number;
+    goldMin: number;
+    goldMax: number;
+    /** 적 점수 1점당 경험치 */
+    xpPerScore: number;
+    /** 바닥에 남아 있는 시간(초) */
+    lifetime: number;
+    /** 이 거리 안에 오면 플레이어 쪽으로 끌려온다 */
+    magnetRange: number;
+    magnetSpeed: number;
+    /** 이 거리 안이면 획득 */
+    pickupRadius: number;
+  };
+  /** 성장 */
+  progression: {
+    /** 1→2 레벨에 필요한 경험치 */
+    xpBase: number;
+    /** 레벨마다 필요 경험치가 곱해지는 비율 */
+    xpGrowth: number;
+    /** 레벨당 최대 체력 증가 */
+    hpPerLevel: number;
+    /** 레벨당 공격력 증가 비율 (0.05 = 5%) */
+    damagePerLevel: number;
+    /** 최대 레벨 */
+    maxLevel: number;
+    /** 레벨 업 때 체력을 회복하는 비율 0~1 */
+    levelUpHealRatio: number;
+  };
   /** 화면 표시 */
   hud: {
     /** 피해 숫자 표시 */
@@ -207,7 +242,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.2.0' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.3.0-a.1' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -364,9 +399,31 @@ export const GameConfig: GameConfigType = {
     default: 'normal',
     presets: {
       easy: { label: '쉬움', enemyHp: 0.8, enemyDamage: 0.7, enemySpeed: 0.9 },
-      normal: { label: '보통', enemyHp: 1.3, enemyDamage: 1.3, enemySpeed: 1.0 },
-      hard: { label: '어려움', enemyHp: 1.8, enemyDamage: 1.8, enemySpeed: 1.15 },
+      normal: { label: '보통', enemyHp: 1.15, enemyDamage: 1.1, enemySpeed: 1.0 },
+      hard: { label: '어려움', enemyHp: 1.6, enemyDamage: 1.6, enemySpeed: 1.15 },
     },
+  },
+
+  loot: {
+    healChance: 0.25,
+    healAmount: 25,
+    goldChance: 0.6,
+    goldMin: 3,
+    goldMax: 12,
+    xpPerScore: 1,
+    lifetime: 20,
+    magnetRange: 3.5,
+    magnetSpeed: 6,
+    pickupRadius: 0.9,
+  },
+
+  progression: {
+    xpBase: 40,
+    xpGrowth: 1.35,
+    hpPerLevel: 10,
+    damagePerLevel: 0.08,
+    maxLevel: 30,
+    levelUpHealRatio: 0.5,
   },
 
   hud: {
@@ -402,6 +459,22 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'combat.melee.knockback': { min: 0, max: 50 },
   'combat.melee.swingTime': { min: 0.05, max: 2 },
   'enemies.separation': { min: 0, max: 20 },
+  'loot.healChance': { min: 0, max: 1 },
+  'loot.healAmount': { min: 1, max: 9999 },
+  'loot.goldChance': { min: 0, max: 1 },
+  'loot.goldMin': { min: 0, max: 99999 },
+  'loot.goldMax': { min: 0, max: 99999 },
+  'loot.xpPerScore': { min: 0.1, max: 100 },
+  'loot.lifetime': { min: 1, max: 600 },
+  'loot.magnetRange': { min: 0, max: 30 },
+  'loot.magnetSpeed': { min: 0, max: 50 },
+  'loot.pickupRadius': { min: 0.2, max: 5 },
+  'progression.xpBase': { min: 1, max: 99999 },
+  'progression.xpGrowth': { min: 1, max: 3 },
+  'progression.hpPerLevel': { min: 0, max: 1000 },
+  'progression.damagePerLevel': { min: 0, max: 1 },
+  'progression.maxLevel': { min: 1, max: 999 },
+  'progression.levelUpHealRatio': { min: 0, max: 1 },
   'enemies.deathDuration': { min: 0, max: 5 },
   'camera.fov': { min: 30, max: 90 },
   'camera.offset.y': { min: 3, max: 40 },

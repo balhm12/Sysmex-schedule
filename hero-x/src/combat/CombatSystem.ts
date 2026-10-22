@@ -32,8 +32,10 @@ export class CombatSystem {
     private readonly getAimPoint: () => Vec2 | null,
     private readonly effects: Effects,
     private readonly projectiles: ProjectileSystem,
-    /** 적이 피해를 받았을 때 알림 (피해 숫자 표시용). killed 는 이 타격으로 처치됐는지 */
+    /** 적이 피해를 받았을 때 알림 (피해 숫자·드롭용). killed 는 이 타격으로 처치됐는지 */
     private readonly onEnemyDamaged: (enemy: Enemy, damage: number, killed: boolean) => void = () => {},
+    /** 플레이어 공격력 배율 (레벨·장비 보너스). 없으면 1 */
+    private readonly getDamageMultiplier: () => number = () => 1,
   ) {}
 
   /** 재시작 시 기록 초기화 */
@@ -99,7 +101,7 @@ export class CombatSystem {
       const ep = enemy.position;
       if (!isInMeleeArc(origin, this.player.facing, { x: ep.x, z: ep.z }, enemy.radius, cfg.range, cfg.arcDegrees)) continue;
       const len = Math.hypot(ep.x - pos.x, ep.z - pos.z) || 1;
-      this.damageEnemy(enemy, cfg.damage, { x: (ep.x - pos.x) / len, z: (ep.z - pos.z) / len }, cfg.knockback);
+      this.damageEnemy(enemy, Math.round(cfg.damage * this.getDamageMultiplier()), { x: (ep.x - pos.x) / len, z: (ep.z - pos.z) / len }, cfg.knockback);
     }
   }
 
@@ -113,7 +115,7 @@ export class CombatSystem {
     this.projectiles.spawn(
       { x: pos.x + dir.x * 0.7, z: pos.z + dir.z * 0.7 },
       dir,
-      { damage: cfg.damage, speed: cfg.speed, lifetime: cfg.lifetime, radius: cfg.radius, knockback: cfg.knockback, color: 0x5cf2d8, friendly: true },
+      { damage: Math.round(cfg.damage * this.getDamageMultiplier()), speed: cfg.speed, lifetime: cfg.lifetime, radius: cfg.radius, knockback: cfg.knockback, color: 0x5cf2d8, friendly: true },
     );
   }
 }
