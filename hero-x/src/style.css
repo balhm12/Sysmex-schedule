@@ -371,11 +371,14 @@ body {
 }
 .inv-row .inv-stats {
   grid-column: 2;
+  grid-row: 2;
   color: #9fabc9;
   font-size: 12px;
 }
 .inv-row .inv-name {
   font-weight: 700;
+  grid-column: 2;
+  grid-row: 1;
 }
 .inv-row .inv-name small {
   font-weight: 400;
@@ -388,7 +391,13 @@ body {
 .inv-slot {
   color: #9fabc9;
   font-size: 12px;
+  grid-column: 1;
   grid-row: 1 / span 2;
+}
+.inv-row .inv-empty {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  padding: 0;
 }
 .inv-empty {
   color: #9fabc9;
