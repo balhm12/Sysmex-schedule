@@ -81,6 +81,7 @@ Claude Code 에 "캐릭터를 더 빠르게 해줘", "카메라를 더 가까이
 | 증상 | 해결 |
 | --- | --- |
 | `npm: command not found` / `'npm'은(는) 내부 또는 외부 명령...` | Node.js 를 설치하고 터미널을 새로 엽니다 |
+| `npm : 이 시스템에서 스크립트를 실행할 수 없으므로 ... npm.ps1` | PowerShell 에서 `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` 실행 후 `Y` (한 번만) |
 | `Cannot find module 'three'` | `hero-x` 폴더 안에서 `npm install` 을 다시 실행합니다 |
 | 포트 5173 이 이미 사용 중 | 이미 켜진 `npm run dev` 터미널을 `Ctrl + C` 로 끄거나, `npm run dev -- --port 5174` 로 다른 포트 사용 |
 | 화면이 검고 "게임을 시작할 수 없습니다" | 최신 Chrome/Edge 사용, 브라우저 설정에서 하드웨어 가속 켜기 |

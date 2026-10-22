@@ -12,6 +12,19 @@
 - 원인: 인터넷 연결 또는 회사 네트워크 차단.
 - 해결: 인터넷 연결 확인 후 다시 `npm install`. 회사 PC 라면 집 네트워크에서 설치 후 `node_modules` 폴더째 사용 가능.
 
+### `npm : 이 시스템에서 스크립트를 실행할 수 없으므로 ... npm.ps1 파일을 로드할 수 없습니다` (PSSecurityException)
+- 원인: Windows PowerShell 의 기본 실행 정책이 `.ps1` 스크립트 실행을 막음. npm 은 PowerShell 에서 `npm.ps1` 로 실행되기 때문에 막힌다.
+- 해결(권장, 한 번만): PowerShell 에서 아래를 실행하고 `Y` 입력.
+  ```
+  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+  ```
+  현재 사용자 계정에만 적용되고, 설치된 도구의 스크립트는 허용하되 인터넷에서 받은 서명 없는 스크립트는 계속 막는 일반적인 설정이다.
+- 대안: 명령에 `.cmd` 를 붙인다. `npm.cmd install`, `npm.cmd run dev`.
+
+### `cd : 'C:\Users\이름\Desktop' 경로는 존재하지 않으므로` (바탕 화면 폴더 없음)
+- 원인: OneDrive 를 쓰는 PC 는 바탕 화면이 `OneDrive\바탕 화면` 에 있다.
+- 해결: 바탕 화면 대신 `cd $HOME` (사용자 폴더)에서 작업한다. 게임 폴더는 `C:\Users\이름\Sysmex-schedule\hero-x` 가 된다.
+
 ### `npm ERR! EPERM` / 권한 오류 (Windows)
 - 해결: 터미널을 닫고 다시 열어 재시도. 계속되면 `node_modules` 폴더를 지우고 `npm install`.
 
