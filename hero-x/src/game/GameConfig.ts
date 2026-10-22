@@ -51,6 +51,23 @@ export interface EnemyTypeConfig {
   knockbackResist?: number;
 }
 
+/** 장비 등급 */
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
+/** 등급 하나의 설정 */
+export interface RarityConfig {
+  /** 표시 이름 */
+  label: string;
+  /** 이름 앞에 붙는 말 (없으면 빈 문자열) */
+  prefix: string;
+  /** 능력치 배율 */
+  statMul: number;
+  /** 드롭 가중치 (클수록 자주) */
+  weight: number;
+  /** 표시 색 */
+  color: string;
+}
+
 /** 난이도 단계 */
 export type DifficultyLevel = 'easy' | 'normal' | 'hard';
 
@@ -87,6 +104,7 @@ export interface GameConfigType {
     jump: string[];
     restart: string[];
     toggleGuide: string[];
+    toggleInventory: string[];
   };
   /** 플레이어 */
   player: {
@@ -214,6 +232,16 @@ export interface GameConfigType {
     /** 이 거리 안이면 획득 */
     pickupRadius: number;
   };
+  /** 장비 */
+  equipment: {
+    /** 적 처치 시 장비가 떨어질 확률 0~1 */
+    dropChance: number;
+    /** 가방 칸 수 */
+    inventorySize: number;
+    /** 방어력 계산 기준: 방어력이 이 값과 같으면 피해 절반 */
+    defenseScale: number;
+    rarities: Record<Rarity, RarityConfig>;
+  };
   /** 성장 */
   progression: {
     /** 1→2 레벨에 필요한 경험치 */
@@ -242,7 +270,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.3.0-a.1' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.3.0' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -254,6 +282,7 @@ export const GameConfig: GameConfigType = {
     jump: ['Space'],
     restart: ['KeyR'],
     toggleGuide: ['KeyH'],
+    toggleInventory: ['KeyI', 'Tab'],
   },
 
   player: {
@@ -417,6 +446,19 @@ export const GameConfig: GameConfigType = {
     pickupRadius: 0.9,
   },
 
+  equipment: {
+    dropChance: 0.3,
+    inventorySize: 20,
+    defenseScale: 50,
+    rarities: {
+      common: { label: '일반', prefix: '', statMul: 1, weight: 55, color: '#cdd6f4' },
+      uncommon: { label: '고급', prefix: '튼튼한', statMul: 1.3, weight: 25, color: '#7dffb0' },
+      rare: { label: '희귀', prefix: '희귀한', statMul: 1.7, weight: 13, color: '#5b8dff' },
+      epic: { label: '영웅', prefix: '영웅의', statMul: 2.2, weight: 5, color: '#c77dff' },
+      legendary: { label: '전설', prefix: '전설의', statMul: 3, weight: 2, color: '#ffc531' },
+    },
+  },
+
   progression: {
     xpBase: 40,
     xpGrowth: 1.35,
@@ -469,6 +511,9 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'loot.magnetRange': { min: 0, max: 30 },
   'loot.magnetSpeed': { min: 0, max: 50 },
   'loot.pickupRadius': { min: 0.2, max: 5 },
+  'equipment.dropChance': { min: 0, max: 1 },
+  'equipment.inventorySize': { min: 1, max: 200 },
+  'equipment.defenseScale': { min: 1, max: 1000 },
   'progression.xpBase': { min: 1, max: 99999 },
   'progression.xpGrowth': { min: 1, max: 3 },
   'progression.hpPerLevel': { min: 0, max: 1000 },

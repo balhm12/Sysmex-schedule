@@ -28,6 +28,8 @@ export class PlayerController {
     private readonly input: InputManager,
     private readonly world: CollisionWorld,
     private readonly getCameraYaw: () => number,
+    /** 이동 속도 배율 (장비 보너스). 없으면 1 */
+    private readonly getSpeedMultiplier: () => number = () => 1,
   ) {
     this.input.onPress(GameConfig.controls.jump, () => {
       this.jumpQueued = true;
@@ -72,7 +74,7 @@ export class PlayerController {
     const axis = this.input.getMoveAxis();
     const dir = computeMoveDirection(axis, this.getCameraYaw());
     const moving = dir.x !== 0 || dir.z !== 0;
-    const speed = cfg.moveSpeed * (this.player.attacking ? cfg.attackMoveFactor : 1);
+    const speed = cfg.moveSpeed * this.getSpeedMultiplier() * (this.player.attacking ? cfg.attackMoveFactor : 1);
 
     let next = { x: pos.x + dir.x * speed * dt + this.knock.x * dt, z: pos.z + dir.z * speed * dt + this.knock.z * dt };
     const decay = Math.exp(-8 * dt);

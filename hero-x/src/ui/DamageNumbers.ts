@@ -35,6 +35,17 @@ export class DamageNumbers {
     if (this.popups.length > 40) this.remove(0);
   }
 
+  /** 글자 띄우기 (장비 획득 안내 등) */
+  showText(pos: THREE.Vector3, text: string, color?: string): void {
+    const el = document.createElement('div');
+    el.className = 'dmg text';
+    el.textContent = text;
+    if (color) el.style.color = color;
+    this.root.appendChild(el);
+    this.popups.push({ el, pos: pos.clone(), t: -0.6 });
+    if (this.popups.length > 40) this.remove(0);
+  }
+
   update(dt: number): void {
     for (let i = this.popups.length - 1; i >= 0; i--) {
       const p = this.popups[i];
@@ -45,7 +56,7 @@ export class DamageNumbers {
         p.el.style.opacity = '0';
       } else {
         p.el.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -50%) scale(${1 + Math.min(p.t * 2, 0.3)})`;
-        p.el.style.opacity = String(Math.max(0, Math.min(1, 1.3 - p.t)));
+        p.el.style.opacity = String(Math.max(0, Math.min(1, 1.3 - Math.max(0, p.t))));
       }
       if (p.t > 1.1) this.remove(i);
     }

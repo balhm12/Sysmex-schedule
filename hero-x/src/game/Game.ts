@@ -6,7 +6,9 @@ import { Dungeon01 } from '../dungeon/Dungeon01';
 import type { Enemy } from '../enemies/Enemy';
 import { EnemySpawner } from '../enemies/EnemySpawner';
 import { InputManager } from '../input/InputManager';
+import { EquipmentSystem, applyDefense } from '../items/EquipmentSystem';
 import { LootSystem } from '../items/LootSystem';
+import { InventoryUI } from '../ui/InventoryUI';
 import type { Drop } from '../items/loot';
 import { PlayerStats } from '../player/PlayerStats';
 import { Player } from '../player/Player';
@@ -38,6 +40,9 @@ export interface GameDebugState {
   difficulty: string;
   pickups: number;
   stats: { level: number; xp: number; xpToNext: number; gold: number; maxHp: number };
+  equipment: { inventory: number; equipped: Record<string, string | null>; totals: { attack: number; defense: number; maxHp: number; moveSpeed: number } };
+  paused: boolean;
+  inventoryVisible: boolean;
   kills: number;
   score: number;
   input: { pointerX: number; pointerY: number; pointerHas: boolean; pressed: string[] };
@@ -65,7 +70,11 @@ export class Game {
   private readonly result: ResultUI;
   private readonly damageNumbers: DamageNumbers;
   private readonly loot: LootSystem;
+  private readonly inventoryUI: InventoryUI;
   readonly stats = new PlayerStats();
+  readonly equipment = new EquipmentSystem();
+  /** 장비 화면이 열려 게임이 멈춘 상태 */
+  private paused = false;
   private difficulty: DifficultyLevel = loadDifficulty();
   private readonly projTmp = new THREE.Vector3();
 
@@ -107,7 +116,7 @@ export class Game {
     this.player = new Player(createPlaceholderModel(GameConfig.player.colors), GameConfig.player.startPosition);
     this.scene.add(this.player.object3d);
     this.cameraCtrl = new CameraController(this.camera);
-    this.controller = new PlayerController(this.player, this.input, this.dungeon, () => this.cameraCtrl.getYaw());
+    this.controller = new PlayerController(this.player, this.input, this.dungeon, () => this.cameraCtrl.getYaw(), () => 1 + this.equipment.totals().moveSpeed);
     this.effects = new Effects(this.scene);
     this.projectiles = new ProjectileSystem(this.scene);
     this.spawner = new EnemySpawner(this.scene);
@@ -122,6 +131,7 @@ export class Game {
         this.damageNumbers.show(this.projTmp, killed ? enemy.def.score : damage, killed ? 'kill' : 'enemy');
       },
       () => this.stats.damageMultiplier,
+      (kind) => this.equipment.weaponAttack(kind),
     );
     this.loot = new LootSystem(this.scene);
 
@@ -133,6 +143,11 @@ export class Game {
     });
     this.hud = new HUD(uiRoot);
     this.result = new ResultUI(uiRoot, () => this.restart());
+    this.inventoryUI = new InventoryUI(uiRoot, this.equipment, {
+      onChange: () => this.applyStats(),
+      onClose: () => this.toggleInventory(false),
+      getSummary: () => this.statSummary(),
+    });
     this.applyDifficulty();
 
     // 입력 연결
@@ -140,6 +155,10 @@ export class Game {
     this.input.onPress(GameConfig.controls.toggleGuide, () => this.guide.toggle());
     this.input.onPress(GameConfig.controls.restart, () => {
       if (this.ended) this.restart();
+    });
+    this.input.onPress(GameConfig.controls.toggleInventory, () => this.toggleInventory());
+    this.input.onPress(['Escape'], () => {
+      if (this.inventoryUI.visible) this.toggleInventory(false);
     });
 
     window.addEventListener('resize', this.resize);
@@ -185,6 +204,34 @@ export class Game {
     this.guide?.refreshDifficulty();
   }
 
+  /** 장비 화면 열기/닫기. 열려 있는 동안 게임은 멈춘다 */
+  toggleInventory(open = !this.inventoryUI.visible): void {
+    if (open) {
+      this.inventoryUI.show();
+      this.paused = true;
+    } else {
+      this.inventoryUI.hide();
+      this.paused = false;
+      this.lastTime = performance.now();
+    }
+  }
+
+  /** 레벨·장비 보너스를 플레이어 체력에 반영 (최대 체력이 줄면 현재 체력도 그 안으로) */
+  private applyStats(): void {
+    const h = this.player.health;
+    h.maxHp = Math.max(1, this.stats.maxHp + this.equipment.totals().maxHp);
+    if (h.hp > h.maxHp) h.hp = h.maxHp;
+  }
+
+  /** 장비 화면 위에 보여줄 요약 */
+  private statSummary(): string {
+    const t = this.equipment.totals();
+    const melee = Math.round((GameConfig.combat.melee.damage + this.equipment.weaponAttack('melee')) * this.stats.damageMultiplier);
+    const ranged = Math.round((GameConfig.combat.ranged.damage + this.equipment.weaponAttack('ranged')) * this.stats.damageMultiplier);
+    const speed = Math.round((1 + t.moveSpeed) * 100);
+    return `레벨 ${this.stats.level} · 골드 ${this.stats.gold} · 근접 ${melee} · 원거리 ${ranged} · 방어 ${t.defense} · 최대 체력 ${this.player.health.maxHp} · 속도 ${speed}%`;
+  }
+
   /** 전투 재시작: 플레이어 회복·복귀, 적 재배치, 기록 초기화 */
   restart(): void {
     this.spawner.clear();
@@ -192,8 +239,8 @@ export class Game {
     this.projectiles.clear();
     this.damageNumbers.clear();
     this.loot.clear();
-    // 레벨·골드는 유지하고(성장), 체력은 레벨 보너스를 포함해 가득 채운다
-    this.player.health.reset(this.stats.maxHp);
+    // 레벨·골드·장비는 유지하고(성장), 체력은 보너스를 포함해 가득 채운다
+    this.player.health.reset(Math.max(1, this.stats.maxHp + this.equipment.totals().maxHp));
     this.player.reset(GameConfig.player.startPosition);
     this.controller.reset();
     this.combat.reset();
@@ -241,6 +288,13 @@ export class Game {
       difficulty: this.difficulty,
       pickups: this.loot.count,
       stats: { level: this.stats.level, xp: this.stats.xp, xpToNext: this.stats.xpToNext, gold: this.stats.gold, maxHp: this.stats.maxHp },
+      equipment: {
+        inventory: this.equipment.inventory.length,
+        equipped: Object.fromEntries(Object.entries(this.equipment.equipped).map(([k, v]) => [k, v ? v.name : null])),
+        totals: this.equipment.totals(),
+      },
+      paused: this.paused,
+      inventoryVisible: this.inventoryUI.visible,
       kills: this.combat.kills,
       score: this.combat.score,
       input: { pointerX: pointer.x, pointerY: pointer.y, pointerHas: pointer.has, pressed: this.input.getPressedCodes() },
@@ -282,9 +336,11 @@ export class Game {
     this.damagePlayer(damage, { x: e.x, z: e.z });
   }
 
-  /** 플레이어 피해 처리 (근접·투사체 공용). from: 피해가 온 위치 */
-  private damagePlayer(damage: number, from: Vec2): void {
-    if (this.ended || !this.player.health.takeDamage(damage)) return;
+  /** 플레이어 피해 처리 (근접·투사체 공용). from: 피해가 온 위치. 방어력만큼 줄어든다 */
+  private damagePlayer(rawDamage: number, from: Vec2): void {
+    if (this.ended) return;
+    const damage = applyDefense(rawDamage, this.equipment.totals().defense);
+    if (!this.player.health.takeDamage(damage)) return;
     const p = this.player.position;
     const len = Math.hypot(p.x - from.x, p.z - from.z) || 1;
     this.controller.applyKnockback({ x: (p.x - from.x) / len, z: (p.z - from.z) / len }, GameConfig.player.hitKnockback);
@@ -308,13 +364,24 @@ export class Game {
     } else if (drop.kind === 'gold') {
       this.stats.addGold(drop.amount);
       this.effects.burst(pos, 0xffd23f, 4, 2);
+    } else if (drop.kind === 'equip') {
+      if (!drop.item) return;
+      if (this.equipment.add(drop.item)) {
+        const color = GameConfig.equipment.rarities[drop.item.rarity].color;
+        this.effects.burst(pos, color, 10, 4);
+        this.damageNumbers.showText(pos, `획득: ${drop.item.name}`, color);
+      } else {
+        // 가방이 가득 차면 다시 바닥에 둔다
+        this.loot.spawn(drop, at);
+        this.damageNumbers.showText(pos, '가방이 가득 찼어요', '#ff6b90');
+      }
     } else {
       const gained = this.stats.addXp(drop.amount);
       this.effects.burst(pos, 0x5cf2d8, 4, 2);
       if (gained > 0) {
         // 레벨 업: 최대 체력을 올리고 일부 회복
         const h = this.player.health;
-        h.maxHp = this.stats.maxHp;
+        this.applyStats();
         h.heal(Math.round(h.maxHp * GameConfig.progression.levelUpHealRatio));
         const p = this.player.position;
         this.effects.burst(new THREE.Vector3(p.x, 1, p.z), 0xffd23f, 24, 7);
@@ -342,6 +409,12 @@ export class Game {
     // 탭을 오래 비웠다 돌아와도 한 번에 크게 움직이지 않도록 dt 상한을 둔다
     const dt = Math.min(0.05, (now - this.lastTime) / 1000);
     this.lastTime = now;
+
+    if (this.paused) {
+      // 장비 화면이 열린 동안은 그리기만 한다
+      this.renderer.render(this.scene, this.camera);
+      return;
+    }
 
     const p = this.player.position;
     this.controller.update(dt);

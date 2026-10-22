@@ -4,12 +4,16 @@
  * - 난수 함수를 인자로 받아 테스트에서 결과를 고정할 수 있다.
  */
 
+import type { ItemInstance } from './ItemDatabase';
+
 /** 떨어지는 아이템 종류 */
-export type ItemKind = 'heal' | 'xp' | 'gold';
+export type ItemKind = 'heal' | 'xp' | 'gold' | 'equip';
 
 export interface Drop {
   kind: ItemKind;
   amount: number;
+  /** kind 가 'equip' 일 때 장비 */
+  item?: ItemInstance;
 }
 
 export interface LootTable {
@@ -24,14 +28,16 @@ export interface LootTable {
   goldMax: number;
   /** 적 점수 1점당 경험치 */
   xpPerScore: number;
+  /** 장비가 떨어질 확률 0~1 (없으면 0) */
+  equipChance?: number;
 }
 
 /**
  * 처치 보상을 굴린다.
  * - 경험치는 항상 떨어진다 (점수 × xpPerScore, 최소 1)
- * - 체력·골드는 확률
+ * - 체력·골드·장비는 확률. 장비는 makeItem 으로 만든다 (없으면 장비는 떨어지지 않음)
  */
-export function rollLoot(enemyScore: number, table: LootTable, random: () => number = Math.random): Drop[] {
+export function rollLoot(enemyScore: number, table: LootTable, random: () => number = Math.random, makeItem?: () => ItemInstance): Drop[] {
   const drops: Drop[] = [];
   drops.push({ kind: 'xp', amount: Math.max(1, Math.round(enemyScore * table.xpPerScore)) });
   if (random() < table.healChance) drops.push({ kind: 'heal', amount: table.healAmount });
@@ -39,5 +45,6 @@ export function rollLoot(enemyScore: number, table: LootTable, random: () => num
     const span = Math.max(0, table.goldMax - table.goldMin);
     drops.push({ kind: 'gold', amount: Math.round(table.goldMin + random() * span) });
   }
+  if (makeItem && random() < (table.equipChance ?? 0)) drops.push({ kind: 'equip', amount: 0, item: makeItem() });
   return drops;
 }

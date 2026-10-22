@@ -37,7 +37,7 @@ export class ControlsGuide {
     this.guide.className = 'guide';
     this.guide.innerHTML = `
       <div class="guide-panel" role="dialog" aria-labelledby="guide-title">
-        <p class="guide-eyebrow">3D 액션 RPG · 2단계 전투 테스트</p>
+        <p class="guide-eyebrow">3D 액션 RPG · 3단계 아이템과 성장</p>
         <h1 class="guide-title" id="guide-title">${meta.title.replace(' X', ' <em>X</em>')}</h1>
         <p class="guide-sub">${meta.subtitle} · v${meta.version}</p>
         <ul class="guide-keys">
@@ -48,6 +48,7 @@ export class ControlsGuide {
           <li>${keys(c.attackMelee)} 근접 공격 (마우스가 가리키는 쪽으로)</li>
           <li>${keys(c.attackRanged)} 원거리 공격 (에너지 탄 발사)</li>
           <li>${keys(c.jump)} 점프 (떠 있는 동안 드론의 탄이 아래로 지나감)</li>
+          <li>${keys(c.toggleInventory)} 장비 화면 열기/닫기 (게임 일시정지)</li>
           <li>${keys(c.restart)} 결과 화면에서 다시 시작</li>
           <li>${keys(c.toggleGuide)} 이 안내 열기/닫기</li>
         </ul>

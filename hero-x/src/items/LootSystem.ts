@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GameConfig } from '../game/GameConfig';
 import type { Vec2 } from '../player/movement';
+import { generateRandomItem } from './ItemDatabase';
 import { rollLoot, type Drop, type ItemKind } from './loot';
 
 interface Pickup {
@@ -23,11 +24,13 @@ export class LootSystem {
     heal: new THREE.BoxGeometry(0.42, 0.42, 0.42),
     xp: new THREE.OctahedronGeometry(0.3, 0),
     gold: new THREE.CylinderGeometry(0.26, 0.26, 0.1, 16),
+    equip: new THREE.BoxGeometry(0.5, 0.36, 0.34),
   };
   private readonly mats: Record<ItemKind, THREE.Material> = {
     heal: new THREE.MeshLambertMaterial({ color: 0xff4f79, emissive: 0x551122 }),
     xp: new THREE.MeshLambertMaterial({ color: 0x5cf2d8, emissive: 0x0f4a44 }),
     gold: new THREE.MeshLambertMaterial({ color: 0xffd23f, emissive: 0x4d3a00 }),
+    equip: new THREE.MeshLambertMaterial({ color: 0xcdd6f4, emissive: 0x333a55 }),
   };
 
   constructor(scene: THREE.Scene) {
@@ -37,7 +40,7 @@ export class LootSystem {
 
   /** 적 처치 보상을 굴려 바닥에 떨어뜨린다 */
   dropFor(enemyScore: number, at: Vec2): Drop[] {
-    const drops = rollLoot(enemyScore, GameConfig.loot);
+    const drops = rollLoot(enemyScore, { ...GameConfig.loot, equipChance: GameConfig.equipment.dropChance }, Math.random, () => generateRandomItem());
     drops.forEach((d, i) => {
       const angle = (i / drops.length) * Math.PI * 2 + Math.random();
       this.spawn(d, { x: at.x + Math.cos(angle) * 0.6, z: at.z + Math.sin(angle) * 0.6 });
@@ -47,7 +50,13 @@ export class LootSystem {
 
   /** 아이템 하나를 놓는다 */
   spawn(drop: Drop, at: Vec2): void {
-    const mesh = new THREE.Mesh(this.geos[drop.kind], this.mats[drop.kind]);
+    let material = this.mats[drop.kind];
+    if (drop.kind === 'equip' && drop.item) {
+      // 장비 상자는 등급 색으로
+      const color = new THREE.Color(GameConfig.equipment.rarities[drop.item.rarity].color);
+      material = new THREE.MeshLambertMaterial({ color, emissive: color.clone().multiplyScalar(0.35) });
+    }
+    const mesh = new THREE.Mesh(this.geos[drop.kind], material);
     mesh.position.set(at.x, 0.6, at.z);
     if (drop.kind === 'gold') mesh.rotation.x = Math.PI / 2;
     mesh.castShadow = true;
@@ -102,7 +111,9 @@ export class LootSystem {
   }
 
   private remove(i: number): void {
-    this.root.remove(this.pickups[i].mesh);
+    const p = this.pickups[i];
+    this.root.remove(p.mesh);
+    if (p.drop.kind === 'equip') (p.mesh.material as THREE.Material).dispose();
     this.pickups.splice(i, 1);
   }
 }
