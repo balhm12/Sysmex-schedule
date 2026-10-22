@@ -438,7 +438,7 @@ body {
 .boss-bar {
   position: absolute;
   left: 50%;
-  top: 14px;
+  top: 96px;
   transform: translateX(-50%);
   width: min(560px, 70vw);
   padding: 8px 14px;
