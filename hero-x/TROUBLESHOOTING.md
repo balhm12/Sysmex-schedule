@@ -1,0 +1,69 @@
+# 문제 해결 가이드
+
+문제가 생기면 먼저 **어느 단계에서** 생겼는지 확인합니다: 설치(`npm install`) → 실행(`npm run dev`) → 브라우저 화면 → 검사/빌드(`npm run check`).
+
+## 설치 단계
+
+### `'npm'은(는) 내부 또는 외부 명령, 실행할 수 있는 프로그램... 아닙니다` / `npm: command not found`
+- 원인: Node.js 가 설치되지 않았거나 터미널이 설치 전에 열려 있음.
+- 해결: https://nodejs.org 에서 LTS 설치 → 터미널을 완전히 닫고 새로 연 뒤 `node -v` 확인.
+
+### `npm ERR! code ENOTFOUND` / `network` 오류
+- 원인: 인터넷 연결 또는 회사 네트워크 차단.
+- 해결: 인터넷 연결 확인 후 다시 `npm install`. 회사 PC 라면 집 네트워크에서 설치 후 `node_modules` 폴더째 사용 가능.
+
+### `npm ERR! EPERM` / 권한 오류 (Windows)
+- 해결: 터미널을 닫고 다시 열어 재시도. 계속되면 `node_modules` 폴더를 지우고 `npm install`.
+
+## 실행 단계
+
+### `Cannot find module 'three'` 또는 `vite: command not found`
+- 원인: 라이브러리가 설치되지 않음 (`node_modules` 없음) 또는 `hero-x` 폴더가 아닌 곳에서 실행.
+- 해결: `cd hero-x` 로 이동 후 `npm install`, 그다음 `npm run dev`.
+
+### `Port 5173 is in use` (포트가 이미 사용 중)
+- 원인: 이전에 켠 개발 서버가 아직 켜져 있음.
+- 해결: 그 터미널에서 `Ctrl + C`. 또는 `npm run dev -- --port 5174` 로 다른 포트 사용 (주소도 5174 로).
+
+### 터미널에 빨간 글씨로 `error TS....`
+- 원인: TypeScript 타입 오류 (코드 수정 중 실수).
+- 해결: 메시지의 파일명과 줄 번호를 확인. Claude Code 에 오류 메시지를 그대로 붙여 넣고 수정을 요청.
+
+## 브라우저 화면
+
+### 화면 위에 빨간 상자 "게임을 시작할 수 없습니다 … WebGL"
+- 원인: 브라우저가 3D(WebGL)를 쓸 수 없음.
+- 해결: 최신 Chrome/Edge 사용. 설정 → 시스템 → "하드웨어 가속 사용" 켜기 → 브라우저 재시작. 원격 데스크톱·가상 머신에서는 3D 가 꺼져 있을 수 있음.
+
+### 화면 위에 빨간 상자 "게임 실행 중 오류가 발생했습니다"
+- 원인: 실행 중 코드 오류.
+- 해결: `F12` → Console 탭에서 `[HERO X]` 로 시작하는 메시지와 빨간 오류를 복사해 Claude Code 에 전달.
+
+### 키를 눌러도 움직이지 않음
+- 안내 화면이 열려 있어도 키 입력은 동작합니다. 그래도 안 되면:
+  - 브라우저 화면을 한 번 클릭해 포커스를 줍니다.
+  - 주소창이나 입력창에 커서가 있으면 게임 키가 무시됩니다.
+  - `src/game/GameConfig.ts` 의 `controls` 가 비어 있지 않은지 확인.
+
+### 화면이 뚝뚝 끊김 (FPS 가 낮음)
+- `src/game/GameConfig.ts` 에서 `graphics.shadows` 를 `false` 로, `graphics.maxPixelRatio` 를 `1` 로 바꿔 봅니다.
+- 노트북이면 전원 연결 후 고성능 모드. 브라우저 하드웨어 가속 확인.
+
+### 캐릭터가 장애물에 끼거나 벽을 통과함
+- `GameConfig.world.obstacles` 의 항목이 시작 위치(0,0)와 겹치면 안 됩니다 (`npm test` 가 확인해 줍니다).
+- `player.radius` 가 너무 크거나 작지 않은지 확인 (0.2~2).
+
+## 검사·빌드 단계
+
+### `npm test` 실패
+- 출력에서 `✗` 또는 `FAIL` 이 붙은 테스트 이름을 확인합니다. 설정값을 바꾼 뒤라면 `tests/config.test.ts` 의 규칙(장애물 크기 > 0, 시작 위치와 겹침 없음, 기본값이 허용 범위 안)을 어겼을 가능성이 큽니다.
+
+### `npm run build` 실패
+- 먼저 `npm run typecheck` 를 실행해 타입 오류를 고칩니다. 그래도 실패하면 오류 전문을 Claude Code 에 전달합니다.
+
+## 그래도 해결되지 않으면
+
+아래 정보를 함께 Claude Code 에 전달하면 빠르게 해결할 수 있습니다.
+1. 실행한 명령어
+2. 터미널 또는 브라우저 콘솔(F12)의 오류 전문
+3. 마지막으로 바꾼 파일
