@@ -4,10 +4,12 @@ import { Effects } from '../combat/Effects';
 import { ProjectileSystem } from '../combat/Projectile';
 import { ChestSystem } from '../dungeon/Chest';
 import { Dungeon01 } from '../dungeon/Dungeon01';
+import { Boss, type BossAttack } from '../enemies/Boss';
 import type { Enemy } from '../enemies/Enemy';
 import { EnemySpawner } from '../enemies/EnemySpawner';
 import { InputManager } from '../input/InputManager';
 import { EquipmentSystem, applyDefense } from '../items/EquipmentSystem';
+import { generateItemAtLeast } from '../items/ItemDatabase';
 import { LootSystem } from '../items/LootSystem';
 import { InventoryUI } from '../ui/InventoryUI';
 import type { Drop } from '../items/loot';
@@ -46,6 +48,8 @@ export interface GameDebugState {
   inventoryVisible: boolean;
   chests: { opened: number; total: number; nearby: boolean };
   prompt: string;
+  boss: { alive: boolean; hp: number; maxHp: number; state: string; phase2: boolean } | null;
+  bossDefeated: boolean;
   kills: number;
   score: number;
   input: { pointerX: number; pointerY: number; pointerHas: boolean; pressed: string[] };
@@ -79,6 +83,9 @@ export class Game {
   readonly equipment = new EquipmentSystem();
   /** 장비 화면이 열려 게임이 멈춘 상태 */
   private paused = false;
+  /** 현재 보스 (등장 전·처치 후에는 null) */
+  private boss: Boss | null = null;
+  private bossDefeated = false;
   private difficulty: DifficultyLevel = loadDifficulty();
   private readonly projTmp = new THREE.Vector3();
 
@@ -262,6 +269,9 @@ export class Game {
     this.damageNumbers.clear();
     this.loot.clear();
     this.chests.reset();
+    this.boss = null;
+    this.bossDefeated = false;
+    this.hud.setBoss(null);
     // 레벨·골드·장비는 유지하고(성장), 체력은 보너스를 포함해 가득 채운다
     this.player.health.reset(Math.max(1, this.stats.maxHp + this.equipment.totals().maxHp));
     this.player.reset(GameConfig.player.startPosition);
@@ -290,6 +300,13 @@ export class Game {
   /** 플레이어를 지정한 위치로 옮긴다 (테스트·디버그용, 나중에 리스폰·순간이동에도 사용) */
   setPlayerPosition(x: number, z: number): void {
     this.player.position.set(x, 0, z);
+  }
+
+  /** 일반 적을 모두 즉시 처치한다 (테스트·디버그용: 보스전으로 바로 가기) */
+  debugDefeatRegularEnemies(): void {
+    for (const e of this.spawner.getEnemies()) {
+      if (e.alive && e !== this.boss) this.combat.damageEnemy(e, 99999, { x: 0, z: 1 }, 0);
+    }
   }
 
   /** 테스트·디버그용 상태 */
@@ -321,6 +338,8 @@ export class Game {
       inventoryVisible: this.inventoryUI.visible,
       chests: { opened: this.chests.openedCount, total: this.chests.total, nearby: this.chests.nearest({ x: this.player.position.x, z: this.player.position.z }) !== null },
       prompt: this.currentPrompt,
+      boss: this.boss ? { alive: this.boss.alive, hp: this.boss.health.hp, maxHp: this.boss.health.maxHp, state: this.boss.bossAI.state, phase2: this.boss.phase2 } : null,
+      bossDefeated: this.bossDefeated,
       kills: this.combat.kills,
       score: this.combat.score,
       input: { pointerX: pointer.x, pointerY: pointer.y, pointerHas: pointer.has, pressed: this.input.getPressedCodes() },
@@ -417,13 +436,73 @@ export class Game {
     }
   }
 
-  /** 승리 판정: 적이 하나라도 배치돼 있었고 모두 처치됐을 때 */
+  /** 보스 등장: 일반 적을 모두 처치했을 때 한 번 */
+  private spawnBoss(): void {
+    const b = GameConfig.boss;
+    const mul = this.spawner.multipliers;
+    this.boss = new Boss({ x: b.spawn.x, z: b.spawn.z }, { hp: mul.hp, speed: mul.speed });
+    this.spawner.addEnemy(this.boss);
+    this.hud.showBanner(`${b.name} 등장!`);
+    this.effects.burst(new THREE.Vector3(b.spawn.x, 1.5, b.spawn.z), b.color, 30, 9);
+    Logger.info(`보스 등장: ${b.name} (체력 ${this.boss.health.maxHp})`);
+  }
+
+  /** 보스의 공격 실행 */
+  private onBossAttack(boss: Boss, attack: BossAttack): void {
+    if (this.ended) return;
+    const dmgMul = getDifficultyPreset(this.difficulty).enemyDamage;
+    const bp = boss.position;
+    const p = this.player.position;
+    if (attack.kind === 'contact') {
+      this.damagePlayer(attack.damage * dmgMul, { x: bp.x, z: bp.z });
+    } else if (attack.kind === 'slam') {
+      this.effects.shockwave(new THREE.Vector3(bp.x, 0, bp.z), attack.radius);
+      this.effects.burst(new THREE.Vector3(bp.x, 0.5, bp.z), 0xff4f79, 20, 6);
+      // 점프로 피할 수 있다 (높이 1 이상)
+      const dist = Math.hypot(p.x - bp.x, p.z - bp.z);
+      if (dist <= attack.radius + GameConfig.player.radius && this.player.jumpY < 1.0) this.damagePlayer(attack.damage * dmgMul, { x: bp.x, z: bp.z });
+    } else {
+      const base = Math.atan2(p.x - bp.x, p.z - bp.z);
+      for (let i = 0; i < attack.count; i++) {
+        const a = attack.aimed ? base + ((i - (attack.count - 1) / 2) * Math.PI * 2) / attack.count : (i / attack.count) * Math.PI * 2;
+        const dir: Vec2 = { x: Math.sin(a), z: Math.cos(a) };
+        this.projectiles.spawn(
+          { x: bp.x + dir.x * (boss.radius + 0.4), z: bp.z + dir.z * (boss.radius + 0.4) },
+          dir,
+          { damage: attack.damage * dmgMul, speed: attack.speed, lifetime: 4, radius: 0.25, knockback: 0, color: 0xb06bff, friendly: false },
+        );
+      }
+    }
+  }
+
+  /** 보스 처치 보상 */
+  private onBossDefeated(): void {
+    const b = GameConfig.boss;
+    const at = { x: this.boss!.position.x, z: this.boss!.position.z };
+    this.loot.spawn({ kind: 'gold', amount: Math.round(b.reward.goldMin + Math.random() * (b.reward.goldMax - b.reward.goldMin)) }, { x: at.x - 1, z: at.z });
+    this.loot.spawn({ kind: 'xp', amount: b.reward.xp }, { x: at.x + 1, z: at.z });
+    this.loot.spawn({ kind: 'equip', amount: 0, item: generateItemAtLeast(b.reward.equipMinRarity) }, { x: at.x, z: at.z + 1 });
+    this.loot.spawn({ kind: 'heal', amount: GameConfig.loot.healAmount * 2 }, { x: at.x, z: at.z - 1 });
+    this.hud.showBanner('던전 클리어!', 3000);
+    Logger.info('보스를 처치했습니다. 던전 클리어!');
+  }
+
+  /** 승리 흐름: 일반 적 모두 처치 → 보스 등장 → 보스 처치 → 클리어 */
   private checkVictory(): void {
     if (this.ended || GameConfig.enemies.spawns.length === 0) return;
-    if (this.spawner.aliveCount === 0) {
+    if (!this.boss) {
+      if (this.spawner.aliveCount === 0) this.spawnBoss();
+      return;
+    }
+    this.hud.setBoss(this.boss.alive ? { name: GameConfig.boss.name, hp: this.boss.health.hp, maxHp: this.boss.health.maxHp, phase2: this.boss.phase2 } : null);
+    if (!this.boss.alive && !this.bossDefeated) {
+      this.bossDefeated = true;
+      this.onBossDefeated();
+    }
+    // 보상을 줍거나 3초가 지나면 결과 화면
+    if (this.bossDefeated && (this.loot.count === 0 || this.boss.removable)) {
       this.ended = true;
-      this.result.show('모든 적 처치!', `처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}`);
-      Logger.info('모든 적을 처치했습니다.');
+      this.result.show('던전 클리어!', `${GameConfig.dungeon.name} · 처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}`);
     }
   }
 
@@ -449,6 +528,8 @@ export class Game {
       playerPos: { x: p.x, z: p.z },
       world: this.dungeon,
       onAttackPlayer: (enemy, damage) => this.onEnemyAttack(enemy, damage),
+      onBossAttack: (boss: Boss, attack: BossAttack) => this.onBossAttack(boss, attack),
+      playerRadius: GameConfig.player.radius,
     });
     this.projectiles.update(dt, {
       world: this.dungeon,

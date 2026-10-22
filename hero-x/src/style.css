@@ -433,3 +433,68 @@ body {
 .hud-prompt[hidden] {
   display: none;
 }
+
+/* ---- 보스 (4단계-b) ---- */
+.boss-bar {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
+  width: min(560px, 70vw);
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: rgba(17, 23, 42, 0.85);
+  border: 1px solid rgba(255, 79, 121, 0.5);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.boss-bar[hidden] {
+  display: none;
+}
+.boss-name {
+  font-weight: 900;
+  color: #ffd23f;
+}
+.boss-track {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(238, 242, 255, 0.12);
+  overflow: hidden;
+}
+.boss-track i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: #ff4f79;
+  transition: width 0.12s;
+}
+.boss-bar.phase2 .boss-track i {
+  background: #ff2d2d;
+}
+.banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 28%;
+  text-align: center;
+  font-size: clamp(32px, 6vw, 56px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), 0 0 24px rgba(255, 210, 63, 0.5);
+  pointer-events: none;
+}
+.banner[hidden] {
+  display: none;
+}
+.banner.pop {
+  animation: banner-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes banner-pop {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

@@ -15,6 +15,9 @@ export class HUD {
   private readonly goldText: HTMLElement;
   private readonly chestText: HTMLElement;
   private readonly prompt: HTMLDivElement;
+  private readonly bossBar: HTMLDivElement;
+  private readonly banner: HTMLDivElement;
+  private bannerTimer: ReturnType<typeof setTimeout> | undefined;
   private last = { hp: -1, maxHp: -1, enemies: -1, kills: -1, score: -1, level: -1, xp: -1, xpToNext: -1, gold: -1 };
 
   constructor(parent: HTMLElement) {
@@ -50,6 +53,39 @@ export class HUD {
     this.prompt.className = 'hud-prompt';
     this.prompt.hidden = true;
     parent.appendChild(this.prompt);
+    this.bossBar = document.createElement('div');
+    this.bossBar.className = 'boss-bar';
+    this.bossBar.hidden = true;
+    this.bossBar.innerHTML = `<span class="boss-name" id="boss-name"></span><div class="boss-track"><i id="boss-fill"></i></div><span class="boss-hp" id="boss-hp"></span>`;
+    parent.appendChild(this.bossBar);
+    this.banner = document.createElement('div');
+    this.banner.className = 'banner';
+    this.banner.hidden = true;
+    parent.appendChild(this.banner);
+  }
+
+  /** 보스 체력바. null 이면 숨김 */
+  setBoss(info: { name: string; hp: number; maxHp: number; phase2: boolean } | null): void {
+    if (!info) {
+      this.bossBar.hidden = true;
+      return;
+    }
+    this.bossBar.hidden = false;
+    (this.bossBar.querySelector('#boss-name') as HTMLElement).textContent = info.name + (info.phase2 ? ' (분노)' : '');
+    (this.bossBar.querySelector('#boss-fill') as HTMLElement).style.width = `${Math.max(0, Math.min(1, info.hp / info.maxHp)) * 100}%`;
+    (this.bossBar.querySelector('#boss-hp') as HTMLElement).textContent = `${Math.ceil(info.hp)} / ${info.maxHp}`;
+    this.bossBar.classList.toggle('phase2', info.phase2);
+  }
+
+  /** 화면 가운데 큰 글씨 (잠시 보였다가 사라짐) */
+  showBanner(text: string, ms = 2200): void {
+    this.banner.textContent = text;
+    this.banner.hidden = false;
+    this.banner.classList.remove('pop');
+    void this.banner.offsetWidth;
+    this.banner.classList.add('pop');
+    clearTimeout(this.bannerTimer);
+    this.bannerTimer = setTimeout(() => (this.banner.hidden = true), ms);
   }
 
   /** 던전 이름 표시 */

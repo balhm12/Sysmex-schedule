@@ -252,6 +252,37 @@ export interface GameConfigType {
       interactRange: number;
     };
   };
+  /** 보스 (일반 적을 모두 처치하면 등장) */
+  boss: {
+    name: string;
+    hp: number;
+    speed: number;
+    radius: number;
+    color: string;
+    score: number;
+    knockbackResist: number;
+    /** 등장 위치 */
+    spawn: { x: number; z: number };
+    /** 돌진 접촉 피해 */
+    contactDamage: number;
+    /** 이 거리 안이면 패턴 시작 */
+    engageRange: number;
+    /** 이 거리보다 멀면 돌진 선택 */
+    chargeMinRange: number;
+    windup: { charge: number; slam: number; barrage: number };
+    chargeDuration: number;
+    recover: number;
+    cooldown: number;
+    /** 2단계 진입 체력 비율 */
+    phase2Ratio: number;
+    phase2TimeMul: number;
+    phase2SpeedMul: number;
+    charge: { speed: number };
+    slam: { radius: number; damage: number };
+    barrage: { count: number; phase2Count: number; damage: number; speed: number };
+    /** 처치 보상 */
+    reward: { goldMin: number; goldMax: number; xp: number; equipMinRarity: Rarity };
+  };
   /** 장비 */
   equipment: {
     /** 적 처치 시 장비가 떨어질 확률 0~1 */
@@ -290,7 +321,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.4.0-a.1' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.4.0-b.1' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -483,6 +514,31 @@ export const GameConfig: GameConfigType = {
     },
   },
 
+  boss: {
+    name: '숲의 수호 로봇',
+    hp: 420,
+    speed: 2.8,
+    radius: 1.6,
+    color: '#3f8f5f',
+    score: 300,
+    knockbackResist: 0.1,
+    spawn: { x: 0, z: -20 },
+    contactDamage: 22,
+    engageRange: 11,
+    chargeMinRange: 5,
+    windup: { charge: 0.8, slam: 0.7, barrage: 0.6 },
+    chargeDuration: 0.55,
+    recover: 0.7,
+    cooldown: 1.3,
+    phase2Ratio: 0.5,
+    phase2TimeMul: 0.7,
+    phase2SpeedMul: 1.3,
+    charge: { speed: 18 },
+    slam: { radius: 4.5, damage: 26 },
+    barrage: { count: 8, phase2Count: 12, damage: 10, speed: 9 },
+    reward: { goldMin: 80, goldMax: 150, xp: 120, equipMinRarity: 'rare' },
+  },
+
   equipment: {
     dropChance: 0.3,
     inventorySize: 20,
@@ -553,6 +609,25 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'dungeon.chestLoot.equipChance': { min: 0, max: 1 },
   'dungeon.chestLoot.healChance': { min: 0, max: 1 },
   'dungeon.chestLoot.interactRange': { min: 0.5, max: 10 },
+  'boss.hp': { min: 1, max: 99999 },
+  'boss.speed': { min: 0, max: 30 },
+  'boss.radius': { min: 0.5, max: 6 },
+  'boss.contactDamage': { min: 0, max: 9999 },
+  'boss.engageRange': { min: 1, max: 60 },
+  'boss.chargeMinRange': { min: 0, max: 60 },
+  'boss.chargeDuration': { min: 0.1, max: 5 },
+  'boss.recover': { min: 0, max: 5 },
+  'boss.cooldown': { min: 0, max: 10 },
+  'boss.phase2Ratio': { min: 0, max: 1 },
+  'boss.phase2TimeMul': { min: 0.2, max: 1 },
+  'boss.phase2SpeedMul': { min: 1, max: 3 },
+  'boss.charge.speed': { min: 1, max: 60 },
+  'boss.slam.radius': { min: 0.5, max: 30 },
+  'boss.slam.damage': { min: 0, max: 9999 },
+  'boss.barrage.count': { min: 1, max: 64 },
+  'boss.barrage.phase2Count': { min: 1, max: 64 },
+  'boss.barrage.damage': { min: 0, max: 9999 },
+  'boss.barrage.speed': { min: 1, max: 60 },
   'equipment.dropChance': { min: 0, max: 1 },
   'equipment.inventorySize': { min: 1, max: 200 },
   'equipment.defenseScale': { min: 1, max: 1000 },

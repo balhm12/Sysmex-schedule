@@ -26,21 +26,23 @@ export class Enemy {
   readonly ai = new EnemyAI();
   readonly def: EnemyTypeConfig;
 
-  private readonly model: EnemyModel;
-  private facing = 0;
-  private readonly knock: Vec2 = { x: 0, z: 0 };
-  private deathTimer = 0;
+  protected readonly model: EnemyModel;
+  protected facing = 0;
+  protected readonly knock: Vec2 = { x: 0, z: 0 };
+  protected deathTimer = 0;
 
   constructor(
     readonly type: string,
     def: EnemyTypeConfig,
     pos: Vec2,
     /** 난이도 배율 (체력·속도). 없으면 1 */
-    private readonly mul: { hp: number; speed: number } = { hp: 1, speed: 1 },
+    protected readonly mul: { hp: number; speed: number } = { hp: 1, speed: 1 },
+    /** 외형 생성 함수 (보스 등 특수 적이 바꿔 쓴다) */
+    makeModel: (type: string, def: EnemyTypeConfig) => EnemyModel = createEnemyModel,
   ) {
     this.def = def;
     this.health = new Health(Math.max(1, Math.round(def.hp * mul.hp)), 0);
-    this.model = createEnemyModel(type, def);
+    this.model = makeModel(type, def);
     this.object3d.name = `Enemy-${type}`;
     this.object3d.add(this.model.root);
     this.object3d.position.set(pos.x, 0, pos.z);
@@ -73,8 +75,13 @@ export class Enemy {
     this.knock.z += fromDir.z * knockback * resist;
     this.model.flash();
     if (this.health.isDead) this.ai.kill();
-    else this.ai.onHurt();
+    else this.onHurtEffect();
     return true;
+  }
+
+  /** 피격 시 행동 (기본: 잠시 멈춤). 보스는 덮어써서 멈추지 않는다 */
+  protected onHurtEffect(): void {
+    this.ai.onHurt();
   }
 
   update(dt: number, ctx: EnemyContext): void {

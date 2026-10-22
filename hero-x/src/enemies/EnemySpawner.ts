@@ -38,6 +38,12 @@ export class EnemySpawner {
     return enemy;
   }
 
+  /** 밖에서 만든 적(보스 등)을 목록에 넣는다 */
+  addEnemy(enemy: Enemy): void {
+    this.scene.add(enemy.object3d);
+    this.enemies.push(enemy);
+  }
+
   /** 모든 적 (사망 연출 중인 적 포함) */
   getEnemies(): Enemy[] {
     return this.enemies;
@@ -48,8 +54,8 @@ export class EnemySpawner {
     return this.enemies.reduce((n, e) => n + (e.alive ? 1 : 0), 0);
   }
 
-  update(dt: number, ctx: Omit<EnemyContext, 'others'>): void {
-    const full: EnemyContext = { ...ctx, others: this.enemies };
+  update<T extends Omit<EnemyContext, 'others'>>(dt: number, ctx: T): void {
+    const full: EnemyContext & T = { ...ctx, others: this.enemies };
     for (const e of this.enemies) e.update(dt, full);
     for (let i = this.enemies.length - 1; i >= 0; i--) {
       if (this.enemies[i].removable) {

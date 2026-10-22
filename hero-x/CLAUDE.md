@@ -9,7 +9,7 @@
 - 장르: 3인칭 3D 액션 RPG. Minecraft Dungeons 의 진행 방식을 참고하되 캐릭터·맵·아이템·음악·텍스처는 독자 제작 또는 적법한 에셋만 사용한다.
 - 실행 환경: Windows PC 웹 브라우저(Chrome/Edge). 기본 게임은 외부 API·유료 서비스 없이 실행된다.
 - 최우선 원칙: **실제로 실행되는 게임**을 단계적으로 완성한다. 그래픽 품질보다 안정성·유지보수성이 먼저다.
-- 현재 상태: **1단계(기반 구축) 완료, 2단계(전투) 진행 중** — **4단계(던전과 보스) 진행 중** — 4-a 보물 상자·던전 표시 완료 v0.4.0-a.1. 다음: 4-b 보스 '숲의 수호 로봇'(전용 체력바, 패턴 2~3개, 예고, 50% 이하 패턴 변화, 보상), 4-c 던전 클리어·실패 결과 화면과 메인 메뉴.
+- 현재 상태: **1단계(기반 구축) 완료, 2단계(전투) 진행 중** — **4단계(던전과 보스) 진행 중** — 4-a 보물 상자, 4-b 보스전(패턴 3개·2단계·보상·클리어) 완료 v0.4.0-b.1. 다음: 4-c 메인 메뉴(새 게임/이어하기 자리/장비/설정 자리)와 던전 입장·결과 흐름 정리.
 
 ## 2. 기술 스택
 
@@ -55,7 +55,9 @@ hero-x/
 │  ├─ enemies/
 │  │  ├─ EnemyAI.ts        적 상태 기계 (idle/chase/windup/hurt/dead, 근접형·원거리형, 테스트 대상)
 │  │  ├─ EnemyModels.ts    종류별 임시 모델 + EnemyModel 인터페이스
-│  │  ├─ Enemy.ts          적 한 마리 (능력치·체력·AI·모델 연결, 이동·충돌)
+│  │  ├─ Enemy.ts          적 한 마리 (능력치·체력·AI·모델 연결, 이동·충돌). 상속 가능(protected 필드, 모델 주입)
+│  │  ├─ BossAI.ts         보스 패턴 상태 기계 (chase/windup/charge/recover, 2단계 시간 배율, 테스트 대상)
+│  │  ├─ Boss.ts           보스 엔티티(Enemy 상속)·패턴 실행 콜백·보스 모델
 │  │  └─ EnemySpawner.ts   설정 기반 배치·갱신·정리
 │  ├─ items/
 │  │  ├─ loot.ts           드롭 확률 계산 순수 함수 (테스트 대상)
@@ -73,7 +75,7 @@ hero-x/
 │  │  ├─ InventoryUI.ts    장비 화면 (슬롯·가방·비교·장착/해제/버리기)
 │  │  └─ ErrorOverlay.ts   화면 오류 표시
 │  └─ utils/Logger.ts      [HERO X] 접두어 로그
-└─ tests/                  단위 테스트 (movement, config, health, enemyAI, melee, difficulty, progression, equipment, chest)
+└─ tests/                  단위 테스트 (movement, config, health, enemyAI, melee, difficulty, progression, equipment, chest, boss)
 ```
 
 앞으로 추가될 폴더(지시서 9장 기준): `combat/Projectile.ts`, `items/`, `save/`, `audio/`, `ui/SettingsUI.ts`, `ui/InventoryUI.ts` 등. 새 기능은 **새 파일**로 만들고 `Game.ts` 에서 연결한다.
@@ -145,6 +147,8 @@ hero-x/
 - 새 장비 → `ItemDatabase.ts` 의 `ITEM_TEMPLATES` 에 항목 추가 (분류 melee/ranged/armor/trinket, 일반 등급 기준 수치).
 - "상자를 더/보상을 더 좋게" → `dungeon.chests` 배열, `dungeon.chestLoot`. 상자 위치는 장애물·적 배치와 겹치지 않아야 한다 (`tests/chest.test.ts` 가 확인).
 - 상호작용(E)이 필요한 새 물체는 `Game.tryInteract` 에 분기를 추가하고 HUD 안내 문구(`currentPrompt`)를 함께 처리한다.
+- "보스를 약하게/세게" → `boss.hp`, `boss.slam.damage`, `boss.contactDamage`, `boss.windup`(예고가 길수록 쉬움). 새 보스 패턴은 `BossAI` 의 패턴 선택과 `Boss.update` 의 실행 분기, `Game.onBossAttack` 의 효과 처리 세 곳에 추가한다.
+- 승리 흐름은 `Game.checkVictory`: 일반 적 전멸 → `spawnBoss` → 보스 사망 → `onBossDefeated`(보상) → 결과 화면. 테스트에서는 `__heroX.debugDefeatRegularEnemies()` 로 바로 보스전으로 간다.
 - 주의: 3D 효과의 방향을 바꿀 때는 `node -e` 로 벡터에 회전을 적용해 보고 확인한다 (2-b 의 부채꼴 반대 방향 버그 참고). 키를 '누르는 순간' 반응해야 하는 동작(점프 등)은 폴링이 아니라 `InputManager.onPress` 로 받는다 (낮은 FPS 에서 짧은 탭을 놓침).
 - 새 적 종류 → `enemies.types` 에 능력치 추가 + `EnemyModels.ts` 에 외형 분기 + (행동이 다르면) `EnemyAI.ts` 확장.
 - "더 어렵게/쉽게" → 먼저 난이도 버튼 안내. 전체 조정은 `difficulty.presets` 배율, 특정 적만이면 `enemies.types.<종류>`.
@@ -156,7 +160,7 @@ hero-x/
 1. 기반 구축 ✅ (v0.1.0)
 2. 전투 시스템 ✅ (v0.2.0: 적 3종, 근접·원거리, 점프, 난이도, 피해 숫자)
 3. 아이템과 성장 ✅ (v0.3.0: 드롭, 경험치·레벨, 골드, 장비·장비 화면·능력치 반영)
-4. 던전과 보스 🔄 (4-a 보물 상자 ✅ v0.4.0-a.1 / 4-b 보스전 / 4-c 클리어·실패 화면·메인 메뉴)
+4. 던전과 보스 🔄 (4-a 보물 상자 ✅ / 4-b 보스전 ✅ v0.4.0-b.1 / 4-c 메인 메뉴·던전 입장 흐름)
 5. 설정 화면과 저장
 6. 콘텐츠 확장
 7. 품질 개선

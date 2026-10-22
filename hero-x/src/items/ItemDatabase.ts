@@ -103,6 +103,16 @@ export function generateRandomItem(random: () => number = Math.random): ItemInst
   return createItem(template, rollRarity(random));
 }
 
+const RARITY_ORDER: Rarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+
+/** 최소 등급을 보장한 무작위 장비 (보스 보상 등) */
+export function generateItemAtLeast(minRarity: Rarity, random: () => number = Math.random): ItemInstance {
+  const template = ITEM_TEMPLATES[Math.min(ITEM_TEMPLATES.length - 1, Math.floor(random() * ITEM_TEMPLATES.length))];
+  const rolled = rollRarity(random);
+  const rarity = RARITY_ORDER.indexOf(rolled) >= RARITY_ORDER.indexOf(minRarity) ? rolled : minRarity;
+  return createItem(template, rarity);
+}
+
 export function findTemplate(id: string): ItemTemplate | undefined {
   return ITEM_TEMPLATES.find((t) => t.id === id);
 }

@@ -7,7 +7,7 @@ import * as THREE from 'three';
  */
 export class Effects {
   private readonly root = new THREE.Group();
-  private readonly swings: Array<{ mesh: THREE.Mesh; life: number; max: number }> = [];
+  private readonly swings: Array<{ mesh: THREE.Mesh; life: number; max: number; grow?: boolean }> = [];
   private readonly particles: Array<{ mesh: THREE.Mesh; v: THREE.Vector3; life: number; max: number }> = [];
   private readonly particleGeo = new THREE.BoxGeometry(0.16, 0.16, 0.16);
 
@@ -39,6 +39,18 @@ export class Effects {
     this.swings.push({ mesh, life: duration, max: duration });
   }
 
+  /** 충격파 링: center 에서 radius 까지 퍼지며 사라진다 */
+  shockwave(center: THREE.Vector3, radius: number, duration = 0.45, color = 0xff4f79): void {
+    const geo = new THREE.RingGeometry(radius * 0.8, radius, 48);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(center.x, 0.08, center.z);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.scale.setScalar(0.2);
+    this.root.add(mesh);
+    this.swings.push({ mesh, life: duration, max: duration, grow: true });
+  }
+
   /** 파편 터뜨리기 (타격: 적게, 처치: 많이) */
   burst(pos: THREE.Vector3, color: THREE.ColorRepresentation, count = 8, power = 5): void {
     let spawned = 0;
@@ -60,7 +72,8 @@ export class Effects {
       s.life -= dt;
       const k = Math.max(0, s.life / s.max);
       (s.mesh.material as THREE.MeshBasicMaterial).opacity = 0.75 * k;
-      s.mesh.scale.setScalar(1 + (1 - k) * 0.15);
+      // 휘두르기는 살짝 커지고, 충격파는 0.2 → 1 로 끝까지 퍼진다
+      s.mesh.scale.setScalar(s.grow ? 0.2 + (1 - k) * 0.8 : 1 + (1 - k) * 0.15);
       if (s.life <= 0) {
         this.root.remove(s.mesh);
         s.mesh.geometry.dispose();
