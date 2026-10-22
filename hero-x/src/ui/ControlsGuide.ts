@@ -2,6 +2,9 @@ import { GameConfig } from '../game/GameConfig';
 
 /** 키 코드를 사람이 읽는 이름으로 */
 function keyLabel(code: string): string {
+  if (code === 'Mouse0') return '마우스 왼쪽';
+  if (code === 'Mouse2') return '마우스 오른쪽';
+  if (code === 'Mouse1') return '마우스 가운데';
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Arrow')) return { Up: '↑', Down: '↓', Left: '←', Right: '→' }[code.slice(5)] ?? code;
   return code;
@@ -25,7 +28,7 @@ export class ControlsGuide {
     this.guide.className = 'guide';
     this.guide.innerHTML = `
       <div class="guide-panel" role="dialog" aria-labelledby="guide-title">
-        <p class="guide-eyebrow">3D 액션 RPG · 1단계 이동 테스트</p>
+        <p class="guide-eyebrow">3D 액션 RPG · 2단계 전투 테스트</p>
         <h1 class="guide-title" id="guide-title">${meta.title.replace(' X', ' <em>X</em>')}</h1>
         <p class="guide-sub">${meta.subtitle} · v${meta.version}</p>
         <ul class="guide-keys">
@@ -33,9 +36,11 @@ export class ControlsGuide {
           <li>${keys(c.down)} 뒤로</li>
           <li>${keys(c.left)} 왼쪽</li>
           <li>${keys(c.right)} 오른쪽</li>
+          <li>${keys(c.attackMelee)} 근접 공격 (마우스가 가리키는 쪽으로)</li>
+          <li>${keys(c.restart)} 결과 화면에서 다시 시작</li>
           <li>${keys(c.toggleGuide)} 이 안내 열기/닫기</li>
         </ul>
-        <p class="guide-note">카메라가 캐릭터를 따라갑니다. 상자와 기둥은 통과할 수 없고, 담장 밖으로는 나갈 수 없습니다.</p>
+        <p class="guide-note">돌진 로봇이 다가와 공격합니다. 눈이 붉어지면 공격 예고이니 피하세요. 모든 로봇을 처치하면 승리입니다.</p>
         <button class="btn" id="guide-start" type="button">시작하기</button>
       </div>`;
     root.appendChild(this.guide);

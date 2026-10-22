@@ -1,8 +1,8 @@
 /**
- * 게임 설정 데이터 (1단계)
+ * 게임 설정 데이터
  *
  * - 자주 바꾸는 수치는 모두 이 파일에서 관리한다. 값만 바꾸면 게임에 바로 반영된다.
- * - 핵심 로직 파일(Game.ts, PlayerController.ts 등)은 이 값을 읽기만 하고 직접 수정하지 않는다.
+ * - 핵심 로직 파일(Game.ts, PlayerController.ts, Enemy.ts 등)은 이 값을 읽기만 하고 직접 수정하지 않는다.
  * - 값의 허용 범위는 아래 CONFIG_LIMITS에 있다. 범위를 벗어나면 게임 시작 시 자동으로 보정된다.
  * - 5단계(설정 화면)에서는 이 값을 화면에서 바꾸고 저장하는 기능이 추가될 예정이다.
  */
@@ -17,21 +17,64 @@ export interface ObstacleConfig {
   color?: string;
 }
 
+/** 적 종류 하나의 능력치 */
+export interface EnemyTypeConfig {
+  /** 화면·로그에 표시할 이름 */
+  name: string;
+  /** 체력 */
+  hp: number;
+  /** 이동 속도 (유닛/초) */
+  speed: number;
+  /** 충돌 반지름 */
+  radius: number;
+  /** 한 번 공격의 피해 */
+  damage: number;
+  /** 공격이 닿는 거리 */
+  attackRange: number;
+  /** 공격 전 예고 시간(초). 플레이어가 피할 기회 */
+  attackWindup: number;
+  /** 공격 후 다음 공격까지 대기(초) */
+  attackCooldown: number;
+  /** 이 거리 안에 플레이어가 오면 추적 시작 */
+  aggroRange: number;
+  /** 임시 모델 색상 */
+  color: string;
+  /** 처치 점수 */
+  score: number;
+}
+
+/** 적 배치 하나: 종류와 위치 */
+export interface EnemySpawnConfig {
+  type: string;
+  x: number;
+  z: number;
+}
+
 export interface GameConfigType {
   /** 게임 이름 정보 (제목 변경은 여기서) */
   meta: { title: string; subtitle: string; version: string };
-  /** 키 설정: 물리 키 코드(e.code) 목록. 예) 'KeyW', 'ArrowUp' */
+  /** 키 설정: 물리 키 코드(e.code) 목록. 마우스 버튼은 'Mouse0'(왼쪽), 'Mouse2'(오른쪽) */
   controls: {
     up: string[];
     down: string[];
     left: string[];
     right: string[];
+    attackMelee: string[];
+    restart: string[];
     toggleGuide: string[];
   };
   /** 플레이어 */
   player: {
+    /** 최대 체력 */
+    maxHp: number;
+    /** 피격 후 무적 시간(초) */
+    invulnerableTime: number;
+    /** 피격 시 밀려나는 세기 */
+    hitKnockback: number;
     /** 이동 속도 (유닛/초) */
     moveSpeed: number;
+    /** 공격 중 이동 속도 비율 (0~1) */
+    attackMoveFactor: number;
     /** 몸을 돌리는 속도 (클수록 빠르게 회전) */
     turnSpeed: number;
     /** 충돌 반지름 */
@@ -40,6 +83,34 @@ export interface GameConfigType {
     startPosition: { x: number; z: number };
     /** 임시 모델 색상 */
     colors: { body: string; accent: string; skin: string; visor: string };
+  };
+  /** 전투 */
+  combat: {
+    /** 근접 공격 */
+    melee: {
+      damage: number;
+      /** 공격이 닿는 거리 */
+      range: number;
+      /** 공격 부채꼴 각도 (도) */
+      arcDegrees: number;
+      /** 다음 공격까지 대기(초) */
+      cooldown: number;
+      /** 맞은 적이 밀려나는 세기 */
+      knockback: number;
+      /** 휘두르기 동작 시간(초) */
+      swingTime: number;
+    };
+  };
+  /** 적 */
+  enemies: {
+    /** 종류별 능력치. 새 종류는 여기에 추가하고 spawns 에서 사용한다. */
+    types: Record<string, EnemyTypeConfig>;
+    /** 던전 1 의 적 배치 */
+    spawns: EnemySpawnConfig[];
+    /** 적끼리 겹치지 않게 밀어내는 세기 */
+    separation: number;
+    /** 처치된 적이 사라질 때까지 시간(초) */
+    deathDuration: number;
   };
   /** 카메라 (3인칭, 위에서 비스듬히 따라오는 던전 탐험 시점) */
   camera: {
@@ -82,22 +153,67 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.1.0' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.2.0-a.1' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
     down: ['KeyS', 'ArrowDown'],
     left: ['KeyA', 'ArrowLeft'],
     right: ['KeyD', 'ArrowRight'],
+    attackMelee: ['Mouse0', 'KeyJ'],
+    restart: ['KeyR'],
     toggleGuide: ['KeyH'],
   },
 
   player: {
+    maxHp: 100,
+    invulnerableTime: 0.6,
+    hitKnockback: 6,
     moveSpeed: 7,
+    attackMoveFactor: 0.6,
     turnSpeed: 14,
     radius: 0.5,
     startPosition: { x: 0, z: 0 },
     colors: { body: '#2f6df6', accent: '#ffc531', skin: '#f3c6a0', visor: '#5cf2d8' },
+  },
+
+  combat: {
+    melee: {
+      damage: 12,
+      range: 1.9,
+      arcDegrees: 110,
+      cooldown: 0.45,
+      knockback: 7,
+      swingTime: 0.22,
+    },
+  },
+
+  enemies: {
+    types: {
+      rusher: {
+        name: '돌진 로봇',
+        hp: 30,
+        speed: 4.2,
+        radius: 0.55,
+        damage: 10,
+        attackRange: 1.5,
+        attackWindup: 0.35,
+        attackCooldown: 1.3,
+        aggroRange: 20,
+        color: '#ff7a45',
+        score: 10,
+      },
+    },
+    spawns: [
+      { type: 'rusher', x: 12, z: -12 },
+      { type: 'rusher', x: -14, z: -6 },
+      { type: 'rusher', x: 16, z: 6 },
+      { type: 'rusher', x: -10, z: 16 },
+      { type: 'rusher', x: 4, z: 20 },
+      { type: 'rusher', x: -20, z: -18 },
+    ],
+    separation: 2.5,
+    deathDuration: 0.6,
   },
 
   camera: {
@@ -150,15 +266,40 @@ export const GameConfig: GameConfigType = {
 
 /** 설정값 허용 범위. 범위를 벗어나면 sanitizeGameConfig()가 자동으로 보정한다. */
 export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
+  'player.maxHp': { min: 1, max: 9999 },
+  'player.invulnerableTime': { min: 0, max: 5 },
+  'player.hitKnockback': { min: 0, max: 50 },
   'player.moveSpeed': { min: 1, max: 30 },
+  'player.attackMoveFactor': { min: 0, max: 1 },
   'player.turnSpeed': { min: 1, max: 40 },
   'player.radius': { min: 0.2, max: 2 },
+  'combat.melee.damage': { min: 1, max: 9999 },
+  'combat.melee.range': { min: 0.5, max: 10 },
+  'combat.melee.arcDegrees': { min: 10, max: 360 },
+  'combat.melee.cooldown': { min: 0.05, max: 5 },
+  'combat.melee.knockback': { min: 0, max: 50 },
+  'combat.melee.swingTime': { min: 0.05, max: 2 },
+  'enemies.separation': { min: 0, max: 20 },
+  'enemies.deathDuration': { min: 0, max: 5 },
   'camera.fov': { min: 30, max: 90 },
   'camera.offset.y': { min: 3, max: 40 },
   'camera.offset.z': { min: 0, max: 40 },
   'camera.smoothing': { min: 0.5, max: 30 },
   'world.arenaHalfSize': { min: 10, max: 200 },
   'graphics.maxPixelRatio': { min: 1, max: 3 },
+};
+
+/** 적 종류 능력치의 허용 범위 (모든 종류에 같은 범위를 적용) */
+export const ENEMY_TYPE_LIMITS: Record<keyof Omit<EnemyTypeConfig, 'name' | 'color'>, { min: number; max: number }> = {
+  hp: { min: 1, max: 99999 },
+  speed: { min: 0, max: 30 },
+  radius: { min: 0.2, max: 5 },
+  damage: { min: 0, max: 9999 },
+  attackRange: { min: 0.3, max: 30 },
+  attackWindup: { min: 0, max: 5 },
+  attackCooldown: { min: 0.1, max: 20 },
+  aggroRange: { min: 1, max: 200 },
+  score: { min: 0, max: 99999 },
 };
 
 /** 보정된 항목 기록 */
@@ -168,12 +309,17 @@ export interface ConfigWarning {
   to: number;
 }
 
+const clampNumber = (value: unknown, min: number, max: number): number =>
+  typeof value === 'number' && !Number.isNaN(value) ? Math.min(max, Math.max(min, value)) : min;
+
 /**
  * 설정값을 허용 범위 안으로 보정한다.
  * 숫자가 아니거나 범위를 벗어난 값은 가장 가까운 허용값으로 바꾸고, 바꾼 항목 목록을 돌려준다.
  */
 export function sanitizeGameConfig(config: GameConfigType): ConfigWarning[] {
   const warnings: ConfigWarning[] = [];
+
+  // 1) 경로로 지정한 단일 값
   for (const [path, { min, max }] of Object.entries(CONFIG_LIMITS)) {
     const keys = path.split('.');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -182,11 +328,25 @@ export function sanitizeGameConfig(config: GameConfigType): ConfigWarning[] {
     const last = keys[keys.length - 1];
     if (!obj || typeof obj !== 'object') continue;
     const value = obj[last];
-    const fixed = typeof value === 'number' && !Number.isNaN(value) ? Math.min(max, Math.max(min, value)) : min;
+    const fixed = clampNumber(value, min, max);
     if (fixed !== value) {
       obj[last] = fixed;
       warnings.push({ path, from: typeof value === 'number' ? value : NaN, to: fixed });
     }
   }
+
+  // 2) 적 종류별 능력치
+  for (const [typeName, def] of Object.entries(config.enemies.types)) {
+    for (const [key, { min, max }] of Object.entries(ENEMY_TYPE_LIMITS)) {
+      const k = key as keyof typeof ENEMY_TYPE_LIMITS;
+      const value = def[k];
+      const fixed = clampNumber(value, min, max);
+      if (fixed !== value) {
+        def[k] = fixed;
+        warnings.push({ path: `enemies.types.${typeName}.${key}`, from: typeof value === 'number' ? value : NaN, to: fixed });
+      }
+    }
+  }
+
   return warnings;
 }

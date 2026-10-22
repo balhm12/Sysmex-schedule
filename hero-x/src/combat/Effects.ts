@@ -1,0 +1,97 @@
+import * as THREE from 'three';
+
+/**
+ * 전투 시각 효과: 근접 공격 휘두르기 부채꼴, 타격·처치 파편
+ * - 피나 잔인한 표현 없이 빛과 파편으로만 표현한다.
+ * - 파편은 미리 만들어 둔 풀(pool)을 재사용해 메모리를 아낀다.
+ */
+export class Effects {
+  private readonly root = new THREE.Group();
+  private readonly swings: Array<{ mesh: THREE.Mesh; life: number; max: number }> = [];
+  private readonly particles: Array<{ mesh: THREE.Mesh; v: THREE.Vector3; life: number; max: number }> = [];
+  private readonly particleGeo = new THREE.BoxGeometry(0.16, 0.16, 0.16);
+
+  constructor(scene: THREE.Scene, particleCount = 120) {
+    this.root.name = 'Effects';
+    scene.add(this.root);
+    for (let i = 0; i < particleCount; i++) {
+      const mesh = new THREE.Mesh(this.particleGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      mesh.visible = false;
+      this.root.add(mesh);
+      this.particles.push({ mesh, v: new THREE.Vector3(), life: 0, max: 1 });
+    }
+  }
+
+  /** 근접 공격 부채꼴 표시 (origin 에서 facing 방향으로, range 길이, arcDegrees 각도) */
+  swing(origin: THREE.Vector3, facing: number, range: number, arcDegrees: number, duration: number, color = 0x5cf2d8): void {
+    const arc = (arcDegrees * Math.PI) / 180;
+    // RingGeometry 는 XY 평면·+X 기준이므로 바닥에 눕히고 각도를 맞춘다
+    const geo = new THREE.RingGeometry(0.45, range, 24, 1, Math.PI / 2 - arc / 2, arc);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(origin.x, 0.5, origin.z);
+    // 바닥으로 눕힌 뒤(-90°), 바라보는 방향으로 회전
+    mesh.rotation.order = 'YXZ';
+    mesh.rotation.y = facing;
+    mesh.rotation.x = -Math.PI / 2;
+    this.root.add(mesh);
+    this.swings.push({ mesh, life: duration, max: duration });
+  }
+
+  /** 파편 터뜨리기 (타격: 적게, 처치: 많이) */
+  burst(pos: THREE.Vector3, color: THREE.ColorRepresentation, count = 8, power = 5): void {
+    let spawned = 0;
+    for (const p of this.particles) {
+      if (p.life > 0) continue;
+      p.mesh.visible = true;
+      p.mesh.position.copy(pos);
+      (p.mesh.material as THREE.MeshBasicMaterial).color.set(color);
+      p.v.set(Math.random() - 0.5, Math.random() * 0.8 + 0.3, Math.random() - 0.5).normalize().multiplyScalar(power * (0.5 + Math.random() * 0.5));
+      p.life = p.max = 0.4 + Math.random() * 0.4;
+      p.mesh.scale.setScalar(0.6 + Math.random() * 0.8);
+      if (++spawned >= count) break;
+    }
+  }
+
+  update(dt: number): void {
+    for (let i = this.swings.length - 1; i >= 0; i--) {
+      const s = this.swings[i];
+      s.life -= dt;
+      const k = Math.max(0, s.life / s.max);
+      (s.mesh.material as THREE.MeshBasicMaterial).opacity = 0.75 * k;
+      s.mesh.scale.setScalar(1 + (1 - k) * 0.15);
+      if (s.life <= 0) {
+        this.root.remove(s.mesh);
+        s.mesh.geometry.dispose();
+        (s.mesh.material as THREE.Material).dispose();
+        this.swings.splice(i, 1);
+      }
+    }
+    for (const p of this.particles) {
+      if (p.life <= 0) continue;
+      p.life -= dt;
+      p.v.y -= 16 * dt;
+      p.mesh.position.addScaledVector(p.v, dt);
+      if (p.mesh.position.y < 0.08) {
+        p.mesh.position.y = 0.08;
+        p.v.y *= -0.3;
+        p.v.x *= 0.7;
+        p.v.z *= 0.7;
+      }
+      p.mesh.rotation.x += dt * 6;
+      p.mesh.rotation.z += dt * 4;
+      p.mesh.scale.setScalar(Math.max(0.01, p.life / p.max) * 1.2);
+      if (p.life <= 0) p.mesh.visible = false;
+    }
+  }
+
+  dispose(): void {
+    this.root.removeFromParent();
+    this.particleGeo.dispose();
+    this.particles.forEach((p) => (p.mesh.material as THREE.Material).dispose());
+    this.swings.forEach((s) => {
+      s.mesh.geometry.dispose();
+      (s.mesh.material as THREE.Material).dispose();
+    });
+  }
+}

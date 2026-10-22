@@ -1,10 +1,17 @@
 import * as THREE from 'three';
+import { CombatSystem } from '../combat/CombatSystem';
+import { Effects } from '../combat/Effects';
 import { Dungeon01 } from '../dungeon/Dungeon01';
+import type { Enemy } from '../enemies/Enemy';
+import { EnemySpawner } from '../enemies/EnemySpawner';
 import { InputManager } from '../input/InputManager';
 import { Player } from '../player/Player';
 import { PlayerController } from '../player/PlayerController';
 import { createPlaceholderModel } from '../player/models/PlaceholderModel';
+import type { Vec2 } from '../player/movement';
 import { ControlsGuide } from '../ui/ControlsGuide';
+import { HUD } from '../ui/HUD';
+import { ResultUI } from '../ui/ResultUI';
 import { Logger } from '../utils/Logger';
 import { CameraController } from './CameraController';
 import { GameConfig, sanitizeGameConfig } from './GameConfig';
@@ -13,14 +20,21 @@ import { GameConfig, sanitizeGameConfig } from './GameConfig';
 export interface GameDebugState {
   running: boolean;
   frames: number;
-  player: { x: number; z: number; facing: number; moving: boolean };
+  ended: boolean;
+  player: { x: number; z: number; facing: number; moving: boolean; hp: number; maxHp: number };
   camera: { x: number; y: number; z: number };
   guideVisible: boolean;
+  resultVisible: boolean;
+  enemies: Array<{ type: string; x: number; z: number; hp: number; state: string }>;
+  aliveEnemies: number;
+  kills: number;
+  score: number;
+  input: { pointerX: number; pointerY: number; pointerHas: boolean; pressed: string[] };
 }
 
 /**
- * 게임 본체: 렌더러·씬·카메라를 만들고, 각 시스템(던전, 플레이어, 입력, 카메라, UI)을 연결해 매 프레임 갱신한다.
- * - 새로운 시스템(적, 전투, 아이템 등)은 이 클래스에 '추가'하는 방식으로 붙인다. 기존 시스템은 서로 직접 참조하지 않는다.
+ * 게임 본체: 렌더러·씬·카메라를 만들고, 각 시스템(던전, 플레이어, 입력, 적, 전투, 카메라, UI)을 연결해 매 프레임 갱신한다.
+ * - 새로운 시스템(아이템, 보스, 저장 등)은 이 클래스에 '추가'하는 방식으로 붙인다. 기존 시스템은 서로 직접 참조하지 않는다.
  */
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
@@ -31,9 +45,20 @@ export class Game {
   private readonly player: Player;
   private readonly controller: PlayerController;
   private readonly cameraCtrl: CameraController;
+  private readonly spawner: EnemySpawner;
+  private readonly effects: Effects;
+  private readonly combat: CombatSystem;
   private readonly guide: ControlsGuide;
+  private readonly hud: HUD;
+  private readonly result: ResultUI;
+
+  private readonly raycaster = new THREE.Raycaster();
+  private readonly groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  private readonly aimHit = new THREE.Vector3();
 
   private running = false;
+  /** 쓰러졌거나 모든 적을 처치해 전투가 끝난 상태 */
+  private ended = false;
   private rafId = 0;
   private lastTime = 0;
   private frames = 0;
@@ -65,15 +90,26 @@ export class Game {
     this.scene.add(this.player.object3d);
     this.cameraCtrl = new CameraController(this.camera);
     this.controller = new PlayerController(this.player, this.input, this.dungeon, () => this.cameraCtrl.getYaw());
+    this.effects = new Effects(this.scene);
+    this.spawner = new EnemySpawner(this.scene);
+    this.spawner.spawnFromConfig();
+    this.combat = new CombatSystem(this.player, this.input, () => this.spawner.getEnemies(), () => this.getAimPoint(), this.effects);
+
+    // UI
     this.guide = new ControlsGuide(uiRoot, () => this.canvas.focus());
+    this.hud = new HUD(uiRoot);
+    this.result = new ResultUI(uiRoot, () => this.restart());
 
     // 입력 연결
-    this.input.attach();
+    this.input.attach(window, canvas);
     this.input.onPress(GameConfig.controls.toggleGuide, () => this.guide.toggle());
+    this.input.onPress(GameConfig.controls.restart, () => {
+      if (this.ended) this.restart();
+    });
 
     window.addEventListener('resize', this.resize);
     this.resize();
-    Logger.info(`${GameConfig.meta.title} v${GameConfig.meta.version} 준비 완료`);
+    Logger.info(`${GameConfig.meta.title} v${GameConfig.meta.version} 준비 완료 (적 ${this.spawner.aliveCount}마리)`);
   }
 
   /** 게임 루프 시작 */
@@ -90,11 +126,25 @@ export class Game {
     cancelAnimationFrame(this.rafId);
   }
 
+  /** 전투 재시작: 플레이어 회복·복귀, 적 재배치, 기록 초기화 */
+  restart(): void {
+    this.spawner.clear();
+    this.spawner.spawnFromConfig();
+    this.player.reset(GameConfig.player.startPosition);
+    this.controller.reset();
+    this.combat.reset();
+    this.result.hide();
+    this.ended = false;
+    Logger.info('전투를 다시 시작합니다.');
+  }
+
   /** 모든 자원 정리 (페이지를 떠나거나 게임을 완전히 종료할 때) */
   dispose(): void {
     this.stop();
     this.input.detach();
     window.removeEventListener('resize', this.resize);
+    this.spawner.dispose();
+    this.effects.dispose();
     this.player.dispose();
     this.dungeon.dispose();
     this.renderer.dispose();
@@ -109,13 +159,56 @@ export class Game {
   getDebugState(): GameDebugState {
     const p = this.player.position;
     const cam = this.camera.position;
+    const pointer = this.input.getPointer();
     return {
       running: this.running,
       frames: this.frames,
-      player: { x: p.x, z: p.z, facing: this.player.facing, moving: this.player.moving },
+      ended: this.ended,
+      player: { x: p.x, z: p.z, facing: this.player.facing, moving: this.player.moving, hp: this.player.health.hp, maxHp: this.player.health.maxHp },
       camera: { x: cam.x, y: cam.y, z: cam.z },
       guideVisible: this.guide.visible,
+      resultVisible: this.result.visible,
+      enemies: this.spawner.getEnemies().map((e) => ({ type: e.type, x: e.position.x, z: e.position.z, hp: e.health.hp, state: e.ai.state })),
+      aliveEnemies: this.spawner.aliveCount,
+      kills: this.combat.kills,
+      score: this.combat.score,
+      input: { pointerX: pointer.x, pointerY: pointer.y, pointerHas: pointer.has, pressed: this.input.getPressedCodes() },
     };
+  }
+
+  /** 마우스가 가리키는 바닥 위 지점 (없으면 null) */
+  private getAimPoint(): Vec2 | null {
+    const pointer = this.input.getPointer();
+    if (!pointer.has) return null;
+    this.raycaster.setFromCamera(new THREE.Vector2(pointer.x, pointer.y), this.camera);
+    const hit = this.raycaster.ray.intersectPlane(this.groundPlane, this.aimHit);
+    return hit ? { x: hit.x, z: hit.z } : null;
+  }
+
+  /** 적이 플레이어를 때렸을 때 */
+  private onEnemyAttack(enemy: Enemy, damage: number): void {
+    if (this.ended) return;
+    if (!this.player.health.takeDamage(damage)) return;
+    const p = this.player.position;
+    const len = Math.hypot(p.x - enemy.position.x, p.z - enemy.position.z) || 1;
+    this.controller.applyKnockback({ x: (p.x - enemy.position.x) / len, z: (p.z - enemy.position.z) / len }, GameConfig.player.hitKnockback);
+    this.effects.burst(new THREE.Vector3(p.x, 1, p.z), 0xff4f79, 6, 4);
+    this.hud.flashHit();
+    if (this.player.health.isDead) {
+      this.ended = true;
+      this.result.show('쓰러졌습니다', `처치 ${this.combat.kills} · 점수 ${this.combat.score}`);
+      Logger.info('플레이어가 쓰러졌습니다.');
+    }
+  }
+
+  /** 승리 판정: 적이 하나라도 배치돼 있었고 모두 처치됐을 때 */
+  private checkVictory(): void {
+    if (this.ended || GameConfig.enemies.spawns.length === 0) return;
+    if (this.spawner.aliveCount === 0) {
+      this.ended = true;
+      this.result.show('모든 적 처치!', `처치 ${this.combat.kills} · 점수 ${this.combat.score}`);
+      Logger.info('모든 적을 처치했습니다.');
+    }
   }
 
   /** 매 프레임 갱신 */
@@ -127,10 +220,27 @@ export class Game {
     const dt = Math.min(0.05, (now - this.lastTime) / 1000);
     this.lastTime = now;
 
+    const p = this.player.position;
     this.controller.update(dt);
+    if (!this.ended) this.combat.update(dt);
+    this.spawner.update(dt, {
+      playerPos: { x: p.x, z: p.z },
+      world: this.dungeon,
+      onAttackPlayer: (enemy, damage) => this.onEnemyAttack(enemy, damage),
+    });
     this.player.update(dt);
-    this.cameraCtrl.update(dt, this.player.position);
-    this.dungeon.updateLight(this.player.position);
+    this.effects.update(dt);
+    this.cameraCtrl.update(dt, p);
+    this.dungeon.updateLight(p);
+    this.checkVictory();
+
+    this.hud.update({
+      hp: this.player.health.hp,
+      maxHp: this.player.health.maxHp,
+      enemies: this.spawner.aliveCount,
+      kills: this.combat.kills,
+      score: this.combat.score,
+    });
 
     this.renderer.render(this.scene, this.camera);
     this.frames++;

@@ -155,3 +155,84 @@ body {
 .error-box b {
   color: #fff;
 }
+
+/* ---- 전투 HUD (2단계) ---- */
+.hud-top {
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  right: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.hud-top[hidden] {
+  display: none;
+}
+.hud-panel {
+  background: rgba(17, 23, 42, 0.82);
+  border: 1px solid rgba(238, 242, 255, 0.12);
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+.hud-hp {
+  min-width: 220px;
+}
+.hud-label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #9fabc9;
+  margin-right: 8px;
+}
+.hud-value {
+  font-size: 13px;
+  color: #cdd6f4;
+  margin-top: 4px;
+}
+.hp-bar {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(238, 242, 255, 0.12);
+  overflow: hidden;
+  margin-top: 6px;
+}
+.hp-bar i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: #35c46a;
+  transition: width 0.15s;
+}
+.hp-bar i.low {
+  background: #ff4f79;
+}
+.hud-stats {
+  display: flex;
+  gap: 18px;
+  font-size: 14px;
+}
+.hud-stats b {
+  font-size: 18px;
+}
+/* 피격 순간 화면 테두리 번쩍임 */
+.hud-top.hit::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(255, 60, 90, 0) 45%, rgba(255, 60, 90, 0.5));
+  animation: hit-flash 0.35s ease-out forwards;
+}
+@keyframes hit-flash {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.result-panel {
+  text-align: center;
+}
+.result-panel .guide-title {
+  font-size: 34px;
+}

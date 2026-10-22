@@ -9,7 +9,7 @@
 - 장르: 3인칭 3D 액션 RPG. Minecraft Dungeons 의 진행 방식을 참고하되 캐릭터·맵·아이템·음악·텍스처는 독자 제작 또는 적법한 에셋만 사용한다.
 - 실행 환경: Windows PC 웹 브라우저(Chrome/Edge). 기본 게임은 외부 API·유료 서비스 없이 실행된다.
 - 최우선 원칙: **실제로 실행되는 게임**을 단계적으로 완성한다. 그래픽 품질보다 안정성·유지보수성이 먼저다.
-- 현재 상태: **1단계(기반 구축) 완료** — 바닥·조명·장애물, 임시 캐릭터, WASD 이동, 카메라 추적, 조작 안내. 다음은 2단계(전투).
+- 현재 상태: **1단계(기반 구축) 완료, 2단계(전투) 진행 중** — 첫 묶음(돌진형 적, 체력·피해, 근접 공격, 처치, 결과 화면) 완료. 다음 묶음: 원거리 공격 + 원거리형 적(2-b), 방어형 적 + 피해 숫자 표시 + 밸런스(2-c).
 
 ## 2. 기술 스택
 
@@ -38,21 +38,35 @@ hero-x/
 │  │  ├─ Game.ts           게임 본체: 렌더러·씬·루프, 시스템 연결
 │  │  ├─ GameConfig.ts     ★ 설정 데이터 + 허용 범위(CONFIG_LIMITS) + 보정 함수
 │  │  └─ CameraController.ts  3인칭 추적 카메라
-│  ├─ input/InputManager.ts   키보드 입력 (키 설정은 GameConfig.controls)
+│  ├─ input/InputManager.ts   키보드·마우스 입력 (키 설정은 GameConfig.controls, 마우스는 'Mouse0' 등)
 │  ├─ player/
-│  │  ├─ Player.ts         플레이어 상태(위치·방향), 모델 교체 setModel()
-│  │  ├─ PlayerController.ts  입력 → 이동 → 충돌 → 위치 반영
+│  │  ├─ Player.ts         플레이어 상태(위치·방향·체력·공격 동작), 모델 교체 setModel()
+│  │  ├─ PlayerController.ts  입력 → 이동 → 충돌 → 위치 반영, 피격 밀림
 │  │  ├─ movement.ts       이동·충돌 순수 함수 (테스트 대상)
 │  │  └─ models/PlaceholderModel.ts  임시 캐릭터 모델 + PlayerModel 인터페이스
+│  ├─ combat/
+│  │  ├─ Health.ts         체력·무적·사망 (플레이어와 적 공용, 테스트 대상)
+│  │  ├─ melee.ts          근접 공격 부채꼴 판정 순수 함수 (테스트 대상)
+│  │  ├─ CombatSystem.ts   플레이어 공격 처리 (입력 → 조준 → 판정 → 피해·효과)
+│  │  └─ Effects.ts        휘두르기 부채꼴·파편 효과 (풀 재사용)
+│  ├─ enemies/
+│  │  ├─ EnemyAI.ts        적 상태 기계 (idle/chase/windup/hurt/dead, 테스트 대상)
+│  │  ├─ EnemyModels.ts    종류별 임시 모델 + EnemyModel 인터페이스
+│  │  ├─ Enemy.ts          적 한 마리 (능력치·체력·AI·모델 연결, 이동·충돌)
+│  │  └─ EnemySpawner.ts   설정 기반 배치·갱신·정리
 │  ├─ dungeon/Dungeon01.ts 바닥·조명·벽·장애물 (CollisionWorld 구현)
 │  ├─ ui/
-│  │  ├─ ControlsGuide.ts  조작 안내 화면 + 하단 HUD
+│  │  ├─ ControlsGuide.ts  조작 안내 화면 + 하단 상태 표시
+│  │  ├─ HUD.ts            체력바·남은 적·처치·점수·피격 번쩍임
+│  │  ├─ ResultUI.ts       결과 화면(쓰러짐/승리)과 다시 시작
 │  │  └─ ErrorOverlay.ts   화면 오류 표시
 │  └─ utils/Logger.ts      [HERO X] 접두어 로그
-└─ tests/                  단위 테스트 (movement, config)
+└─ tests/                  단위 테스트 (movement, config, health, enemyAI, melee)
 ```
 
-앞으로 추가될 폴더(지시서 9장 기준): `combat/`, `enemies/`, `items/`, `save/`, `audio/`, `ui/HUD.ts`, `ui/SettingsUI.ts` 등. 새 기능은 **새 파일**로 만들고 `Game.ts` 에서 연결한다.
+앞으로 추가될 폴더(지시서 9장 기준): `combat/Projectile.ts`, `items/`, `save/`, `audio/`, `ui/SettingsUI.ts`, `ui/InventoryUI.ts` 등. 새 기능은 **새 파일**로 만들고 `Game.ts` 에서 연결한다.
+
+시스템 간 연결 규칙: `Game.ts` 만 모든 시스템을 알고, 각 시스템은 필요한 정보를 **함수나 인터페이스로** 받는다. (예: `CombatSystem` 은 적 목록을 `() => Enemy[]` 로, 조준 지점을 `() => Vec2 | null` 로 받는다. `Enemy` 는 `CollisionWorld` 인터페이스만 안다.)
 
 ## 4. 코드 작성 규칙
 
@@ -79,7 +93,9 @@ hero-x/
 | `npm run preview` | 빌드 결과 미리보기 → http://localhost:4173 |
 | `npm run check` | 타입 검사 + 테스트 + 빌드를 한 번에 (작업 완료 전 필수) |
 
-브라우저에서 눈으로 확인할 때: 개발 모드이거나 주소 뒤에 `?debug` 를 붙이면 콘솔에서 `__heroX.getDebugState()` 로 플레이어·카메라 상태를 볼 수 있다.
+브라우저에서 눈으로 확인할 때: 개발 모드이거나 주소 뒤에 `?debug` 를 붙이면 콘솔에서 `__heroX.getDebugState()` 로 플레이어·카메라·적·입력 상태를 볼 수 있고, `__heroX.setPlayerPosition(x, z)` 로 순간이동, `__heroX.restart()` 로 재시작할 수 있다.
+
+브라우저 자동 검증(헤드리스 Chromium + Playwright)은 프로젝트 의존성에 넣지 않았다. 작업 환경에 Playwright 가 있으면 개발 서버를 띄우고 `__heroX` 디버그 API 로 시나리오(이동, 충돌, 피격, 공격, 결과 화면, 재시작)를 돌려 확인한다. 공격 검증 시에는 사람이 하듯 **적이 있는 방향으로 마우스를 옮긴 뒤** 공격해야 한다 (공격은 마우스 방향 부채꼴에만 들어간다).
 
 ## 6. 기능 추가·변경 절차 (반드시 이 순서로)
 
@@ -108,12 +124,15 @@ hero-x/
 - "카메라를 더 가까이" → `GameConfig.camera.offset` 의 y, z 를 줄인다.
 - "장애물을 더 많이" → `GameConfig.world.obstacles` 배열에 항목 추가 (시작 위치와 겹치지 않게; `tests/config.test.ts` 가 확인).
 - "키를 방향키로만" → `GameConfig.controls` 수정.
-- 새 기능(적, 무기, 아이템…) → 새 파일을 만들고 `Game.ts` 의 루프에 `update()` 를 추가. 설정은 `GameConfig.ts` 에.
+- "적을 두 배로" → `GameConfig.enemies.spawns` 에 항목 추가. "적 체력 30% 올려" → `enemies.types.rusher.hp` 조정.
+- "공격을 더 세게/넓게" → `GameConfig.combat.melee` 의 `damage`, `range`, `arcDegrees`.
+- 새 적 종류 → `enemies.types` 에 능력치 추가 + `EnemyModels.ts` 에 외형 분기 + (행동이 다르면) `EnemyAI.ts` 확장.
+- 새 기능(무기, 아이템…) → 새 파일을 만들고 `Game.ts` 의 루프에 `update()` 를 추가. 설정은 `GameConfig.ts` 에.
 
 ## 9. 개발 단계 (지시서 11장)
 
 1. 기반 구축 ✅ (v0.1.0)
-2. 전투 시스템 (근접·원거리 공격, 적 3종, 체력·피해)
+2. 전투 시스템 🔄 (2-a 돌진형 적·근접 공격 ✅ v0.2.0-a.1 / 2-b 원거리 공격·원거리형 적 / 2-c 방어형 적·피해 숫자·밸런스)
 3. 아이템과 성장
 4. 던전과 보스
 5. 설정 화면과 저장
