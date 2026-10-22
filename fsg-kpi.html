@@ -51,7 +51,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,th:focus-visible,.
 #upl{display:none;background:var(--surface);border-bottom:1px solid var(--border)}
 #upl.open{display:block}
 #upl .wrap{padding-top:16px;padding-bottom:18px}
-.drops{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.drops{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .drop{border:2px dashed var(--border);border-radius:6px;padding:16px 18px;cursor:pointer;background:var(--card)}
 .drop.over{border-color:var(--primary);background:var(--tint)}
 .drop b{color:var(--primary);font-size:15px}
@@ -93,6 +93,7 @@ td.good{color:var(--good-t);font-weight:700}td.bad{color:var(--bad-t);font-weigh
 .cv.tall{height:400px}
 .tw{overflow:auto}
 .tw.lim{max-height:520px}
+#tInsList{min-width:760px}#tInsCal{min-width:520px}#tInsCal td,#tInsCal th{padding:7px 8px}#tFamTrend td:first-child,#tFamTrend th:first-child{white-space:nowrap}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{text-align:left;font-weight:700;color:var(--muted);font-size:12px;padding:8px 10px;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--surface)}
 .tw.lim thead th{position:sticky;top:0}
@@ -105,7 +106,8 @@ tbody tr:hover{background:var(--card)}
 tr.tot td{font-weight:700;background:var(--tint)}
 .bad{color:var(--bad);font-weight:700}.good{color:var(--good);font-weight:700}
 .teams{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
-.tc{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px}
+.tc{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px 16px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.tc:hover{border-color:var(--primary)}.tc:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .tc.sel{border-color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary)}
 .tc .n{font-size:14px;font-weight:700;color:var(--primary)}
 .tc .hc2{font-family:Arial,sans-serif;font-size:30px;font-weight:700;line-height:1.15;margin-top:2px}
@@ -381,10 +383,16 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
       <p>인사 「직원 월별 연장근무현황」(성명·1월~12월, 시간.분, 파일명에 연도) 또는 「연장근로」 월별 시트 파일(Apr-26 …, 시간만 읽고 수당·금액 열은 읽지 않음). 넣으면 부서원 KPI의 OT 시간이 이 자료 기준이 됩니다. 올린 달만 바뀌고 다른 달은 그대로 합쳐지며, 월별 연장근로 파일이 있는 달은 신청 현황으로 덮지 않습니다.</p>
       <div class="st" id="stHr">선택된 파일 없음</div>
     </div>
+    <div class="drop" id="dropGeo" tabindex="0" role="button" aria-label="이동거리 좌표 파일 선택">
+      <b>이동거리 좌표 (선택)</b>
+      <p>「FSG_이동거리_좌표_날짜.json」 — 기관 좌표(자산대장 주소 → 행정동 중심)와 직원 거주지 좌표(동·구 단위). 넣으면 부서원 KPI에 「이동거리」 탭이 계산됩니다. 거주지가 들어 있어 암호화해서만 올라갑니다.</p>
+      <div class="st" id="stGeo">선택된 파일 없음</div>
+    </div>
   </div>
   <input type="file" id="fAct" accept=".xlsx,.xls,.csv" hidden>
   <input type="file" id="fSer" accept=".xlsx,.xls,.csv" hidden>
   <input type="file" id="fHr" accept=".xlsx,.xls,.csv" hidden>
+  <input type="file" id="fGeo" accept=".json" hidden>
   <div class="uplfoot">
     <span>엑셀은 이 브라우저에서 읽어 집계에 필요한 열만 정리한 뒤, 접근 코드로 암호화해서 저장소에 올립니다. 팀장 화면은 5분 안에(또는 새로고침 시) 자동 반영됩니다.</span>
   </div>
@@ -413,6 +421,8 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
   <div id="lockMsg" class="bad" role="alert"></div></div></div>
 <section id="empty" class="wrap" hidden><div class="panel" style="margin-top:24px"><p id="emptyMsg" style="margin:0"></p></div></section>
 <main class="wrap" id="mainArea" hidden>
+  <h2 class="sec">팀 구성 <small id="orgSub"></small></h2>
+  <section class="teams" id="teams"></section>
   <h2 class="sec">핵심 KPI <small id="kpiSub"></small></h2>
   <section class="kpis" id="kpis"></section>
   <div class="na" id="na"></div>
@@ -431,8 +441,6 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
     </section>
   </div>
 
-  <h2 class="sec">팀 구성 <small id="orgSub"></small></h2>
-  <section class="teams" id="teams"></section>
 
   <div class="grid" style="margin-top:16px">
     <section class="panel">
@@ -460,6 +468,30 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
       <div class="cv tall"><canvas id="cErr"></canvas></div>
     </section>
   </div>
+
+  <section class="panel" style="margin-top:16px">
+    <div class="thead"><div><h3>장비군별 고장률·재방문율 추이</h3><p class="d" style="margin:0" id="ftNote"></p></div>
+      <div class="rng" style="gap:10px;flex-wrap:wrap">
+        <div class="f"><label for="fFtFam">장비군</label><select id="fFtFam"></select></div>
+        <div class="f"><label for="fFtUnit">단위</label><select id="fFtUnit"><option value="m">월별 (12개월)</option><option value="q">분기별 (8분기)</option></select></div>
+      </div></div>
+    <div class="cv"><canvas id="cFamTrend"></canvas></div>
+    <div class="thead" style="margin-top:18px"><div><h3 style="font-size:14px">장비군 비교</h3><p class="d" style="margin:0" id="ftTblNote"></p></div>
+      <div class="f"><label for="fFtMet">지표</label><select id="fFtMet"><option value="rev">재방문율 (%)</option><option value="rate">100대당 월 고장 (건)</option><option value="n">고장 수리 (건)</option></select></div></div>
+    <div class="tw"><table id="tFamTrend"></table></div>
+  </section>
+
+  <h2 class="sec">설치 <small id="insSub"></small></h2>
+  <section class="kpis" id="insKpis"></section>
+  <div class="grid" style="margin-top:16px">
+    <section class="panel"><h3>담당 팀별 설치 (CRM)</h3><p class="d">설치한 기관의 담당 팀 기준 · 담당 팀 = 그 기관을 가장 많이 방문한 팀</p><div class="cv"><canvas id="cInsTeam"></canvas></div></section>
+    <section class="panel"><h3>설치 예정 (설치일정표 참고)</h3><p class="d" id="insCalNote"></p><div class="tw lim" style="max-height:330px"><table id="tInsCal"></table></div></section>
+  </div>
+  <section class="panel" style="margin-top:16px">
+    <div class="thead"><div><h3>담당 기관 설치 목록 (CRM)</h3><p class="d" style="margin:0">설치 후 90일 고장 = 같은 S/N에 설치 다음 날부터 90일 안에 들어온 고장 수리 건수</p></div></div>
+    <div class="tw lim" style="max-height:420px"><table id="tInsList"></table></div>
+    <p class="d" id="insListN" style="margin:8px 0 0"></p>
+  </section>
 
   <section class="panel" style="margin-top:16px">
     <div class="thead">
@@ -2009,12 +2041,66 @@ function renderOTTable(period, names){
   t.querySelectorAll('tbody tr').forEach(function(tr){ tr.addEventListener('click', function(){ state.person = tr.getAttribute('data-person'); switchTab('person'); }); });
 }
 
+/* ================= RENDER: 이동거리 ================= */
+function renderMove(){
+  var el = document.getElementById('panel-move'), M = DATA.move;
+  var info = '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div>';
+  if (!M){ el.innerHTML = info+'<b>이동거리 좌표가 아직 없습니다.</b> 관리자가 「이동거리 좌표」 파일을 올리면 표시됩니다.</div></div>'; return; }
+  var period = state.period, scope = state.mvScope || 'ALL';
+  var monthsOf = function(p){ return p === '직전 년도' ? DATA.cmp_months : p === '전체 누적' ? null : DATA.sel_months; };
+  var sum = function(n, months){ var m = M.per[n] || {}, o = {km:0, days:0, vis:0};
+    Object.keys(m).forEach(function(mk){ if (!months || months.indexOf(mk) >= 0){ o.km += m[mk].km; o.days += m[mk].days; o.vis += m[mk].vis; } }); return o; };
+  var hasHome = function(n){ return M.homes.indexOf(n) >= 0; };
+  var all = DATA.teams.reduce(function(a,t){ return a.concat(DATA.team[t].members); }, []).filter(hasHome);
+  var names = (scope === 'ALL' ? all : DATA.team[scope].members.filter(hasHome));
+  var cm = monthsOf(period), pm = period === '이번 년도' ? DATA.cmp_months : null;
+  var agg = function(list, months){ return list.reduce(function(o,n){ var s = sum(n, months); o.km += s.km; o.days += s.days; o.vis += s.vis; return o; }, {km:0, days:0, vis:0}); };
+  var cur = agg(names, cm), prv = pm ? agg(names, pm) : null, head = names.length || 1;
+  var missN = Object.keys(M.miss).reduce(function(a,k){ return a + M.miss[k]; }, 0);
+  var html = info+'<b>이동거리 = 그날 거주지 → 방문 기관 → 거주지 최단경로의 직선거리 × 1.3</b>(가까운 순서 + 2-opt). 담당자 기준 · 장비 설치·이전 설치·고장 수리·PM·Calibration · 취소·제주 제외 · 하루 같은 기관은 한 번. '+
+    '기관 위치 = 자산대장 주소의 행정동 중심(동을 못 찾으면 시·군·구 중심), 거주지 = 동 또는 구 중심이라 <b>실제 도로 거리와 다를 수 있는 추정치</b>입니다. '+
+    '좌표 파일: '+esc(M.src||'')+(M.made?' ('+esc(M.made)+')':'')+' · 기관 좌표가 없어 뺀 방문 '+fmt(missN)+'건 · 제주 '+fmt(M.jeju)+'건 제외 · 팀장·신입은 거주지 자료가 없어 제외.</div></div>';
+  html += '<div class="controls" style="margin-bottom:14px;"><div class="control-group" style="flex-wrap:wrap;min-width:0;"><span class="control-label">범위</span><div class="segmented" id="mvSeg" style="flex-wrap:wrap;max-width:100%;"></div></div></div>';
+  var dl = function(c, p){ if (p == null) return ''; var d = c - p; return '<span class="stat-delta delta-flat">'+(d>0?'▲ +':d<0?'▼ −':'· ')+fmt(Math.round(Math.abs(d)))+'km <span style="color:var(--text-muted);font-weight:500;">'+(DATA.cmp_short||'비교 기간')+'</span></span>'; };
+  html += '<div class="block grid grid-4">'+
+    statTile('이동거리 합계', fmt(Math.round(cur.km)), 'km', dl(cur.km, prv && prv.km), fmt(names.length)+'명 · 방문일 '+fmt(cur.days)+'일')+
+    statTile('1인당 이동거리', fmt(Math.round(cur.km/head)), 'km', dl(cur.km/head, prv && prv.km/head), PL(period))+
+    statTile('방문일 1일 평균', cur.days ? fmt1(cur.km/cur.days) : '-', 'km', dl(cur.days?cur.km/cur.days:0, prv && prv.days ? prv.km/prv.days : null), '하루 평균 '+(cur.days?fmt1(cur.vis/cur.days):'-')+'곳 방문')+
+    statTile('기관 좌표 없음', fmt(missN), '건', '', '전체 기간 · 계산에서 뺀 방문(자산대장에 주소가 없는 기관)')+
+    '</div>';
+  html += '<div class="block grid grid-2">'+chartCard('mv-team-chart', '팀별 1인당 이동거리', PL(period))+
+    chartCard('mv-trend-chart', '월별 1인당 이동거리', '최근 12개월 · '+(scope==='ALL'?'FSG 전체':DATA.team_short[scope]))+'</div>';
+  html += '<div class="block"><div class="block-head"><h2>개인별 이동거리</h2><span class="hint">열 제목 클릭 시 정렬 · '+PL(period)+'</span></div>'+
+    '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="mvTable"></table></div></div>';
+  el.innerHTML = html;
+  teamButtons(document.getElementById('mvSeg'), scope, true, function(t){ state.mvScope = t; renderMove(); });
+  var tl = VIEW.map(function(t){ return DATA.team_short[t]; });
+  barChart(document.getElementById('mv-team-chart'), tl, VIEW.map(function(t){ var L = DATA.team[t].members.filter(hasHome); return L.length ? Math.round(agg(L, cm).km / L.length) : 0; }), VIEW.map(function(t){ return TEAM_COLOR[t]; }), {unit:'km'});
+  var TM = DATA.trend_months || [], idx = [], vals = {};
+  TM.forEach(function(mk, i){ idx.push(i+1); vals[i+1] = Math.round(agg(names, [mk]).km / head); });
+  lineChart(document.getElementById('mv-trend-chart'), idx, [{name:'1인당 이동거리', color:'var(--s1)', values:vals, partial:true}], {unit:'km', partial:DATA.trend_partial});
+  var rows = names.map(function(n){ var c = sum(n, cm), p = pm ? sum(n, pm) : null;
+    return {name:n, team:DATA.person[n].team, grade:(DATA.grade||{})[n]||'', days:c.days, km:c.km, per:c.days?c.km/c.days:0, vis:c.days?c.vis/c.days:0, d:p?c.km-p.km:null, lv:M.homeLv[n]||''}; });
+  var key = state.mvSort || 'km', dir = state.mvDir || -1;
+  rows.sort(function(a,b){ var x = a[key], y = b[key]; return (typeof x === 'string' ? x.localeCompare(y,'ko') : (x||0)-(y||0)) * dir; });
+  var mx = Math.max(1, Math.max.apply(null, rows.map(function(r){ return r.km; })));
+  var cols = [['#',null],['이름','name'],['팀','team'],['직급','grade'],['방문일','days'],['이동거리(km)','km'],['1일 평균(km)','per'],['1일 방문 기관','vis']].concat(pm?[[DATA.cmp_short||'증감','d']]:[]).concat([['거주지 기준','lv']]);
+  var T = document.getElementById('mvTable');
+  T.innerHTML = '<thead><tr>'+cols.map(function(c){ return '<th'+(c[1]?' data-k="'+c[1]+'" style="cursor:pointer"':'')+(['days','km','per','vis','d'].indexOf(c[1])>=0?' class="num"':'')+'>'+c[0]+(c[1]===key?(dir<0?' ▼':' ▲'):'')+'</th>'; }).join('')+'</tr></thead><tbody>'+
+    rows.map(function(r,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(r.name)+'</td><td><span style="color:'+TEAM_COLOR[r.team]+';font-weight:700">'+esc(DATA.team_short[r.team]||r.team)+'</span></td><td>'+esc(r.grade)+'</td>'+
+      '<td class="num">'+fmt(r.days)+'</td><td class="num"><span style="display:inline-block;width:70px;height:6px;border-radius:3px;background:var(--border);margin-right:8px;vertical-align:middle;overflow:hidden"><i style="display:block;height:100%;width:'+(r.km/mx*100)+'%;background:'+TEAM_COLOR[r.team]+'"></i></span>'+fmt(Math.round(r.km))+'</td>'+
+      '<td class="num">'+(r.days?fmt1(r.per):'-')+'</td><td class="num">'+(r.days?fmt1(r.vis):'-')+'</td>'+(pm?'<td class="num" style="color:var(--text-muted)">'+(r.d==null?'-':(r.d>0?'+':'')+fmt(Math.round(r.d)))+'</td>':'')+
+      '<td style="color:var(--text-muted)">'+esc(r.lv)+'</td></tr>'; }).join('')+'</tbody>';
+  T.querySelectorAll('th[data-k]').forEach(function(th){ th.addEventListener('click', function(){ var k = th.getAttribute('data-k'); if (state.mvSort === k) state.mvDir = -(state.mvDir||-1); else { state.mvSort = k; state.mvDir = -1; } renderMove(); }); });
+}
+
 /* ================= APP SHELL ================= */
 function render(){
   if (state.tab === 'overview') renderOverview();
   else if (state.tab === 'team') renderTeam();
   else if (state.tab === 'person') renderPerson();
   else if (state.tab === 'ot') renderOT();
+  else if (state.tab === 'move') renderMove();
 }
 
 function switchTab(tab){
@@ -2141,6 +2227,7 @@ function errKey(e){
 }
 
 /* ===== 상태 ===== */
+let GEO=null;   /* 이동거리 좌표 — 관리자 업로드(암호화) */
 let RAW=null, SERIAL=null, HRDATA=null, SRC={act:'', ser:null, hr:null, at:null, embedded:false};
 let D=null;   // 가공 결과
 
@@ -2399,6 +2486,8 @@ function render(){
 
   renderHealth(end, p);
   renderErrors(p, team);
+  renderFamTrend(p, team);
+  renderInstall(p, team);
   renderInst(p, team);
   renderDQ(p);
 }
@@ -2418,13 +2507,13 @@ function renderOrg(p, team){
   const gbar=list=>{const n=list.length;return `<div class="gbar">${GRADES.map(g=>{const c=list.filter(r=>r[2]===g).length;return c?`<i style="width:${c/n*100}%;background:${GCOL[g]}" title="${g} ${c}명"></i>`:'';}).join('')}</div>
     <div class="glg">${GRADES.map(g=>{const c=list.filter(r=>r[2]===g).length;return c?`<span><b style="background:${GCOL[g]}"></b>${g} ${c}</span>`:'';}).join('')}</div>`;};
   const cards=TEAMS.map(t=>{const m=ROSTER.filter(r=>r[1]===t); const lead=m.find(r=>r[2]==='팀장'); const act=active[t]?active[t].size:0;
-    return `<div class="tc${team===t?' sel':''}"><div class="n">${t}</div><div class="hc2">${m.length}<small>명</small></div><div class="ld">팀장 ${lead?lead[0]:'-'}</div>
+    return `<div class="tc${team===t?' sel':''}" role="button" tabindex="0" data-team="${t}" aria-pressed="${team===t}" title="${t} 데이터 보기"><div class="n">${t}</div><div class="hc2">${m.length}<small>명</small></div><div class="ld">팀장 ${lead?lead[0]:'-'}</div>
       ${gbar(m)}<div class="act">활동 인원 <b>${act}명</b></div><div class="rg">${REGION[t]}</div></div>`;});
   const allAct=Object.values(active).reduce((a,s)=>a+s.size,0);
-  cards.push(`<div class="tc${team?'':' sel'}"><div class="n">FSG 전체</div><div class="hc2">${ROSTER.length}<small>명</small></div><div class="ld">4개 팀</div>${gbar(ROSTER)}
+  cards.push(`<div class="tc${team?'':' sel'}" role="button" tabindex="0" data-team="" aria-pressed="${!team}" title="FSG 전체 데이터 보기"><div class="n">FSG 전체</div><div class="hc2">${ROSTER.length}<small>명</small></div><div class="ld">4개 팀</div>${gbar(ROSTER)}
     <div class="act">활동 인원 <b>${allAct}명</b></div></div>`);
   $('teams').innerHTML=cards.join('');
-  $('orgSub').textContent=`FSG 로스터 ${ROSTER_DATE} 시행 기준`;
+  $('orgSub').textContent=`FSG 로스터 ${ROSTER_DATE} 시행 기준 · 카드를 누르면 그 팀 데이터로 바뀝니다`;
 }
 function serStats(months, team, sn){
   const ms=new Set(months); let n=0,f=0,d=0; const units=new Set();
@@ -2504,6 +2593,169 @@ function drawErr(rows){
   upsert('cErr',{type:'bar',data:{labels:k.map(e=>{const s=D.errDisp[e]||e;return s.length>32?s.slice(0,31)+'…':s;}),datasets:[{label:'건수',data:k.map(e=>c[e]),backgroundColor:'#005BAC'}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:it=>D.errDisp[k[it[0].dataIndex]],label:x=>`${fmt(x.raw)}건 (${(x.raw/r.length*100).toFixed(1)}%)`}}},
       scales:{x:axis({beginAtZero:true}),y:axis({grid:{display:false},ticks:{color:css('--text'),autoSkip:false}})}}});
+}
+
+
+/* ===== 이동거리 (2026-10-22, 부하도 스킬 기준) =====
+   일자별 거주지 → 그날 방문 기관 → 거주지 최단경로(가까운 순 + 2-opt), 직선거리 × 1.3. 담당자 기준, 장비 설치·이전 설치·고장 수리·PM·Calibration, 취소 제외, 제주 제외, 하루 같은 기관 1번.
+   좌표 = 관리자가 올린 이동거리 좌표 파일 {acct:{거래처:[위도,경도,정밀도('동'|'구'),제주?]}, home:{성명:[위도,경도,정밀도]}} — 기관은 자산대장 주소의 행정동 중심(없으면 시군구 중심). */
+const MOVE_PURP=new Set(['장비 설치','장비 이전 설치','고장 수리','PM','Calibration']);
+function parseGeo(buf, fname){
+  let g; try{ g=JSON.parse(new TextDecoder().decode(buf)); }catch(e){ throw new Error('이동거리 좌표 파일(JSON)이 아닙니다.'); }
+  if(!g||!g.acct||!g.home) throw new Error("acct·home 항목이 없습니다. 「FSG_이동거리_좌표」 파일인지 확인해 주세요.");
+  g.src=fname; return g;
+}
+function hvKm(a,b){ const R=6371, r=Math.PI/180, dLa=(b[0]-a[0])*r, dLo=(b[1]-a[1])*r;
+  const x=Math.sin(dLa/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLo/2)**2; return 2*R*Math.asin(Math.sqrt(x)); }
+function routeKm(home, pts){
+  if(!pts.length) return 0; const rem=pts.slice(), order=[]; let cur=home;
+  while(rem.length){ let bi=0, bd=Infinity; rem.forEach((p,i)=>{ const d=hvKm(cur,p); if(d<bd){bd=d;bi=i;} }); cur=rem.splice(bi,1)[0]; order.push(cur); }
+  const path=[home].concat(order,[home]); let imp=true;
+  while(imp){ imp=false;
+    for(let i=1;i<path.length-2;i++) for(let k=i+1;k<path.length-1;k++){
+      if(hvKm(path[i-1],path[k])+hvKm(path[i],path[k+1]) < hvKm(path[i-1],path[i])+hvKm(path[k],path[k+1])-1e-9){ const seg=path.slice(i,k+1).reverse(); path.splice(i,k-i+1,...seg); imp=true; } } }
+  let s=0; for(let i=0;i<path.length-1;i++) s+=hvKm(path[i],path[i+1]); return s*1.3;
+}
+let _moveC=null;
+function moveData(){
+  if(!GEO||!RAW) return null; if(_moveC&&_moveC.raw===RAW&&_moveC.geo===GEO) return _moveC.r;
+  const days={}, miss={}; let jeju=0;
+  for(const r of RAW){ if(r.t==null||r.st==='취소됨'||!MOVE_PURP.has(r.purp)||!GEO.home[r.own]) continue;
+    const g=GEO.acct[r.acct]; if(!g){ const k=r.acct||'(거래처 없음)'; miss[k]=(miss[k]||0)+1; continue; } if(g[3]){ jeju++; continue; }
+    const d=ymd(r.t), P=days[r.own]||(days[r.own]={}); (P[d]||(P[d]=new Set())).add(r.acct); }
+  const per={};
+  for(const n in days){ const h=GEO.home[n], m={};
+    for(const d in days[n]){ const pts=[...days[n][d]].map(a=>GEO.acct[a]), mk=d.slice(0,7), x=m[mk]||(m[mk]={km:0,days:0,vis:0});
+      x.km+=routeKm(h,pts); x.days++; x.vis+=pts.length; }
+    per[n]=m; }
+  const r={per, miss, jeju, homes:Object.keys(GEO.home), homeLv:Object.fromEntries(Object.entries(GEO.home).map(([k,v])=>[k,v[2]])), made:GEO.made||'', src:GEO.src||''};
+  _moveC={raw:RAW, geo:GEO, r}; return r;
+}
+/* ===== 장비군별 고장률·재방문율 추이 (2026-10-22) =====
+   고장률 = 100대당 월 고장 수리 = 고장 수리 건수 ÷ (자료 있는 달 수) ÷ 가동 대수 × 100. 가동 대수 = 구간 끝 달 기준 최근 12개월 서비스 장비(자산대장이 있으면 그중 '사용' 장비).
+   재방문율 = 장비군별 차트와 같은 기준(고장 수리 중 재방문 ÷ 기록 기준 고장 수리+PM). 팀 = 거래처 담당 팀 */
+function fyQ(mk){ const y=+mk.slice(0,4), m=+mk.slice(5), fy=m>=4?y:y-1; return 'FY'+String(fy).slice(2)+' Q'+(Math.floor(((m+8)%12)/3)+1); }
+const _fleetC={};
+function famFleet(end, team){
+  const key=end+'|'+(team||'')+'|'+D.rawN+'|'+(SERIAL?SERIAL.length:0); if(_fleetC[key]) return _fleetC[key];
+  const ms=last12Set(end), seen={};
+  for(const o of D.rows){ if(!ms.has(o.mk)||!o.sn||!o.acct) continue; if(team&&o.atm!==team) continue; seen[o.sn+'|'+o.acct]=o.fam; }
+  const c={}; let tot=0;
+  if(SERIAL&&SERIAL.length&&SERIAL.some(s=>s.model)){ for(const s of SERIAL){ const k=s.sn+'|'+s.acct; if(!(k in seen)) continue; const f=famOf(s.model); c[f]=(c[f]||0)+1; tot++; } }
+  else { Object.values(seen).forEach(f=>{ c[f]=(c[f]||0)+1; tot++; }); }
+  c['전체']=tot; return (_fleetC[key]=c);
+}
+function famBucket(months, team){
+  const ms=new Set(months), r={}; const g=f=>r[f]||(r[f]={n:0,f:0,s:0});
+  for(const o of D.rows){ if(!ms.has(o.mk)||(team&&o.atm!==team)) continue;
+    if(o.purp==='고장 수리'){ for(const x of [g(o.fam),g('전체')]){ x.n++; if(o.rec){ x.s++; x.f+=o.rv; } } }
+    else if(o.purp==='PM'&&o.rec){ g(o.fam).s++; g('전체').s++; } }
+  return r;
+}
+function famBuckets(p, unit){
+  const last=D.months[D.months.length-1], end=p.months.filter(m=>m<=last).pop()||last;
+  if(unit==='q'){ const order=[], by={}; for(let i=0;i<30;i++){ const m=shiftMonth(end,-i); const q=fyQ(m); if(!by[q]){ if(order.length>=8) break; by[q]=[]; order.unshift(q); } by[q].unshift(m); }
+    return order.map(q=>({label:q, months:by[q]})); }
+  const out=[]; for(let i=11;i>=0;i--){ const m=shiftMonth(end,-i); out.push({label:m.slice(2).replace('-','.'), months:[m]}); } return out;
+}
+function renderFamTrend(p, team){
+  const unit=$('fFtUnit').value||'m', B=famBuckets(p, unit);
+  B.forEach(b=>{ b.have=b.months.filter(m=>D.months.includes(m)); b.st=famBucket(b.months, team); b.fl=famFleet(b.months[b.months.length-1], team); b.prov=b.have.length?isProvisional(b.have):false; });
+  const fams=FAM_ORDER.filter(f=>B.some(b=>b.st[f]&&b.st[f].n));
+  const sel=$('fFtFam'), cur=sel.value; sel.innerHTML='<option value="전체">전체 장비</option>'+fams.map(f=>`<option>${esc(f)}</option>`).join(''); sel.value=fams.includes(cur)?cur:'전체';
+  const F=sel.value;
+  const val=(b,f,k)=>{ const x=b.st[f]; if(!x||!b.have.length) return null;
+    if(k==='n') return x.n; if(k==='rev') return x.s>=5?+(x.f/x.s*100).toFixed(1):null;
+    const fl=b.fl[f]; return fl>=10?+(x.n/b.have.length/fl*100).toFixed(2):null; };
+  $('ftNote').textContent=`${team||'FSG 전체'} · ${unit==='q'?'회계연도 분기(4월 시작)':'최근 12개월'} · 100대당 월 고장 = 고장 수리 ÷ 달 수 ÷ 가동 대수 × 100 · 재방문율 목표 ${TARGET_REV}% 이하${B.some(b=>b.prov)?' · ◆ = 재방문 확인 기간이 남은 잠정치':''}`;
+  const lab=B.map(b=>b.label), revV=B.map(b=>val(b,F,'rev')), rateV=B.map(b=>val(b,F,'rate'));
+  const GOOD=css('--good')||'#3FBA46', BAD=css('--bad')||'#E7413E';
+  upsert('cFamTrend',{data:{labels:lab,datasets:[
+    {type:'bar',label:'고장 수리(건)',data:B.map(b=>val(b,F,'n')),backgroundColor:'#9DC3E6',yAxisID:'y',order:3},
+    {type:'line',label:'재방문율(%)',data:revV,borderColor:'#E7413E',backgroundColor:'#E7413E',pointBackgroundColor:revV.map(v=>v==null?BAD:v>TARGET_REV?BAD:GOOD),pointBorderColor:'#fff',pointBorderWidth:1.5,
+      pointRadius:B.map(b=>b.prov?6:4.5),pointStyle:B.map(b=>b.prov?'rectRot':'circle'),tension:.25,yAxisID:'y2',order:1,spanGaps:true},
+    {type:'line',label:'100대당 월 고장(건)',data:rateV,borderColor:'#005BAC',backgroundColor:'#005BAC',pointRadius:4,pointStyle:'rectRounded',tension:.25,yAxisID:'y2',order:2,spanGaps:true},
+    {type:'line',label:`재방문율 목표 ${TARGET_REV}%`,data:B.map(()=>TARGET_REV),borderColor:'#E7413E',borderDash:[6,4],borderWidth:1,pointRadius:0,yAxisID:'y2',order:4}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}},tooltip:{callbacks:{afterTitle:it=>{const b=B[it[0].dataIndex]; return (b.months.length>1?b.months[0]+' ~ '+b.months[b.months.length-1]:'')+(b.prov?' (잠정)':'')+(b.fl[F]?` · 가동 ${fmt(b.fl[F])}대`:'');}}}},
+      scales:{x:axis({grid:{display:false}}),y:axis({beginAtZero:true,title:{display:true,text:'고장 수리(건)',color:css('--muted')}}),
+        y2:axis({position:'right',beginAtZero:true,grid:{display:false},title:{display:true,text:'재방문율(%) · 100대당 월 고장(건)',color:css('--muted')}})}}});
+  const k=$('fFtMet').value||'rev', fmtV=v=>v==null?'-':k==='n'?fmt(v):k==='rev'?f1(v)+'%':v.toFixed(2);
+  const list=['전체'].concat(fams);
+  $('ftTblNote').textContent=k==='rev'?`빨강 = 목표 ${TARGET_REV}% 초과 · 기록이 5건 미만인 칸은 '-'`:k==='rate'?'가동 10대 미만 장비군은 \'-\'':'';
+  $('tFamTrend').innerHTML=`<thead><tr><th>장비군</th>${B.map(b=>`<th class="num">${b.label}${b.prov?'◆':''}</th>`).join('')}<th class="num">가동 대수</th></tr></thead><tbody>`+
+    list.map(f=>`<tr${f==='전체'?' class="tot"':''}><td>${f==='전체'?'전체 장비':esc(f)}</td>${B.map(b=>{const v=val(b,f,k); return `<td class="num${k==='rev'&&v!=null&&v>TARGET_REV?' bad':''}">${fmtV(v)}</td>`;}).join('')}<td class="num">${fmt(B[B.length-1].fl[f]||0)}대</td></tr>`).join('')+'</tbody>';
+}
+
+/* ===== 설치 (2026-10-22 사용자 결정): 집계 기준은 CRM 설치 기록. 설치일정표(같은 Firebase의 schedule-overrides)는 참고용 —
+   오늘부터 한 달 뒤까지 잡힌 설치·이전설치를 '예정'으로만 보여준다(CRM과 대조·집계하지 않음) */
+const INST_BASE=[{"id": "base-1", "category": "evaluation", "start": "2026-02-25", "end": "2026-02-25", "title": "대구가톨릭", "device": "XR Demo", "team": null, "assignee": "Mia"}, {"id": "base-2", "category": "evaluation", "start": "2026-02-26", "end": "2026-02-26", "title": "Hema", "device": "CAL", "team": null, "assignee": null}, {"id": "base-4", "category": "evaluation", "start": "2026-03-03", "end": "2026-03-03", "title": "Hema", "device": "CAL", "team": null, "assignee": null}, {"id": "base-5", "category": "evaluation", "start": "2026-07-01", "end": "2026-07-01", "title": "신원의료재단", "device": "XN 설치평가", "team": null, "assignee": "Judy"}, {"id": "base-6", "category": "install", "start": "2026-07-08", "end": "2026-07-10", "title": "강남차병원", "device": "XR-9100", "team": "FS East", "assignee": null}, {"id": "base-7", "category": "install", "start": "2026-07-14", "end": "2026-07-16", "title": "SD의학연구소", "device": "XN 2EA 추가 (System 연결)", "team": "FS East", "assignee": null}, {"id": "base-8", "category": "evaluation", "start": "2026-07-20", "end": "2026-07-20", "title": "SD의학연구소", "device": "XN 설치평가", "team": null, "assignee": "Jinny"}, {"id": "base-9", "category": "evaluation", "start": "2026-07-20", "end": "2026-07-20", "title": "대구파티마병원", "device": "XN-350 BF 설치평가", "team": null, "assignee": "Carson, Sea"}, {"id": "base-10", "category": "evaluation", "start": "2026-07-29", "end": "2026-07-29", "title": "녹십자", "device": "CN 설치평가", "team": null, "assignee": "Yusuf"}, {"id": "base-11", "category": "install", "start": "2026-08-03", "end": "2026-08-07", "title": "대구가톨릭병원", "device": "XR-9100", "team": "FS South", "assignee": null}, {"id": "base-12", "category": "relocation", "start": "2026-08-20", "end": "2026-08-20", "title": "대구카톨릭병원", "device": "XR 이전설치", "team": "FS South", "assignee": null}, {"id": "base-13", "category": "install", "start": "2026-08-24", "end": "2026-08-24", "title": "남양주현대병원", "device": "UN 설치", "team": null, "assignee": null}, {"id": "base-14", "category": "install", "start": "2026-08-25", "end": "2026-08-28", "title": "광주씨젠", "device": "XR-9100 / UN-2000", "team": "FS Central", "assignee": null}, {"id": "base-15", "category": "install", "start": "2026-08-25", "end": "2026-08-28", "title": "대구씨젠", "device": "XR-9100", "team": "FS South", "assignee": null}, {"id": "base-16", "category": "install", "start": "2026-08-25", "end": "2026-08-25", "title": "대구가톨릭대학교병원", "device": "- XR > Judy 8월 초 설치", "team": "FS South", "assignee": null}, {"id": "base-17", "category": "evaluation", "start": "2026-08-26", "end": "2026-08-26", "title": "남양주현대병원", "device": "UN 평가", "team": null, "assignee": null}, {"id": "base-18", "category": "install", "start": "2026-08-31", "end": "2026-09-04", "title": "한양대병원", "device": "XR-9100", "team": "FS East", "assignee": null}, {"id": "base-19", "category": "install", "start": "2026-09-07", "end": "2026-09-11", "title": "강릉아산병원", "device": "XR-9100", "team": "FS East", "assignee": null}, {"id": "base-20", "category": "install", "start": "2026-09-07", "end": "2026-09-11", "title": "대구파티마병원", "device": "XR-9100", "team": "FS South", "assignee": null}, {"id": "base-21", "category": "evaluation", "start": "2026-09-07", "end": "2026-09-07", "title": "한양대병원", "device": "XR 설치평가", "team": null, "assignee": "Sea, Jinny"}, {"id": "base-22", "category": "relocation", "start": "2026-09-12", "end": "2026-09-12", "title": "대구씨젠", "device": "XR 이전설치", "team": "FS South", "assignee": null}, {"id": "base-23", "category": "relocation", "start": "2026-09-12", "end": "2026-09-12", "title": "광주씨젠", "device": "XR/UN 이전설치", "team": "FS Central", "assignee": null}, {"id": "base-24", "category": "install", "start": "2026-09-14", "end": "2026-09-18", "title": "삼성서울병원", "device": "XR-9100", "team": "FS East", "assignee": null}, {"id": "base-25", "category": "evaluation", "start": "2026-09-14", "end": "2026-09-14", "title": "강릉아산병원", "device": "XR 설치평가", "team": null, "assignee": "Judy"}, {"id": "base-26", "category": "relocation", "start": "2026-09-17", "end": "2026-09-17", "title": "한양대병원", "device": "XR 이전설치", "team": "FS East", "assignee": null}, {"id": "base-27", "category": "relocation", "start": "2026-09-21", "end": "2026-09-21", "title": "강릉아산", "device": "XR 이전설치", "team": "FS East", "assignee": null}, {"id": "base-28", "category": "evaluation", "start": "2026-09-21", "end": "2026-09-21", "title": "삼성서울", "device": "XR (~30일까지 평가 완료 필)", "team": null, "assignee": null}, {"id": "base-29", "category": "install", "start": "2026-09-28", "end": "2026-10-01", "title": "국립암센터", "device": "XR-9100", "team": "FS West", "assignee": null}, {"id": "base-30", "category": "relocation", "start": "2026-10-02", "end": "2026-10-02", "title": "삼성서울병원", "device": "XR 이전설치 (야간)", "team": "FS East", "assignee": null}]   /* 설치일정표(index.html) BASE_EVENTS 사본 — 수정·삭제는 schedule-overrides에서 반영 */;
+let INSTCAL=null, INSTCAL_INFO={state:'loading'}, _instLoading=null;
+function loadInstCal(){
+  if(_instLoading) return _instLoading;
+  _instLoading=(async()=>{
+    try{ await ensureAuth(); const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),30000); let d;
+      try{ const r=await fetch(withAuth(FIREBASE_URL.replace(/\/$/,'')+'/schedule-overrides.json'),{signal:ctl.signal,cache:'no-store'});
+        if(!r.ok) throw new Error('설치일정표 '+r.status); d=(await r.json())||{}; } finally{ clearTimeout(tm); }
+      const del=new Set(Array.isArray(d.deleted)?d.deleted:Object.keys(d.deleted||{})), ed=d.edited||{}, cu=Array.isArray(d.custom)?d.custom:Object.values(d.custom||{});
+      INSTCAL=INST_BASE.filter(e=>!del.has(e.id)).map(e=>ed[e.id]||e).concat(cu.filter(e=>e&&!del.has(e.id)))
+        .filter(e=>e&&(e.category==='install'||e.category==='relocation')&&/^\d{4}-\d{2}-\d{2}/.test(e.start||''));
+      INSTCAL_INFO={state:'ok'};
+    }catch(e){ INSTCAL=null; INSTCAL_INFO={state:'fail', msg:String(e.message||e)}; }
+    if(D&&!$('mainArea').hidden) renderInstall(curPeriod(), $('fTeam').value||null);
+  })();
+  return _instLoading;
+}
+const INS_PURP={'장비 설치':'설치','설치':'설치','장비 이전 설치':'이전 설치'};
+function insUnits(){
+  if(D._ins) return D._ins; const u={}, rep={};
+  for(const o of D.rows){ if(o.purp==='고장 수리'&&o.sn) (rep[o.sn]||(rep[o.sn]=[])).push(o.t); }
+  for(const o of D.rows){ const kind=INS_PURP[o.purp]; if(!kind||o.internal) continue;
+    const k=o.acct+'|'+(o.sn||(o.model+'|'+o.mk))+'|'+kind; let x=u[k];
+    if(!x) x=u[k]={acct:o.acct, sn:o.sn||'', model:o.model||'', fam:o.fam, kind, t:o.t, teams:new Set(), atm:o.atm, n:0};
+    if(o.t<x.t) x.t=o.t; (o.cteams||[]).forEach(t=>{ if(t) x.teams.add(t); }); x.n++; }
+  const L=Object.values(u); L.forEach(x=>{ x.d=ymd(x.t); x.mk=x.d.slice(0,7);
+    x.f90=x.sn?(rep[x.sn]||[]).filter(t=>t>x.t+DAY&&t<=x.t+90*DAY).length:null; x.part=x.t+90*DAY>D.maxT;
+    x.other=!!(x.atm&&x.teams.size&&!x.teams.has(x.atm)); });
+  return (D._ins=L);
+}
+function renderInstall(p, team){
+  if(!D) return; const ms=new Set(p.months), pp=prevPeriod(p), pms=new Set(pp.months), U=insUnits();
+  const inT=x=>!team||x.atm===team, cu=U.filter(x=>ms.has(x.mk)&&inT(x)), pu=U.filter(x=>pms.has(x.mk)&&inT(x));
+  const ins=a=>a.filter(x=>x.kind==='설치');
+  const ev=ins(cu).filter(x=>x.sn), f90=ev.filter(x=>x.f90>0).length, part=ev.filter(x=>x.part).length;
+  /* 예정: 오늘 ~ 한 달 뒤(진행 중 포함). 팀 = 일정표 담당팀(비어 있으면 전체에서만 보임) */
+  const td=new Date(), today=td.getFullYear()+'-'+String(td.getMonth()+1).padStart(2,'0')+'-'+String(td.getDate()).padStart(2,'0');
+  const t2=new Date(td.getTime()+30*DAY), until=t2.getFullYear()+'-'+String(t2.getMonth()+1).padStart(2,'0')+'-'+String(t2.getDate()).padStart(2,'0');
+  const up=INSTCAL?INSTCAL.filter(e=>(e.end||e.start)>=today&&e.start<=until&&(!team||String(e.team||'').toUpperCase()===team)).sort((a,b)=>a.start.localeCompare(b.start)):null;
+  $('insSub').textContent=`${p.label}, ${team||'FSG 전체'} (${pp.label} 대비)`;
+  $('insKpis').innerHTML=[
+    card('장비 설치 (CRM)', fmt(ins(cu).length), '대', delta(ins(cu).length, ins(pu).length,'대',0,pp.label), `이전 설치 ${fmt(cu.length-ins(cu).length)}건 · 기관 ${fmt(new Set(cu.map(x=>x.acct)).size)}곳`),
+    card('설치 예정 (한 달)', up?fmt(up.length):'-', up?'건':'', '', up?`설치일정표 참고 · ${today.slice(5).replace('-','.')} ~ ${until.slice(5).replace('-','.')} · 이전설치 ${fmt(up.filter(e=>e.category==='relocation').length)}건`:(INSTCAL_INFO.state==='loading'?'설치일정표 불러오는 중':'설치일정표를 불러오지 못했습니다')),
+    card('설치 후 90일 내 고장', ev.length?f1(f90/ev.length*100):'-', ev.length?'%':'', '', `S/N 있는 설치 ${fmt(ev.length)}대 중 ${fmt(f90)}대${part?` · 90일 안 지난 ${fmt(part)}대 포함`:''}`, {prov:part>0}),
+    card('다른 팀 지원 설치', fmt(cu.filter(x=>x.other).length), '건', '', '설치한 사람의 팀 ≠ 기관 담당 팀'),
+  ].join('');
+  /* 담당 팀별 */
+  const tk=team?[team]:TEAMS, by=t=>cu.filter(x=>x.atm===t);
+  upsert('cInsTeam',{type:'bar',data:{labels:tk,datasets:[
+    {label:'설치 (담당 팀이 설치)',data:tk.map(t=>ins(by(t)).filter(x=>!x.other).length),backgroundColor:'#005BAC',stack:'a'},
+    {label:'설치 (다른 팀 지원)',data:tk.map(t=>ins(by(t)).filter(x=>x.other).length),backgroundColor:'#00B8EE',stack:'a'},
+    {label:'이전 설치',data:tk.map(t=>by(t).filter(x=>x.kind!=='설치').length),backgroundColor:'#9AA5B1',stack:'a'}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}}},
+      scales:{x:axis({stacked:true,grid:{display:false}}),y:axis({stacked:true,beginAtZero:true,ticks:{precision:0,color:css('--text')}})}}});
+  /* 설치 예정 (참고) */
+  $('insCalNote').textContent=up?`설치일정표에 잡힌 오늘 ~ 한 달 뒤(${until}) 설치·이전설치입니다. 참고용이며 위 집계에는 들어가지 않습니다(집계는 CRM 기준).`
+    :(INSTCAL_INFO.state==='loading'?'설치일정표를 불러오는 중입니다.':'설치일정표를 불러오지 못했습니다('+(INSTCAL_INFO.msg||'')+'). 새로고침해 보세요.');
+  const dd=e=>{ const n=Math.round((Date.UTC(+e.start.slice(0,4),+e.start.slice(5,7)-1,+e.start.slice(8,10))-Date.UTC(td.getFullYear(),td.getMonth(),td.getDate()))/DAY); return n<=0?'진행 중':'D-'+n; };
+  $('tInsCal').innerHTML=up?`<thead><tr><th>일정</th><th></th><th>구분</th><th>병원</th><th>장비</th><th>팀</th></tr></thead><tbody>`+(up.length?up.map(e=>
+      `<tr><td style="white-space:nowrap">${e.start.slice(5).replace('-','.')}${e.end&&e.end!==e.start?'~'+e.end.slice(5).replace('-','.'):''}</td><td style="white-space:nowrap;color:var(--primary);font-weight:700">${dd(e)}</td><td style="white-space:nowrap">${e.category==='relocation'?'이전설치':'설치'}</td><td>${esc(e.title||'')}</td><td>${esc(e.device||'')}</td><td style="white-space:nowrap">${esc(e.team||'-')}</td></tr>`).join('')
+      :'<tr><td colspan="6" style="color:var(--muted)">한 달 안에 잡힌 설치 일정이 없습니다</td></tr>')+'</tbody>':'';
+  /* 설치 목록 */
+  const L=cu.slice().sort((a,b)=>b.t-a.t), S=L.slice(0,200);
+  $('tInsList').innerHTML=`<thead><tr><th>날짜</th><th>기관</th><th>담당 팀</th><th>구분</th><th>장비</th><th>설치 팀</th><th class="num">설치 후 90일 고장</th></tr></thead><tbody>`+
+    S.map(x=>`<tr><td style="white-space:nowrap">${x.d}</td><td>${esc(x.acct)}</td><td>${x.atm||'-'}</td><td style="white-space:nowrap">${x.kind}</td><td>${esc(x.model||'-')}${x.sn?` <span style="color:var(--muted)">${esc(x.sn)}</span>`:''}</td><td>${[...x.teams].join(', ')||'-'}${x.other?' <span style="color:var(--warn);font-weight:700">지원</span>':''}</td>`+
+      `<td class="num${x.kind==='설치'&&x.f90>0?' bad':''}">${x.kind!=='설치'||x.f90==null?'-':fmt(x.f90)+(x.part?' <small style="color:var(--muted)">잠정</small>':'')}</td></tr>`).join('')+'</tbody>';
+  $('insListN').textContent=`${fmt(L.length)}건${L.length>S.length?` 중 최근 ${fmt(S.length)}건 표시`:''} · 같은 기관·S/N은 여러 날 방문해도 1건`;
 }
 
 let instRows=[], sortKey='rep', sortDir=-1;
@@ -2627,7 +2879,7 @@ function parseSerial(buf){
 }
 const nowStr=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
 async function handleFile(kind, file){
-  if(!file) return; const st=$(kind==='act'?'stAct':kind==='hr'?'stHr':'stSer');
+  if(!file) return; const st=$(kind==='act'?'stAct':kind==='hr'?'stHr':kind==='geo'?'stGeo':'stSer');
   if(typeof XLSX==='undefined'){ st.innerHTML='<span class="bad">엑셀 읽기 라이브러리를 불러오지 못했습니다. 네트워크 연결을 확인해 주세요.</span>'; return; }
   $('busy').classList.add('on'); await new Promise(r=>setTimeout(r,30));
   try{
@@ -2636,6 +2888,7 @@ async function handleFile(kind, file){
     if(kind==='act'){ RAW=fixTz(parseActivity(buf)); SRC.act=file.name; SRC.embedded=false; msg=`${file.name}: ${fmt(RAW.length)}행 읽음`; }
     else if(kind==='hr'){ const nw=parseHr(buf,file.name), c=hrCovOf(nw); HRDATA=mergeHr(HRDATA, nw); SRC.hr=HRDATA.src;
       msg=`${file.name}: ${nw.kind==='mon'?'월별 연장근로':'연장근무 신청'} ${fmt(Object.keys(nw.h).length)}명, ${c[0]||''}~${c[c.length-1]||''} 읽음(기존 자료와 합침: ${HRDATA.srcs.map(x=>(x.kind==='mon'?'월별 ':'신청 ')+x.first+'~'+x.last).join(' + ')})`; }
+    else if(kind==='geo'){ GEO=parseGeo(buf,file.name); SRC.geo=file.name; PROD_DIRTY=true; msg=`${file.name}: 기관 ${fmt(Object.keys(GEO.acct).length)}곳 · 직원 ${fmt(Object.keys(GEO.home).length)}명 좌표 읽음`; }
     else { const all=parseSerial(buf); SERIAL=all.filter(x=>x.state==='사용'); SRC.ser=file.name; msg=`${file.name}: 장비 ${fmt(all.length)}대 중 '사용' ${fmt(SERIAL.length)}대`; }
     SRC.at=nowStr(); if(RAW){ refresh(); } else PROD_DIRTY=true;
     st.textContent=msg+', 저장소에 올리는 중';
@@ -2643,6 +2896,7 @@ async function handleFile(kind, file){
     const ok = kind==='act'
       ? await pushShared('act', encodeAct(RAW,file.name), {actSrc:file.name, actRows:RAW.length})
       : kind==='hr' ? await pushShared('hr', HRDATA, {hrSrc:HRDATA.src})
+      : kind==='geo' ? await pushShared('geo', GEO, {geoSrc:file.name})
       : await pushShared('ser', encodeSer(SERIAL), {serSrc:file.name});
     st.innerHTML = ok ? msg+', <span class="good">올리기 완료. 팀장 화면은 새로고침하거나 5분 안에 자동 반영됩니다</span>' : msg+'. <span class="bad">공유 저장소에 연결되지 않아 이 화면에만 반영됐습니다</span>';
   }catch(err){ st.innerHTML=`<span class="bad">${esc(err.code?('공유 저장 실패 ('+err.code+'). 잠시 후 다시 올려 주세요.'):(err.message||err))}</span>`; }
@@ -2762,7 +3016,7 @@ async function pushShared(kind, payload, meta){
   const rec=await seal(payload, CODE);
   await fb(kind,{method:'PUT',body:JSON.stringify(rec)});
   const m={...(cur||{}),...meta,updatedAt:nowStr(),check:await seal('FSG-KPI',CODE)};
-  if(kind==='act') m.actAt=m.updatedAt; else m.serAt=m.updatedAt;
+  if(kind==='act') m.actAt=m.updatedAt; else if(kind==='ser') m.serAt=m.updatedAt;
   await fb('meta',{method:'PUT',body:JSON.stringify(m)});
   META=m; return true;
 }
@@ -2776,9 +3030,10 @@ async function loadAll(){
     if(!(await codeOk(CODE,meta))){ localStorage.removeItem(KEY_LS); CODE=null; showLock('접근 코드가 맞지 않습니다. 다시 입력해 주세요.'); return; }
     /* 자산대장·연장근무는 선택 자료 — 못 읽어도 CRM 화면은 연다 */
     const opt=k=>fb(k).catch(e=>{ console.warn(k+' 불러오기 실패',e); return null; });
-    const [a,s,hr]=await Promise.all([fb('act'), meta.serSrc?opt('ser'):Promise.resolve(null), meta.hrSrc?opt('hr'):Promise.resolve(null)]);
+    const [a,s,hr,geo]=await Promise.all([fb('act'), meta.serSrc?opt('ser'):Promise.resolve(null), meta.hrSrc?opt('hr'):Promise.resolve(null), meta.geoSrc?opt('geo'):Promise.resolve(null)]);
     RAW=fixTz(decodeEmbed(await open_(a,CODE))); SERIAL=s?decodeSer(await open_(s,CODE)):null;
     HRDATA=null; if(hr){ try{ HRDATA=await open_(hr,CODE); }catch(e){ console.warn('hr decode',e); } }
+    GEO=null; if(geo){ try{ GEO=await open_(geo,CODE); GEO.src=GEO.src||meta.geoSrc; }catch(e){ console.warn('geo decode',e); } }
     META=meta; SRC={act:meta.actSrc,ser:s?meta.serSrc:null,hr:HRDATA?meta.hrSrc:null,at:meta.updatedAt,embedded:false};
     $('empty').hidden=true; refresh(); showMain();
   }catch(err){ const net=err instanceof TypeError;
@@ -2824,12 +3079,18 @@ function refresh(){
 $('fTeam').innerHTML='<option value="">FSG 전체</option>'+TEAMS.map(t=>`<option>${t}</option>`).join('');
 ['fPeriod','fTeam'].forEach(id=>$(id).addEventListener('change',render));
 $('fErrFam').addEventListener('change',()=>drawErr());
+/* 팀 카드 → 팀 필터 */
+const pickTeam=el=>{ const c=el.closest('.tc[data-team]'); if(!c) return; $('fTeam').value=c.dataset.team; render(); };
+$('teams').addEventListener('click',e=>pickTeam(e.target));
+$('teams').addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pickTeam(e.target); } });
+['fFtFam','fFtUnit','fFtMet'].forEach(id=>$(id).addEventListener('change',()=>renderFamTrend(curPeriod(), $('fTeam').value||null)));
+
 $('fSearch').addEventListener('input',drawInst);
 document.querySelectorAll('#tInst th.s').forEach(th=>{const go=()=>{const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=['name','team','fam'].includes(k)?1:-1;}
   document.querySelectorAll('#tInst th').forEach(x=>x.removeAttribute('aria-sort'));th.setAttribute('aria-sort',sortDir<0?'descending':'ascending');drawInst();};
   th.addEventListener('click',go);th.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});});
 $('openUpl').addEventListener('click',()=>{const o=$('upl').classList.toggle('open');$('openUpl').setAttribute('aria-expanded',o);});
-bindDrop('dropAct','fAct','act'); bindDrop('dropSer','fSer','ser'); bindDrop('dropHr','fHr','hr');
+bindDrop('dropAct','fAct','act'); bindDrop('dropSer','fSer','ser'); bindDrop('dropHr','fHr','hr'); bindDrop('dropGeo','fGeo','geo');
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>render());
 if(typeof Chart!=='undefined'){Chart.defaults.font.family="'Malgun Gothic', Arial, sans-serif";Chart.defaults.font.size=12;}
 $('lockBtn').addEventListener('click',submitCode);
@@ -2846,6 +3107,7 @@ const PROD_SKELETON=`<nav class="tabs" id="prodTabs">
     <button data-tab="team">팀별 비교</button>
     <button data-tab="person">개인별 상세</button>
     <button data-tab="ot">야간·휴일 근무</button>
+    <button data-tab="move">이동거리</button>
   </nav>
   <div class="controls" id="globalControls">
     <div class="control-group"><span class="control-label">기간</span><div class="segmented" id="periodSeg"></div></div>
@@ -2854,6 +3116,7 @@ const PROD_SKELETON=`<nav class="tabs" id="prodTabs">
   <section class="panel" id="panel-team"></section>
   <section class="panel" id="panel-person"></section>
   <section class="panel" id="panel-ot"></section>
+  <section class="panel" id="panel-move"></section>
   <p class="pfoot" id="metaLine"></p>
   <div class="tooltip" id="tooltip"></div>`;
 /* 직급 표시는 현재 직급(ROSTER), 직급 가중치는 활동일 기준(GRADE_HIST 시행일부터 새 직급) · 신입은 업무량 비교에서 따로 표시 */
@@ -2888,6 +3151,7 @@ function renderProd(){
       trend_labels:S.trend.map(m=>m.slice(2,4)+'.'+m.slice(5)), trend_names:['최근 12개월','전년 동월'],
       /* 월별 추이 마지막 달이 CRM 추출일이 속한 달이면 아직 집계 중(진행 중) */
       trend_partial:(()=>{const lm=S.trend[S.trend.length-1], c=D.excl&&D.excl.cut; return c&&lm&&c.slice(0,7)===lm?{idx:S.trend.length, month:+lm.slice(5), cut:c}:null;})(),
+      move:GEO?moveData():null, sel_months:S.sel, cmp_months:S.cmp, trend_months:S.trend,
       grade:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), promoted:Object.fromEntries(GRADE_HIST.filter(([n,d])=>S.sel.includes(d.slice(0,7))).map(([n,d,prev])=>[n,prev+'→'+rosterMap[n].grade+' ('+d.slice(5).replace('-','/')+')'])), newbie:NEWBIE, ex_lead:$('pExLead').checked});
     $('pCmp').innerHTML=`비교 기간: ${esc(S.cmpLabel)}<br>직급 표시: 현재 · 직급 가중치: 진급자는 시행일부터 새 직급`;
     $('prod').innerHTML=PROD_SKELETON; window.initProdDashboard(PROD); PROD_DIRTY=false;
@@ -2908,7 +3172,7 @@ function setView(v){
   if(history.replaceState) history.replaceState(null,'',location.pathname+location.search+(v==='prod'?'#people':''));
   if(v==='prod') renderProd(); else render();
 }
-function showMain(){ $('vtabs').hidden=false; setView(VIEW); loadShifts(); }
+function showMain(){ $('vtabs').hidden=false; setView(VIEW); loadShifts(); loadInstCal(); }
 /* 근무일정표(같은 Firebase 프로젝트 work-schedule/{팀}/{날짜}/{성명}.night)에서 EAST·WEST 시프트 근무일(석간·석/야)을 읽는다.
    시프트 근무는 주간 업무가 저녁·야간으로 옮겨간 것이라 그날 근무시간 외 활동은 야간 OT·잔업에서 빼고 '시프트 근무'로 따로 센다. 읽기만 한다. */
 const SHIFT_TEAMS=['east','west'], SHIFT_KEYS=['석간','석/야'];
