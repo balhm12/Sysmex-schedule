@@ -220,7 +220,7 @@ footer{font-size:12px;color:var(--ink-3);line-height:1.6;max-width:70ch}
       <div id="qdist"></div>
     </section>
     <section class="panel">
-      <div class="ph"><h2>서비스 형태 · 장비 · 직급별</h2><span class="hint">응답수 / 평균</span></div>
+      <div class="ph"><h2>서비스 형태 · 장비 · 직급별</h2><span class="hint">문항별 교차 · 전체 평균보다 낮으면 음영</span></div>
       <div id="breakdown" class="tscroll"></div>
     </section>
   </div>
@@ -376,8 +376,12 @@ function renderTeam(){
   const rows=TEAMS.map(t=>{const R=DATA.recs.filter(r=>r.team===t&&(month==='ALL'||r.month===month));const v=visitsFor(t,month);
     return {t,n:R.length,v,rr:rate(R,v),avg:mean(R.map(r=>r.avg)),q:[1,2,3].map(i=>mean(R.map(r=>r['q'+i]))),cm:R.filter(r=>r.comment&&r.comment.trim()).length};});
   const maxrr=Math.max(...rows.map(r=>r.rr||0),1);
+  // 음영 기준 — 선택한 기간의 전 팀 평균. 팀 필터와 무관하게 전체로 잡아야
+  // 한 팀만 볼 때도 "전체 대비 어디쯤인가"가 유지된다.
+  const AR=DATA.recs.filter(r=>month==='ALL'||r.month===month);
+  const tBase=[1,2,3].map(i=>mean(AR.map(r=>r['q'+i]))).concat(mean(AR.map(r=>r.avg)));
   $('#teamTbl').innerHTML=`<thead><tr><th>팀</th><th class="num">응답</th><th class="num">방문</th><th>응답률</th><th class="num">신속</th><th class="num">전문</th><th class="num">응대</th><th class="num">종합</th></tr></thead><tbody>`+
-    rows.map(r=>`<tr style="${team!=='ALL'&&team!==r.t?'opacity:.45':''}"><td><span class="dot" style="background:${TCOL[r.t]}"></span>${r.t.replace('FS ','')}</td><td class="num mono">${r.n}</td><td class="num mono">${r.v}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="bar" style="flex:1"><i style="width:${(r.rr||0)/maxrr*100}%;background:${TCOL[r.t]}"></i></div><span class="mono" style="min-width:48px;text-align:right">${fmt(r.rr,1)}%${r.rr>100?'<span class="over">*</span>':''}</span></div></td><td class="num mono">${fmt(r.q[0])}</td><td class="num mono">${fmt(r.q[1])}</td><td class="num mono">${fmt(r.q[2])}</td><td class="num mono"><b>${fmt(r.avg)}</b></td></tr>`).join('')+`</tbody>`;
+    rows.map(r=>`<tr style="${team!=='ALL'&&team!==r.t?'opacity:.45':''}"><td><span class="dot" style="background:${TCOL[r.t]}"></span>${r.t.replace('FS ','')}</td><td class="num mono">${r.n}</td><td class="num mono">${r.v}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="bar" style="flex:1"><i style="width:${(r.rr||0)/maxrr*100}%;background:${TCOL[r.t]}"></i></div><span class="mono" style="min-width:48px;text-align:right">${fmt(r.rr,1)}%${r.rr>100?'<span class="over">*</span>':''}</span></div></td>${r.q.map((v,i)=>`<td class="num mono" style="${heatStyle(v,tBase[i],r.n)}" data-tip="${r.t.replace('FS ','')} · ${['신속','전문','응대'][i]} ${fmt(v)} (전체 ${fmt(tBase[i])})">${fmt(v)}</td>`).join('')}<td class="num mono" style="${heatStyle(r.avg,tBase[3],r.n)}"><b>${fmt(r.avg)}</b></td></tr>`).join('')+`</tbody>`;
 }
 
 function renderTrend(R){
@@ -410,13 +414,52 @@ function renderQ(R){
     <div style="display:flex;gap:12px;font-size:11px;color:var(--ink-3)" class="mono">${cnt.map((c,i)=>`<span>${5-i}점 ${c}</span>`).join('')}</div></div>`;}).join('');
 }
 
+/* 구분별 × 문항별 교차표.
+ * 문항을 더 쪼개는 대신 이 축을 쓰는 이유: 실측상 문항 간 변별폭은 0.01인데
+ * (신속 4.97 / 전문 4.98 / 응대 4.98) 장비·직급·형태 간 변별폭은 0.08~0.13으로
+ * 8~13배 크다. 같은 데이터라도 어느 축으로 쪼개느냐가 변별을 결정한다.
+ *
+ * 작은 표본을 강조하지 않는다: HISCL 10건의 만점 80%는 2건이 4점인 것으로,
+ * 전체 96% 기준에서 우연히 나올 수 있다(p≈0.06). 색으로 강조하면 없는 문제를
+ * 만들어 낸다. 그래서 응답 30건 미만은 색을 빼고 '표본 적음'으로 표시만 한다. */
+const HEAT_MIN_N=30;
+/* 전체 평균보다 얼마나 낮은지로 음영을 정한다. 높은 쪽은 칠하지 않는다 —
+ * 만점이 기본값이라 '평균 이상'은 정보가 거의 없다.
+ * 표본이 작으면 칠하지 않는다: 10건짜리 1~2건 차이를 색으로 강조하면
+ * 없는 문제를 만들어 낸다(HISCL 4.87은 전체 96% 기준 우연 범위, p≈0.06). */
+function heatStyle(v,b,n){
+  if(v==null||b==null||n<HEAT_MIN_N)return '';
+  const d=v-b;
+  if(d<=-0.10)return 'background:color-mix(in srgb,var(--crit) 16%,transparent)';
+  if(d<=-0.05)return 'background:color-mix(in srgb,var(--warn) 20%,transparent)';
+  return '';
+}
 function renderBreak(R){
   const groups=[['서비스 형태','svc'],['장비 모델','model'],['직급','grade']];
   const order={grade:['팀장','T4','T3','T2','T1']};
-  $('#breakdown').innerHTML=`<table><thead><tr><th>구분</th><th class="num">응답</th><th class="num">평균</th><th class="num">만점비율</th></tr></thead><tbody>`+groups.map(([l,k])=>{
-    let keys=[...new Set(R.map(r=>r[k]||'(미입력)'))];keys.sort((a,b)=>order[k]?order[k].indexOf(a)-order[k].indexOf(b):R.filter(r=>r[k]===b).length-R.filter(r=>r[k]===a).length);
-    return `<tr><td colspan="4" style="font-size:11px;color:var(--ink-3);letter-spacing:.06em;font-weight:600;padding-top:10px">${l}</td></tr>`+keys.map(x=>{const S=R.filter(r=>(r[k]||'(미입력)')===x);const p=S.filter(r=>r.avg===5).length;
-      return `<tr><td>${x}</td><td class="num mono">${S.length}</td><td class="num mono">${fmt(mean(S.map(r=>r.avg)))}</td><td class="num mono">${fmt(pct(p,S.length),0)}%</td></tr>`;}).join('');}).join('')+`</tbody></table>`;
+  const QS=[['신속','q1'],['전문','q2'],['응대','q3']];
+  const base={};QS.forEach(([,k])=>base[k]=mean(R.map(r=>r[k])));
+  const baseAvg=mean(R.map(r=>r.avg));
+  const heat=heatStyle;
+  const head=`<thead><tr><th>구분</th><th class="num">응답</th>`+
+    QS.map(([l])=>`<th class="num">${l}</th>`).join('')+
+    `<th class="num">종합</th><th class="num">만점</th></tr></thead>`;
+  $('#breakdown').innerHTML=`<table>${head}<tbody>`+groups.map(([l,k])=>{
+    let keys=[...new Set(R.map(r=>r[k]||'(미입력)'))];
+    keys.sort((a,b)=>order[k]?order[k].indexOf(a)-order[k].indexOf(b):R.filter(r=>r[k]===b).length-R.filter(r=>r[k]===a).length);
+    return `<tr><td colspan="7" style="font-size:11px;color:var(--ink-3);letter-spacing:.06em;font-weight:600;padding-top:10px">${l}</td></tr>`+
+      keys.map(x=>{
+        const S=R.filter(r=>(r[k]||'(미입력)')===x),n=S.length;
+        const p=S.filter(r=>r.avg===5).length,a=mean(S.map(r=>r.avg));
+        const small=n<HEAT_MIN_N;
+        return `<tr><td>${x}${small?` <span class="chip" title="응답 ${n}건은 1~2건 차이로 값이 크게 흔들려 비교 근거로 쓰기 어렵습니다">표본 적음</span>`:''}</td>`+
+          `<td class="num mono">${n}</td>`+
+          QS.map(([,q])=>{const v=mean(S.map(r=>r[q]));
+            return `<td class="num mono" style="${heat(v,base[q],n)}" data-tip="${x} · ${q==='q1'?'신속':q==='q2'?'전문':'응대'} ${fmt(v)} (전체 ${fmt(base[q])})">${fmt(v)}</td>`;}).join('')+
+          `<td class="num mono" style="${heat(a,baseAvg,n)}"><b>${fmt(a)}</b></td>`+
+          `<td class="num mono">${fmt(pct(p,n),0)}%</td></tr>`;
+      }).join('');
+  }).join('')+`</tbody></table>`;
 }
 
 function fsrRows(R){
