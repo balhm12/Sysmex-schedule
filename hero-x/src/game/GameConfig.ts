@@ -105,6 +105,8 @@ export interface GameConfigType {
     restart: string[];
     toggleGuide: string[];
     toggleInventory: string[];
+    /** 상자 열기 등 상호작용 */
+    interact: string[];
   };
   /** 플레이어 */
   player: {
@@ -232,6 +234,24 @@ export interface GameConfigType {
     /** 이 거리 안이면 획득 */
     pickupRadius: number;
   };
+  /** 던전 */
+  dungeon: {
+    /** 화면에 표시할 던전 이름 */
+    name: string;
+    /** 보물 상자 위치 */
+    chests: Array<{ x: number; z: number }>;
+    chestLoot: {
+      /** 골드 범위 (항상) */
+      goldMin: number;
+      goldMax: number;
+      /** 장비가 나올 확률 0~1 */
+      equipChance: number;
+      /** 체력 회복이 나올 확률 0~1 */
+      healChance: number;
+      /** 이 거리 안에서 열 수 있다 */
+      interactRange: number;
+    };
+  };
   /** 장비 */
   equipment: {
     /** 적 처치 시 장비가 떨어질 확률 0~1 */
@@ -270,7 +290,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.3.0' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.4.0-a.1' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -283,6 +303,7 @@ export const GameConfig: GameConfigType = {
     restart: ['KeyR'],
     toggleGuide: ['KeyH'],
     toggleInventory: ['KeyI', 'Tab'],
+    interact: ['KeyE', 'KeyF'],
   },
 
   player: {
@@ -446,6 +467,22 @@ export const GameConfig: GameConfigType = {
     pickupRadius: 0.9,
   },
 
+  dungeon: {
+    name: '잊혀진 숲',
+    chests: [
+      { x: -22, z: -4 },
+      { x: 12, z: 2 },
+      { x: -4, z: 24 },
+    ],
+    chestLoot: {
+      goldMin: 15,
+      goldMax: 40,
+      equipChance: 0.8,
+      healChance: 0.5,
+      interactRange: 2.2,
+    },
+  },
+
   equipment: {
     dropChance: 0.3,
     inventorySize: 20,
@@ -511,6 +548,11 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'loot.magnetRange': { min: 0, max: 30 },
   'loot.magnetSpeed': { min: 0, max: 50 },
   'loot.pickupRadius': { min: 0.2, max: 5 },
+  'dungeon.chestLoot.goldMin': { min: 0, max: 99999 },
+  'dungeon.chestLoot.goldMax': { min: 0, max: 99999 },
+  'dungeon.chestLoot.equipChance': { min: 0, max: 1 },
+  'dungeon.chestLoot.healChance': { min: 0, max: 1 },
+  'dungeon.chestLoot.interactRange': { min: 0.5, max: 10 },
   'equipment.dropChance': { min: 0, max: 1 },
   'equipment.inventorySize': { min: 1, max: 200 },
   'equipment.defenseScale': { min: 1, max: 1000 },

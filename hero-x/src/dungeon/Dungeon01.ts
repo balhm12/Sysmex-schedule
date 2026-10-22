@@ -132,6 +132,11 @@ export class Dungeon01 implements CollisionWorld {
     return this.boxes;
   }
 
+  /** 다른 시스템(보물 상자 등)의 충돌 상자를 추가한다 */
+  addCollisionBoxes(boxes: Box[]): void {
+    this.boxes.push(...boxes);
+  }
+
   getArenaHalfSize(): number {
     return GameConfig.world.arenaHalfSize;
   }

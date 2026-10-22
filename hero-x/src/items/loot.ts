@@ -48,3 +48,22 @@ export function rollLoot(enemyScore: number, table: LootTable, random: () => num
   if (makeItem && random() < (table.equipChance ?? 0)) drops.push({ kind: 'equip', amount: 0, item: makeItem() });
   return drops;
 }
+
+export interface ChestLootTable {
+  goldMin: number;
+  goldMax: number;
+  equipChance: number;
+  healChance: number;
+  /** 회복량 (GameConfig.loot.healAmount) */
+  healAmount: number;
+}
+
+/** 보물 상자 보상: 골드는 항상, 장비·회복은 확률 */
+export function rollChestLoot(table: ChestLootTable, random: () => number = Math.random, makeItem?: () => ItemInstance): Drop[] {
+  const drops: Drop[] = [];
+  const span = Math.max(0, table.goldMax - table.goldMin);
+  drops.push({ kind: 'gold', amount: Math.round(table.goldMin + random() * span) });
+  if (makeItem && random() < table.equipChance) drops.push({ kind: 'equip', amount: 0, item: makeItem() });
+  if (random() < table.healChance) drops.push({ kind: 'heal', amount: table.healAmount });
+  return drops;
+}

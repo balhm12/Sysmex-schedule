@@ -9,7 +9,7 @@
 - 장르: 3인칭 3D 액션 RPG. Minecraft Dungeons 의 진행 방식을 참고하되 캐릭터·맵·아이템·음악·텍스처는 독자 제작 또는 적법한 에셋만 사용한다.
 - 실행 환경: Windows PC 웹 브라우저(Chrome/Edge). 기본 게임은 외부 API·유료 서비스 없이 실행된다.
 - 최우선 원칙: **실제로 실행되는 게임**을 단계적으로 완성한다. 그래픽 품질보다 안정성·유지보수성이 먼저다.
-- 현재 상태: **1단계(기반 구축) 완료, 2단계(전투) 진행 중** — **3단계(아이템과 성장) 완료 (v0.3.0)** — 드롭, 경험치·레벨, 골드, 장비 12종·등급 5단계, 장비 화면(I), 능력치 반영. 다음: 4단계 던전과 보스(던전 맵 정리, 적 배치, 보물 상자, 보스전, 클리어·실패 화면).
+- 현재 상태: **1단계(기반 구축) 완료, 2단계(전투) 진행 중** — **4단계(던전과 보스) 진행 중** — 4-a 보물 상자·던전 표시 완료 v0.4.0-a.1. 다음: 4-b 보스 '숲의 수호 로봇'(전용 체력바, 패턴 2~3개, 예고, 50% 이하 패턴 변화, 보상), 4-c 던전 클리어·실패 결과 화면과 메인 메뉴.
 
 ## 2. 기술 스택
 
@@ -62,7 +62,9 @@ hero-x/
 │  │  ├─ LootSystem.ts     바닥 아이템 생성·끌림·획득 (효과 적용은 Game.onCollect)
 │  │  ├─ ItemDatabase.ts   장비 템플릿 12종, 등급 적용 생성, 무작위 생성 (테스트 대상)
 │  │  └─ EquipmentSystem.ts 가방·슬롯 장착/해제, 능력치 합산, 방어력 계산 (테스트 대상)
-│  ├─ dungeon/Dungeon01.ts 바닥·조명·벽·장애물 (CollisionWorld 구현)
+│  ├─ dungeon/
+│  │  ├─ Dungeon01.ts      바닥·조명·벽·장애물 (CollisionWorld 구현, 외부 충돌 상자 추가 가능)
+│  │  └─ Chest.ts          보물 상자 배치·근접 판정·열기 연출 (보상은 loot.rollChestLoot)
 │  ├─ ui/
 │  │  ├─ ControlsGuide.ts  조작 안내 화면 + 하단 상태 표시
 │  │  ├─ HUD.ts            체력바·남은 적·처치·점수·피격 번쩍임
@@ -71,7 +73,7 @@ hero-x/
 │  │  ├─ InventoryUI.ts    장비 화면 (슬롯·가방·비교·장착/해제/버리기)
 │  │  └─ ErrorOverlay.ts   화면 오류 표시
 │  └─ utils/Logger.ts      [HERO X] 접두어 로그
-└─ tests/                  단위 테스트 (movement, config, health, enemyAI, melee, difficulty, progression, equipment)
+└─ tests/                  단위 테스트 (movement, config, health, enemyAI, melee, difficulty, progression, equipment, chest)
 ```
 
 앞으로 추가될 폴더(지시서 9장 기준): `combat/Projectile.ts`, `items/`, `save/`, `audio/`, `ui/SettingsUI.ts`, `ui/InventoryUI.ts` 등. 새 기능은 **새 파일**로 만들고 `Game.ts` 에서 연결한다.
@@ -141,6 +143,8 @@ hero-x/
 - 플레이어 공격력: `CombatSystem` 이 레벨 배율(`() => stats.damageMultiplier`)과 무기 공격력(`(kind) => equipment.weaponAttack(kind)`)을 함수로 받는다. 피해 = (기본 + 무기) × 배율.
 - 방어력은 `Game.damagePlayer` 에서 `applyDefense` 로, 체력 보너스는 `Game.applyStats`, 속도 보너스는 `PlayerController` 의 배율 함수로 적용된다. 새 능력치를 추가하면 이 세 곳을 확인한다.
 - 새 장비 → `ItemDatabase.ts` 의 `ITEM_TEMPLATES` 에 항목 추가 (분류 melee/ranged/armor/trinket, 일반 등급 기준 수치).
+- "상자를 더/보상을 더 좋게" → `dungeon.chests` 배열, `dungeon.chestLoot`. 상자 위치는 장애물·적 배치와 겹치지 않아야 한다 (`tests/chest.test.ts` 가 확인).
+- 상호작용(E)이 필요한 새 물체는 `Game.tryInteract` 에 분기를 추가하고 HUD 안내 문구(`currentPrompt`)를 함께 처리한다.
 - 주의: 3D 효과의 방향을 바꿀 때는 `node -e` 로 벡터에 회전을 적용해 보고 확인한다 (2-b 의 부채꼴 반대 방향 버그 참고). 키를 '누르는 순간' 반응해야 하는 동작(점프 등)은 폴링이 아니라 `InputManager.onPress` 로 받는다 (낮은 FPS 에서 짧은 탭을 놓침).
 - 새 적 종류 → `enemies.types` 에 능력치 추가 + `EnemyModels.ts` 에 외형 분기 + (행동이 다르면) `EnemyAI.ts` 확장.
 - "더 어렵게/쉽게" → 먼저 난이도 버튼 안내. 전체 조정은 `difficulty.presets` 배율, 특정 적만이면 `enemies.types.<종류>`.
@@ -152,7 +156,7 @@ hero-x/
 1. 기반 구축 ✅ (v0.1.0)
 2. 전투 시스템 ✅ (v0.2.0: 적 3종, 근접·원거리, 점프, 난이도, 피해 숫자)
 3. 아이템과 성장 ✅ (v0.3.0: 드롭, 경험치·레벨, 골드, 장비·장비 화면·능력치 반영)
-4. 던전과 보스
+4. 던전과 보스 🔄 (4-a 보물 상자 ✅ v0.4.0-a.1 / 4-b 보스전 / 4-c 클리어·실패 화면·메인 메뉴)
 5. 설정 화면과 저장
 6. 콘텐츠 확장
 7. 품질 개선

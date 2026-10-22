@@ -13,6 +13,8 @@ export class HUD {
   private readonly xpFill: HTMLElement;
   private readonly xpText: HTMLElement;
   private readonly goldText: HTMLElement;
+  private readonly chestText: HTMLElement;
+  private readonly prompt: HTMLDivElement;
   private last = { hp: -1, maxHp: -1, enemies: -1, kills: -1, score: -1, level: -1, xp: -1, xpToNext: -1, gold: -1 };
 
   constructor(parent: HTMLElement) {
@@ -27,6 +29,8 @@ export class HUD {
         <div class="hud-value"><span class="hud-label">골드</span><b id="hud-gold">0</b></div>
       </div>
       <div class="hud-panel hud-stats">
+        <div><span class="hud-label">던전</span><b id="hud-dungeon"></b></div>
+        <div><span class="hud-label">상자</span><b id="hud-chests">0 / 0</b></div>
         <div><span class="hud-label">남은 적</span><b id="hud-enemies">0</b></div>
         <div><span class="hud-label">처치</span><b id="hud-kills">0</b></div>
         <div><span class="hud-label">점수</span><b id="hud-score">0</b></div>
@@ -41,6 +45,28 @@ export class HUD {
     this.xpFill = this.root.querySelector('#hud-xp-fill') as HTMLElement;
     this.xpText = this.root.querySelector('#hud-xp-text') as HTMLElement;
     this.goldText = this.root.querySelector('#hud-gold') as HTMLElement;
+    this.chestText = this.root.querySelector('#hud-chests') as HTMLElement;
+    this.prompt = document.createElement('div');
+    this.prompt.className = 'hud-prompt';
+    this.prompt.hidden = true;
+    parent.appendChild(this.prompt);
+  }
+
+  /** 던전 이름 표시 */
+  setDungeonName(name: string): void {
+    (this.root.querySelector('#hud-dungeon') as HTMLElement).textContent = name;
+  }
+
+  /** 열린 상자 수 */
+  setChests(opened: number, total: number): void {
+    const text = `${opened} / ${total}`;
+    if (this.chestText.textContent !== text) this.chestText.textContent = text;
+  }
+
+  /** 화면 가운데 아래 안내 문구 (예: "E 상자 열기"). 빈 문자열이면 숨김 */
+  setPrompt(text: string): void {
+    if (this.prompt.textContent !== text) this.prompt.textContent = text;
+    this.prompt.hidden = text === '';
   }
 
   update(data: { hp: number; maxHp: number; enemies: number; kills: number; score: number; level: number; xp: number; xpToNext: number; gold: number }): void {

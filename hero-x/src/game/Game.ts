@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { CombatSystem } from '../combat/CombatSystem';
 import { Effects } from '../combat/Effects';
 import { ProjectileSystem } from '../combat/Projectile';
+import { ChestSystem } from '../dungeon/Chest';
 import { Dungeon01 } from '../dungeon/Dungeon01';
 import type { Enemy } from '../enemies/Enemy';
 import { EnemySpawner } from '../enemies/EnemySpawner';
@@ -43,6 +44,8 @@ export interface GameDebugState {
   equipment: { inventory: number; equipped: Record<string, string | null>; totals: { attack: number; defense: number; maxHp: number; moveSpeed: number } };
   paused: boolean;
   inventoryVisible: boolean;
+  chests: { opened: number; total: number; nearby: boolean };
+  prompt: string;
   kills: number;
   score: number;
   input: { pointerX: number; pointerY: number; pointerHas: boolean; pressed: string[] };
@@ -70,6 +73,7 @@ export class Game {
   private readonly result: ResultUI;
   private readonly damageNumbers: DamageNumbers;
   private readonly loot: LootSystem;
+  private readonly chests: ChestSystem;
   private readonly inventoryUI: InventoryUI;
   readonly stats = new PlayerStats();
   readonly equipment = new EquipmentSystem();
@@ -113,6 +117,8 @@ export class Game {
 
     // 시스템 구성
     this.dungeon = new Dungeon01(this.scene);
+    this.chests = new ChestSystem(this.scene);
+    this.dungeon.addCollisionBoxes(this.chests.getCollisionBoxes());
     this.player = new Player(createPlaceholderModel(GameConfig.player.colors), GameConfig.player.startPosition);
     this.scene.add(this.player.object3d);
     this.cameraCtrl = new CameraController(this.camera);
@@ -142,6 +148,7 @@ export class Game {
       set: (level) => this.setDifficulty(level),
     });
     this.hud = new HUD(uiRoot);
+    this.hud.setDungeonName(GameConfig.dungeon.name);
     this.result = new ResultUI(uiRoot, () => this.restart());
     this.inventoryUI = new InventoryUI(uiRoot, this.equipment, {
       onChange: () => this.applyStats(),
@@ -157,6 +164,7 @@ export class Game {
       if (this.ended) this.restart();
     });
     this.input.onPress(GameConfig.controls.toggleInventory, () => this.toggleInventory());
+    this.input.onPress(GameConfig.controls.interact, () => this.tryInteract());
     this.input.onPress(['Escape'], () => {
       if (this.inventoryUI.visible) this.toggleInventory(false);
     });
@@ -204,6 +212,20 @@ export class Game {
     this.guide?.refreshDifficulty();
   }
 
+  private currentPrompt = '';
+
+  /** 상호작용 키: 가까운 보물 상자를 연다 */
+  private tryInteract(): void {
+    if (this.ended || this.paused || this.player.health.isDead) return;
+    const p = this.player.position;
+    const chest = this.chests.nearest({ x: p.x, z: p.z });
+    if (!chest || !this.chests.open(chest)) return;
+    const drops = this.loot.dropChest({ x: chest.x, z: chest.z });
+    this.effects.burst(new THREE.Vector3(chest.x, 1, chest.z), 0xffd23f, 16, 5);
+    this.damageNumbers.showText(new THREE.Vector3(chest.x, 1.8, chest.z), '보물 상자!', '#ffd23f');
+    Logger.info(`보물 상자 개봉: ${drops.map((d) => (d.kind === 'equip' ? d.item?.name : `${d.kind} ${d.amount}`)).join(', ')}`);
+  }
+
   /** 장비 화면 열기/닫기. 열려 있는 동안 게임은 멈춘다 */
   toggleInventory(open = !this.inventoryUI.visible): void {
     if (open) {
@@ -239,6 +261,7 @@ export class Game {
     this.projectiles.clear();
     this.damageNumbers.clear();
     this.loot.clear();
+    this.chests.reset();
     // 레벨·골드·장비는 유지하고(성장), 체력은 보너스를 포함해 가득 채운다
     this.player.health.reset(Math.max(1, this.stats.maxHp + this.equipment.totals().maxHp));
     this.player.reset(GameConfig.player.startPosition);
@@ -257,6 +280,7 @@ export class Game {
     this.spawner.dispose();
     this.projectiles.dispose();
     this.loot.dispose();
+    this.chests.dispose();
     this.effects.dispose();
     this.player.dispose();
     this.dungeon.dispose();
@@ -295,6 +319,8 @@ export class Game {
       },
       paused: this.paused,
       inventoryVisible: this.inventoryUI.visible,
+      chests: { opened: this.chests.openedCount, total: this.chests.total, nearby: this.chests.nearest({ x: this.player.position.x, z: this.player.position.z }) !== null },
+      prompt: this.currentPrompt,
       kills: this.combat.kills,
       score: this.combat.score,
       input: { pointerX: pointer.x, pointerY: pointer.y, pointerHas: pointer.has, pressed: this.input.getPressedCodes() },
@@ -436,6 +462,11 @@ export class Game {
       onHitPlayer: (spec, _dir, from) => this.damagePlayer(spec.damage, from),
     });
     this.loot.update(dt, { x: p.x, z: p.z }, (drop, at) => this.onCollect(drop, at));
+    this.chests.update(dt);
+    const nearChest = !this.ended && this.chests.nearest({ x: p.x, z: p.z }) !== null;
+    this.currentPrompt = nearChest ? `${GameConfig.controls.interact[0].replace('Key', '')} 보물 상자 열기` : '';
+    this.hud.setPrompt(this.currentPrompt);
+    this.hud.setChests(this.chests.openedCount, this.chests.total);
     this.player.update(dt);
     this.effects.update(dt);
     this.damageNumbers.update(dt);

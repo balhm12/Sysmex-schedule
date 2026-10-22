@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GameConfig } from '../game/GameConfig';
 import type { Vec2 } from '../player/movement';
 import { generateRandomItem } from './ItemDatabase';
-import { rollLoot, type Drop, type ItemKind } from './loot';
+import { rollChestLoot, rollLoot, type Drop, type ItemKind } from './loot';
 
 interface Pickup {
   mesh: THREE.Mesh;
@@ -41,11 +41,24 @@ export class LootSystem {
   /** 적 처치 보상을 굴려 바닥에 떨어뜨린다 */
   dropFor(enemyScore: number, at: Vec2): Drop[] {
     const drops = rollLoot(enemyScore, { ...GameConfig.loot, equipChance: GameConfig.equipment.dropChance }, Math.random, () => generateRandomItem());
+    this.scatter(drops, at, 0.6);
+    return drops;
+  }
+
+  /** 보물 상자 보상을 굴려 상자 앞에 흩어 놓는다 */
+  dropChest(at: Vec2): Drop[] {
+    const t = GameConfig.dungeon.chestLoot;
+    const drops = rollChestLoot({ ...t, healAmount: GameConfig.loot.healAmount }, Math.random, () => generateRandomItem());
+    this.scatter(drops, at, 1.1);
+    return drops;
+  }
+
+  /** 여러 개를 원형으로 흩어 놓는다 */
+  private scatter(drops: Drop[], at: Vec2, radius: number): void {
     drops.forEach((d, i) => {
       const angle = (i / drops.length) * Math.PI * 2 + Math.random();
-      this.spawn(d, { x: at.x + Math.cos(angle) * 0.6, z: at.z + Math.sin(angle) * 0.6 });
+      this.spawn(d, { x: at.x + Math.cos(angle) * radius, z: at.z + Math.sin(angle) * radius });
     });
-    return drops;
   }
 
   /** 아이템 하나를 놓는다 */
