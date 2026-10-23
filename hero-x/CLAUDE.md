@@ -55,7 +55,8 @@ hero-x/
 │  │  ├─ movement.ts       이동·충돌 순수 함수 (테스트 대상)
 │  │  ├─ FaceTexture.ts    얼굴 사진 자르기·저장(localStorage)·텍스처 (cropRect 는 테스트 대상)
 │  │  └─ models/PlaceholderModel.ts  관절형 영웅 모델(걷기·공격·점프·회피·피격·망토) + PlayerModel 인터페이스 (setFace 로 얼굴 사진)
-├─ public/models/           정식 .glb 모델과 manifest.json, 넣는 방법 README
+├─ public/models/           정식 .glb 모델과 manifest.json, 넣는 방법 README (player.glb = 아들 복셀 캐릭터)
+├─ tools/make_player_glb.py 아들 복셀 캐릭터 .glb 생성기 (파이썬 표준 라이브러리만, 박스 쌓기 → glTF 2.0 바이너리). 색은 sRGB→선형 변환해서 넣는다
 │  ├─ render/
 │  │  ├─ materials.ts      PBR 재질 도우미 (pbr/metal/glow). 새 물체는 Lambert 대신 이걸 쓴다
 │  │  ├─ Quality.ts        화질 프리셋(낮음/중간/높음: 블룸·MSAA·그림자 해상도·바닥 선명도)
@@ -174,7 +175,7 @@ hero-x/
 - 그래픽: 재질은 반드시 `render/materials.ts` 의 `pbr()/glow()` 로 만든다(블룸은 emissiveIntensity ≥ 1.5 에 걸림). 던전 분위기(하늘·노출·바닥)는 `DungeonDefs.theme` 수치만 바꾼다. 후처리 켜고 끄기는 `RenderPipeline.setQuality`, 그림자 해상도는 `DungeonScene.applyQuality`.
 - 게임 루프: `Game.frame()` 이 흐른 시간을 `performance.maxStep`(0.05초) 단위의 `simulate(dt)` 로 나눠 돌리고 한 번 그린다. 시간에 따라 움직이는 로직은 `simulate` 안에, 화면 갱신·FPS 측정은 `frame` 에 둔다.
 - 성능: 자동 화질은 `Game.updateAutoQuality` 가 `GameConfig.performance` 간격으로 `decideQuality` 를 호출해 설정을 낮춘다(올리지 않음). WebGL 끊김은 `contextLost` 플래그로 프레임을 건너뛴다. 프레임 예외는 `loop` 의 try/catch 가 루프를 멈추고 저장한 뒤 다시 던진다(ErrorOverlay 표시).
-- 모델 교체: `.glb` 는 `public/models/` + `manifest.json`. 생성 함수(`createEnemyModel`, `createBossModel`, `Game.swapPlayerModel`)가 `modelRegistry` 에서 먼저 찾고 없으면 임시 모델을 만든다. 적·보스는 다음 생성부터 적용. 얼굴 사진은 `PlayerModel.setFace`(임시 모델만 구현). 현재 `player.glb`(아들 복셀 캐릭터, Z-up 이라 `rotationX: -90`)가 들어 있고, 클립이 없어 `PartRig` 가 부품 이름으로 관절을 만든다. 부품 이름 규칙을 바꾸면 `classifyPart` 와 `tests/models.test.ts` 를 함께 고친다. 'glb 없음' 경로의 브라우저 검증은 Playwright `page.route` 로 manifest 를 비워서 한다(저장소 manifest 파일을 고쳐 쓰지 않는다).
+- 모델 교체: `.glb` 는 `public/models/` + `manifest.json`. 생성 함수(`createEnemyModel`, `createBossModel`, `Game.swapPlayerModel`)가 `modelRegistry` 에서 먼저 찾고 없으면 임시 모델을 만든다. 적·보스는 다음 생성부터 적용. 얼굴 사진은 `PlayerModel.setFace`(임시 모델만 구현). 현재 `player.glb`(아들 복셀 캐릭터, `tools/make_player_glb.py` 로 생성, Y-up·정면 +Z)가 들어 있고, 클립이 없어 `PartRig` 가 부품 이름으로 관절을 만든다. 캐릭터 외형을 바꾸는 요청은 스크립트의 박스를 고치고 다시 생성한다(브라우저에서 모델만 보는 뷰어는 Playwright importmap 방식으로 three 를 vite 에서 불러 쓴다). 부품 이름 규칙을 바꾸면 `classifyPart` 와 `tests/models.test.ts` 를 함께 고친다. 'glb 없음' 경로의 브라우저 검증은 Playwright `page.route` 로 manifest 를 비워서 한다(저장소 manifest 파일을 고쳐 쓰지 않는다).
 - 소리: 새 효과음은 `soundDefs.SFX` 에 레시피(`parts` + `reverb/pitchJitter/gainJitter`)를 추가하고 `Game` 에서 `this.audio.play('이름')`. 음악은 `MUSIC` 에 트랙(베이스 16칸 = 멜로디·드럼 32칸, 코드는 베이스와 같은 길이, 첫 칸은 코드 필수)을 추가하고 `Game.dungeonMusic()` 매핑. 저장소에는 음원 파일을 두지 않고 합성으로 동작하되, 사용자가 `public/sounds/manifest.json` 에 적은 파일(CC0 등 라이선스 확인)은 같은 이름의 효과음·음악을 대신한다(`SoundRegistry` 가 받고 `AudioSystem` 이 디코딩, 없거나 실패하면 합성음). 소리는 첫 사용자 조작 뒤에만 난다(브라우저 제한) — 테스트에서는 키 입력 뒤 `audio.ready/voices` 를 보고, 파일 경로는 Playwright `page.route` 로 manifest 와 wav 를 가로채 검증한다(저장소 파일은 건드리지 않음).
 - 진동은 `utils/haptics.ts` 의 `vibrate()` 를 `settings.haptics` 확인 후 호출한다. 터치 전용 표시(자동 조준 고리 `aimRing`)는 `settings.touchControls` 일 때만 보인다.
 - "아이템이 더 자주/레벨이 빨리" → `loot.healChance/goldChance`, `progression.xpBase/xpGrowth`.
