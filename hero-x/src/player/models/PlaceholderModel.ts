@@ -23,6 +23,8 @@ export interface PlayerModel {
   update(dt: number, state: PlayerModelState): void;
   /** 메모리 정리 */
   dispose(): void;
+  /** 얼굴 사진 텍스처 붙이기 (지원하는 모델만). null 이면 원래 얼굴 */
+  setFace?(texture: THREE.Texture | null): void;
 }
 
 export interface PlaceholderColors {
@@ -102,12 +104,25 @@ export function createPlaceholderModel(colors: PlaceholderColors): PlayerModel {
   addMesh(head, new THREE.BoxGeometry(0.5, 0.16, 0.12), visorMat, 0, 0.05, 0.36);
   const hair = addMesh(head, new THREE.SphereGeometry(0.43, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), darkMat, 0, 0.03, -0.05);
   hair.rotation.x = -0.3;
+  // 얼굴 사진: 머리 앞면에 살짝 둥근 판을 두고 사진 텍스처를 붙인다 (사진이 없으면 숨김)
+  const faceMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 1 });
+  const facePlane = new THREE.Mesh(new THREE.SphereGeometry(0.405, 24, 18, Math.PI * 0.72, Math.PI * 0.56, Math.PI * 0.22, Math.PI * 0.56), faceMat);
+  facePlane.visible = false;
+  head.add(facePlane);
+  const visor = head.children[1];
   root.add(head);
 
   let walkT = 0;
 
   return {
     root,
+    setFace(texture) {
+      if (faceMat.map && faceMat.map !== texture) faceMat.map.dispose();
+      faceMat.map = texture;
+      faceMat.needsUpdate = true;
+      facePlane.visible = texture !== null;
+      visor.visible = texture === null;
+    },
     update(dt, state) {
       if (state.dead) {
         // 쓰러짐: 옆으로 눕는다

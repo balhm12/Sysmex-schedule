@@ -10,6 +10,8 @@ export interface SettingsUICallbacks {
   /** 모두 기본값으로 */
   resetAll: () => void;
   onClose: () => void;
+  /** 얼굴 사진: 현재 사진(data URL) / 고르기 / 지우기 */
+  face: { get: () => string | null; pick: (file: File) => Promise<void>; clear: () => void };
 }
 
 /**
@@ -47,7 +49,12 @@ export class SettingsUI {
       <div class="guide-panel settings-panel" role="dialog" aria-labelledby="settings-title">
         <div class="inv-head"><h2 class="guide-title" id="settings-title">설정</h2><button class="btn small" id="settings-close" type="button">닫기 (Esc)</button></div>
         <p class="guide-sub">바꾸는 즉시 적용되고 이 브라우저에 저장됩니다.</p>
-        <div class="set-body">${groups}</div>
+        <div class="set-body">${groups}
+          <section class="set-group"><h3 class="set-group-title">내 얼굴</h3>
+            <div class="set-row"><div class="set-text"><div class="set-label">내 얼굴 사진</div><div class="set-desc">정면 사진을 고르면 캐릭터 머리에 얼굴이 붙습니다. 사진은 이 브라우저 안에만 저장되고 어디에도 보내지 않습니다.</div><div class="set-desc" id="face-status"></div></div>
+            <div class="set-control face-control"><img id="face-preview" alt="얼굴 미리보기" hidden><label class="btn small" for="face-file">사진 고르기</label><input id="face-file" type="file" accept="image/*" hidden><button class="btn small ghost" id="face-clear" type="button">지우기</button></div></div>
+          </section>
+        </div>
         <div class="menu-confirm" id="settings-confirm" hidden>
           <p>모든 설정을 기본값으로 되돌릴까요?</p>
           <div class="btns"><button class="btn small" id="settings-reset-yes" type="button">되돌리기</button><button class="btn small ghost" id="settings-reset-no" type="button">취소</button></div>
@@ -57,6 +64,25 @@ export class SettingsUI {
     parent.appendChild(this.el);
 
     this.el.querySelector('#settings-close')?.addEventListener('click', () => this.cb.onClose());
+    const fileInput = this.el.querySelector('#face-file') as HTMLInputElement;
+    fileInput.addEventListener('change', async () => {
+      const f = fileInput.files?.[0];
+      fileInput.value = '';
+      if (!f) return;
+      const status = this.el.querySelector('#face-status') as HTMLElement;
+      status.textContent = '사진을 처리하는 중…';
+      try {
+        await this.cb.face.pick(f);
+        status.textContent = '';
+      } catch (err) {
+        status.textContent = err instanceof Error ? err.message : String(err);
+      }
+      this.refresh();
+    });
+    this.el.querySelector('#face-clear')?.addEventListener('click', () => {
+      this.cb.face.clear();
+      this.refresh();
+    });
     this.el.querySelector('#settings-reset')?.addEventListener('click', () => this.setConfirm(true));
     this.el.querySelector('#settings-reset-no')?.addEventListener('click', () => this.setConfirm(false));
     this.el.querySelector('#settings-reset-yes')?.addEventListener('click', () => {
@@ -98,6 +124,11 @@ export class SettingsUI {
   /** 현재 값으로 모든 컨트롤을 갱신 */
   refresh(): void {
     const s = this.cb.get();
+    const face = this.cb.face.get();
+    const preview = this.el.querySelector('#face-preview') as HTMLImageElement;
+    preview.hidden = !face;
+    if (face) preview.src = face;
+    (this.el.querySelector('#face-clear') as HTMLButtonElement).disabled = !face;
     for (const d of SETTING_DEFS) {
       if (d.kind === 'choice') {
         this.el.querySelectorAll<HTMLButtonElement>('.diff-btn[data-key="difficulty"]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.level === s.difficulty)));

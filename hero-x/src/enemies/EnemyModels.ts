@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { modelRegistry } from '../assets/ModelRegistry';
 import type { EnemyTypeConfig } from '../game/GameConfig';
 import type { EnemyState } from './EnemyAI';
 
@@ -31,6 +32,9 @@ export interface EnemyModel {
  * - tank(철벽 로봇): 큰 몸통 + 방패. 예고 때 방패를 들어 올린다. 밀려남 저항이 크다.
  */
 export function createEnemyModel(type: string, def: EnemyTypeConfig): EnemyModel {
+  // 정식 .glb 모델이 등록돼 있으면 그것을 쓴다 (높이는 충돌 반지름에 비례)
+  const gltf = modelRegistry.createEnemyModel(`enemy:${type}`, def.radius * 2.8);
+  if (gltf) return gltf;
   // def.model 이 있으면 그 외형을, 없으면 종류 이름으로 고른다 (새 종류가 기존 외형을 재사용할 수 있게)
   switch (def.model ?? type) {
     case 'tank':

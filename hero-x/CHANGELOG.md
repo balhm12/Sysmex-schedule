@@ -2,6 +2,26 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-23 · v0.7.0-b.1 · 7단계 둘째 묶음 (내 얼굴 사진·정식 모델(.glb) 교체 구조)
+
+### 변경 내용
+- **내 얼굴 사진**: 설정 → 내 얼굴 → `사진 고르기`. 사진의 가운데 위쪽 정사각형을 잘라 256px 로 줄여 캐릭터 머리 앞면에 붙인다. 브라우저 저장소(`hero-x.face`)에만 저장, 서버 전송 없음. `지우기`로 원래 얼굴. (`src/player/FaceTexture.ts`, `PlayerModel.setFace`)
+- **정식 모델 교체 구조**: `public/models/manifest.json` 에 `.glb` 파일 이름을 적으면 플레이어·적(종류별)·보스(외형별)가 그 모델로 바뀐다. 없으면 임시 모델. 애니메이션 클립 이름(idle/walk·run/attack/jump/die)이 있으면 자동 재생. 크기(`scale`)·바닥(`offsetY`)·정면(`rotationY`) 보정. 파일을 못 읽으면 경고만 남기고 임시 모델로 계속. (`src/assets/ModelRegistry.ts`, `public/models/README.md` 에 만드는 방법)
+- three.js 에 포함된 `GLTFLoader`·`SkeletonUtils` 를 사용(새 라이브러리 없음).
+
+### 수정 파일
+- 신규: `src/player/FaceTexture.ts`, `src/assets/ModelRegistry.ts`, `public/models/{manifest.json,README.md}`, `tests/models.test.ts`
+- 수정: `src/player/{Player.ts,models/PlaceholderModel.ts}`, `src/enemies/{EnemyModels,Boss}.ts`, `src/ui/SettingsUI.ts`, `src/game/{Game,GameConfig}.ts`, `src/style.css`, `package.json`
+
+### 테스트 결과 (실제 실행)
+- `npm run typecheck`: 통과 · `npm test`: 104개 통과(얼굴 자르기 3개, manifest 검증 2개 추가) · `npm run build`: 성공
+- 브라우저 검증: 처음엔 얼굴 없음·모델 없음·manifest 경고 없음 → 설정에서 사진(300×400 PNG) 선택 → 머리에 얼굴 표시·미리보기·JPEG data URL 저장 → 새로고침 뒤 유지 → 지우기로 원복·저장 삭제 → manifest 에 없는 glb 두 개를 적으면 경고 2개(404)만 남고 새 게임 정상(적 11). 그 밖의 콘솔 오류 없음.
+- 실제 .glb 파일로의 교체는 파일이 아직 없어 검증하지 못했다. 파일이 생기면 크기·방향 보정 값과 함께 확인한다.
+
+### 알려진 문제
+- 얼굴 사진은 임시 캐릭터에만 붙는다. .glb 플레이어 모델을 쓰면 그 모델의 얼굴이 쓰인다.
+- 사진이 매우 크면(수십 MB) 휴대폰에서 처리에 몇 초 걸릴 수 있다.
+
 ## 2026-10-23 · v0.7.0-a.1 · 7단계 첫째 묶음 (효과음·음악)
 
 ### 변경 내용

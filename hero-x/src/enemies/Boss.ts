@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { modelRegistry } from '../assets/ModelRegistry';
 import type { BossConfig } from '../game/DungeonDefs';
 import { GameConfig, type EnemyTypeConfig } from '../game/GameConfig';
 import { clampToArena, directionToFacing, lerpAngle, resolveCircleVsBoxes, type Vec2 } from '../player/movement';
@@ -151,6 +152,9 @@ export type BossModelKind = 'guardian' | 'golem' | 'commander';
  * 예고 때 패턴별로 다른 색·동작.
  */
 function createBossModel(def: EnemyTypeConfig, kind: BossModelKind = 'guardian'): EnemyModel {
+  // 정식 .glb 보스 모델이 등록돼 있으면 그것을 쓴다
+  const gltf = modelRegistry.createEnemyModel(`boss:${kind}`, def.radius * 3.0);
+  if (gltf) return gltf;
   const root = new THREE.Group();
   root.name = `Boss-${def.name}`;
   const r = def.radius;

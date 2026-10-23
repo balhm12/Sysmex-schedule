@@ -990,3 +990,18 @@ body {
     width: 92vw;
   }
 }
+
+/* 얼굴 사진 설정 */
+.face-control {
+  gap: 10px;
+}
+#face-preview {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #5cf2d8;
+}
+#face-preview[hidden] {
+  display: none;
+}

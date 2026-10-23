@@ -55,6 +55,21 @@ export class Player {
     return this.jumpY > 0;
   }
 
+  /** 현재 외형 모델 */
+  get currentModel(): PlayerModel {
+    return this.model;
+  }
+
+  /** 얼굴 사진이 붙어 보이는 중인지 (디버그용) */
+  get faceVisible(): boolean {
+    let visible = false;
+    this.model.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh && mesh.visible && (mesh.material as THREE.MeshBasicMaterial).map && mesh.parent?.position.y === 1.42) visible = true;
+    });
+    return visible;
+  }
+
   /** 외형 모델 교체 (기존 모델은 정리한다) */
   setModel(model: PlayerModel): void {
     this.object3d.remove(this.model.root);

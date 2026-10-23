@@ -20,6 +20,8 @@ import { PlayerStats } from '../player/PlayerStats';
 import { Player } from '../player/Player';
 import { PlayerController } from '../player/PlayerController';
 import { createPlaceholderModel } from '../player/models/PlaceholderModel';
+import { faceFromFile, faceTexture, loadFace, saveFace } from '../player/FaceTexture';
+import { modelRegistry } from '../assets/ModelRegistry';
 import type { Vec2 } from '../player/movement';
 import { ControlsGuide } from '../ui/ControlsGuide';
 import { MainMenu } from '../ui/MainMenu';
@@ -56,6 +58,9 @@ export interface GameDebugState {
   dash: { active: boolean; cooldown: number; invulnerable: number };
   aimRingVisible: boolean;
   audio: { ready: boolean; track: string | null };
+  face: boolean;
+  faceVisible: boolean;
+  models: { loaded: string[]; playerGltf: boolean };
   pixelRatio: number;
   interactButtonVisible: boolean;
   shadowsEnabled: boolean;
@@ -104,6 +109,10 @@ export class Game {
   private readonly dungeonSelect: DungeonSelectUI;
   /** 이번 클리어로 새로 열린 던전 (결과 화면 안내용) */
   private unlockedNow: DungeonDef | null = null;
+  /** 얼굴 사진 (data URL). null 이면 기본 얼굴 */
+  private face: string | null = loadFace();
+  /** 플레이어가 정식 glb 모델을 쓰는 중인지 */
+  private playerUsesGltf = false;
   /** 소리 (효과음·음악, 코드 합성) */
   private readonly audio = new AudioSystem();
   /** 자동 조준 표시: 터치 조작 중 겨누는 적 발밑의 고리 */
@@ -280,6 +289,21 @@ export class Game {
       set: (key, value) => this.updateSetting(key, value),
       resetAll: () => this.resetSettings(),
       onClose: () => this.closeSettings(),
+      face: {
+        get: () => this.face,
+        pick: async (file) => {
+          const data = await faceFromFile(file);
+          this.face = data;
+          if (!saveFace(data)) Logger.warn('얼굴 사진을 브라우저에 저장하지 못했습니다 (용량 또는 저장소 제한). 이번 실행에서만 보입니다.');
+          await this.applyFace();
+          Logger.info('얼굴 사진을 적용했습니다.');
+        },
+        clear: () => {
+          this.face = null;
+          saveFace(null);
+          void this.applyFace();
+        },
+      },
     });
     this.inventoryUI = new InventoryUI(uiRoot, this.equipment, {
       onChange: () => {
@@ -320,6 +344,11 @@ export class Game {
     });
     this.hud.hide();
     this.menu.show();
+
+    // 얼굴 사진·정식 모델은 비동기로 붙인다 (실패해도 임시 모델로 계속)
+    void this.applyFace();
+    modelRegistry.onPlayerReady = () => this.swapPlayerModel();
+    void modelRegistry.load(import.meta.env.BASE_URL);
 
     window.addEventListener('resize', this.resize);
     // 탭을 닫거나 숨길 때 바뀐 것이 있으면 바로 저장한다
@@ -551,6 +580,34 @@ export class Game {
   private dungeonMusic(): MusicName {
     const id = this.dungeonDef.id;
     return id === 'cave' || id === 'fortress' || id === 'forest' ? id : 'forest';
+  }
+
+  /** 얼굴 사진을 현재 플레이어 모델에 붙인다 (지원하는 모델만) */
+  private async applyFace(): Promise<void> {
+    const model = this.player.currentModel;
+    if (!model.setFace) return;
+    if (!this.face) {
+      model.setFace(null);
+      return;
+    }
+    try {
+      model.setFace(await faceTexture(this.face));
+    } catch (err) {
+      Logger.warn('얼굴 사진을 붙이지 못했습니다.', err);
+    }
+  }
+
+  /** 정식 glb 플레이어 모델이 로드되면 교체 */
+  private swapPlayerModel(): void {
+    const m = modelRegistry.createPlayerModel();
+    if (!m) return;
+    this.player.setModel(m);
+    this.playerUsesGltf = true;
+    Logger.info('플레이어 정식 모델로 교체했습니다.');
+  }
+
+  getFace(): string | null {
+    return this.face;
   }
 
   /** 터치 조작은 설정이 켜져 있고 플레이 중일 때만 보인다 */
@@ -809,6 +866,9 @@ export class Game {
       dash: { active: this.controller.dashing, cooldown: this.controller.dashCooldownRatio, invulnerable: this.player.health.invulnerable },
       aimRingVisible: this.aimRing.visible,
       audio: { ready: this.audio.ready, track: this.audio.currentTrack },
+      face: this.face !== null,
+      faceVisible: this.player.faceVisible,
+      models: { loaded: modelRegistry.loadedKeys, playerGltf: this.playerUsesGltf },
       pixelRatio: this.renderer.getPixelRatio(),
       interactButtonVisible: this.touch.visible && !(document.getElementById('touch-interact') as HTMLButtonElement | null)?.hidden,
       shadowsEnabled: this.renderer.shadowMap.enabled,
