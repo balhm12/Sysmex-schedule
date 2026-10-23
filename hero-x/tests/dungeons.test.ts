@@ -89,7 +89,7 @@ describe('던전 정의 (DungeonDefs)', () => {
     expect(fort.useCharge).toBe(true);
   });
 
-  it('새 적 종류(박쥐 드론·요새 포대)는 능력치가 허용 범위 안이고 기존 외형을 재사용한다', () => {
+  it('새 적 종류(동굴 박쥐·돌 골렘)는 능력치가 허용 범위 안이고 기존 외형을 재사용한다', () => {
     const stalker = GameConfig.enemies.types.stalker;
     const artillery = GameConfig.enemies.types.artillery;
     expect(stalker.model).toBe('shooter');

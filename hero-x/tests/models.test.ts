@@ -69,6 +69,11 @@ describe('적 부품 이름 리그 (classifyEnemyPart / enemyPartGroup)', () => 
     expect(classifyEnemyPart('antenna_a')).toBe('antenna');
     expect(classifyEnemyPart('glow_muzzle')).toBe('glow');
     expect(classifyEnemyPart('eye_lens')).toBe('eye');
+    expect(classifyEnemyPart('float_tail')).toBe('float');
+    expect(classifyEnemyPart('leg_l_claw')).toBe('leg');
+    expect(classifyEnemyPart('left_leg')).toBeNull(); // 사람형 부품은 classifyPart 가 맡는다
+    expect(classifyPart('weapon_club')).toBe('weapon');
+    expect(classifyPart('tooth_l')).toBeNull();
     expect(classifyEnemyPart('body')).toBeNull();
     expect(classifyEnemyPart('stripe_0')).toBeNull();
     expect(enemyPartGroup('wheel_fl_hub')).toBe('wheel:fl');

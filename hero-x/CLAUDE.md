@@ -58,7 +58,8 @@ hero-x/
 ├─ public/models/           정식 .glb 모델과 manifest.json, 넣는 방법 README (player.glb = 아들 복셀 캐릭터)
 ├─ tools/voxel_glb.py       복셀(박스 쌓기) → glTF 2.0 바이너리 공용 모듈 (파이썬 표준 라이브러리만). 색은 sRGB→선형 변환해서 넣는다
 ├─ tools/make_player_glb.py 아들 복셀 캐릭터 .glb 생성기 → public/models/player.glb
-├─ tools/make_enemies_glb.py 적 5종 복셀 .glb 생성기 → public/models/enemy-*.glb (부품 이름 규칙은 public/models/README)
+├─ tools/make_enemies_glb.py 적 5종 로봇 복셀 .glb 생성기 → public/models/enemy-*.glb (선택 외형)
+├─ tools/make_monsters_glb.py 적 5종 몬스터 복셀 .glb 생성기 → public/models/monster-*.glb (현재 manifest 가 쓰는 외형. 사람형은 플레이어와 같은 부품 이름 + weapon_*, 떠다님은 float_*, 부품 이름 규칙은 public/models/README)
 │  ├─ render/
 │  │  ├─ materials.ts      PBR 재질 도우미 (pbr/metal/glow). 새 물체는 Lambert 대신 이걸 쓴다
 │  │  ├─ Quality.ts        화질 프리셋(낮음/중간/높음: 블룸·MSAA·그림자 해상도·바닥 선명도)
@@ -197,7 +198,7 @@ hero-x/
 - 저장: 성장·장비·난이도·기록만 저장하고 던전 안 상태는 저장하지 않는다. 저장 형식을 바꾸면 `SAVE_VERSION` 을 올리고 `migrateSaveData` 에 변환을 추가한 뒤 `tests/save.test.ts` 에 옛 형식 → 새 형식 테스트를 더한다. 장비는 원형 id·등급만 저장하고 `createItem` 으로 다시 만든다. 저장 시점은 `Game.markDirty()`(자동 저장 간격 뒤) 또는 `Game.saveNow()`(메뉴·결과·탭 닫기)로만 다룬다. 저장 데이터 초기화는 사용자가 '새 게임'을 확인했을 때만 한다.
 - 게임 흐름은 `Game.mode`('menu' | 'play' | 'result') 하나로 관리한다. 메뉴·결과 전환은 `newGame / continueGame / retry / openMenu / showResult` 만 사용하고, 루프는 `mode !== 'play'` 이거나 `paused` 면 그리기만 한다. 브라우저 자동 검증은 `#menu-new` 버튼으로 시작한다.
 - 주의: 3D 효과의 방향을 바꿀 때는 `node -e` 로 벡터에 회전을 적용해 보고 확인한다 (2-b 의 부채꼴 반대 방향 버그 참고). 키를 '누르는 순간' 반응해야 하는 동작(점프 등)은 폴링이 아니라 `InputManager.onPress` 로 받는다 (낮은 FPS 에서 짧은 탭을 놓침).
-- 새 적 종류 → `enemies.types` 에 능력치 추가 + 외형은 `tools/make_enemies_glb.py` 에 복셀 모델을 추가하고 `manifest.json` `enemies.<종류>` 에 등록(또는 `EnemyModels.ts` 임시 모델 분기) + (행동이 다르면) `EnemyAI.ts` 확장. 적 .glb 의 재질은 개체마다 복제되므로(`cloneMaterials`) 피격 번쩍임·발광이 섞이지 않는다.
+- 새 적 종류 → `enemies.types` 에 능력치 추가 + 외형은 `tools/make_monsters_glb.py`(또는 로봇은 `make_enemies_glb.py`)에 복셀 모델을 추가하고 `manifest.json` `enemies.<종류>` 에 등록(또는 `EnemyModels.ts` 임시 모델 분기) + (행동이 다르면) `EnemyAI.ts` 확장. 적 .glb 의 재질은 개체마다 복제되므로(`cloneMaterials`) 피격 번쩍임·발광이 섞이지 않는다.
 - "더 어렵게/쉽게" → 먼저 난이도 버튼 안내. 전체 조정은 `difficulty.presets` 배율, 특정 적만이면 `enemies.types.<종류>`.
 - 난이도 배율은 적 생성 시(체력·속도)와 피해 계산 시(공격력, `Game.onEnemyAttack`)에 적용된다. 새 적 능력치를 추가하면 배율 적용 위치를 함께 확인한다.
 - 새 기능(무기, 아이템…) → 새 파일을 만들고 `Game.ts` 의 루프에 `update()` 를 추가. 설정은 `GameConfig.ts` 에.

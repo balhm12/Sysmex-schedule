@@ -1,6 +1,6 @@
 {
   "name": "hero-x",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": true,
   "description": "HERO X - 모험의 던전 (3D 액션 RPG, Three.js + TypeScript + Vite)",
   "type": "module",

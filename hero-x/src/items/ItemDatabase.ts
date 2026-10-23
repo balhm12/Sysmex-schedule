@@ -61,7 +61,7 @@ export const ITEM_TEMPLATES: ItemTemplate[] = [
   { id: 'amulet_power', name: '힘의 목걸이', category: 'trinket', base: { attack: 2, defense: 2 }, description: '공격과 방어를 조금씩 올려 준다.' },
   // 6단계 추가 장비
   { id: 'spear_crystal', name: '수정 창', category: 'melee', base: { attack: 6, moveSpeed: 0.04 }, description: '수정 동굴에서 캔 가볍고 날카로운 창.' },
-  { id: 'rifle_rail', name: '레일 라이플', category: 'ranged', base: { attack: 10, moveSpeed: -0.08 }, description: '요새 포대의 부품으로 만든 강력한 총. 무겁다.' },
+  { id: 'rifle_rail', name: '레일 라이플', category: 'ranged', base: { attack: 10, moveSpeed: -0.08 }, description: '돌 골렘의 심장석을 박아 만든 강력한 총. 무겁다.' },
   { id: 'cloak_shadow', name: '그림자 망토', category: 'armor', base: { defense: 7, moveSpeed: 0.1 }, description: '얇지만 몸놀림이 빨라지는 망토.' },
   { id: 'core_fortress', name: '요새 코어', category: 'trinket', base: { defense: 6, maxHp: 15 }, description: '요새의 동력 코어. 단단해진다.' },
 ];

@@ -47,7 +47,7 @@ export class ControlsGuide {
           <li>${keys(c.restart)} 결과 화면에서 다시 도전</li>
           <li>${keys(c.toggleGuide)} 이 안내 열기/닫기</li>
         </ul>
-        <p class="guide-note">돌진 로봇은 눈이 붉어진 뒤 덤벼들고, 포격 드론은 포신이 밝아진 뒤 탄을 쏘며, 철벽 로봇은 방패를 들어 올린 뒤 내려찍습니다. 보스는 바닥 원 색깔로 패턴을 예고합니다(주황 돌진 · 빨강 내려찍기 · 보라 탄막).</p>
+        <p class="guide-note">고블린 전사는 곤봉을 치켜든 뒤 내려치고, 유령 마법사는 지팡이를 치켜들어 마법탄을 쏘며, 트롤 거인은 방패를 들어 올린 뒤 도끼를 휘두릅니다. 눈이 커지고 밝아지는 것이 공격 신호입니다. 보스는 바닥 원 색깔로 패턴을 예고합니다(주황 돌진 · 빨강 내려찍기 · 보라 탄막).</p>
       </div>`;
     root.appendChild(this.guide);
     this.guide.querySelector<HTMLButtonElement>('#guide-close')?.addEventListener('click', onClose);

@@ -102,7 +102,7 @@ export const DUNGEONS: DungeonDef[] = [
   {
     id: 'cave',
     name: '수정 동굴',
-    subtitle: '어둡고 좁은 동굴. 빠른 박쥐 드론이 떼로 덤빈다.',
+    subtitle: '어둡고 좁은 동굴. 빠른 동굴 박쥐이 떼로 덤빈다.',
     recommendedLevel: 4,
     requiresClear: 'forest',
     arenaHalfSize: 24,
@@ -171,7 +171,7 @@ export const DUNGEONS: DungeonDef[] = [
       spawn: { x: 0, z: -17 },
       contactDamage: 24,
       model: 'golem',
-      // 돌진 대신 박쥐 드론을 소환한다. 느리지만 내려찍기가 넓다
+      // 돌진 대신 동굴 박쥐을 소환한다. 느리지만 내려찍기가 넓다
       useCharge: false,
       closePatterns: ['slam', 'summon', 'barrage'],
       engageRange: 9,
@@ -187,7 +187,7 @@ export const DUNGEONS: DungeonDef[] = [
   {
     id: 'fortress',
     name: '강철 요새',
-    subtitle: '붉은 강철 요새. 철벽 로봇과 포대가 길목을 지킨다.',
+    subtitle: '붉은 강철 요새. 트롤 거인과 포대가 길목을 지킨다.',
     recommendedLevel: 8,
     requiresClear: 'cave',
     arenaHalfSize: 30,

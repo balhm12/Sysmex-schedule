@@ -203,8 +203,8 @@ export function buildPartRig(root: THREE.Object3D): PartRig | null {
 
 // ====================== 적 리그 ======================
 
-/** 적 부품 종류: 이름 접두어로 정한다 */
-export type EnemyPartKind = 'wheel' | 'claw' | 'rotor' | 'wing' | 'barrel' | 'shield' | 'piston' | 'antenna' | 'glow' | 'eye' | null;
+/** 적 전용 부품 종류: 이름 접두어로 정한다 (사람형 부품 left_/right_/head/weapon 은 classifyPart 가 맡는다) */
+export type EnemyPartKind = 'wheel' | 'claw' | 'rotor' | 'wing' | 'barrel' | 'shield' | 'piston' | 'antenna' | 'glow' | 'eye' | 'float' | 'leg' | null;
 
 const ENEMY_PREFIX: Array<[RegExp, Exclude<EnemyPartKind, null>]> = [
   [/^wheel/, 'wheel'],
@@ -217,6 +217,8 @@ const ENEMY_PREFIX: Array<[RegExp, Exclude<EnemyPartKind, null>]> = [
   [/^antenna/, 'antenna'],
   [/^glow/, 'glow'],
   [/^eye/, 'eye'],
+  [/^float/, 'float'],
+  [/^leg/, 'leg'],
 ];
 
 /** 적 메시 이름 → 부품 종류 (순수 함수, 테스트 대상) */
@@ -237,12 +239,20 @@ export interface EnemyPartRig {
   update(dt: number, s: EnemyModelState): void;
 }
 
+interface EnemyJoint {
+  kind: Exclude<EnemyPartKind, null>;
+  group: THREE.Group;
+  /** 좌우 부호 (x 중심의 부호) */
+  side: number;
+  base: THREE.Vector3;
+}
+
 /**
  * 적 모델의 부품 이름으로 관절을 만든다 (root 변환은 항등, 메시는 보정 완료 상태).
- * - wheel: 중심 관절, 이동 시 X 축 회전. claw: 몸 쪽 모서리 관절, 예고 때 Y 축으로 벌어짐.
- * - rotor: 중심, 항상 Y 축 회전 → 모델이 떠다님. wing: 안쪽 모서리, Z 축 퍼덕임 → 떠다님.
- * - barrel: 예고 끝에 뒤로 반동(위치). shield: 아래 모서리 관절, 예고 때 X 축으로 들어 올림.
- * - piston: 이동 시 위아래. antenna: 아래 모서리, 흔들림. glow: 발광 세기(예고 때 밝게). eye: 예고 때 커짐.
+ * 기계 부품: wheel(이동 시 X 회전) · claw(예고 때 Y 로 벌어짐) · rotor(항상 회전, 떠다님) · wing(퍼덕임, 떠다님) ·
+ *   barrel(발사 순간 반동) · shield(예고 때 들어 올림) · piston(이동 시 펌프) · antenna(흔들림) · glow(예고 때 밝게) ·
+ *   eye(예고 때 커짐) · float(있으면 떠다님) · leg(짧게 흔들림).
+ * 사람형 부품(left_/right_ + leg/arm/hand…, head, weapon_*): 걷기(팔다리 교차)·예고(무기 팔 뒤로 치켜들기)·공격(앞으로 휘두르기).
  * 인식된 부품이 하나도 없으면 null.
  */
 export function buildEnemyPartRig(root: THREE.Object3D): EnemyPartRig | null {
@@ -250,30 +260,55 @@ export function buildEnemyPartRig(root: THREE.Object3D): EnemyPartRig | null {
   const whole = new THREE.Box3().setFromObject(root);
   const height = Math.max(0.01, whole.max.y - whole.min.y);
   const groups = new Map<string, { kind: Exclude<EnemyPartKind, null>; meshes: THREE.Mesh[] }>();
+  const humanoid = new Map<Exclude<PartKind, null>, THREE.Mesh[]>();
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (!mesh.isMesh) return;
+    // 사람형 부품이 우선 (left_leg 는 'leg' 접두어가 아니므로 겹치지 않지만, 안전하게 먼저 본다)
+    const hk = classifyPart(mesh.name);
+    if (hk) {
+      const list = humanoid.get(hk) ?? [];
+      list.push(mesh);
+      humanoid.set(hk, list);
+      return;
+    }
     const kind = classifyEnemyPart(mesh.name);
     if (!kind) return;
-    // 묶음: 발광·눈은 메시마다, 로터·포신·방패는 종류마다 하나, 나머지(바퀴·집게·날개·피스톤·안테나)는 두 번째 토큰까지
+    // 묶음: 발광·눈은 메시마다, 로터·포신·방패는 종류마다 하나, 나머지(바퀴·집게·날개·피스톤·안테나·다리)는 두 번째 토큰까지
     const key = kind === 'glow' || kind === 'eye' ? `${kind}:${mesh.name}` : kind === 'rotor' || kind === 'barrel' || kind === 'shield' ? kind : enemyPartGroup(mesh.name);
     const g = groups.get(key) ?? { kind, meshes: [] };
     g.meshes.push(mesh);
     groups.set(key, g);
   });
-  if (groups.size === 0) return null;
+  const hasLegs = humanoid.has('leftLeg') && humanoid.has('rightLeg');
+  const hasArms = humanoid.has('leftArm') && humanoid.has('rightArm');
+  if (groups.size === 0 && !hasLegs && !hasArms) return null;
 
-  interface Joint {
-    kind: Exclude<EnemyPartKind, null>;
-    group: THREE.Group;
-    side: number; // 좌우 부호 (x 중심의 부호)
-    base: THREE.Vector3;
-  }
-  const joints: Joint[] = [];
-  const glowMats: THREE.MeshStandardMaterial[] = [];
-  for (const { kind, meshes } of groups.values()) {
+  const boxOf = (meshes: THREE.Mesh[]) => {
     const box = new THREE.Box3();
     for (const m of meshes) box.expandByObject(m);
+    return box;
+  };
+  const attachJoint = (name: string, meshes: THREE.Mesh[], pivot: THREE.Vector3): THREE.Group => {
+    const group = new THREE.Group();
+    group.name = name;
+    group.position.copy(pivot);
+    root.add(group);
+    group.updateMatrixWorld(true);
+    for (const m of meshes) group.attach(m);
+    return group;
+  };
+
+  // --- 기계 부품 관절 ---
+  const joints: EnemyJoint[] = [];
+  const glowMats: THREE.MeshStandardMaterial[] = [];
+  let floating = false;
+  for (const { kind, meshes } of groups.values()) {
+    if (kind === 'float') {
+      floating = true;
+      continue;
+    }
+    const box = boxOf(meshes);
     const c = box.getCenter(new THREE.Vector3());
     const side = c.x >= 0 ? 1 : -1;
     let pivot: THREE.Vector3;
@@ -286,25 +321,49 @@ export function buildEnemyPartRig(root: THREE.Object3D): EnemyPartRig | null {
       case 'antenna':
         pivot = new THREE.Vector3(c.x, box.min.y, c.z); // 아래 모서리
         break;
+      case 'leg':
+        pivot = new THREE.Vector3(c.x, box.max.y, c.z); // 위 모서리
+        break;
       default:
         pivot = c.clone();
     }
-    const group = new THREE.Group();
-    group.name = `joint:${kind}`;
-    group.position.copy(pivot);
-    root.add(group);
-    group.updateMatrixWorld(true);
-    for (const m of meshes) {
-      group.attach(m);
-      if (kind === 'glow') {
+    const group = attachJoint(`joint:${kind}`, meshes, pivot);
+    if (kind === 'glow') {
+      for (const m of meshes) {
         const list = Array.isArray(m.material) ? m.material : [m.material];
         for (const mt of list) if ((mt as THREE.MeshStandardMaterial).emissive) glowMats.push(mt as THREE.MeshStandardMaterial);
       }
     }
     joints.push({ kind, group, side, base: pivot.clone() });
   }
-  const floating = joints.some((j) => j.kind === 'rotor' || j.kind === 'wing');
+  if (joints.some((j) => j.kind === 'rotor' || j.kind === 'wing')) floating = true;
   const glowBase = glowMats.map((m) => m.emissiveIntensity);
+
+  // --- 사람형 관절: 다리·팔은 위 끝, 머리는 아래 끝. 무기는 가까운 팔에 ---
+  const weapons = humanoid.get('weapon') ?? [];
+  let weaponSide: 'leftArm' | 'rightArm' | null = null;
+  if (weapons.length > 0 && hasArms) {
+    const wx = boxOf(weapons).getCenter(new THREE.Vector3()).x;
+    const lx = boxOf(humanoid.get('leftArm')!).getCenter(new THREE.Vector3()).x;
+    const rx = boxOf(humanoid.get('rightArm')!).getCenter(new THREE.Vector3()).x;
+    weaponSide = Math.abs(wx - lx) <= Math.abs(wx - rx) ? 'leftArm' : 'rightArm';
+    humanoid.get(weaponSide)!.push(...weapons);
+  }
+  const makeHuman = (kind: Exclude<PartKind, null>, atTop: boolean): THREE.Group | null => {
+    const meshes = humanoid.get(kind);
+    if (!meshes || meshes.length === 0) return null;
+    const body = meshes.filter((m) => classifyPart(m.name) !== 'weapon');
+    const box = boxOf(body.length ? body : meshes);
+    const c = box.getCenter(new THREE.Vector3());
+    return attachJoint(`joint:${kind}`, meshes, new THREE.Vector3(c.x, atTop ? box.max.y : box.min.y, c.z));
+  };
+  const lLeg = hasLegs ? makeHuman('leftLeg', true) : null;
+  const rLeg = hasLegs ? makeHuman('rightLeg', true) : null;
+  const lArm = hasArms ? makeHuman('leftArm', true) : null;
+  const rArm = hasArms ? makeHuman('rightArm', true) : null;
+  const head = makeHuman('head', false);
+  const weaponArm = weaponSide === 'leftArm' ? lArm : weaponSide === 'rightArm' ? rArm : rArm;
+  const otherArm = weaponArm === lArm ? rArm : lArm;
 
   // 몸 전체를 감싸 떠다님·기울임을 root 와 분리
   const body = new THREE.Group();
@@ -313,17 +372,18 @@ export function buildEnemyPartRig(root: THREE.Object3D): EnemyPartRig | null {
   root.add(body);
   for (const ch of children) body.attach(ch);
 
+  const lerp = (a: number, b: number, k: number) => a + (b - a) * Math.max(0, Math.min(1, k));
   let t = 0;
-  let recoil = 0;
+  let recoil = 0; // 공격 직후 1 → 0 (휘두르기·반동)
   let prevWindup = 0;
   return {
     update(dt: number, s: EnemyModelState) {
       t += dt;
       const windup = s.state === 'windup' ? s.windup : 0;
-      // 예고가 끝나는 순간(발사) 반동 시작
+      // 예고가 끝나는 순간(공격 발생) 휘두르기·반동 시작
       if (prevWindup > 0.5 && windup === 0) recoil = 1;
       prevWindup = windup;
-      recoil = Math.max(0, recoil - dt * 5);
+      recoil = Math.max(0, recoil - dt * 4);
       const move = s.moving ? 1 : 0;
       for (const j of joints) {
         const g = j.group;
@@ -352,19 +412,42 @@ export function buildEnemyPartRig(root: THREE.Object3D): EnemyPartRig | null {
           case 'antenna':
             g.rotation.z = Math.sin(t * 3 + j.side) * 0.12 + (s.moving ? Math.sin(t * 12) * 0.1 : 0);
             break;
+          case 'leg':
+            g.rotation.x = Math.sin(t * 6 + j.side) * 0.2 * (floating ? 1 : move);
+            break;
           case 'eye': {
             const k = 1 + windup * 0.5;
             g.scale.set(k, k, 1);
             break;
           }
           case 'glow':
+          case 'float':
             break;
         }
       }
       glowMats.forEach((m, i) => (m.emissiveIntensity = glowBase[i] * (0.5 + windup * 1.5 + recoil)));
+
+      // 사람형: 걷기 교차, 예고 때 무기 팔을 뒤로 치켜들고 공격 순간 앞으로 휘두른다
+      if (lLeg || lArm) {
+        const w = t * 8;
+        const legSwing = s.moving ? Math.sin(w) * 0.6 : 0;
+        const armSwing = s.moving ? -Math.sin(w) * 0.4 : Math.sin(t * 2) * 0.05;
+        if (lLeg) lLeg.rotation.x = legSwing;
+        if (rLeg) rLeg.rotation.x = -legSwing;
+        // 무기 팔: 예고 0→1 동안 -2.0 까지 뒤로, 공격 직후 recoil 1→0 동안 +1.1(앞) → 0 으로 복귀
+        let weaponAngle = armSwing;
+        if (windup > 0) weaponAngle = lerp(0, -2.0, windup);
+        else if (recoil > 0) weaponAngle = recoil > 0.6 ? lerp(-2.0, 1.1, (1 - recoil) / 0.4) : lerp(1.1, 0, (0.6 - recoil) / 0.6);
+        if (weaponArm) weaponArm.rotation.x = weaponAngle;
+        if (otherArm) otherArm.rotation.x = windup > 0 ? lerp(0, 0.5, windup) : recoil > 0 ? -0.3 * recoil : -armSwing;
+        if (head) head.rotation.x = -0.25 * windup + (s.moving ? Math.sin(w) * 0.03 : 0);
+        body.rotation.y = windup > 0 ? 0.3 * windup : recoil > 0.6 ? lerp(0.3, -0.25, (1 - recoil) / 0.4) : lerp(-0.25, 0, (0.6 - recoil) / 0.6);
+      } else {
+        body.rotation.y = 0;
+      }
       // 떠다니는 적은 몸을 띄우고 위아래로 흔들림, 그 외는 이동 시 살짝 들썩임
-      body.position.y = floating ? height * 0.35 + Math.sin(t * 3) * height * 0.04 : s.moving ? Math.abs(Math.sin(t * 8)) * height * 0.025 : 0;
-      body.rotation.x = windup * -0.12 + recoil * 0.08;
+      body.position.y = floating ? height * 0.3 + Math.sin(t * 3) * height * 0.04 : s.moving ? Math.abs(Math.sin(t * 8)) * height * 0.025 : 0;
+      body.rotation.x = windup * -0.12 + recoil * 0.1;
     },
   };
 }

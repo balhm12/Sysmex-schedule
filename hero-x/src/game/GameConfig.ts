@@ -377,7 +377,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.5.0' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.6.0' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -433,7 +433,7 @@ export const GameConfig: GameConfigType = {
   enemies: {
     types: {
       rusher: {
-        name: '돌진 로봇',
+        name: '고블린 전사',
         hp: 30,
         speed: 4.2,
         radius: 0.55,
@@ -446,7 +446,7 @@ export const GameConfig: GameConfigType = {
         score: 10,
       },
       shooter: {
-        name: '포격 드론',
+        name: '유령 마법사',
         hp: 20,
         speed: 3.2,
         radius: 0.5,
@@ -462,7 +462,7 @@ export const GameConfig: GameConfigType = {
         projectileSpeed: 11,
       },
       tank: {
-        name: '철벽 로봇',
+        name: '트롤 거인',
         hp: 90,
         speed: 1.9,
         radius: 0.9,
@@ -475,9 +475,9 @@ export const GameConfig: GameConfigType = {
         score: 30,
         knockbackResist: 0.25,
       },
-      // 동굴 박쥐 드론 (수정 동굴): 작고 빠른 근접형. 체력은 낮다. 외형은 드론 모델 재사용
+      // 동굴 동굴 박쥐 (수정 동굴): 작고 빠른 근접형. 체력은 낮다. 외형은 드론 모델 재사용
       stalker: {
-        name: '박쥐 드론',
+        name: '동굴 박쥐',
         hp: 18,
         speed: 7.5,
         radius: 0.45,
@@ -491,9 +491,9 @@ export const GameConfig: GameConfigType = {
         attackKind: 'melee',
         model: 'shooter',
       },
-      // 요새 포대 (강철 요새): 느리고 단단한 원거리형. 멀리서 세게 쏜다. 외형은 철벽 로봇 재사용
+      // 돌 골렘 (강철 요새): 느리고 단단한 원거리형. 멀리서 세게 쏜다. 외형은 트롤 거인 재사용
       artillery: {
-        name: '요새 포대',
+        name: '돌 골렘',
         hp: 70,
         speed: 1.6,
         radius: 0.8,

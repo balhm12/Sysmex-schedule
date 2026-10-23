@@ -2,6 +2,28 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.6.0 · 적을 몬스터로 (고블린·유령 마법사·트롤·동굴 박쥐·돌 골렘) + 사람형 적 리그
+
+### 변경 내용
+- **몬스터 5종 복셀 모델** `tools/make_monsters_glb.py`(새) → `public/models/monster-*.glb`, manifest 가 이 파일들을 쓴다(로봇 `enemy-*.glb` 는 선택 외형으로 남김).
+  - rusher **고블린 전사**(52개 박스): 초록 피부, 발가락 달린 맨발, 누더기 옷·허리띠·주머니, 뼈 어깨 장식, 큰 머리·뾰족 귀·긴 코·송곳니·노란 발광 눈, 깃털 머리띠, 못 박힌 곤봉.
+  - shooter **유령 마법사**(29개): 반투명 연기 하체(떠다님), 보라 로브·소매·장식 띠, 두건 속 어둠과 분홍 눈, 지팡이 끝 발광 구슬.
+  - tank **트롤 거인**(60개): 굵은 다리·발톱, 거대한 몸통·배·털 조끼·허리띠·등 혹, 긴 팔·주먹, 작은 머리·뿔·아래 송곳니·주황 눈, 룬이 빛나는 나무 방패(예고 때 들어 올림), 도끼.
+  - stalker **동굴 박쥐**(37개): 보라 털, 큰 귀, 코·송곳니·분홍 눈, 뼈대(팔·손가락뼈)와 막으로 된 날개(퍼덕임), 갈고리 발, 가슴 발광 무늬.
+  - artillery **돌 골렘**(39개): 바위 다리·몸통, 용암 균열·심장석, 이끼, 바위 팔, 눈 틈새 발광, 손에 든 던질 바위(예고 때 치켜듦).
+- **사람형 적 리그** (`PartRig.buildEnemyPartRig` 확장): 플레이어와 같은 부품 이름(`left_leg`…`weapon_*`)을 적에도 적용. 걷기(팔다리 교차), 예고(무기 팔을 뒤로 치켜들고 몸이 돌아감, 머리 숙임), 공격 순간(앞으로 휘두르고 복귀). 새 부품 `float_*`(떠다님), `leg_*`(짧게 흔들림). 기계 부품(wheel/claw/rotor/wing/barrel/shield/piston/antenna/glow/eye)과 함께 쓸 수 있다.
+- 적 이름 변경: 돌진 로봇→고블린 전사, 포격 드론→유령 마법사, 철벽 로봇→트롤 거인, 박쥐 드론→동굴 박쥐, 요새 포대→돌 골렘 (`GameConfig`, 던전 부제, 조작 안내, 장비 설명, 문서). 능력치·행동은 그대로.
+
+### 수정 파일
+`tools/make_monsters_glb.py`(새), `public/models/monster-*.glb`(새 5개), `public/models/manifest.json`, `public/models/README.md`, `src/assets/PartRig.ts`, `src/game/GameConfig.ts`, `src/game/DungeonDefs.ts`, `src/ui/ControlsGuide.ts`, `src/items/ItemDatabase.ts`, `tests/models.test.ts`, `tests/dungeons.test.ts`, `package.json`, `CLAUDE.md`, `GAME_GUIDE.md`, `CHANGELOG.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 118개·빌드).
+- 모델 단독 뷰어로 5종 확인. 게임 안(숲) 근접: 고블린·트롤(방패 룬·눈 발광) 확인, 콘솔 오류 없음. 회귀: 던전 선택·새 적(smoke12), 보스 패턴(smoke14) 통과(동굴 박쥐·돌 골렘 생성 포함).
+
+### 알려진 문제
+- 몬스터 색은 .glb 에 고정(설정의 `color` 는 투사체·효과 색에만). 로봇으로 되돌리려면 manifest 파일 이름만 바꾸면 된다.
+
 ## 2026-10-24 · v1.5.0 · 점프로 장애물 위에 올라서기
 
 ### 변경 내용
