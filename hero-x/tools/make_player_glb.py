@@ -5,70 +5,48 @@
 - 좌표: Y 가 위, 정면은 +Z (게임 규칙). 크기는 게임이 키 1.9 로 다시 맞추므로 비율만 중요하다.
 - 부품 이름은 src/assets/PartRig.ts 규칙을 따른다 (left_/right_ + leg/boot/arm/hand/bracer…, head/hair/eye/glass…, sword_…).
   게임이 이 이름으로 관절을 만들어 걷기·공격 동작을 넣는다.
-- 재질: 색은 baseColorFactor, 검 날은 발광(emissive) + 반투명. 노멀을 넣지 않아 게임(three.js)이 평면 음영(flat)으로 그린다.
+- 재질·내보내기는 tools/voxel_glb.py 공용 모듈 (색은 sRGB→선형 변환, 검 날은 발광+반투명, 평면 음영).
 """
-import json
 import math
 import random
-import struct
 from pathlib import Path
+from voxel_glb import VoxelModel, mat
 
 OUT = Path(__file__).resolve().parent.parent / 'public' / 'models' / 'player.glb'
 
-# ---------- 색 (0~1) ----------
-def srgb_to_linear(v):
-    """glTF 의 baseColorFactor 는 선형 값이라 화면 색(sRGB)을 변환해 넣는다 (안 하면 전체가 허옇게 뜬다)"""
-    return v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
-
-
-def c(hexs, a=1.0):
-    h = hexs.lstrip('#')
-    return [srgb_to_linear(int(h[i:i + 2], 16) / 255) for i in (0, 2, 4)] + [a]
-
 MAT = {
-    'skin': dict(color=c('#f4c9a4'), rough=0.85),
-    'skin_dark': dict(color=c('#d9a884'), rough=0.85),
-    'blush': dict(color=c('#f3a9a0'), rough=0.9),
-    'hair': dict(color=c('#55371f'), rough=0.9),
-    'hair_dark': dict(color=c('#3a2012'), rough=0.9),
-    'hair_light': dict(color=c('#6b4328'), rough=0.9),
-    'eye_white': dict(color=c('#f7f3ea'), rough=0.6),
-    'iris': dict(color=c('#5a3a22'), rough=0.5),
-    'pupil': dict(color=c('#1d120b'), rough=0.5),
-    'glint': dict(color=c('#ffffff'), rough=0.3, emissive=[0.5, 0.5, 0.5], strength=0.8),
-    'glass': dict(color=c('#9aa3b2'), rough=0.35, metal=0.6),
-    'lens': dict(color=c('#cfe4ff', 0.18), rough=0.2, blend=True),
-    'mouth': dict(color=c('#7a3b32'), rough=0.9),
-    'navy': dict(color=c('#1c2d6e'), rough=0.9),
-    'blue': dict(color=c('#2f58c4'), rough=0.85),
-    'blue_light': dict(color=c('#4f7fe0'), rough=0.85),
-    'gold': dict(color=c('#e3b23c'), rough=0.45, metal=0.5),
-    'gold_dark': dict(color=c('#b8872a'), rough=0.5, metal=0.5),
-    'brown': dict(color=c('#6b3f24'), rough=0.9),
-    'brown_dark': dict(color=c('#452614'), rough=0.9),
-    'brown_light': dict(color=c('#8a5633'), rough=0.9),
-    'white': dict(color=c('#ece9e2'), rough=0.9),
-    'pants': dict(color=c('#1a1f3d'), rough=0.9),
-    'sole': dict(color=c('#2b1a10'), rough=0.95),
-    'blade': dict(color=c('#5fc4ff', 0.88), rough=0.2, emissive=[0.25, 0.6, 1.0], strength=1.1, blend=True),
-    'blade_core': dict(color=c('#e8fbff', 0.9), rough=0.2, emissive=[0.8, 0.95, 1.0], strength=1.6, blend=True),
-    'gem': dict(color=c('#5ec8ff'), rough=0.2, emissive=[0.3, 0.7, 1.0], strength=1.2),
-    'spark': dict(color=c('#bfefff', 0.8), rough=0.2, emissive=[0.6, 0.9, 1.0], strength=1.4, blend=True),
+    'skin': mat('#f4c9a4', rough=0.85),
+    'skin_dark': mat('#d9a884', rough=0.85),
+    'blush': mat('#f3a9a0', rough=0.9),
+    'hair': mat('#55371f', rough=0.9),
+    'hair_dark': mat('#3a2012', rough=0.9),
+    'hair_light': mat('#6b4328', rough=0.9),
+    'eye_white': mat('#f7f3ea', rough=0.6),
+    'iris': mat('#5a3a22', rough=0.5),
+    'pupil': mat('#1d120b', rough=0.5),
+    'glint': mat('#ffffff', rough=0.3, emissive=[0.5, 0.5, 0.5], strength=0.8),
+    'glass': mat('#9aa3b2', rough=0.35, metal=0.6),
+    'lens': mat('#cfe4ff', 0.18, rough=0.2, blend=True),
+    'mouth': mat('#7a3b32', rough=0.9),
+    'navy': mat('#1c2d6e', rough=0.9),
+    'blue': mat('#2f58c4', rough=0.85),
+    'blue_light': mat('#4f7fe0', rough=0.85),
+    'gold': mat('#e3b23c', rough=0.45, metal=0.5),
+    'gold_dark': mat('#b8872a', rough=0.5, metal=0.5),
+    'brown': mat('#6b3f24', rough=0.9),
+    'brown_dark': mat('#452614', rough=0.9),
+    'brown_light': mat('#8a5633', rough=0.9),
+    'white': mat('#ece9e2', rough=0.9),
+    'pants': mat('#1a1f3d', rough=0.9),
+    'sole': mat('#2b1a10', rough=0.95),
+    'blade': mat('#5fc4ff', 0.88, rough=0.2, emissive=[0.25, 0.6, 1.0], strength=1.1, blend=True),
+    'blade_core': mat('#e8fbff', 0.9, rough=0.2, emissive=[0.8, 0.95, 1.0], strength=1.6, blend=True),
+    'gem': mat('#5ec8ff', rough=0.2, emissive=[0.3, 0.7, 1.0], strength=1.2),
+    'spark': mat('#bfefff', 0.8, rough=0.2, emissive=[0.6, 0.9, 1.0], strength=1.4, blend=True),
 }
-MAT_INDEX = {k: i for i, k in enumerate(MAT)}
-
-boxes = []  # (이름, 중심 xyz, 크기 xyz, 재질)
-
-
-def box(name, cx, cy, cz, sx, sy, sz, mat):
-    boxes.append((name, (cx, cy, cz), (sx, sy, sz), mat))
-
-
-def mirror(name_l, name_r, x, y, z, sx, sy, sz, mat):
-    """좌우 대칭 두 개 (x 는 +쪽 값)"""
-    box(name_l, +x, y, z, sx, sy, sz, mat)
-    box(name_r, -x, y, z, sx, sy, sz, mat)
-
+model = VoxelModel('voxel_adventurer', MAT)
+box = model.box
+mirror = model.mirror
 
 # ---------- 비율 (치비: 머리 큼) ----------
 # 캐릭터가 +Z 를 보므로 +X 는 캐릭터의 왼쪽 = 화면에서 볼 때 오른쪽. 검은 캐릭터 오른손(-X).
@@ -238,91 +216,4 @@ for sgn, side in ((1, 'left'), (-1, 'right')):
     box(f'{side}_boot_toe', lx, 0.12, 0.3, 0.38, 0.22, 0.14, 'brown_light')
     box(f'{side}_boot_sole', lx, 0.03, 0.06, 0.46, 0.06, 0.56, 'sole')
 
-# ---------- glb 내보내기 ----------
-def face_tris(mn, mx):
-    """8꼭짓점 박스의 삼각형 색인 (바깥을 향하게 감김 확인)"""
-    verts = []
-    for i in range(8):
-        verts.append(((mx if i & 1 else mn)[0], (mx if i & 2 else mn)[1], (mx if i & 4 else mn)[2]))
-    faces = {  # 축, 방향, 네 꼭짓점
-        (0, -1): [0, 2, 6, 4], (0, 1): [1, 3, 7, 5],
-        (1, -1): [0, 1, 5, 4], (1, 1): [2, 3, 7, 6],
-        (2, -1): [0, 1, 3, 2], (2, 1): [4, 5, 7, 6],
-    }
-    tris = []
-    for (axis, d), q in faces.items():
-        a, b, cc = verts[q[0]], verts[q[1]], verts[q[2]]
-        u = [b[i] - a[i] for i in range(3)]
-        v = [cc[i] - a[i] for i in range(3)]
-        n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]
-        if n[axis] * d < 0:
-            q = [q[0], q[3], q[2], q[1]]
-        tris += [q[0], q[1], q[2], q[0], q[2], q[3]]
-    return verts, tris
-
-
-bin_parts = []
-buffer_views = []
-accessors = []
-meshes = []
-nodes = []
-offset = 0
-
-
-def add_view(data, target):
-    global offset
-    pad = (-len(data)) % 4
-    data = data + b'\0' * pad
-    buffer_views.append({'buffer': 0, 'byteOffset': offset, 'byteLength': len(data) - pad, 'target': target})
-    bin_parts.append(data)
-    offset += len(data)
-    return len(buffer_views) - 1
-
-
-# 색인은 모든 박스가 같으므로 한 번만
-_, tris = face_tris((0, 0, 0), (1, 1, 1))
-idx_view = add_view(struct.pack('<36H', *tris), 34963)
-accessors.append({'bufferView': idx_view, 'componentType': 5123, 'count': 36, 'type': 'SCALAR', 'max': [7], 'min': [0]})
-IDX = 0
-
-for name, (cx, cy, cz), (sx, sy, sz), mat in boxes:
-    mn = (cx - sx / 2, cy - sy / 2, cz - sz / 2)
-    mx = (cx + sx / 2, cy + sy / 2, cz + sz / 2)
-    verts, _ = face_tris(mn, mx)
-    view = add_view(struct.pack('<24f', *[v for p in verts for v in p]), 34962)
-    accessors.append({'bufferView': view, 'componentType': 5126, 'count': 8, 'type': 'VEC3', 'min': list(mn), 'max': list(mx)})
-    meshes.append({'name': name, 'primitives': [{'attributes': {'POSITION': len(accessors) - 1}, 'indices': IDX, 'material': MAT_INDEX[mat], 'mode': 4}]})
-    nodes.append({'name': name, 'mesh': len(meshes) - 1})
-
-materials = []
-for k, m in MAT.items():
-    entry = {'name': k, 'pbrMetallicRoughness': {'baseColorFactor': m['color'], 'metallicFactor': m.get('metal', 0.0), 'roughnessFactor': m.get('rough', 0.9)}}
-    if m.get('emissive'):
-        entry['emissiveFactor'] = m['emissive']
-        entry['extensions'] = {'KHR_materials_emissive_strength': {'emissiveStrength': m.get('strength', 1.0)}}
-    if m.get('blend'):
-        entry['alphaMode'] = 'BLEND'
-        entry['doubleSided'] = True
-    materials.append(entry)
-
-bin_data = b''.join(bin_parts)
-gltf = {
-    'asset': {'version': '2.0', 'generator': 'hero-x tools/make_player_glb.py'},
-    'scene': 0,
-    'scenes': [{'nodes': [len(nodes)]}],
-    'nodes': nodes + [{'name': 'voxel_adventurer', 'children': list(range(len(nodes)))}],
-    'meshes': meshes,
-    'materials': materials,
-    'accessors': accessors,
-    'bufferViews': buffer_views,
-    'buffers': [{'byteLength': len(bin_data)}],
-    'extensionsUsed': ['KHR_materials_emissive_strength'],
-}
-json_bytes = json.dumps(gltf, separators=(',', ':')).encode('utf-8')
-json_bytes += b' ' * ((-len(json_bytes)) % 4)
-total = 12 + 8 + len(json_bytes) + 8 + len(bin_data)
-with open(OUT, 'wb') as f:
-    f.write(b'glTF' + struct.pack('<II', 2, total))
-    f.write(struct.pack('<I', len(json_bytes)) + b'JSON' + json_bytes)
-    f.write(struct.pack('<I', len(bin_data)) + b'BIN\0' + bin_data)
-print(f'{OUT.name}: 박스 {len(boxes)}개, 재질 {len(materials)}개, {total / 1024:.1f} KB')
+model.export(OUT)

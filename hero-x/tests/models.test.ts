@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeManifest } from '../src/assets/ModelRegistry';
-import { classifyPart } from '../src/assets/PartRig';
+import { classifyEnemyPart, classifyPart, enemyPartGroup } from '../src/assets/PartRig';
 import { cropRect } from '../src/player/FaceTexture';
 
 describe('얼굴 사진 자르기 (cropRect)', () => {
@@ -53,5 +53,27 @@ describe('부품 이름 리그 (classifyPart)', () => {
     expect(classifyPart('torso')).toBeNull();
     expect(classifyPart('backpack')).toBeNull();
     expect(classifyPart('belt')).toBeNull();
+  });
+});
+
+describe('적 부품 이름 리그 (classifyEnemyPart / enemyPartGroup)', () => {
+  it('접두어로 종류를 정하고, 두 번째 토큰까지가 한 관절 묶음이다', () => {
+    expect(classifyEnemyPart('wheel_fl')).toBe('wheel');
+    expect(classifyEnemyPart('wheel_fl_hub')).toBe('wheel');
+    expect(classifyEnemyPart('claw_l_arm')).toBe('claw');
+    expect(classifyEnemyPart('rotor_blade_a')).toBe('rotor');
+    expect(classifyEnemyPart('wing_r_tip')).toBe('wing');
+    expect(classifyEnemyPart('barrel_main')).toBe('barrel');
+    expect(classifyEnemyPart('shield_rim_top')).toBe('shield');
+    expect(classifyEnemyPart('piston_l')).toBe('piston');
+    expect(classifyEnemyPart('antenna_a')).toBe('antenna');
+    expect(classifyEnemyPart('glow_muzzle')).toBe('glow');
+    expect(classifyEnemyPart('eye_lens')).toBe('eye');
+    expect(classifyEnemyPart('body')).toBeNull();
+    expect(classifyEnemyPart('stripe_0')).toBeNull();
+    expect(enemyPartGroup('wheel_fl_hub')).toBe('wheel:fl');
+    expect(enemyPartGroup('claw_l_tip')).toBe('claw:l');
+    expect(enemyPartGroup('rotor_blade_a')).toBe('rotor:blade'); // 로터는 날개·축이 묶음이 달라도 모두 중심에서 돈다
+    expect(enemyPartGroup('shield')).toBe('shield');
   });
 });

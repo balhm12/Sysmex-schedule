@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { EnemyModelState } from '../enemies/EnemyModels';
 import type { PlayerModelState } from '../player/models/PlaceholderModel';
 
 /**
@@ -196,6 +197,174 @@ export function buildPartRig(root: THREE.Object3D): PartRig | null {
       if (head) head.group.rotation.x = headPitch + (s.moving ? Math.sin(t * 9) * 0.02 : 0);
       body.rotation.set(bodyPitch, bodyYaw, 0);
       body.position.y = bob;
+    },
+  };
+}
+
+// ====================== 적 리그 ======================
+
+/** 적 부품 종류: 이름 접두어로 정한다 */
+export type EnemyPartKind = 'wheel' | 'claw' | 'rotor' | 'wing' | 'barrel' | 'shield' | 'piston' | 'antenna' | 'glow' | 'eye' | null;
+
+const ENEMY_PREFIX: Array<[RegExp, Exclude<EnemyPartKind, null>]> = [
+  [/^wheel/, 'wheel'],
+  [/^claw/, 'claw'],
+  [/^rotor/, 'rotor'],
+  [/^wing/, 'wing'],
+  [/^barrel/, 'barrel'],
+  [/^shield/, 'shield'],
+  [/^piston/, 'piston'],
+  [/^antenna/, 'antenna'],
+  [/^glow/, 'glow'],
+  [/^eye/, 'eye'],
+];
+
+/** 적 메시 이름 → 부품 종류 (순수 함수, 테스트 대상) */
+export function classifyEnemyPart(name: string): EnemyPartKind {
+  const n = name.toLowerCase().trim();
+  for (const [re, kind] of ENEMY_PREFIX) if (re.test(n)) return kind;
+  return null;
+}
+
+/** 'claw_l_arm' / 'wing_r' / 'wheel_fl_hub' 처럼 종류 뒤의 첫 토큰이 묶음 이름(한 관절) */
+export function enemyPartGroup(name: string): string {
+  const n = name.toLowerCase().trim();
+  const parts = n.split(/[_\-\s]+/);
+  return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : parts[0];
+}
+
+export interface EnemyPartRig {
+  update(dt: number, s: EnemyModelState): void;
+}
+
+/**
+ * 적 모델의 부품 이름으로 관절을 만든다 (root 변환은 항등, 메시는 보정 완료 상태).
+ * - wheel: 중심 관절, 이동 시 X 축 회전. claw: 몸 쪽 모서리 관절, 예고 때 Y 축으로 벌어짐.
+ * - rotor: 중심, 항상 Y 축 회전 → 모델이 떠다님. wing: 안쪽 모서리, Z 축 퍼덕임 → 떠다님.
+ * - barrel: 예고 끝에 뒤로 반동(위치). shield: 아래 모서리 관절, 예고 때 X 축으로 들어 올림.
+ * - piston: 이동 시 위아래. antenna: 아래 모서리, 흔들림. glow: 발광 세기(예고 때 밝게). eye: 예고 때 커짐.
+ * 인식된 부품이 하나도 없으면 null.
+ */
+export function buildEnemyPartRig(root: THREE.Object3D): EnemyPartRig | null {
+  root.updateMatrixWorld(true);
+  const whole = new THREE.Box3().setFromObject(root);
+  const height = Math.max(0.01, whole.max.y - whole.min.y);
+  const groups = new Map<string, { kind: Exclude<EnemyPartKind, null>; meshes: THREE.Mesh[] }>();
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const kind = classifyEnemyPart(mesh.name);
+    if (!kind) return;
+    // 묶음: 발광·눈은 메시마다, 로터·포신·방패는 종류마다 하나, 나머지(바퀴·집게·날개·피스톤·안테나)는 두 번째 토큰까지
+    const key = kind === 'glow' || kind === 'eye' ? `${kind}:${mesh.name}` : kind === 'rotor' || kind === 'barrel' || kind === 'shield' ? kind : enemyPartGroup(mesh.name);
+    const g = groups.get(key) ?? { kind, meshes: [] };
+    g.meshes.push(mesh);
+    groups.set(key, g);
+  });
+  if (groups.size === 0) return null;
+
+  interface Joint {
+    kind: Exclude<EnemyPartKind, null>;
+    group: THREE.Group;
+    side: number; // 좌우 부호 (x 중심의 부호)
+    base: THREE.Vector3;
+  }
+  const joints: Joint[] = [];
+  const glowMats: THREE.MeshStandardMaterial[] = [];
+  for (const { kind, meshes } of groups.values()) {
+    const box = new THREE.Box3();
+    for (const m of meshes) box.expandByObject(m);
+    const c = box.getCenter(new THREE.Vector3());
+    const side = c.x >= 0 ? 1 : -1;
+    let pivot: THREE.Vector3;
+    switch (kind) {
+      case 'claw':
+      case 'wing':
+        pivot = new THREE.Vector3(side > 0 ? box.min.x : box.max.x, c.y, kind === 'claw' ? box.min.z : c.z); // 몸 쪽 모서리
+        break;
+      case 'shield':
+      case 'antenna':
+        pivot = new THREE.Vector3(c.x, box.min.y, c.z); // 아래 모서리
+        break;
+      default:
+        pivot = c.clone();
+    }
+    const group = new THREE.Group();
+    group.name = `joint:${kind}`;
+    group.position.copy(pivot);
+    root.add(group);
+    group.updateMatrixWorld(true);
+    for (const m of meshes) {
+      group.attach(m);
+      if (kind === 'glow') {
+        const list = Array.isArray(m.material) ? m.material : [m.material];
+        for (const mt of list) if ((mt as THREE.MeshStandardMaterial).emissive) glowMats.push(mt as THREE.MeshStandardMaterial);
+      }
+    }
+    joints.push({ kind, group, side, base: pivot.clone() });
+  }
+  const floating = joints.some((j) => j.kind === 'rotor' || j.kind === 'wing');
+  const glowBase = glowMats.map((m) => m.emissiveIntensity);
+
+  // 몸 전체를 감싸 떠다님·기울임을 root 와 분리
+  const body = new THREE.Group();
+  body.name = 'rigBody';
+  const children = [...root.children];
+  root.add(body);
+  for (const ch of children) body.attach(ch);
+
+  let t = 0;
+  let recoil = 0;
+  let prevWindup = 0;
+  return {
+    update(dt: number, s: EnemyModelState) {
+      t += dt;
+      const windup = s.state === 'windup' ? s.windup : 0;
+      // 예고가 끝나는 순간(발사) 반동 시작
+      if (prevWindup > 0.5 && windup === 0) recoil = 1;
+      prevWindup = windup;
+      recoil = Math.max(0, recoil - dt * 5);
+      const move = s.moving ? 1 : 0;
+      for (const j of joints) {
+        const g = j.group;
+        switch (j.kind) {
+          case 'wheel':
+            if (s.moving) g.rotation.x += dt * 9;
+            break;
+          case 'claw':
+            g.rotation.y = -j.side * (0.15 + windup * 0.7 + (s.moving ? Math.sin(t * 10) * 0.08 : 0));
+            break;
+          case 'rotor':
+            g.rotation.y += dt * 18;
+            break;
+          case 'wing':
+            g.rotation.z = j.side * Math.sin(t * 14) * (0.45 + move * 0.2);
+            break;
+          case 'barrel':
+            g.position.z = j.base.z - recoil * height * 0.12;
+            break;
+          case 'shield':
+            g.rotation.x = -windup * 1.1 + (s.moving ? Math.sin(t * 8) * 0.03 : 0);
+            break;
+          case 'piston':
+            g.position.y = j.base.y + (s.moving ? Math.sin(t * 8 + j.side * Math.PI) * height * 0.05 : 0);
+            break;
+          case 'antenna':
+            g.rotation.z = Math.sin(t * 3 + j.side) * 0.12 + (s.moving ? Math.sin(t * 12) * 0.1 : 0);
+            break;
+          case 'eye': {
+            const k = 1 + windup * 0.5;
+            g.scale.set(k, k, 1);
+            break;
+          }
+          case 'glow':
+            break;
+        }
+      }
+      glowMats.forEach((m, i) => (m.emissiveIntensity = glowBase[i] * (0.5 + windup * 1.5 + recoil)));
+      // 떠다니는 적은 몸을 띄우고 위아래로 흔들림, 그 외는 이동 시 살짝 들썩임
+      body.position.y = floating ? height * 0.35 + Math.sin(t * 3) * height * 0.04 : s.moving ? Math.abs(Math.sin(t * 8)) * height * 0.025 : 0;
+      body.rotation.x = windup * -0.12 + recoil * 0.08;
     },
   };
 }

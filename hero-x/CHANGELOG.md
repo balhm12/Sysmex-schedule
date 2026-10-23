@@ -2,6 +2,26 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-23 · v1.4.0 · 적 5종 복셀 모델 + 적용 부품 이름 리그
+
+### 변경 내용
+- **공용 생성 모듈** `tools/voxel_glb.py`(새): 박스 쌓기 → .glb 내보내기를 모듈로 빼고 `make_player_glb.py` 가 이를 쓰도록 정리(출력 동일: 박스 209개).
+- **적 5종 복셀 모델** `tools/make_enemies_glb.py`(새) → `public/models/enemy-{rusher,shooter,tank,stalker,artillery}.glb`, manifest 에 등록. 돌진 로봇(바퀴 4·집게 2·외눈·발광 안테나·경고 줄무늬), 포격 드론(로터·포신·발광 포구·렌즈 눈·지느러미), 철벽 로봇(궤도·바퀴·방패+금 테·붉은 눈·배기관·피스톤), 박쥐 드론(반투명 날개·송곳니·분홍 눈·귀), 요새 포대(다리 4·큰 포신·탄약 상자·줄무늬). 기존엔 박쥐 드론·요새 포대가 다른 적 외형을 재사용했는데 이제 전용 외형.
+- **적 부품 이름 리그** (`PartRig.ts` `buildEnemyPartRig`): `wheel_`(이동 시 회전) / `claw_`(예고 때 벌어짐) / `rotor_`(항상 회전, 떠다님) / `wing_`(퍼덕임, 떠다님) / `barrel_`(발사 순간 반동) / `shield`(예고 때 들어 올림) / `piston_`(이동 시 펌프) / `antenna_`(흔들림) / `glow_`(예고 때 밝아짐) / `eye_`(예고 때 커짐). 예고 때 몸이 살짝 숙여지고 떠다니는 적은 위아래로 흔들린다. `ModelRegistry` 가 클립 없는 적 .glb 에 자동 적용.
+- `ModelRegistry.cloneMaterials`: .glb 재질을 개체마다 복제해 피격 번쩍임·발광이 다른 개체와 섞이지 않게. 번쩍임이 끝나면 원래 emissive 색으로 복원(발광 부품 유지).
+
+### 수정 파일
+`tools/voxel_glb.py`(새), `tools/make_enemies_glb.py`(새), `tools/make_player_glb.py`, `public/models/enemy-*.glb`(새 5개), `public/models/manifest.json`, `public/models/README.md`, `src/assets/PartRig.ts`, `src/assets/ModelRegistry.ts`, `tests/models.test.ts`, `package.json`, `src/game/GameConfig.ts`, `CLAUDE.md`, `GAME_GUIDE.md`, `CHANGELOG.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 115개·빌드). `classifyEnemyPart`/`enemyPartGroup` 테스트 추가.
+- 모델 단독 뷰어로 5종 정면·3/4·뒷면 확인. 게임 안(숲) 근접 스크린샷: 돌진 로봇(집게·안테나 발광), 포격 드론(떠서 로터 회전), 철벽 로봇(방패) 확인, 콘솔 오류 없음.
+- 회귀: 던전 선택·새 적(smoke12), 보스 패턴(smoke14) 통과 — 동굴·요새의 박쥐 드론·요새 포대 .glb 생성 포함.
+
+### 알려진 문제
+- 적 모델 색은 .glb 에 고정이라 `enemies.types.<종류>.color` 를 바꿔도 .glb 적의 색은 바뀌지 않는다(투사체·효과 색만 바뀜). 색을 바꾸려면 생성 스크립트를 고치고 다시 생성.
+- 보스 3종은 아직 임시 모델(다음 단계).
+
 ## 2026-10-23 · v1.3.1 · 아들 캐릭터 모델 디테일 강화 (코드로 다시 생성)
 
 ### 변경 내용

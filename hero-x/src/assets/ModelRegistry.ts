@@ -3,7 +3,7 @@ import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { EnemyModel, EnemyModelState } from '../enemies/EnemyModels';
 import type { PlayerModel, PlayerModelState } from '../player/models/PlaceholderModel';
-import { buildPartRig } from './PartRig';
+import { buildEnemyPartRig, buildPartRig } from './PartRig';
 import { Logger } from '../utils/Logger';
 
 /**
@@ -137,6 +137,27 @@ class ModelRegistry {
 
 export const modelRegistry = new ModelRegistry();
 
+/** 재질을 이 인스턴스 전용으로 복제한다 (피격 번쩍임·발광이 다른 개체와 섞이지 않게). emissive 가 있는 것만 돌려준다 */
+function cloneMaterials(root: THREE.Object3D): THREE.MeshStandardMaterial[] {
+  const out: THREE.MeshStandardMaterial[] = [];
+  const cache = new Map<THREE.Material, THREE.Material>();
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const swap = (mt: THREE.Material) => {
+      let own = cache.get(mt);
+      if (!own) {
+        own = mt.clone();
+        cache.set(mt, own);
+        if ((own as THREE.MeshStandardMaterial).emissive) out.push(own as THREE.MeshStandardMaterial);
+      }
+      return own;
+    };
+    mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swap) : swap(mesh.material);
+  });
+  return out;
+}
+
 /** 씬 복제(뼈대 있는 모델도 안전) + 크기·위치 보정 */
 function instantiate(m: Loaded, targetHeight: number | null): { root: THREE.Group; mixer: THREE.AnimationMixer | null; clips: THREE.AnimationClip[] } {
   const scene = SkeletonUtils.clone(m.gltf.scene) as THREE.Group;
@@ -216,21 +237,7 @@ function createGltfPlayerModel(m: Loaded): PlayerModel {
   // 클립이 없으면 부품 이름으로 관절 리그를 시도한다 (복셀 캐릭터)
   const rig = mixer ? null : buildPartRig(root);
   if (rig) Logger.info('플레이어 모델: 부품 이름 리그로 걷기·공격 동작을 만듭니다.');
-  const mats: THREE.MeshStandardMaterial[] = [];
-  root.traverse((o) => {
-    const mesh = o as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    for (const mt of list) {
-      // 같은 재질을 여러 모델이 공유하지 않도록 복제 (피격 붉은빛)
-      const std = mt as THREE.MeshStandardMaterial;
-      if (!std.emissive) continue;
-      const own = std.clone();
-      if (Array.isArray(mesh.material)) mesh.material = mesh.material.map((x) => (x === mt ? own : x));
-      else mesh.material = own;
-      mats.push(own);
-    }
-  });
+  const mats = cloneMaterials(root);
   let t = 0;
   return {
     root,
@@ -265,6 +272,8 @@ function createGltfPlayerModel(m: Loaded): PlayerModel {
 function createGltfEnemyModel(m: Loaded, targetHeight: number): EnemyModel {
   const { root, mixer, clips } = instantiate(m, targetHeight);
   root.name = 'GltfEnemy';
+  // 클립이 없으면 부품 이름(wheel_/claw_/rotor_/wing_/barrel_/shield/…)으로 동작을 만든다
+  const rig = mixer ? null : buildEnemyPartRig(root);
   const walk = findClip(clips, 'run', 'walk');
   const idle = findClip(clips, 'idle');
   const attack = findClip(clips, 'attack');
@@ -277,14 +286,8 @@ function createGltfEnemyModel(m: Loaded, targetHeight: number): EnemyModel {
     current?.fadeOut(0.1);
     current = a;
   };
-  const mats: THREE.MeshStandardMaterial[] = [];
-  root.traverse((o) => {
-    const mesh = o as THREE.Mesh;
-    if (mesh.isMesh) {
-      const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      for (const mt of list) if ((mt as THREE.MeshStandardMaterial).emissive) mats.push(mt as THREE.MeshStandardMaterial);
-    }
-  });
+  const mats = cloneMaterials(root);
+  const baseEmissive = mats.map((mt) => mt.emissive.clone());
   let flashTimer = 0;
   let t = 0;
   return {
@@ -297,7 +300,9 @@ function createGltfEnemyModel(m: Loaded, targetHeight: number): EnemyModel {
         root.position.y = -(1 - k) * 0.5;
         return;
       }
-      if (mixer) {
+      if (rig) {
+        rig.update(dt, s);
+      } else if (mixer) {
         if (s.state === 'windup' && attack) play(attack);
         else if (s.moving) play(walk ?? idle);
         else play(idle ?? walk);
@@ -308,7 +313,7 @@ function createGltfEnemyModel(m: Loaded, targetHeight: number): EnemyModel {
       }
       if (flashTimer > 0) {
         flashTimer -= dt;
-        for (const mt of mats) mt.emissive.setScalar(flashTimer > 0 ? 0.8 : 0);
+        if (flashTimer <= 0) mats.forEach((mt, i) => mt.emissive.copy(baseEmissive[i]));
       }
     },
     flash() {
