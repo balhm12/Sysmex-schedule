@@ -89,7 +89,7 @@
 ### GitHub Pages 주소가 404
 - 저장소 → Actions 에서 "HERO X 게임 배포" 가 성공했는지 확인합니다. 실패했으면 로그를 Claude Code 에 전달하세요.
 - 저장소 → Settings → Pages 가 `main` / `/ (root)` 로 되어 있어야 합니다. 바뀐 뒤 1~2분 기다립니다.
-- 주소 끝의 `/game/` 까지 정확히 입력합니다.
+- 주소는 대소문자까지 정확히: `https://balhm12.github.io/Sysmex-schedule/game/` (S 는 대문자, 끝에 `/game/`). 휴대폰 브라우저가 주소를 자동 완성해 `balhm12.github.io` 만 남기면 "There isn't a GitHub Pages site here" 404 가 뜹니다.
 
 ### 캐릭터가 장애물에 끼거나 벽을 통과함
 - `GameConfig.world.obstacles` 의 항목이 시작 위치(0,0)와 겹치면 안 됩니다 (`npm test` 가 확인해 줍니다).

@@ -60,9 +60,10 @@ npm run dev
 `hero-x` 브랜치에 코드를 올리면(git push) GitHub 가 자동으로 빌드해 `main` 브랜치의 `game/` 폴더에 넣습니다. 1~2분 뒤 휴대폰 브라우저에서 아래 주소를 엽니다.
 
 ```
-https://balhm12.github.io/sysmex-schedule/game/
+https://balhm12.github.io/Sysmex-schedule/game/
 ```
 
+- 주소의 `Sysmex-schedule` 은 S 가 대문자입니다 (일정표 주소와 같은 규칙). 끝의 `/game/` 까지 입력하세요.
 - 처음 한 번: GitHub 저장소 → Settings → Pages 에서 Source 가 `Deploy from a branch`, Branch 가 `main` / `/ (root)` 인지 확인합니다 (일정표 사이트가 이미 이렇게 되어 있다면 그대로입니다).
 - 배포 진행 상황은 저장소 → Actions → "HERO X 게임 배포" 에서 봅니다. 실패하면 로그를 Claude Code 에 전달하세요.
 - 홈 화면에 추가하면(Chrome: 메뉴 → 홈 화면에 추가 / Safari: 공유 → 홈 화면에 추가) 전체 화면으로 열립니다.

@@ -2,7 +2,7 @@ name: HERO X 게임 배포 (GitHub Pages)
 
 # hero-x 브랜치에 게임 소스가 올라오면 빌드해서 main 브랜치의 game/ 폴더에 넣습니다.
 # 이 저장소의 GitHub Pages 는 main 브랜치(루트)를 그대로 보여주므로,
-# 결과는 https://balhm12.github.io/sysmex-schedule/game/ 에서 열립니다.
+# 결과는 https://balhm12.github.io/Sysmex-schedule/game/ 에서 열립니다.
 # main 의 다른 파일(일정표 등)은 건드리지 않고 game/ 폴더만 바꿉니다.
 on:
   push:

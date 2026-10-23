@@ -9,7 +9,7 @@
 - **자동 조준**: 터치 조작이 켜져 있으면 `combat.autoAimRange`(14) 안의 가장 가까운 적을 겨눈다 (`Game.nearestEnemyPoint`). 적이 없으면 바라보는 방향으로 공격.
 - **설정 추가**: `터치 조작`(기본: 터치 기기면 켜짐), `렌더 해상도` 0.5~1.5× (휴대폰 기본 0.8). 휴대폰은 그림자가 기본 꺼짐. 기기 판별은 `src/utils/device.ts`.
 - **화면 맞춤**: 900px 이하·낮은 화면에서 창·HUD·설정·던전 카드 레이아웃 축소, 세로로 들면 "가로로 돌리세요" 안내, 확대·더블탭 줌 방지(viewport meta), 캔버스 `touch-action: none`, 홈 화면 추가 시 전체 화면 메타.
-- **GitHub Pages 배포**: `.github/workflows/deploy-hero-x.yml` — `hero-x` 브랜치에 올리면 검사·빌드 후 결과를 **main 브랜치 `game/` 폴더**에 넣는다(다른 파일은 건드리지 않음). 주소: https://balhm12.github.io/sysmex-schedule/game/
+- **GitHub Pages 배포**: `.github/workflows/deploy-hero-x.yml` — `hero-x` 브랜치에 올리면 검사·빌드 후 결과를 **main 브랜치 `game/` 폴더**에 넣는다(다른 파일은 건드리지 않음). 주소: https://balhm12.github.io/Sysmex-schedule/game/
 - 같은 와이파이에서 휴대폰으로 PC 개발 서버에 접속하는 방법을 README 에 추가 (`npm run dev -- --host`).
 
 ### 수정 파일
