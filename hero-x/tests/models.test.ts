@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeManifest } from '../src/assets/ModelRegistry';
+import { classifyPart } from '../src/assets/PartRig';
 import { cropRect } from '../src/player/FaceTexture';
 
 describe('얼굴 사진 자르기 (cropRect)', () => {
@@ -27,10 +28,30 @@ describe('모델 manifest 검증 (normalizeManifest)', () => {
   });
   it('항목이 있으면 기본값(scale 1, offsetY 0, rotationY 0)을 채운다', () => {
     const m = normalizeManifest({ player: { file: 'player.glb' }, enemies: { rusher: { file: 'r.glb', scale: 0.5, rotationY: 180 }, tank: null }, bosses: { golem: { file: 'g.glb', offsetY: -0.1 } } });
-    expect(m.player).toEqual({ file: 'player.glb', scale: 1, offsetY: 0, rotationY: 0 });
-    expect(m.enemies.rusher).toEqual({ file: 'r.glb', scale: 0.5, offsetY: 0, rotationY: 180 });
+    expect(m.player).toEqual({ file: 'player.glb', scale: 1, offsetY: 0, rotationY: 0, rotationX: 0 });
+    expect(m.enemies.rusher).toEqual({ file: 'r.glb', scale: 0.5, offsetY: 0, rotationY: 180, rotationX: 0 });
     expect('tank' in m.enemies).toBe(false);
     expect(m.bosses.golem?.offsetY).toBe(-0.1);
     expect(normalizeManifest({ player: { file: 'p.glb', scale: -1 } }).player?.scale).toBe(1);
+  });
+});
+
+describe('부품 이름 리그 (classifyPart)', () => {
+  it('left_/right_ 접두어 + 다리·팔 부품, 머리·무기 이름을 분류한다', () => {
+    expect(classifyPart('left_leg')).toBe('leftLeg');
+    expect(classifyPart('right_boot_trim')).toBe('rightLeg');
+    expect(classifyPart('L_Knee')).toBe('leftLeg');
+    expect(classifyPart('right_arm')).toBe('rightArm');
+    expect(classifyPart('left_bracer_gold')).toBe('leftArm');
+    expect(classifyPart('left_shoulder')).toBe('leftArm');
+    expect(classifyPart('head')).toBe('head');
+    expect(classifyPart('hair_left')).toBe('head');
+    expect(classifyPart('left_ear')).toBe('head');
+    expect(classifyPart('eye_white_L')).toBe('head');
+    expect(classifyPart('glasses_bridge')).toBe('head');
+    expect(classifyPart('sword_blade')).toBe('weapon');
+    expect(classifyPart('torso')).toBeNull();
+    expect(classifyPart('backpack')).toBeNull();
+    expect(classifyPart('belt')).toBeNull();
   });
 });

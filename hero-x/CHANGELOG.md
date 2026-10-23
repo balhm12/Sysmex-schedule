@@ -2,6 +2,26 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-23 · v1.3.0 · 아들 캐릭터 모델(player.glb) 투입 + 부품 이름 리그
+
+### 변경 내용
+- **`public/models/player.glb`**: 사용자가 준 아들 복셀 모험가 모델(안경·갈색 머리·파란 튜닉·검·배낭, 68개 부품, 40KB). `manifest.json` 의 `player` 에 등록.
+- **`rotationX` 옵션** (`ModelRegistry.ts`): 위가 Z 축인 파일(trimesh·복셀 도구 출력)을 세우기 위한 보정. 회전 → 크기 재기 → 바닥·중심 맞추기 순서로 바꿔 어떤 축의 파일이든 발이 땅에 닿고 가운데에 선다.
+- **부품 이름 리그** (`assets/PartRig.ts` 새 파일): 애니메이션 클립이 없는 .glb 에서 메시 이름(`left_leg`, `right_arm`, `head`, `sword_*` …)으로 다리·팔·머리를 묶고 바운딩 박스로 엉덩이·어깨·목 관절을 잡아 걷기(다리·팔 교차, 들썩임)·공격(검 든 팔을 뒤로 당겼다 휘두르고 몸이 따라 돎)·점프·회피(앞으로 숙임)·피격(뒤로 젖힘 + 붉은빛)·쓰러짐 동작을 만든다. 무기는 가까운 팔에 붙는다. 양 다리·양 팔이 모두 없으면 기존 단순 흔들림.
+- glb 플레이어 재질을 복제해 피격 붉은빛(emissive)을 넣는다.
+
+### 수정 파일
+`public/models/player.glb`(새), `public/models/manifest.json`, `public/models/README.md`, `src/assets/PartRig.ts`(새), `src/assets/ModelRegistry.ts`, `tests/models.test.ts`, `package.json`, `src/game/GameConfig.ts`, `CLAUDE.md`, `GAME_GUIDE.md`, `CHANGELOG.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 114개·빌드). `classifyPart` 이름 분류 테스트 추가, manifest 기본값에 `rotationX: 0` 반영.
+- Playwright 스크린샷(고화질·카메라 0.6): 정면(카메라를 향해 섬, 발이 땅에 닿음, 키 1.9), 걷기(다리 교차), 공격(검 팔 휘두름 + 부채꼴), 뒷모습(배낭) 확인. 오류 없음. 피격 무적 중 깜빡임(원래 기능)으로 한 장은 비어 보였고 재확인 시 정상.
+- 회귀: 저장·이어하기(smoke10), 회피(smoke16) 통과. 얼굴 사진·모델 구조 검증(smoke19)은 저장소 manifest 를 고쳐 쓰던 방식을 `page.route` 가로채기로 바꿔 'glb 없음' 경로로 통과.
+
+### 알려진 문제
+- 설정의 **내 얼굴 사진**은 임시 모델 전용이라 `player.glb` 를 쓰는 동안 적용되지 않는다(설정 화면에는 그대로 보임).
+- 리그 동작은 코드로 만든 것이라 전문 애니메이션만큼 자연스럽지는 않다. 각도·속도는 `PartRig.ts` 의 `update` 수치로 조정.
+
 ## 2026-10-23 · v1.2.0 · 소리 개선 (효과음·음악 합성 고도화 + 음원 파일 교체 구조)
 
 ### 변경 내용

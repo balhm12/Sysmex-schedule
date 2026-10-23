@@ -3,6 +3,7 @@ import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { EnemyModel, EnemyModelState } from '../enemies/EnemyModels';
 import type { PlayerModel, PlayerModelState } from '../player/models/PlaceholderModel';
+import { buildPartRig } from './PartRig';
 import { Logger } from '../utils/Logger';
 
 /**
@@ -11,7 +12,8 @@ import { Logger } from '../utils/Logger';
  * - 키: player / enemies.<종류> / bosses.<외형> . 값: { file, scale, offsetY, rotationY }
  * - 로드는 비동기. 플레이어는 로드되는 즉시 교체(Game 이 콜백으로), 적·보스는 다음 생성부터 적용된다.
  * - 애니메이션 클립 이름에 idle / walk|run / attack / jump / die(dead) 가 들어 있으면 상태에 맞춰 재생한다. 없으면 정지 모델.
- * - 모델 정면은 +Z 이어야 한다. 반대면 rotationY 에 180 을 적는다.
+ * - 모델 정면은 +Z 이어야 한다. 반대면 rotationY 에 180 을 적는다. 위가 Z 축인 파일(복셀 도구 등)은 rotationX 에 -90.
+ * - 애니메이션 클립이 없어도 부품 이름(left_leg, right_arm, head, sword …)이 있으면 PartRig 가 걷기·공격 동작을 만든다.
  */
 export interface ModelEntry {
   file: string;
@@ -21,6 +23,8 @@ export interface ModelEntry {
   offsetY?: number;
   /** 정면 보정 (도) */
   rotationY?: number;
+  /** 위 방향 보정 (도). Z 가 위인 파일은 -90 */
+  rotationX?: number;
 }
 
 export interface ModelManifest {
@@ -42,6 +46,7 @@ function entry(v: unknown): ModelEntry | null {
     scale: typeof v.scale === 'number' && v.scale > 0 ? v.scale : 1,
     offsetY: typeof v.offsetY === 'number' ? v.offsetY : 0,
     rotationY: typeof v.rotationY === 'number' ? v.rotationY : 0,
+    rotationX: typeof v.rotationX === 'number' ? v.rotationX : 0,
   };
 }
 
@@ -144,6 +149,9 @@ function instantiate(m: Loaded, targetHeight: number | null): { root: THREE.Grou
       mesh.receiveShadow = false;
     }
   });
+  // 회전 보정 먼저 (위 방향·정면), 그 다음 크기를 잰다
+  scene.rotation.set(((m.entry.rotationX ?? 0) * Math.PI) / 180, ((m.entry.rotationY ?? 0) * Math.PI) / 180, 0);
+  scene.updateMatrixWorld(true);
   // 크기: targetHeight 가 있으면 모델 높이를 거기에 맞추고, 그 위에 manifest 의 scale 을 곱한다
   let k = m.entry.scale ?? 1;
   if (targetHeight) {
@@ -152,10 +160,11 @@ function instantiate(m: Loaded, targetHeight: number | null): { root: THREE.Grou
     if (h > 1e-6) k *= targetHeight / h;
   }
   scene.scale.setScalar(k);
-  // 발이 땅에 닿게: 바운딩 박스 바닥을 0 으로
+  scene.updateMatrixWorld(true);
+  // 발이 땅에 닿게, 좌우·앞뒤 중심을 0 으로
   const box2 = new THREE.Box3().setFromObject(scene);
-  scene.position.y = -box2.min.y + (m.entry.offsetY ?? 0);
-  scene.rotation.y = ((m.entry.rotationY ?? 0) * Math.PI) / 180;
+  const c = box2.getCenter(new THREE.Vector3());
+  scene.position.set(-c.x, -box2.min.y + (m.entry.offsetY ?? 0), -c.z);
   const clips = m.gltf.animations;
   const mixer = clips.length > 0 ? new THREE.AnimationMixer(scene) : null;
   return { root, mixer, clips };
@@ -204,12 +213,34 @@ function createGltfPlayerModel(m: Loaded): PlayerModel {
     current?.fadeOut(0.12);
     current = a;
   };
+  // 클립이 없으면 부품 이름으로 관절 리그를 시도한다 (복셀 캐릭터)
+  const rig = mixer ? null : buildPartRig(root);
+  if (rig) Logger.info('플레이어 모델: 부품 이름 리그로 걷기·공격 동작을 만듭니다.');
+  const mats: THREE.MeshStandardMaterial[] = [];
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const mt of list) {
+      // 같은 재질을 여러 모델이 공유하지 않도록 복제 (피격 붉은빛)
+      const std = mt as THREE.MeshStandardMaterial;
+      if (!std.emissive) continue;
+      const own = std.clone();
+      if (Array.isArray(mesh.material)) mesh.material = mesh.material.map((x) => (x === mt ? own : x));
+      else mesh.material = own;
+      mats.push(own);
+    }
+  });
   let t = 0;
   return {
     root,
     update(dt: number, s: PlayerModelState) {
       t += dt;
-      if (mixer) {
+      const hurt = s.hurt ?? 0;
+      for (const mt of mats) mt.emissive.setRGB(hurt * 0.6, 0, 0);
+      if (rig) {
+        rig.update(dt, s);
+      } else if (mixer) {
         if (s.dead) play(actions.die ?? actions.idle, false);
         else if (s.attack !== null && actions.attack) play(actions.attack, false);
         else if (s.airborne && actions.jump) play(actions.jump, false);
