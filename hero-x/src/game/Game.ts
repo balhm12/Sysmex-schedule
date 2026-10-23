@@ -10,6 +10,7 @@ import { Boss, type BossAttack } from '../enemies/Boss';
 import type { Enemy } from '../enemies/Enemy';
 import { EnemySpawner } from '../enemies/EnemySpawner';
 import { InputManager } from '../input/InputManager';
+import { TouchControls } from '../input/TouchControls';
 import { EquipmentSystem, applyDefense } from '../items/EquipmentSystem';
 import { generateItemAtLeast } from '../items/ItemDatabase';
 import { LootSystem } from '../items/LootSystem';
@@ -45,6 +46,9 @@ export interface GameDebugState {
   dungeonSelectVisible: boolean;
   unlockedNow: string | null;
   settingsVisible: boolean;
+  touchVisible: boolean;
+  pixelRatio: number;
+  interactButtonVisible: boolean;
   shadowsEnabled: boolean;
   cameraDistanceScale: number;
   player: { x: number; z: number; facing: number; moving: boolean; hp: number; maxHp: number };
@@ -101,6 +105,8 @@ export class Game {
   private readonly guide: ControlsGuide;
   private readonly menu: MainMenu;
   private readonly settingsUI: SettingsUI;
+  /** 터치 조작 (설정 touchControls 가 켜져 있고 플레이 중일 때만 보인다) */
+  private readonly touch: TouchControls;
   /** 사용자 설정 (설정 화면에서 바꾸고 브라우저에 저장) */
   private settings: UserSettings = defaultSettings();
   /** 게임 흐름: menu(메인 메뉴) → play(던전) → result(결과) */
@@ -203,6 +209,16 @@ export class Game {
     // UI
     this.damageNumbers = new DamageNumbers(uiRoot, (pos) => this.projectToScreen(pos));
     this.guide = new ControlsGuide(uiRoot, () => this.guide.hide());
+    this.touch = new TouchControls(
+      uiRoot,
+      this.input,
+      () => {
+        if (this.mode === 'play') this.openMenu();
+      },
+      () => {
+        if (this.mode === 'play') this.toggleInventory();
+      },
+    );
     this.hud = new HUD(uiRoot);
     this.hud.setDungeonName(this.dungeonDef.name);
     this.result = new ResultUI(uiRoot, () => this.retry(), () => this.openMenu(), () => this.openDungeons());
@@ -363,8 +379,16 @@ export class Game {
     }
     this.dungeon.setShadows(s.shadows);
     if (!s.showFps) this.guide.setHudText('');
+    this.applyPixelRatio();
+    this.updateTouchVisibility();
     this.applyDifficultyToSpawner();
     this.applyStats();
+  }
+
+  /** 렌더 해상도: 기기 배율(상한 graphics.maxPixelRatio) × 사용자 설정 */
+  private applyPixelRatio(): void {
+    const base = Math.min(window.devicePixelRatio || 1, GameConfig.graphics.maxPixelRatio);
+    this.renderer.setPixelRatio(Math.max(0.3, base * this.settings.resolution));
   }
 
   getSettings(): UserSettings {
@@ -474,8 +498,18 @@ export class Game {
     this.paused = false;
     this.result.hide();
     this.hud.hide();
+    this.touch.hide();
     this.saveNow();
     this.menu.show();
+  }
+
+  /** 터치 조작은 설정이 켜져 있고 플레이 중일 때만 보인다 */
+  private updateTouchVisibility(): void {
+    const on = this.settings.touchControls && this.mode === 'play';
+    if (on) this.touch.show();
+    else this.touch.hide();
+    // 터치 조작 중에는 키보드 안내 문구(왼쪽 아래)를 숨긴다 (조이스틱과 겹침)
+    document.body.classList.toggle('touch-mode', on);
   }
 
   // ---------- 저장 ----------
@@ -569,6 +603,7 @@ export class Game {
     this.dungeonSelect.hide();
     this.result.hide();
     this.hud.show();
+    this.updateTouchVisibility();
     this.lastTime = performance.now();
     this.canvas.focus();
   }
@@ -655,6 +690,7 @@ export class Game {
     this.mode = 'result';
     this.runActive = false;
     this.inventoryUI.hide();
+    this.touch.hide();
     this.paused = false;
     // 한 판의 기록을 누적하고 저장한다
     this.records.totalKills += this.combat.kills;
@@ -706,6 +742,9 @@ export class Game {
       dungeonSelectVisible: this.dungeonSelect.visible,
       unlockedNow: this.unlockedNow?.id ?? null,
       settingsVisible: this.settingsUI.visible,
+      touchVisible: this.touch.visible,
+      pixelRatio: this.renderer.getPixelRatio(),
+      interactButtonVisible: this.touch.visible && !(document.getElementById('touch-interact') as HTMLButtonElement | null)?.hidden,
       shadowsEnabled: this.renderer.shadowMap.enabled,
       cameraDistanceScale: this.cameraCtrl.distanceScale,
       save: { status: this.saveStatus, lastSavedAt: this.lastSavedAt, hasSavedProgress: this.hasSavedProgress, blocked: this.saveBlocked, dirty: this.saveDirty, records: { ...this.records } },
@@ -749,11 +788,29 @@ export class Game {
 
   /** 마우스가 가리키는 바닥 위 지점 (없으면 null) */
   private getAimPoint(): Vec2 | null {
+    // 터치 조작: 가까운 적을 자동 조준 (없으면 바라보는 방향 유지)
+    if (this.settings.touchControls) return this.nearestEnemyPoint(GameConfig.combat.autoAimRange);
     const pointer = this.input.getPointer();
     if (!pointer.has) return null;
     this.raycaster.setFromCamera(new THREE.Vector2(pointer.x, pointer.y), this.camera);
     const hit = this.raycaster.ray.intersectPlane(this.groundPlane, this.aimHit);
     return hit ? { x: hit.x, z: hit.z } : null;
+  }
+
+  /** 지정 거리 안의 가장 가까운 살아 있는 적의 위치 (없으면 null) */
+  private nearestEnemyPoint(range: number): Vec2 | null {
+    const p = this.player.position;
+    let best: Enemy | null = null;
+    let bestD = range;
+    for (const e of this.spawner.getEnemies()) {
+      if (!e.alive) continue;
+      const d = Math.hypot(e.position.x - p.x, e.position.z - p.z);
+      if (d < bestD) {
+        bestD = d;
+        best = e;
+      }
+    }
+    return best ? { x: best.position.x, z: best.position.z } : null;
   }
 
   /** 적이 공격을 실행했을 때: 근접이면 바로 피해, 원거리면 플레이어 쪽으로 탄 발사 */
@@ -951,6 +1008,7 @@ export class Game {
     const nearChest = !this.ended && this.chests.nearest({ x: p.x, z: p.z }) !== null;
     this.currentPrompt = nearChest ? `${GameConfig.controls.interact[0].replace('Key', '')} 보물 상자 열기` : '';
     this.hud.setPrompt(this.currentPrompt);
+    this.touch.setInteract(nearChest);
     this.hud.setChests(this.chests.openedCount, this.chests.total);
     this.player.update(dt);
     this.effects.update(dt);

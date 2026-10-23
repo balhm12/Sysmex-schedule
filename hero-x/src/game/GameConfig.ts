@@ -137,6 +137,8 @@ export interface GameConfigType {
   };
   /** 전투 */
   combat: {
+    /** 터치 조작 자동 조준: 이 거리 안의 가장 가까운 적을 겨눈다 */
+    autoAimRange: number;
     /** 근접 공격 */
     melee: {
       damage: number;
@@ -328,7 +330,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.6.0-a.1' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.6.1' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -359,6 +361,7 @@ export const GameConfig: GameConfigType = {
   },
 
   combat: {
+    autoAimRange: 14,
     melee: {
       damage: 12,
       range: 1.9,
@@ -625,6 +628,7 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'player.attackMoveFactor': { min: 0, max: 1 },
   'player.jumpSpeed': { min: 1, max: 30 },
   'player.gravity': { min: 1, max: 100 },
+  'combat.autoAimRange': { min: 2, max: 60 },
   'combat.ranged.damage': { min: 1, max: 9999 },
   'combat.ranged.speed': { min: 1, max: 100 },
   'combat.ranged.cooldown': { min: 0.05, max: 5 },

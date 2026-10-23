@@ -2,6 +2,7 @@ import { GameConfig, type DifficultyLevel } from './GameConfig';
 import { isDifficultyLevel } from './Difficulty';
 import type { StorageLike } from '../save/SaveStorage';
 import { Logger } from '../utils/Logger';
+import { isTouchDevice } from '../utils/device';
 
 /**
  * 사용자 설정 (게임 안 설정 화면에서 바꾸는 값)
@@ -20,6 +21,10 @@ export interface UserSettings {
   enemyHpMul: number;
   /** 카메라 거리 배율 (1 = 기본) */
   cameraDistance: number;
+  /** 터치 조작 표시 (가상 조이스틱·버튼) + 가까운 적 자동 조준. 기본값은 터치 기기 여부로 정한다 */
+  touchControls: boolean;
+  /** 렌더 해상도 배율 (낮추면 휴대폰에서 부드러워진다) */
+  resolution: number;
   /** 피해 숫자 표시 */
   showDamageNumbers: boolean;
   /** 맞았을 때 화면 테두리 붉게 */
@@ -43,26 +48,32 @@ export const SETTING_GROUPS = ['게임', '전투 수치', '화면'] as const;
 export const SETTING_DEFS: SettingDef[] = [
   { key: 'difficulty', kind: 'choice', group: '게임', label: '난이도', description: '적의 체력·공격력·속도 배율. 바꾸면 던전을 처음부터 다시 시작합니다.' },
   { key: 'cameraDistance', kind: 'range', group: '게임', label: '카메라 거리', description: '1.0 이 기본. 멀리 두면 넓게 보이고 가까우면 캐릭터가 크게 보입니다.', min: 0.6, max: 1.6, step: 0.1, unit: '×' },
+  { key: 'touchControls', kind: 'toggle', group: '게임', label: '터치 조작', description: '화면에 조이스틱·버튼을 띄우고 가까운 적을 자동으로 조준합니다. 휴대폰·태블릿은 기본 켜짐.' },
   { key: 'playerHpMul', kind: 'range', group: '전투 수치', label: '내 최대 체력', description: '레벨·장비 보너스를 더한 최대 체력에 곱합니다.', min: 0.5, max: 3, step: 0.1, unit: '×' },
   { key: 'playerDamageMul', kind: 'range', group: '전투 수치', label: '내 공격력', description: '근접·원거리 공격 피해에 곱합니다.', min: 0.5, max: 3, step: 0.1, unit: '×' },
   { key: 'enemyHpMul', kind: 'range', group: '전투 수치', label: '적 체력', description: '난이도 배율에 다시 곱합니다. 다음 던전 입장부터 적용됩니다.', min: 0.5, max: 3, step: 0.1, unit: '×' },
   { key: 'showDamageNumbers', kind: 'toggle', group: '화면', label: '피해 숫자 표시', description: '공격하거나 맞을 때 숫자를 띄웁니다.' },
   { key: 'hitFlash', kind: 'toggle', group: '화면', label: '피격 시 화면 번쩍임', description: '맞았을 때 화면 테두리를 붉게 비춥니다.' },
-  { key: 'shadows', kind: 'toggle', group: '화면', label: '그림자', description: '느린 PC 에서는 끄면 부드러워집니다.' },
+  { key: 'shadows', kind: 'toggle', group: '화면', label: '그림자', description: '느린 PC·휴대폰에서는 끄면 부드러워집니다.' },
+  { key: 'resolution', kind: 'range', group: '화면', label: '렌더 해상도', description: '1.0 이 기기 기본. 휴대폰에서 끊기면 0.6~0.8 로 낮추세요.', min: 0.5, max: 1.5, step: 0.1, unit: '×' },
   { key: 'showFps', kind: 'toggle', group: '화면', label: 'FPS 표시', description: '왼쪽 아래에 초당 프레임을 보여줍니다.' },
 ];
 
 /** 기본값 (GameConfig 의 개발자 설정을 기본으로 삼는다) */
 export function defaultSettings(): UserSettings {
+  const touch = isTouchDevice();
   return {
     difficulty: GameConfig.difficulty.default,
     playerHpMul: 1,
     playerDamageMul: 1,
     enemyHpMul: 1,
     cameraDistance: 1,
+    touchControls: touch,
+    // 휴대폰은 그림자를 끄고 해상도를 낮춰 시작한다 (설정에서 올릴 수 있다)
+    resolution: touch ? 0.8 : 1,
     showDamageNumbers: GameConfig.hud.showDamageNumbers,
     hitFlash: true,
-    shadows: GameConfig.graphics.shadows,
+    shadows: touch ? false : GameConfig.graphics.shadows,
     showFps: GameConfig.debug.showFps,
   };
 }

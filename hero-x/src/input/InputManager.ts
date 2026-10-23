@@ -27,12 +27,16 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * - 마우스 버튼은 'Mouse0'(왼쪽), 'Mouse1'(가운데), 'Mouse2'(오른쪽) 코드로 키와 똑같이 다룬다.
  * - 키 설정은 GameConfig.controls 에서 바꾼다.
  * - 창이 포커스를 잃거나 탭이 숨겨지면 눌린 키를 모두 해제한다 (키가 눌린 채로 굳는 현상 방지).
+ * - 터치 조작(TouchControls)은 setVirtualAxis / pressVirtual / releaseVirtual 로 같은 경로에 입력을 넣는다.
+ *   손가락 터치(pointerType 'touch')는 마우스 버튼·마우스 조준으로 취급하지 않는다 (터치 버튼과 겹치지 않게).
  */
 export class InputManager {
   private readonly pressed = new Set<string>();
   private readonly pressHandlers = new Map<string, Array<() => void>>();
   private readonly pointer: PointerState = { x: 0, y: 0, has: false };
   private cleanup: Array<() => void> = [];
+  /** 가상 조이스틱 축 (-1~1). 키 입력이 없을 때만 쓴다 */
+  private readonly virtualAxis: MoveAxis = { x: 0, z: 0 };
 
   /** 브라우저 이벤트 연결. canvas 를 주면 마우스 위치를 그 영역 기준으로 계산한다. */
   attach(target: Window = window, canvas?: HTMLElement): void {
@@ -50,17 +54,19 @@ export class InputManager {
       if (document.hidden) release();
     };
     const onPointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
       const rect = canvas ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
       this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       this.pointer.has = true;
     };
     const onPointerDown = (e: PointerEvent) => {
-      if (isTypingTarget(e.target)) return;
+      if (isTypingTarget(e.target) || e.pointerType === 'touch') return;
       onPointerMove(e);
       this.press(`Mouse${e.button}`);
     };
     const onPointerUp = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
       this.pressed.delete(`Mouse${e.button}`);
     };
     const onContextMenu = (e: Event) => e.preventDefault();
@@ -123,13 +129,33 @@ export class InputManager {
     return [...this.pressed];
   }
 
-  /** 현재 이동 축 (-1, 0, 1 조합). 대각선 정규화는 movement.ts 에서 처리한다. */
+  /** 현재 이동 축 (키: -1, 0, 1 조합 / 조이스틱: -1~1). 대각선 정규화는 movement.ts 에서 처리한다. */
   getMoveAxis(): MoveAxis {
     const c = GameConfig.controls;
-    return {
+    const axis = {
       x: (this.isActionDown(c.right) ? 1 : 0) - (this.isActionDown(c.left) ? 1 : 0),
       z: (this.isActionDown(c.down) ? 1 : 0) - (this.isActionDown(c.up) ? 1 : 0),
     };
+    if (axis.x === 0 && axis.z === 0) return { x: this.virtualAxis.x, z: this.virtualAxis.z };
+    return axis;
+  }
+
+  /** 가상 조이스틱 축 설정 (터치 조작). 길이가 1을 넘으면 줄인다 */
+  setVirtualAxis(x: number, z: number): void {
+    const len = Math.hypot(x, z);
+    const k = len > 1 ? 1 / len : 1;
+    this.virtualAxis.x = x * k;
+    this.virtualAxis.z = z * k;
+  }
+
+  /** 가상 키 누름 (터치 버튼). 실제 키와 똑같이 onPress 와 isActionDown 에 반영된다 */
+  pressVirtual(code: string): void {
+    if (!code || this.pressed.has(code)) return;
+    this.press(code);
+  }
+
+  releaseVirtual(code: string): void {
+    this.pressed.delete(code);
   }
 
   private press(code: string): void {

@@ -2,6 +2,29 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-23 · v0.6.1 · 모바일 지원 (터치 조작·화면 맞춤·GitHub Pages 배포)
+
+### 변경 내용
+- **터치 조작** (`src/input/TouchControls.ts`): 왼쪽 가상 조이스틱(이동), 오른쪽 근접·원거리·점프 버튼, 상자 근처에서만 보이는 `열기` 버튼, 위쪽 `장비`·`메뉴` 버튼. 버튼은 `GameConfig.controls` 의 키 코드를 `InputManager` 에 가상으로 눌러 기존 입력 경로를 그대로 쓴다. 손가락 터치는 마우스 버튼·마우스 조준으로 취급하지 않는다.
+- **자동 조준**: 터치 조작이 켜져 있으면 `combat.autoAimRange`(14) 안의 가장 가까운 적을 겨눈다 (`Game.nearestEnemyPoint`). 적이 없으면 바라보는 방향으로 공격.
+- **설정 추가**: `터치 조작`(기본: 터치 기기면 켜짐), `렌더 해상도` 0.5~1.5× (휴대폰 기본 0.8). 휴대폰은 그림자가 기본 꺼짐. 기기 판별은 `src/utils/device.ts`.
+- **화면 맞춤**: 900px 이하·낮은 화면에서 창·HUD·설정·던전 카드 레이아웃 축소, 세로로 들면 "가로로 돌리세요" 안내, 확대·더블탭 줌 방지(viewport meta), 캔버스 `touch-action: none`, 홈 화면 추가 시 전체 화면 메타.
+- **GitHub Pages 배포**: `.github/workflows/deploy-hero-x.yml` — `hero-x` 브랜치에 올리면 검사·빌드 후 결과를 **main 브랜치 `game/` 폴더**에 넣는다(다른 파일은 건드리지 않음). 주소: https://balhm12.github.io/sysmex-schedule/game/
+- 같은 와이파이에서 휴대폰으로 PC 개발 서버에 접속하는 방법을 README 에 추가 (`npm run dev -- --host`).
+
+### 수정 파일
+- 신규: `src/input/TouchControls.ts`, `src/utils/device.ts`, `../.github/workflows/deploy-hero-x.yml`
+- 수정: `index.html`, `src/game/{Game,GameConfig,Settings}.ts`, `src/input/InputManager.ts`, `src/style.css`, `package.json`
+
+### 테스트 결과 (실제 실행)
+- `npm run typecheck`: 통과 · `npm test`: 94개 통과 · `npm run build`: 성공
+- 브라우저 검증(Playwright, Pixel 5 터치 에뮬레이션 가로 851×393, dpr 2): 기본값 터치 켜짐·그림자 꺼짐·해상도 0.8(pixelRatio 1.6) → 새 게임에서 터치 UI 표시 → 조이스틱으로 이동(z 0→1.5) → 근접 버튼이 자동 조준으로 적 체력 35→23 → 원거리 버튼 투사체 발생 → 점프 버튼 높이 1.17 → 상자 옆에서만 `열기` 버튼, 누르면 상자 열림 → 메뉴 버튼으로 메뉴(터치 UI 숨김) → 설정에서 터치 끄면 UI 안 보임. PC 환경 기본값(터치 꺼짐·그림자 켜짐)도 확인. 메뉴·설정 회귀 통과. 콘솔 오류 없음.
+- 실제 휴대폰 기기에서의 확인은 아직 하지 않았다 (에뮬레이션만). 배포 후 사용자 확인 필요.
+
+### 알려진 문제
+- GitHub Pages 의 저장은 PC 의 `localhost` 저장과 별개다(브라우저 저장소가 주소별). 진행 공유(내보내기/가져오기)는 다음 묶음에서 검토.
+- iOS Safari 는 홈 화면에 추가하지 않으면 위·아래 브라우저 막대가 화면을 가린다. 가로 모드 권장.
+
 ## 2026-10-23 · v0.6.0-a.1 · 6단계 첫째 묶음 (던전 3개·던전 선택·새 적·새 장비)
 
 ### 변경 내용
