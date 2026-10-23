@@ -945,3 +945,48 @@ body.touch-mode .hud {
   right: auto;
   left: max(14px, env(safe-area-inset-left));
 }
+
+/* 브라우저 확대 방지(더블탭) + 당겨서 새로고침·바운스 방지 */
+html,
+body {
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+/* 세로 화면(휴대폰 세로): 위쪽 정보 패널을 두 줄로 쌓고 글자를 줄인다 */
+@media (max-width: 600px) {
+  .hud-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    right: 10px;
+  }
+  .hud-panel {
+    min-width: 0;
+    padding: 6px 10px;
+  }
+  .hud-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 12px;
+  }
+  .hud-stats > div {
+    white-space: nowrap;
+  }
+  .hud-stats b {
+    font-size: 14px;
+  }
+  .hud-hp .hud-xp-row {
+    flex-wrap: nowrap;
+  }
+  /* 터치 메뉴·장비 버튼은 패널 아래로 */
+  .touch-top {
+    top: auto;
+    bottom: max(230px, calc(env(safe-area-inset-bottom) + 230px));
+  }
+  .boss-bar {
+    top: 150px;
+    width: 92vw;
+  }
+}
