@@ -16,6 +16,7 @@ if (!canvas || !uiRoot) {
 
 installErrorOverlay(uiRoot);
 preventBrowserZoom();
+installViewportFix();
 
 try {
   const game = new Game(canvas, uiRoot);
@@ -72,4 +73,41 @@ function preventBrowserZoom(): void {
     },
     { passive: false },
   );
+}
+
+/**
+ * 휴대폰 회전·주소창 변화 대응
+ * - iOS Safari 는 가로↔세로로 돌리면 확대 배율이 남거나 페이지가 밀려 화면이 잘린다.
+ *   회전·크기 변경 때 viewport 메타를 다시 써서 배율을 1 로 되돌리고, 맨 위로 스크롤한다.
+ * - 브라우저 위·아래 막대가 차지하는 높이는 visualViewport 로 재서 #app 높이(--app-height)에 반영한다.
+ *   (100vh 는 막대 뒤까지 포함해 아래 버튼이 가려진다)
+ */
+function installViewportFix(): void {
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  const content = meta?.getAttribute('content') ?? '';
+  const vv = window.visualViewport;
+  let timer = 0;
+  const apply = () => {
+    const h = vv ? Math.round(vv.height) : window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', `${h}px`);
+    window.scrollTo(0, 0);
+  };
+  const resetScale = () => {
+    if (!meta) return;
+    // 같은 값을 다시 쓰면 무시되므로 잠깐 바꿨다가 되돌린다
+    meta.setAttribute('content', content + ', minimum-scale=1.0');
+    requestAnimationFrame(() => meta.setAttribute('content', content));
+  };
+  const onChange = () => {
+    resetScale();
+    apply();
+    clearTimeout(timer);
+    // 회전 직후에는 크기가 몇 번에 걸쳐 바뀌므로 조금 뒤 한 번 더
+    timer = window.setTimeout(apply, 350);
+  };
+  window.addEventListener('orientationchange', onChange);
+  window.addEventListener('resize', onChange);
+  vv?.addEventListener('resize', apply);
+  vv?.addEventListener('scroll', apply);
+  apply();
 }

@@ -11,7 +11,11 @@ body {
 
 #app {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* 브라우저 막대를 뺀 실제 보이는 높이 (main.ts 가 visualViewport 로 갱신). 지원 전에는 100dvh */
+  height: var(--app-height, 100dvh);
 }
 
 #game-canvas {
@@ -959,10 +963,14 @@ body {
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
+    left: 10px;
     right: 10px;
+    max-width: calc(100% - 20px);
   }
   .hud-panel {
     min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 6px 10px;
   }
   .hud-stats {

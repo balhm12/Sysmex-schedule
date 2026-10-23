@@ -2,6 +2,23 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-23 · v1.1.1 · 휴대폰 회전(가로 → 세로) 화면 깨짐 수정
+
+### 변경 내용
+- 증상: iPhone Safari 에서 가로로 하다가 세로로 돌리면 가로 때 배율이 남아 HUD 가 화면 밖으로 잘리고, 버튼이 브라우저 주소창 뒤로 들어감.
+- `main.ts` `installViewportFix()` 추가: 회전·크기 변경 때 viewport 메타를 다시 써서 배율을 1 로 되돌리고 맨 위로 스크롤. `visualViewport` 높이(브라우저 막대 제외)를 `--app-height` 로 넣어 `#app` 높이에 사용(미지원 브라우저는 `100dvh`).
+- `style.css`: 세로 화면에서 `.hud-top` 을 좌우 10px 안에 가두고 패널 폭을 넘지 않게(`max-width`, `box-sizing`).
+
+### 수정 파일
+`src/main.ts`, `src/style.css`, `package.json`, `src/game/GameConfig.ts`, `CHANGELOG.md`, `TROUBLESHOOTING.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 110개·빌드).
+- Playwright(Pixel 5 에뮬레이션) 가로 851×393 → 세로 393×851 → 다시 가로: 각 단계에서 `#app` 높이 = 창 높이, 캔버스 비율 = 창 비율, 근접 버튼 아래 끝 ≤ 창 높이, HUD 오른쪽 ≤ 창 너비 확인(통과).
+
+### 알려진 문제
+- 실제 iPhone Safari 회전은 에뮬레이션으로 완전히 재현되지 않으므로 기기에서 확인 필요. 그래도 깨지면 TROUBLESHOOTING 의 '휴대폰 회전' 항목 참고.
+
 ## 2026-10-23 · v1.1.0 · 그래픽 개선 3 (캐릭터·적 모델 고도화) — 그래픽 개선 1~3 완료
 
 ### 변경 내용
