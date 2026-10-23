@@ -340,6 +340,13 @@ export interface GameConfigType {
     /** 피해 숫자 표시 */
     showDamageNumbers: boolean;
   };
+  /** 성능 */
+  performance: {
+    /** 자동 화질 판단 간격(초): 이 시간 동안의 평균 FPS 로 판단 */
+    autoQualityInterval: number;
+    /** 이 FPS 미만이면 화질을 한 단계 내린다 */
+    autoQualityFps: number;
+  };
   /** 저장 */
   save: {
     /** 자동 저장 간격(초). 바뀐 것이 있을 때만 이 간격으로 저장한다 */
@@ -353,7 +360,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.7.0-b.1' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.0.0' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -641,6 +648,10 @@ export const GameConfig: GameConfigType = {
     showDamageNumbers: true,
   },
 
+  performance: {
+    autoQualityInterval: 6,
+    autoQualityFps: 30,
+  },
   save: {
     autoSaveInterval: 3,
   },
@@ -726,6 +737,8 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'progression.damagePerLevel': { min: 0, max: 1 },
   'progression.maxLevel': { min: 1, max: 999 },
   'save.autoSaveInterval': { min: 0.5, max: 600 },
+  'performance.autoQualityInterval': { min: 2, max: 60 },
+  'performance.autoQualityFps': { min: 10, max: 60 },
   'progression.levelUpHealRatio': { min: 0, max: 1 },
   'enemies.deathDuration': { min: 0, max: 5 },
   'camera.fov': { min: 30, max: 90 },

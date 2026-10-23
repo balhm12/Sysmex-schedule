@@ -37,6 +37,8 @@ export interface UserSettings {
   soundMusic: number;
   /** 렌더 해상도 배율 (낮추면 휴대폰에서 부드러워진다) */
   resolution: number;
+  /** 화면이 끊기면 그림자·해상도를 자동으로 낮춘다 */
+  autoQuality: boolean;
   /** 피해 숫자 표시 */
   showDamageNumbers: boolean;
   /** 맞았을 때 화면 테두리 붉게 */
@@ -75,6 +77,7 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: 'hitFlash', kind: 'toggle', group: '화면', label: '피격 시 화면 번쩍임', description: '맞았을 때 화면 테두리를 붉게 비춥니다.' },
   { key: 'shadows', kind: 'toggle', group: '화면', label: '그림자', description: '느린 PC·휴대폰에서는 끄면 부드러워집니다.' },
   { key: 'resolution', kind: 'range', group: '화면', label: '렌더 해상도', description: '1.0 이 기기 기본. 휴대폰에서 끊기면 0.6~0.8 로 낮추세요.', min: 0.5, max: 1.5, step: 0.1, unit: '×' },
+  { key: 'autoQuality', kind: 'toggle', group: '화면', label: '자동 화질 조절', description: '플레이 중 평균 30 FPS 아래면 그림자를 끄고 해상도를 한 단계씩 낮춥니다. 직접 정하려면 끄세요.' },
   { key: 'showFps', kind: 'toggle', group: '화면', label: 'FPS 표시', description: '왼쪽 아래에 초당 프레임을 보여줍니다.' },
 ];
 
@@ -97,6 +100,7 @@ export function defaultSettings(): UserSettings {
     soundMusic: 0.6,
     // 휴대폰은 그림자를 끄고 해상도를 낮춰 시작한다 (설정에서 올릴 수 있다)
     resolution: touch ? 0.8 : 1,
+    autoQuality: true,
     showDamageNumbers: GameConfig.hud.showDamageNumbers,
     hitFlash: true,
     shadows: touch ? false : GameConfig.graphics.shadows,

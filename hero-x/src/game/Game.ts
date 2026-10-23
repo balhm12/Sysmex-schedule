@@ -33,6 +33,7 @@ import { EMPTY_RECORDS, applySaveData, cloneRecords, hasProgress, serializeSave,
 import { browserStorage, clearSave, loadSave, writeSave } from '../save/SaveStorage';
 import { vibrate } from '../utils/haptics';
 import { AudioSystem } from '../audio/AudioSystem';
+import { decideQuality } from './AutoQuality';
 import type { MusicName } from '../audio/soundDefs';
 import { Logger } from '../utils/Logger';
 import { CameraController } from './CameraController';
@@ -58,6 +59,7 @@ export interface GameDebugState {
   dash: { active: boolean; cooldown: number; invulnerable: number };
   aimRingVisible: boolean;
   audio: { ready: boolean; track: string | null };
+  contextLost: boolean;
   face: boolean;
   faceVisible: boolean;
   models: { loaded: string[]; playerGltf: boolean };
@@ -109,6 +111,14 @@ export class Game {
   private readonly dungeonSelect: DungeonSelectUI;
   /** 이번 클리어로 새로 열린 던전 (결과 화면 안내용) */
   private unlockedNow: DungeonDef | null = null;
+  // 자동 화질: 플레이 중 FPS 표본
+  private qualityFrames = 0;
+  private qualityTime = 0;
+  private readonly qualitySamples: number[] = [];
+  /** 그래픽 장치 연결이 끊긴 상태 (WebGL context lost) */
+  private contextLost = false;
+  /** 복구 직후 잠시 동안은 프레임 오류를 치명적으로 보지 않는다 (셰이더 재컴파일 중 일시 오류) */
+  private restoreGraceUntil = 0;
   /** 얼굴 사진 (data URL). null 이면 기본 얼굴 */
   private face: string | null = loadFace();
   /** 플레이어가 정식 glb 모델을 쓰는 중인지 */
@@ -198,6 +208,20 @@ export class Game {
     this.renderer.shadowMap.enabled = g.shadows;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // 그래픽 장치 연결이 끊기면(메모리 부족·절전 등) 멈췄다가 복구되면 이어서 그린다
+    canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      this.contextLost = true;
+      this.hud.showBanner('그래픽 연결이 끊겼습니다. 복구 중…', 4000);
+      Logger.warn('WebGL 컨텍스트가 끊겼습니다. 복구를 기다립니다.');
+    });
+    canvas.addEventListener('webglcontextrestored', () => {
+      this.contextLost = false;
+      this.lastTime = performance.now();
+      this.restoreGraceUntil = performance.now() + 3000;
+      this.hud.showBanner('그래픽 연결이 복구됐습니다', 1500);
+      Logger.info('WebGL 컨텍스트가 복구됐습니다.');
+    });
 
     const c = GameConfig.camera;
     this.camera = new THREE.PerspectiveCamera(c.fov, 1, c.near, c.far);
@@ -673,8 +697,10 @@ export class Game {
       this.hasSavedProgress = hasProgress(data);
       this.lastSavedAt = data.savedAt;
       this.saveStatus = `마지막 저장: ${formatSavedAt(data.savedAt)}`;
-      if (this.menu?.visible) this.menu.refresh();
+    } else {
+      this.saveStatus = this.storage ? '저장에 실패했습니다 (저장 공간 부족 또는 차단). 진행이 기억되지 않을 수 있습니다.' : '이 브라우저에서는 저장이 되지 않습니다 (사생활 보호 모드 등).';
     }
+    if (this.menu?.visible) this.menu.refresh();
     return ok;
   }
 
@@ -866,6 +892,7 @@ export class Game {
       dash: { active: this.controller.dashing, cooldown: this.controller.dashCooldownRatio, invulnerable: this.player.health.invulnerable },
       aimRingVisible: this.aimRing.visible,
       audio: { ready: this.audio.ready, track: this.audio.currentTrack },
+      contextLost: this.contextLost,
       face: this.face !== null,
       faceVisible: this.player.faceVisible,
       models: { loaded: modelRegistry.loadedKeys, playerGltf: this.playerUsesGltf },
@@ -1150,11 +1177,38 @@ export class Game {
   private readonly loop = (now: number): void => {
     if (!this.running) return;
     this.rafId = requestAnimationFrame(this.loop);
+    try {
+      this.frame(now);
+    } catch (err) {
+      if (this.restoreGraceUntil > 0) {
+        if (performance.now() < this.restoreGraceUntil) {
+          // 그래픽 복구 직후의 일시 오류는 건너뛰고 다음 프레임을 시도한다
+          Logger.warn('그래픽 복구 중 프레임 오류를 건너뜁니다.', err);
+          return;
+        }
+        // 복구 뒤에도 계속 실패하면 진행을 저장하고 페이지를 새로 연다 (저장 지점에서 이어짐)
+        this.restoreGraceUntil = 0;
+        Logger.warn('그래픽 복구에 실패해 페이지를 다시 엽니다.', err);
+        this.flushSave();
+        this.hud.showBanner('그래픽 복구 실패 — 다시 여는 중…', 3000);
+        location.reload();
+        return;
+      }
+      // 한 프레임의 오류로 게임 전체가 굳지 않게: 루프를 멈추고 오류 상자(ErrorOverlay)에 맡긴다
+      this.stop();
+      this.flushSave();
+      Logger.error('게임 루프에서 오류가 나 멈췄습니다. 새로고침(F5)하면 저장된 진행에서 이어집니다.', err);
+      throw err;
+    }
+  };
 
+  /** 한 프레임 갱신·그리기 */
+  private frame(now: number): void {
     // 탭을 오래 비웠다 돌아와도 한 번에 크게 움직이지 않도록 dt 상한을 둔다
     const dt = Math.min(0.05, (now - this.lastTime) / 1000);
     this.lastTime = now;
 
+    if (this.contextLost) return;
     if (this.paused || this.mode === 'menu') {
       // 장비 화면이 열렸거나 메인 메뉴 중에는 그리기만 한다
       this.renderer.render(this.scene, this.camera);
@@ -1222,8 +1276,32 @@ export class Game {
 
     this.renderer.render(this.scene, this.camera);
     this.frames++;
+    // 복구 뒤 한 프레임이라도 정상으로 그려지면 복구 완료
+    if (this.restoreGraceUntil > 0) this.restoreGraceUntil = 0;
     this.updateFps(dt);
-  };
+    this.updateAutoQuality(dt);
+  }
+
+  /** 자동 화질: 일정 시간마다 평균 FPS 를 보고 낮으면 그림자·해상도를 한 단계 내린다 */
+  private updateAutoQuality(dt: number): void {
+    if (!this.settings.autoQuality) return;
+    this.qualityFrames++;
+    this.qualityTime += dt;
+    const p = GameConfig.performance;
+    if (this.qualityTime < p.autoQualityInterval) return;
+    this.qualitySamples.push(this.qualityFrames / this.qualityTime);
+    this.qualityFrames = 0;
+    this.qualityTime = 0;
+    const d = decideQuality(this.qualitySamples, { shadows: this.settings.shadows, resolution: this.settings.resolution }, p.autoQualityFps);
+    this.qualitySamples.length = 0;
+    if (!d.message) return;
+    this.settings = { ...this.settings, shadows: d.next.shadows, resolution: d.next.resolution };
+    saveSettings(this.storage, this.settings);
+    this.settingsUI.refresh();
+    this.applySettings();
+    this.hud.showBanner(d.message, 2500);
+    Logger.info(`자동 화질 조절: ${d.message}`);
+  }
 
   /** FPS 표시 (0.5초마다 갱신) */
   private updateFps(dt: number): void {

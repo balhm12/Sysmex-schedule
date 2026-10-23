@@ -9,7 +9,7 @@
 - 장르: 3인칭 3D 액션 RPG. Minecraft Dungeons 의 진행 방식을 참고하되 캐릭터·맵·아이템·음악·텍스처는 독자 제작 또는 적법한 에셋만 사용한다.
 - 실행 환경: Windows PC 웹 브라우저(Chrome/Edge). 기본 게임은 외부 API·유료 서비스 없이 실행된다.
 - 최우선 원칙: **실제로 실행되는 게임**을 단계적으로 완성한다. 그래픽 품질보다 안정성·유지보수성이 먼저다.
-- 현재 상태: **7단계(품질 개선) 진행 중** — 6단계까지 완료(v0.6.x: 던전 3개·모바일·조작 개선·보스 차별화), 7-a 효과음·음악 v0.7.0-a.1, 7-b 얼굴 사진·glb 모델 교체 구조 v0.7.0-b.1 완료. 다음: 7-c 성능·오류 처리·최종 문서 정리.
+- 현재 상태: **지시서 1~7단계 모두 완료 (v1.0.0)**. 이후 작업은 사용자 플레이 의견 기반 조정(밸런스·조작 느낌·음악), 정식 .glb 모델 투입, 추가 콘텐츠(던전·적·장비)다. 새 작업도 같은 절차(최소 단위 구현 → `npm run check` → 브라우저 확인 → 문서 → 커밋)로 한다.
 
 ## 2. 기술 스택
 
@@ -38,6 +38,7 @@ hero-x/
 │  │  ├─ Game.ts           게임 본체: 렌더러·씬·루프, 시스템 연결
 │  │  ├─ GameConfig.ts     ★ 설정 데이터 + 허용 범위(CONFIG_LIMITS) + 보정 함수
 │  │  ├─ Difficulty.ts     난이도 배율 조회·저장(localStorage, 실패해도 동작)
+│  │  ├─ AutoQuality.ts    자동 화질 판단 (평균 FPS → 그림자 끄기 → 해상도 낮추기, 순수 함수·테스트 대상)
 │  │  ├─ Settings.ts       ★ 사용자 설정: 항목 정의(SETTING_DEFS)·기본값·보정·저장 (테스트 대상)
 │  │  ├─ DungeonDefs.ts    ★ 던전 정의 목록(DUNGEONS: 공간·장애물·상자·적 배치·보스 덮어쓰기·보상·해금) (테스트 대상)
 │  ├─ save/
@@ -159,6 +160,7 @@ hero-x/
 - "적을 두 배로" → `GameConfig.enemies.spawns` 에 항목 추가. "적 체력 30% 올려" → `enemies.types.rusher.hp` 조정.
 - "공격을 더 세게/넓게" → `GameConfig.combat.melee` 의 `damage`, `range`, `arcDegrees`. 원거리는 `combat.ranged`.
 - "점프를 더 높게" → `player.jumpSpeed` 올리기 (또는 `player.gravity` 내리기). "회피를 더 멀리/자주" → `player.dash.speed/duration/cooldown`. 회피 키는 `controls.dodge`, 터치 버튼은 `TouchControls` 의 `#touch-dodge`.
+- 성능: 자동 화질은 `Game.updateAutoQuality` 가 `GameConfig.performance` 간격으로 `decideQuality` 를 호출해 설정을 낮춘다(올리지 않음). WebGL 끊김은 `contextLost` 플래그로 프레임을 건너뛴다. 프레임 예외는 `loop` 의 try/catch 가 루프를 멈추고 저장한 뒤 다시 던진다(ErrorOverlay 표시).
 - 모델 교체: `.glb` 는 `public/models/` + `manifest.json`. 생성 함수(`createEnemyModel`, `createBossModel`, `Game.swapPlayerModel`)가 `modelRegistry` 에서 먼저 찾고 없으면 임시 모델을 만든다. 적·보스는 다음 생성부터 적용. 얼굴 사진은 `PlayerModel.setFace`(임시 모델만 구현).
 - 소리: 새 효과음은 `soundDefs.SFX` 에 레시피를 추가하고 `Game` 에서 `this.audio.play('이름')`. 음악은 `MUSIC` 에 트랙을 추가하고 `Game.dungeonMusic()` 매핑. 외부 음원 파일은 쓰지 않는다. 소리는 첫 사용자 조작 뒤에만 난다(브라우저 제한) — 테스트에서는 `#menu-new` 클릭 뒤 `audio.ready` 를 본다.
 - 진동은 `utils/haptics.ts` 의 `vibrate()` 를 `settings.haptics` 확인 후 호출한다. 터치 전용 표시(자동 조준 고리 `aimRing`)는 `settings.touchControls` 일 때만 보인다.
@@ -192,6 +194,6 @@ hero-x/
 4. 던전과 보스 ✅ (v0.4.0: 보물 상자, 보스전, 메인 메뉴·입장·결과 흐름)
 5. 설정 화면과 저장 ✅ (v0.5.0: 자동 저장·이어하기·버전·손상 처리, 설정 화면·기본값 복원)
 6. 콘텐츠 확장 ✅ (v0.6.0-a.1 던전 3개·던전 선택·새 적·새 장비 / v0.6.1 모바일 / v0.6.2 보스별 패턴·외형)
-7. 품질 개선 🔄 (7-a 효과음·음악 ✅ / 7-b 얼굴 사진·glb 교체 구조 ✅ v0.7.0-b.1 / 7-c 성능·오류 처리·최종 문서)
+7. 품질 개선 ✅ (v0.7.0-a.1 효과음·음악 / v0.7.0-b.1 얼굴 사진·glb 교체 구조 / v1.0.0 자동 화질·오류 처리·문서)
 
 각 단계는 완료 기준을 만족하고 기존 기능이 정상일 때만 다음 단계로 넘어간다.
