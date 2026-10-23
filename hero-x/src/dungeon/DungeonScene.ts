@@ -175,7 +175,7 @@ export class DungeonScene implements CollisionWorld {
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       this.root.add(mesh);
-      this.boxes.push({ x: o.x, z: o.z, w: o.w, d: o.d });
+      this.boxes.push({ x: o.x, z: o.z, w: o.w, d: o.d, h: o.h });
       this.disposables.push(geo, mat);
     }
   }

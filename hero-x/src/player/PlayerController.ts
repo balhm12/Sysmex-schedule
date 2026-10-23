@@ -6,6 +6,7 @@ import {
   computeMoveDirection,
   createDashState,
   directionToFacing,
+  groundHeightAt,
   integrateJump,
   startDash,
   tickDash,
@@ -85,18 +86,13 @@ export class PlayerController {
       return;
     }
 
-    // 점프: 땅에 있을 때 점프 키를 누르면 떠오르고, 중력으로 내려온다 (공중에서 누른 입력은 버린다)
+    // 점프: 땅(또는 상자 위)에 있을 때 점프 키를 누르면 떠오른다 (공중에서 누른 입력은 버린다). 중력은 이동 뒤에 적용
     if (this.jumpQueued && !this.player.airborne) {
       this.player.jumpVy = cfg.jumpSpeed;
-      this.player.jumpY = 0.001;
+      this.player.jumpY = this.player.groundY + 0.001;
       this.onJump?.();
     }
     this.jumpQueued = false;
-    if (this.player.airborne) {
-      const j = integrateJump({ y: this.player.jumpY, vy: this.player.jumpVy }, dt, cfg.gravity);
-      this.player.jumpY = j.y;
-      this.player.jumpVy = j.vy;
-    }
 
     const axis = this.input.getMoveAxis();
     let dir = computeMoveDirection(axis, this.getCameraYaw());
@@ -127,10 +123,21 @@ export class PlayerController {
     this.knock.x *= decay;
     this.knock.z *= decay;
 
-    next = resolveCircleVsBoxes(next, cfg.radius, this.world.getObstacleBoxes());
+    // 발이 윗면에 닿은 상자는 가로막지 않고(위로 지나감), 그 밖의 상자는 밀어낸다
+    const boxes = this.world.getObstacleBoxes();
+    next = resolveCircleVsBoxes(next, cfg.radius, boxes, this.player.jumpY, cfg.climbAssist);
     next = clampToArena(next, this.world.getArenaHalfSize(), cfg.radius);
     pos.x = next.x;
     pos.z = next.z;
+
+    // 발밑 높이(서 있는 상자 윗면 또는 땅)를 구하고, 공중이면 중력으로 내려온다. 윗면보다 조금 낮으면 올려 준다(올라서기 보조)
+    const ground = groundHeightAt(next, cfg.radius, boxes, this.player.jumpY, cfg.climbAssist);
+    this.player.groundY = ground;
+    if (this.player.jumpY !== ground || this.player.jumpVy !== 0) {
+      const j = integrateJump({ y: this.player.jumpY, vy: this.player.jumpVy }, dt, cfg.gravity, ground);
+      this.player.jumpY = j.y;
+      this.player.jumpVy = j.vy;
+    }
 
     // 이동 방향으로 부드럽게 몸을 돌린다 (공격 중에는 공격 방향 유지)
     if (moving && (!this.player.attacking || this.dash.timer > 0)) {

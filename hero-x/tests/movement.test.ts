@@ -4,6 +4,7 @@ import {
   computeMoveDirection,
   directionToFacing,
   hitsObstacle,
+  groundHeightAt,
   integrateJump,
   lerpAngle,
   resolveCircleVsBoxes,
@@ -114,5 +115,35 @@ describe('회피(대시) 상태', () => {
     tickDash(d, 0.8);
     expect(startDash(d, { x: 0, z: 0 }, 0.2, 1.0)).toBe(true); // 방향이 없으면 앞(+Z)
     expect(d.dir).toEqual({ x: 0, z: 1 });
+  });
+});
+
+describe('장애물 위에 올라서기 (높이가 있는 상자)', () => {
+  const crate = { x: 0, z: 0, w: 2, d: 2, h: 2 };
+  const pillar = { x: 5, z: 0, w: 1.2, d: 1.2 }; // 높이 없음 = 항상 가로막음
+  it('발이 윗면(보조 포함)에 닿지 않으면 밀어내고, 닿으면 지나간다', () => {
+    expect(resolveCircleVsBoxes({ x: 0.9, z: 0 }, 0.5, [crate], 0)).toEqual({ x: 1.5, z: 0 });
+    expect(resolveCircleVsBoxes({ x: 0.9, z: 0 }, 0.5, [crate], 1.0, 0.8)).toEqual({ x: 1.5, z: 0 }); // 2 - 0.8 = 1.2 보다 낮음
+    expect(resolveCircleVsBoxes({ x: 0.9, z: 0 }, 0.5, [crate], 1.3, 0.8)).toEqual({ x: 0.9, z: 0 }); // 보조로 통과
+    expect(resolveCircleVsBoxes({ x: 0.9, z: 0 }, 0.5, [crate], 2.5)).toEqual({ x: 0.9, z: 0 });
+    expect(resolveCircleVsBoxes({ x: 5.4, z: 0 }, 0.5, [pillar], 9)).toEqual({ x: 6.1, z: 0 }); // 높이 없는 상자는 항상 막음
+  });
+  it('발밑 높이: 상자 위(가장자리 여유 포함)에 있고 충분히 높으면 상자 높이, 아니면 0', () => {
+    expect(groundHeightAt({ x: 0, z: 0 }, 0.5, [crate], 2.5)).toBe(2);
+    expect(groundHeightAt({ x: 1.2, z: 0 }, 0.5, [crate], 2.5)).toBe(2); // 반지름 절반(0.25)까지 여유
+    expect(groundHeightAt({ x: 1.3, z: 0 }, 0.5, [crate], 2.5)).toBe(0);
+    expect(groundHeightAt({ x: 0, z: 0 }, 0.5, [crate], 1.0)).toBe(0); // 아직 못 올라옴
+    expect(groundHeightAt({ x: 0, z: 0 }, 0.5, [crate], 1.3, 0.8)).toBe(2); // 보조로 올라섬
+    expect(groundHeightAt({ x: 5, z: 0 }, 0.5, [pillar], 9)).toBe(0); // 높이 없는 상자 위에는 못 선다
+    expect(groundHeightAt({ x: 0, z: 0 }, 0.5, [crate, { x: 0, z: 0, w: 1, d: 1, h: 3 }], 3)).toBe(3); // 겹치면 높은 것
+  });
+  it('점프 적분: 발밑(ground)에 착지하고, 발밑보다 낮으면 올려 준다', () => {
+    expect(integrateJump({ y: 2.3, vy: -1 }, 0.5, 24, 2)).toEqual({ y: 2, vy: 0 });
+    expect(integrateJump({ y: 1.5, vy: 0 }, 0.016, 24, 2)).toEqual({ y: 2, vy: 0 });
+    const up = integrateJump({ y: 2.001, vy: 8 }, 0.1, 24, 2);
+    expect(up.y).toBeGreaterThan(2.5);
+    const fall = integrateJump({ y: 2, vy: 0 }, 0.1, 24, 0); // 상자에서 걸어 내려오면 떨어진다
+    expect(fall.y).toBeLessThan(2);
+    expect(fall.vy).toBeLessThan(0);
   });
 });

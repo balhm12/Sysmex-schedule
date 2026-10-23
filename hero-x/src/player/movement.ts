@@ -10,12 +10,21 @@ export interface Vec2 {
   z: number;
 }
 
-/** 축에 정렬된 사각형 장애물: 중심(x, z)과 가로(w), 세로(d) */
+/** 축에 정렬된 사각형 장애물: 중심(x, z)과 가로(w), 세로(d). h(높이)가 있으면 점프로 올라설 수 있다 */
 export interface Box {
   x: number;
   z: number;
   w: number;
   d: number;
+  h?: number;
+}
+
+/**
+ * 발 높이(feetY)가 상자 윗면에 (올라서기 보조 climbAssist 만큼 모자라도) 닿았으면 그 상자는 가로막지 않는다.
+ * 높이가 없는 상자(h 없음)는 항상 가로막는다.
+ */
+export function isAboveBox(b: Box, feetY: number, climbAssist = 0): boolean {
+  return b.h !== undefined && feetY >= b.h - climbAssist;
 }
 
 /** 충돌 정보를 제공하는 세계(던전)의 인터페이스. 던전 파일을 바꿔도 플레이어 코드는 그대로 쓴다. */
@@ -44,10 +53,12 @@ export function computeMoveDirection(axis: Vec2, cameraYaw = 0): Vec2 {
 /**
  * 원(플레이어)과 사각형 장애물들의 겹침을 밀어내어 새 위치를 돌려준다.
  * 장애물 안쪽 깊숙이 들어간 경우에는 더 가까운 면으로 밀어낸다.
+ * feetY(발 높이)가 상자 윗면에 닿았으면 그 상자는 건너뛴다(위로 지나감).
  */
-export function resolveCircleVsBoxes(pos: Vec2, radius: number, boxes: Box[]): Vec2 {
+export function resolveCircleVsBoxes(pos: Vec2, radius: number, boxes: Box[], feetY = 0, climbAssist = 0): Vec2 {
   const out = { x: pos.x, z: pos.z };
   for (const b of boxes) {
+    if (isAboveBox(b, feetY, climbAssist)) continue;
     const hw = b.w / 2;
     const hd = b.d / 2;
     const cx = clamp(out.x, b.x - hw, b.x + hw);
@@ -101,18 +112,36 @@ export function hitsObstacle(pos: Vec2, radius: number, boxes: Box[], halfSize: 
   return false;
 }
 
+/**
+ * 발밑 높이: 중심이 (반지름의 절반만큼 넓힌) 상자 윗면 안에 있고 발이 윗면에 닿을 만큼 높으면 그 상자의 높이, 아니면 0(땅).
+ * 여러 상자가 겹치면 가장 높은 것. 발이 윗면보다 조금 낮아도(climbAssist) 올라선 것으로 쳐서 '올라서기 보조'가 된다.
+ */
+export function groundHeightAt(pos: Vec2, radius: number, boxes: Box[], feetY: number, climbAssist = 0): number {
+  let ground = 0;
+  const m = radius * 0.5;
+  for (const b of boxes) {
+    if (b.h === undefined || b.h <= ground) continue;
+    if (!isAboveBox(b, feetY, climbAssist)) continue;
+    if (Math.abs(pos.x - b.x) <= b.w / 2 + m && Math.abs(pos.z - b.z) <= b.d / 2 + m) ground = b.h;
+  }
+  return ground;
+}
+
 /** 점프 상태: 높이(y)와 수직 속도(vy) */
 export interface JumpState {
   y: number;
   vy: number;
 }
 
-/** 점프 한 프레임 적분. 땅(y=0)에 닿으면 멈춘다. */
-export function integrateJump(state: JumpState, dt: number, gravity: number): JumpState {
+/**
+ * 점프 한 프레임 적분. 발밑(ground, 기본 0 = 땅)에 닿으면 멈춘다. 발밑보다 낮으면 발밑으로 올려 준다(올라서기).
+ * 등가속도 공식(y += vy·dt − g·dt²/2)이라 프레임 간격이 커도(느린 기기) 점프 최고 높이가 줄지 않는다.
+ */
+export function integrateJump(state: JumpState, dt: number, gravity: number, ground = 0): JumpState {
+  let y = state.y + state.vy * dt - 0.5 * gravity * dt * dt;
   let vy = state.vy - gravity * dt;
-  let y = state.y + vy * dt;
-  if (y <= 0) {
-    y = 0;
+  if (y <= ground) {
+    y = ground;
     vy = 0;
   }
   return { y, vy };

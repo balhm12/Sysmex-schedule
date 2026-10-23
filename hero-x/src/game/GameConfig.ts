@@ -139,6 +139,8 @@ export interface GameConfigType {
     jumpSpeed: number;
     /** 중력 (클수록 빨리 떨어짐) */
     gravity: number;
+    /** 올라서기 보조(유닛): 점프 정점이 상자 윗면보다 이만큼 낮아도 올라선다. 0 이면 보조 없음 */
+    climbAssist: number;
     /** 몸을 돌리는 속도 (클수록 빠르게 회전) */
     turnSpeed: number;
     /** 충돌 반지름 */
@@ -375,7 +377,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.4.0' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.5.0' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -401,6 +403,7 @@ export const GameConfig: GameConfigType = {
     dash: { speed: 20, duration: 0.22, cooldown: 0.9, invulnerable: true },
     jumpSpeed: 8,
     gravity: 24,
+    climbAssist: 1.0,
     turnSpeed: 14,
     radius: 0.5,
     startPosition: { x: 0, z: 0 },
@@ -692,6 +695,7 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'player.attackMoveFactor': { min: 0, max: 1 },
   'player.jumpSpeed': { min: 1, max: 30 },
   'player.gravity': { min: 1, max: 100 },
+  'player.climbAssist': { min: 0, max: 3 },
   'player.dash.speed': { min: 1, max: 60 },
   'player.dash.duration': { min: 0.05, max: 2 },
   'player.dash.cooldown': { min: 0, max: 10 },

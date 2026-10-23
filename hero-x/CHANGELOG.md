@@ -2,6 +2,25 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.5.0 · 점프로 장애물 위에 올라서기
+
+### 변경 내용
+- 충돌 상자(`Box`)에 높이 `h` 추가(던전 장애물은 설정의 `h` 그대로, 보물 상자는 높이 없음 = 못 오름).
+- `movement.ts`: `isAboveBox`(발이 윗면에 닿은 상자는 가로막지 않음), `groundHeightAt`(발밑 높이: 중심이 반지름 절반 여유 안에 있는 가장 높은 상자), `integrateJump` 에 발밑 높이 인자 + 등가속도 공식(프레임 간격이 커도 점프 높이가 줄지 않음 — 느린 기기에서 못 오르던 문제 예방).
+- `PlayerController`: 이동 → 발밑 높이 계산 → 중력 순서. 윗면보다 `player.climbAssist`(1.0) 만큼 낮아도 올려 준다(올라서기 보조). 상자 가장자리로 걸어가면 떨어진다. 상자 위에서도 다시 점프 가능.
+- `Player.groundY` 추가, `airborne` 는 발밑 기준. 디버그 상태에 `groundY`.
+- 설정 `player.climbAssist`(허용 0~3).
+
+### 수정 파일
+`src/player/movement.ts`, `src/player/PlayerController.ts`, `src/player/Player.ts`, `src/dungeon/DungeonScene.ts`, `src/game/GameConfig.ts`, `src/game/Game.ts`, `tests/movement.test.ts`, `package.json`, `CLAUDE.md`, `GAME_GUIDE.md`, `CHANGELOG.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 118개·빌드). 통과/가로막힘, 발밑 높이, 적분·착지·낙하 테스트 추가.
+- Playwright: 상자(높이 2) 앞에서 점프+전진 → 위에 섬(groundY 2, 스크린샷) → 걸어 내려오면 땅(0) → 돌기둥(높이 4)은 가로막힘 → 땅에서 다시 점프 정상. 콘솔 오류 없음.
+
+### 알려진 문제
+- 적은 상자 위로 못 올라오고(근접 공격도 안 닿음) 드론 포격만 맞는다. 너무 안전하면 `boss`/`enemies` 수치나 `climbAssist` 로 조정.
+
 ## 2026-10-23 · v1.4.0 · 적 5종 복셀 모델 + 적용 부품 이름 리그
 
 ### 변경 내용

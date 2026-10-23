@@ -172,7 +172,7 @@ hero-x/
 - "키를 방향키로만" → `GameConfig.controls` 수정.
 - "적을 두 배로" → `GameConfig.enemies.spawns` 에 항목 추가. "적 체력 30% 올려" → `enemies.types.rusher.hp` 조정.
 - "공격을 더 세게/넓게" → `GameConfig.combat.melee` 의 `damage`, `range`, `arcDegrees`. 원거리는 `combat.ranged`.
-- "점프를 더 높게" → `player.jumpSpeed` 올리기 (또는 `player.gravity` 내리기). "회피를 더 멀리/자주" → `player.dash.speed/duration/cooldown`. 회피 키는 `controls.dodge`, 터치 버튼은 `TouchControls` 의 `#touch-dodge`.
+- "점프를 더 높게" → `player.jumpSpeed` 올리기 (또는 `player.gravity` 내리기). 장애물 위에 올라서기: 높이(`h`)가 있는 상자는 발이 윗면에 닿으면 가로막지 않고(`isAboveBox`) 발밑 높이(`groundHeightAt`)가 그 상자가 된다. 점프 정점이 윗면보다 `player.climbAssist` 만큼 낮아도 올려 준다(기본 1.0 → 높이 2 상자까지). 상자 위에서는 적 근접 공격이 닿지 않는다(`jumpY < 1.0` 검사). 보물 상자 등 `h` 없는 충돌 상자는 못 오른다. "회피를 더 멀리/자주" → `player.dash.speed/duration/cooldown`. 회피 키는 `controls.dodge`, 터치 버튼은 `TouchControls` 의 `#touch-dodge`.
 - 장식 추가: 종류·개수는 `decorLayout.DECOR_KINDS`, 외형은 `Decor.makeProp` 의 분기. 장식은 충돌이 없으므로 통행에 방해되는 큰 것은 `outside` 에만 둔다. 타격감 수치는 `GameConfig.juice`.
 - 그래픽: 재질은 반드시 `render/materials.ts` 의 `pbr()/glow()` 로 만든다(블룸은 emissiveIntensity ≥ 1.5 에 걸림). 던전 분위기(하늘·노출·바닥)는 `DungeonDefs.theme` 수치만 바꾼다. 후처리 켜고 끄기는 `RenderPipeline.setQuality`, 그림자 해상도는 `DungeonScene.applyQuality`.
 - 게임 루프: `Game.frame()` 이 흐른 시간을 `performance.maxStep`(0.05초) 단위의 `simulate(dt)` 로 나눠 돌리고 한 번 그린다. 시간에 따라 움직이는 로직은 `simulate` 안에, 화면 갱신·FPS 측정은 `frame` 에 둔다.

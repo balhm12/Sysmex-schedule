@@ -20,8 +20,10 @@ export class Player {
   /** 현재 이동 속도 (유닛/초) */
   speed = 0;
 
-  /** 점프 높이 (0 이면 땅) */
+  /** 발 높이 (0 이면 땅, 상자 위에 서 있으면 그 상자 높이) */
   jumpY = 0;
+  /** 발밑 높이 (서 있는 상자 윗면, 땅이면 0). PlayerController 가 매 프레임 갱신 */
+  groundY = 0;
   /** 점프 수직 속도 */
   jumpVy = 0;
 
@@ -52,7 +54,7 @@ export class Player {
 
   /** 공중에 떠 있는지 */
   get airborne(): boolean {
-    return this.jumpY > 0;
+    return this.jumpY > this.groundY + 1e-4;
   }
 
   /** 현재 외형 모델 */
@@ -94,6 +96,7 @@ export class Player {
     this.attackTimer = 0;
     this.jumpY = 0;
     this.jumpVy = 0;
+    this.groundY = 0;
     this.object3d.visible = true;
   }
 

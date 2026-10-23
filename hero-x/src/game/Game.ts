@@ -84,6 +84,7 @@ export interface GameDebugState {
   aliveEnemies: number;
   projectiles: number;
   playerY: number;
+  groundY: number;
   difficulty: string;
   pickups: number;
   stats: { level: number; xp: number; xpToNext: number; gold: number; maxHp: number };
@@ -932,6 +933,7 @@ export class Game {
       aliveEnemies: this.spawner.aliveCount,
       projectiles: this.projectiles.count,
       playerY: this.player.jumpY,
+      groundY: this.player.groundY,
       difficulty: this.difficulty,
       pickups: this.loot.count,
       stats: { level: this.stats.level, xp: this.stats.xp, xpToNext: this.stats.xpToNext, gold: this.stats.gold, maxHp: this.stats.maxHp },
