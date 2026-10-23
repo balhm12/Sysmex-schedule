@@ -48,6 +48,11 @@ export function createEnemyModel(type: string, def: EnemyTypeConfig): EnemyModel
   }
 }
 
+/** 집게 등 금속 부품 재질 (적 색을 살짝 섞은 강철) */
+function steelFor(def: EnemyTypeConfig): THREE.MeshStandardMaterial {
+  return pbr({ color: new THREE.Color(def.color).lerp(new THREE.Color(0x9aa3b2), 0.6), roughness: 0.35, metalness: 0.85 });
+}
+
 /** 철벽 로봇: 넓은 몸통 + 앞에 든 방패 + 두 눈. 예고 때 방패를 들어 올렸다가 내려찍는다 */
 function createTankModel(def: EnemyTypeConfig): EnemyModel {
   const root = new THREE.Group();
@@ -71,6 +76,19 @@ function createTankModel(def: EnemyTypeConfig): EnemyModel {
     const eye = new THREE.Mesh(new THREE.SphereGeometry(r * 0.13, 8, 6), eyeMat);
     eye.position.set(sx * r * 0.35, r * 1.5, r * 0.72);
     root.add(eye);
+  }
+  // 등 뒤 배기관 2개 + 몸통 옆 피스톤 (이동 중 들썩임)
+  for (const sx of [-1, 1]) {
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.12, r * 0.14, r * 0.7, 8), darkMat);
+    pipe.position.set(sx * r * 0.45, r * 2.1, -r * 0.45);
+    root.add(pipe);
+  }
+  const pistons: THREE.Mesh[] = [];
+  for (const sx of [-1, 1]) {
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.1, r * 0.1, r * 0.6, 8), steelMat);
+    p.position.set(sx * r * 0.95, r * 0.75, -r * 0.4);
+    root.add(p);
+    pistons.push(p);
   }
   // 방패: 어깨를 축으로 들어 올린다
   const shieldPivot = new THREE.Group();
@@ -96,9 +114,12 @@ function createTankModel(def: EnemyTypeConfig): EnemyModel {
         return;
       }
       body.position.y = r * 1.1 + (s.moving ? Math.abs(Math.sin(t * 8)) * 0.04 : 0);
-      // 예고: 방패를 뒤로 들어 올림 (progress 1 에서 내려찍기 직전)
+      pistons[0].position.y = r * 0.75 + (s.moving ? Math.sin(t * 8) * 0.12 : 0);
+      pistons[1].position.y = r * 0.75 + (s.moving ? -Math.sin(t * 8) * 0.12 : 0);
+      // 예고: 방패를 뒤로 들어 올림 (progress 1 에서 내려찍기 직전), 눈이 붉게 맥동
       shieldPivot.rotation.x = -s.windup * 1.3;
-      eyeMat.color.setRGB(1, 0.82 - s.windup * 0.6, 0.25 - s.windup * 0.2);
+      eyeMat.emissive.setRGB(1, 0.82 - s.windup * 0.6, 0.25 - s.windup * 0.2);
+      eyeMat.emissiveIntensity = 1.6 + Math.sin(t * 4) * 0.4 + s.windup * 1.5;
       if (flashTimer > 0) {
         flashTimer -= dt;
         bodyMat.emissive.setScalar(flashTimer > 0 ? 0.9 : 0);
@@ -149,9 +170,23 @@ function createShooterModel(def: EnemyTypeConfig): EnemyModel {
   const muzzle = new THREE.Mesh(new THREE.SphereGeometry(r * 0.2, 8, 6), glowMat);
   muzzle.position.set(0, r * 1.6, r * 1.6);
   hover.add(muzzle);
+  // 머리 위 로터 3장 (항상 회전) + 아래 센서 눈
+  const rotor = new THREE.Group();
+  rotor.position.y = r * 2.55;
+  for (let i = 0; i < 3; i++) {
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(r * 1.4, r * 0.04, r * 0.16), darkMat);
+    blade.rotation.y = (i / 3) * Math.PI * 2;
+    rotor.add(blade);
+  }
+  hover.add(rotor);
+  const sensor = new THREE.Mesh(new THREE.SphereGeometry(r * 0.14, 8, 6), glow(0x5cf2d8, 1.6));
+  sensor.position.set(0, r * 0.85, r * 0.35);
+  hover.add(sensor);
 
   let flashTimer = 0;
   let t = Math.random() * 10;
+  let lastWindup = 0;
+  let recoil = 0;
 
   return {
     root,
@@ -164,10 +199,17 @@ function createShooterModel(def: EnemyTypeConfig): EnemyModel {
         root.rotation.y += dt * 8;
         return;
       }
-      // 둥실둥실 떠 있기
+      // 둥실둥실 떠 있고 로터가 돈다
       hover.position.y = Math.sin(t * 3) * 0.08;
       ring.rotation.z += dt * 2;
-      // 예고: 포신 끝이 커지며 밝아진다
+      rotor.rotation.y += dt * (s.moving ? 28 : 18);
+      hover.rotation.x = s.moving ? 0.15 : 0;
+      // 예고: 포신 끝이 커지며 밝아진다. 발사 순간(예고 1→0) 포신이 뒤로 밀린다
+      if (lastWindup > 0.6 && s.windup === 0) recoil = 1;
+      lastWindup = s.windup;
+      recoil = Math.max(0, recoil - dt * 5);
+      barrel.position.z = r * 1.1 - recoil * r * 0.3;
+      muzzle.position.z = r * 1.6 - recoil * r * 0.3;
       muzzle.scale.setScalar(1 + s.windup * 1.5);
       glowMat.color.setRGB(1, 0.33 + s.windup * 0.6, 0.47 + s.windup * 0.5);
       if (flashTimer > 0) {
@@ -223,9 +265,37 @@ function createRusherModel(def: EnemyTypeConfig): EnemyModel {
   const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, r * 0.8, 6), darkMat);
   antenna.position.set(0, r * 2.1, 0);
   root.add(antenna);
-  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), glow(def.color, 2.5));
+  const tipMat = glow(def.color, 2.5);
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), tipMat);
   tip.position.set(0, r * 2.5, 0);
   root.add(tip);
+  // 바퀴 4개 (이동 중 구른다) + 집게 팔 2개 (예고 때 벌어진다)
+  const wheelMat = pbr({ color: 0x1a1d26, roughness: 0.7, metalness: 0.3 });
+  const wheels: THREE.Mesh[] = [];
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.3, r * 0.3, r * 0.22, 12), wheelMat);
+      w.rotation.z = Math.PI / 2;
+      w.position.set(sx * r * 1.0, r * 0.3, sz * r * 0.6);
+      w.castShadow = true;
+      root.add(w);
+      wheels.push(w);
+    }
+  }
+  const claws: THREE.Group[] = [];
+  for (const sx of [-1, 1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(sx * r * 0.85, r * 1.0, r * 0.5);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(r * 0.18, r * 0.18, r * 0.7), darkMat);
+    arm.position.z = r * 0.35;
+    pivot.add(arm);
+    const claw = new THREE.Mesh(new THREE.ConeGeometry(r * 0.14, r * 0.35, 4), steelFor(def));
+    claw.rotation.x = Math.PI / 2;
+    claw.position.z = r * 0.85;
+    pivot.add(claw);
+    root.add(pivot);
+    claws.push(pivot);
+  }
 
   let flashTimer = 0;
   let t = Math.random() * 10;
@@ -242,13 +312,17 @@ function createRusherModel(def: EnemyTypeConfig): EnemyModel {
         root.rotation.y += dt * 8;
         return;
       }
-      // 이동 중 바퀴 소리 나듯 들썩이기
+      // 이동 중 바퀴가 구르고 몸이 들썩인다
       body.position.y = r * 1.1 + (s.moving ? Math.abs(Math.sin(t * 14)) * 0.06 : 0);
-      // 공격 예고: 눈이 커지고 붉어지며 몸이 뒤로 젖혀졌다가 튀어나간다
+      if (s.moving) for (const w of wheels) w.rotation.x += dt * 9;
+      // 공격 예고: 눈이 커지고 붉어지며 몸이 뒤로 젖혀지고 집게가 벌어졌다가 튀어나간다
       const w = s.windup;
       pupil.scale.setScalar(1 + w * 1.2);
       (pupil.material as THREE.MeshStandardMaterial).emissive.setRGB(0.1 + w * 0.9, 0.1, 0.13);
       body.rotation.x = -w * 0.35;
+      claws[0].rotation.y = -0.2 - w * 0.9;
+      claws[1].rotation.y = 0.2 + w * 0.9;
+      tipMat.emissiveIntensity = 1.8 + Math.sin(t * 6) * 0.7 + w * 2;
       // 피격 번쩍임
       if (flashTimer > 0) {
         flashTimer -= dt;

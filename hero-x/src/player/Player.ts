@@ -65,7 +65,7 @@ export class Player {
     let visible = false;
     this.model.root.traverse((o) => {
       const mesh = o as THREE.Mesh;
-      if (mesh.isMesh && mesh.visible && (mesh.material as THREE.MeshBasicMaterial).map && mesh.parent?.position.y === 1.42) visible = true;
+      if (mesh.isMesh && mesh.visible && (mesh.material as THREE.MeshBasicMaterial).map && mesh.parent?.position.y === 1.42 && (mesh.material as THREE.MeshBasicMaterial).transparent) visible = true;
     });
     return visible;
   }
@@ -109,6 +109,9 @@ export class Player {
       attack: this.attackTimer > 0 ? 1 - this.attackTimer / this.attackDuration : null,
       airborne: this.airborne,
       dead: this.health.isDead,
+      dashing: this.dashing,
+      // 피격 직후(무적 시간) 비율. 회피 무적은 피격이 아니므로 제외
+      hurt: !this.dashing && this.health.invulnerableTime > 0 ? Math.min(1, this.health.invulnerable / this.health.invulnerableTime) : 0,
     });
     // 무적 시간 동안 깜빡여서 피격을 알린다
     this.object3d.visible = this.health.isDead || this.health.invulnerable <= 0 || Math.floor(this.health.invulnerable * 20) % 2 === 0;

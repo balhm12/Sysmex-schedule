@@ -256,8 +256,12 @@ function createBossModel(def: EnemyTypeConfig, kind: BossModelKind = 'guardian')
         root.rotation.y += dt * 3;
         return;
       }
-      eyeMat.color.set(s.phase2 ? 0xff3b3b : 0x5cf2d8);
+      eyeMat.emissive.set(s.phase2 ? 0xff3b3b : 0x5cf2d8);
+      eyeMat.emissiveIntensity = 2 + Math.sin(t * (s.phase2 ? 8 : 3)) * 0.8;
       body.position.y = r * 1.3 + (s.moving ? Math.abs(Math.sin(t * 6)) * 0.08 : 0);
+      // 숨쉬기: 몸통이 천천히 부풀었다 줄어든다
+      const breathe = 1 + Math.sin(t * 1.6) * 0.02;
+      body.scale.set(breathe, 1 / breathe, breathe);
       const w = s.windup;
       const pat = s.pattern ?? null;
       // 예고: 패턴 색으로 바닥 원이 커지고, 팔 동작이 달라진다
