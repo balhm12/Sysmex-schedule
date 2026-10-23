@@ -3,7 +3,9 @@ import { CombatSystem } from '../combat/CombatSystem';
 import { Effects } from '../combat/Effects';
 import { ProjectileSystem } from '../combat/Projectile';
 import { ChestSystem } from '../dungeon/Chest';
-import { Dungeon01 } from '../dungeon/Dungeon01';
+import { DungeonScene } from '../dungeon/DungeonScene';
+import { DUNGEONS, isDungeonUnlocked, nextDungeonAfter, resolveBossConfig, type BossConfig, type DungeonDef } from './DungeonDefs';
+import { DungeonSelectUI } from '../ui/DungeonSelectUI';
 import { Boss, type BossAttack } from '../enemies/Boss';
 import type { Enemy } from '../enemies/Enemy';
 import { EnemySpawner } from '../enemies/EnemySpawner';
@@ -24,7 +26,7 @@ import { DamageNumbers } from '../ui/DamageNumbers';
 import { HUD } from '../ui/HUD';
 import { ResultUI } from '../ui/ResultUI';
 import { SettingsUI } from '../ui/SettingsUI';
-import { EMPTY_RECORDS, applySaveData, hasProgress, serializeSave, type SaveRecords } from '../save/SaveData';
+import { EMPTY_RECORDS, applySaveData, cloneRecords, hasProgress, serializeSave, type SaveRecords } from '../save/SaveData';
 import { browserStorage, clearSave, loadSave, writeSave } from '../save/SaveStorage';
 import { Logger } from '../utils/Logger';
 import { CameraController } from './CameraController';
@@ -39,6 +41,9 @@ export interface GameDebugState {
   ended: boolean;
   save: { status: string; lastSavedAt: string | null; hasSavedProgress: boolean; blocked: boolean; dirty: boolean; records: SaveRecords };
   settings: UserSettings;
+  dungeon: { id: string; name: string; arenaHalfSize: number; obstacles: number };
+  dungeonSelectVisible: boolean;
+  unlockedNow: string | null;
   settingsVisible: boolean;
   shadowsEnabled: boolean;
   cameraDistanceScale: number;
@@ -77,7 +82,15 @@ export class Game {
   private readonly scene = new THREE.Scene();
   private readonly camera: THREE.PerspectiveCamera;
   private readonly input = new InputManager();
-  private readonly dungeon: Dungeon01;
+  /** 현재 던전 공간 (던전을 바꾸면 새로 만든다) */
+  private dungeon: DungeonScene;
+  /** 현재 던전 정의 */
+  private dungeonDef: DungeonDef = DUNGEONS[0];
+  /** 현재 던전의 보스 설정 */
+  private bossCfg: BossConfig = resolveBossConfig(DUNGEONS[0]);
+  private readonly dungeonSelect: DungeonSelectUI;
+  /** 이번 클리어로 새로 열린 던전 (결과 화면 안내용) */
+  private unlockedNow: DungeonDef | null = null;
   private readonly player: Player;
   private readonly controller: PlayerController;
   private readonly cameraCtrl: CameraController;
@@ -98,7 +111,7 @@ export class Game {
   private readonly result: ResultUI;
   private readonly damageNumbers: DamageNumbers;
   private readonly loot: LootSystem;
-  private readonly chests: ChestSystem;
+  private chests: ChestSystem;
   private readonly inventoryUI: InventoryUI;
   readonly stats = new PlayerStats();
   readonly equipment = new EquipmentSystem();
@@ -160,22 +173,24 @@ export class Game {
     this.camera = new THREE.PerspectiveCamera(c.fov, 1, c.near, c.far);
 
     // 시스템 구성
-    this.dungeon = new Dungeon01(this.scene);
-    this.chests = new ChestSystem(this.scene);
+    this.dungeon = new DungeonScene(this.scene, this.dungeonDef);
+    this.chests = new ChestSystem(this.scene, this.dungeonDef.chests);
     this.dungeon.addCollisionBoxes(this.chests.getCollisionBoxes());
+    // 충돌 세계는 던전이 바뀌어도 같은 객체를 쓰도록 현재 던전으로 넘겨주는 껍데기를 준다
+    const world = { getObstacleBoxes: () => this.dungeon.getObstacleBoxes(), getArenaHalfSize: () => this.dungeon.getArenaHalfSize() };
     this.player = new Player(createPlaceholderModel(GameConfig.player.colors), GameConfig.player.startPosition);
     this.scene.add(this.player.object3d);
     this.cameraCtrl = new CameraController(this.camera);
-    this.controller = new PlayerController(this.player, this.input, this.dungeon, () => this.cameraCtrl.getYaw(), () => 1 + this.equipment.totals().moveSpeed);
+    this.controller = new PlayerController(this.player, this.input, world, () => this.cameraCtrl.getYaw(), () => 1 + this.equipment.totals().moveSpeed);
     this.effects = new Effects(this.scene);
     this.projectiles = new ProjectileSystem(this.scene);
     this.spawner = new EnemySpawner(this.scene);
     this.applyDifficultyToSpawner();
-    this.spawner.spawnFromConfig();
+    this.spawner.spawnFromConfig(this.dungeonDef.spawns);
     this.combat = new CombatSystem(
       this.player, this.input, () => this.spawner.getEnemies(), () => this.getAimPoint(), this.effects, this.projectiles,
       (enemy, damage, killed) => {
-        if (killed) this.loot.dropFor(enemy.def.score, { x: enemy.position.x, z: enemy.position.z });
+        if (killed) this.loot.dropFor(enemy.def.score, { x: enemy.position.x, z: enemy.position.z }, this.dungeonDef.rewardMul);
         if (!this.settings.showDamageNumbers) return;
         this.projTmp.set(enemy.position.x, 1.6, enemy.position.z);
         this.damageNumbers.show(this.projTmp, killed ? enemy.def.score : damage, killed ? 'kill' : 'enemy');
@@ -189,13 +204,20 @@ export class Game {
     this.damageNumbers = new DamageNumbers(uiRoot, (pos) => this.projectToScreen(pos));
     this.guide = new ControlsGuide(uiRoot, () => this.guide.hide());
     this.hud = new HUD(uiRoot);
-    this.hud.setDungeonName(GameConfig.dungeon.name);
-    this.result = new ResultUI(uiRoot, () => this.retry(), () => this.openMenu());
+    this.hud.setDungeonName(this.dungeonDef.name);
+    this.result = new ResultUI(uiRoot, () => this.retry(), () => this.openMenu(), () => this.openDungeons());
+    this.dungeonSelect = new DungeonSelectUI(uiRoot, {
+      clears: () => this.records.dungeonClears,
+      level: () => this.stats.level,
+      enter: (def) => this.enterDungeon(def),
+      onClose: () => this.closeDungeons(),
+    });
     this.loadFromStorage();
     this.menu = new MainMenu(uiRoot, {
       newGame: () => this.newGame(),
       continueGame: () => this.continueGame(),
       openSettings: () => this.openSettings(),
+      openDungeons: () => this.openDungeons(),
       hasProgress: () => this.runActive || this.hasSavedProgress,
       progressText: () => this.progressText(),
       saveNote: () => this.saveStatus,
@@ -234,11 +256,12 @@ export class Game {
     this.input.onPress(['Escape'], () => {
       if (this.guide.visible) this.guide.hide();
       else if (this.settingsUI.visible) this.settingsUI.pressBack();
+      else if (this.dungeonSelect.visible) this.closeDungeons();
       else if (this.inventoryUI.visible) this.toggleInventory(false);
       else if (this.mode === 'play') this.openMenu();
     });
     this.input.onPress(['Enter'], () => {
-      if (this.mode === 'menu' && !this.inventoryUI.visible && !this.guide.visible && !this.settingsUI.visible) this.menu.pressPrimary();
+      if (this.mode === 'menu' && !this.inventoryUI.visible && !this.guide.visible && !this.settingsUI.visible && !this.dungeonSelect.visible) this.menu.pressPrimary();
     });
     this.hud.hide();
     this.menu.show();
@@ -368,24 +391,71 @@ export class Game {
   newGame(): void {
     this.stats.reset();
     this.equipment.reset();
-    this.records = { ...EMPTY_RECORDS };
+    this.records = cloneRecords(EMPTY_RECORDS);
     this.saveBlocked = false;
     clearSave(this.storage);
+    this.enterDungeon(DUNGEONS[0]);
+    Logger.info('새 게임을 시작합니다.');
+  }
+
+  /** 던전 입장: 던전 공간을 새로 만들고 전투를 시작한다 (성장은 유지) */
+  enterDungeon(def: DungeonDef): void {
+    if (!isDungeonUnlocked(def, this.records.dungeonClears)) {
+      Logger.warn(`던전 '${def.name}' 은(는) 아직 잠겨 있습니다.`);
+      return;
+    }
+    this.loadDungeon(def);
     this.restart();
     this.runActive = true;
     this.saveNow();
+    this.dungeonSelect.hide();
     this.enterPlay();
-    this.hud.showBanner(`${GameConfig.dungeon.name}`, 1800);
-    Logger.info('새 게임을 시작합니다.');
+    this.hud.showBanner(def.name, 1800);
+  }
+
+  /** 던전 공간 교체 (같은 던전이면 유지) */
+  private loadDungeon(def: DungeonDef): void {
+    if (def.id === this.dungeonDef.id && this.dungeon.def.id === def.id) return;
+    this.chests.dispose();
+    this.dungeon.dispose();
+    this.dungeonDef = def;
+    this.bossCfg = resolveBossConfig(def);
+    this.dungeon = new DungeonScene(this.scene, def);
+    this.chests = new ChestSystem(this.scene, def.chests);
+    this.dungeon.addCollisionBoxes(this.chests.getCollisionBoxes());
+    this.hud.setDungeonName(def.name);
+    Logger.info(`던전 '${def.name}' 을(를) 불러왔습니다 (적 ${def.spawns.length}마리, 상자 ${def.chests.length}개).`);
+  }
+
+  openDungeons(): void {
+    if (!this.runActive && !this.hasSavedProgress) return;
+    this.inventoryUI.hide();
+    this.settingsUI.hide();
+    this.guide.hide();
+    if (this.mode === 'result') {
+      this.result.hide();
+      this.mode = 'menu';
+      this.hud.hide();
+      this.menu.show();
+    }
+    this.dungeonSelect.show();
+  }
+
+  closeDungeons(): void {
+    this.dungeonSelect.hide();
+    if (this.mode === 'menu') this.menu.refresh();
+  }
+
+  getDungeonId(): string {
+    return this.dungeonDef.id;
   }
 
   /** 이어하기: 멈춰 둔 던전으로 돌아간다. 새로고침 뒤라면(저장만 있음) 성장을 유지한 채 던전 입구부터 */
   continueGame(): void {
     if (!this.runActive) {
-      if (!this.hasSavedProgress) return;
-      this.restart();
-      this.runActive = true;
-      this.hud.showBanner(`${GameConfig.dungeon.name}`, 1800);
+      // 새로고침 뒤에는 멈춰 둔 던전이 없으므로 던전을 고르게 한다
+      if (this.hasSavedProgress) this.openDungeons();
+      return;
     }
     this.enterPlay();
   }
@@ -416,7 +486,7 @@ export class Game {
     switch (r.kind) {
       case 'loaded':
         applySaveData(r.data, { stats: this.stats, equipment: this.equipment });
-        this.records = { ...r.data.records };
+        this.records = cloneRecords(r.data.records);
         this.difficulty = r.data.difficulty;
         saveDifficulty(this.difficulty);
         this.hasSavedProgress = hasProgress(r.data);
@@ -479,15 +549,16 @@ export class Game {
   private progressText(): string {
     if (!this.runActive && !this.hasSavedProgress) return '';
     const r = this.records;
-    const parts = [`레벨 ${this.stats.level}`, `골드 ${this.stats.gold}`, `클리어 ${r.clears}회`];
+    const opened = DUNGEONS.filter((d) => isDungeonUnlocked(d, r.dungeonClears)).length;
+    const parts = [`레벨 ${this.stats.level}`, `골드 ${this.stats.gold}`, `클리어 ${r.clears}회`, `열린 던전 ${opened}/${DUNGEONS.length}`];
     if (r.bestScore > 0) parts.push(`최고 점수 ${r.bestScore}`);
-    if (!this.runActive) parts.push('이어하기는 던전 입구부터');
+    if (!this.runActive) parts.push('이어하기는 던전 선택부터');
     return parts.join(' · ');
   }
 
   /** 누적 기록 (테스트·디버그용) */
   getRecords(): SaveRecords {
-    return { ...this.records };
+    return cloneRecords(this.records);
   }
 
   private enterPlay(): void {
@@ -495,6 +566,7 @@ export class Game {
     this.menu.hide();
     this.guide.hide();
     this.settingsUI.hide();
+    this.dungeonSelect.hide();
     this.result.hide();
     this.hud.show();
     this.lastTime = performance.now();
@@ -557,7 +629,8 @@ export class Game {
   /** 전투 재시작: 플레이어 회복·복귀, 적 재배치, 기록 초기화 */
   restart(): void {
     this.spawner.clear();
-    this.spawner.spawnFromConfig();
+    this.spawner.spawnFromConfig(this.dungeonDef.spawns);
+    this.unlockedNow = null;
     this.projectiles.clear();
     this.damageNumbers.clear();
     this.loot.clear();
@@ -629,6 +702,9 @@ export class Game {
       frames: this.frames,
       ended: this.ended,
       settings: { ...this.settings },
+      dungeon: { id: this.dungeonDef.id, name: this.dungeonDef.name, arenaHalfSize: this.dungeon.getArenaHalfSize(), obstacles: this.dungeon.getObstacleBoxes().length },
+      dungeonSelectVisible: this.dungeonSelect.visible,
+      unlockedNow: this.unlockedNow?.id ?? null,
       settingsVisible: this.settingsUI.visible,
       shadowsEnabled: this.renderer.shadowMap.enabled,
       cameraDistanceScale: this.cameraCtrl.distanceScale,
@@ -759,9 +835,9 @@ export class Game {
 
   /** 보스 등장: 일반 적을 모두 처치했을 때 한 번 */
   private spawnBoss(): void {
-    const b = GameConfig.boss;
+    const b = this.bossCfg;
     const mul = this.spawner.multipliers;
-    this.boss = new Boss({ x: b.spawn.x, z: b.spawn.z }, { hp: mul.hp, speed: mul.speed });
+    this.boss = new Boss({ x: b.spawn.x, z: b.spawn.z }, { hp: mul.hp, speed: mul.speed }, b);
     this.spawner.addEnemy(this.boss);
     this.hud.showBanner(`${b.name} 등장!`);
     this.effects.burst(new THREE.Vector3(b.spawn.x, 1.5, b.spawn.z), b.color, 30, 9);
@@ -798,33 +874,39 @@ export class Game {
 
   /** 보스 처치 보상 */
   private onBossDefeated(): void {
-    const b = GameConfig.boss;
+    const b = this.bossCfg;
     const at = { x: this.boss!.position.x, z: this.boss!.position.z };
     this.loot.spawn({ kind: 'gold', amount: Math.round(b.reward.goldMin + Math.random() * (b.reward.goldMax - b.reward.goldMin)) }, { x: at.x - 1, z: at.z });
     this.loot.spawn({ kind: 'xp', amount: b.reward.xp }, { x: at.x + 1, z: at.z });
     this.loot.spawn({ kind: 'equip', amount: 0, item: generateItemAtLeast(b.reward.equipMinRarity) }, { x: at.x, z: at.z + 1 });
     this.loot.spawn({ kind: 'heal', amount: GameConfig.loot.healAmount * 2 }, { x: at.x, z: at.z - 1 });
     this.records.clears++;
+    const id = this.dungeonDef.id;
+    const before = this.records.dungeonClears[id] ?? 0;
+    this.records.dungeonClears[id] = before + 1;
+    const next = nextDungeonAfter(id);
+    this.unlockedNow = before === 0 && next ? next : null;
     this.markDirty();
-    this.hud.showBanner('던전 클리어!', 3000);
+    this.hud.showBanner(this.unlockedNow ? `던전 클리어! '${this.unlockedNow.name}' 이(가) 열렸습니다` : '던전 클리어!', 3000);
     Logger.info('보스를 처치했습니다. 던전 클리어!');
   }
 
   /** 승리 흐름: 일반 적 모두 처치 → 보스 등장 → 보스 처치 → 클리어 */
   private checkVictory(): void {
-    if (this.ended || GameConfig.enemies.spawns.length === 0) return;
+    if (this.ended || this.dungeonDef.spawns.length === 0) return;
     if (!this.boss) {
       if (this.spawner.aliveCount === 0) this.spawnBoss();
       return;
     }
-    this.hud.setBoss(this.boss.alive ? { name: GameConfig.boss.name, hp: this.boss.health.hp, maxHp: this.boss.health.maxHp, phase2: this.boss.phase2 } : null);
+    this.hud.setBoss(this.boss.alive ? { name: this.bossCfg.name, hp: this.boss.health.hp, maxHp: this.boss.health.maxHp, phase2: this.boss.phase2 } : null);
     if (!this.boss.alive && !this.bossDefeated) {
       this.bossDefeated = true;
       this.onBossDefeated();
     }
     // 보상을 줍거나 3초가 지나면 결과 화면
     if (this.bossDefeated && (this.loot.count === 0 || this.boss.removable)) {
-      this.showResult('던전 클리어!', `${GameConfig.dungeon.name} · 처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}`);
+      const unlockNote = this.unlockedNow ? ` · 새 던전 '${this.unlockedNow.name}' 이(가) 열렸습니다!` : '';
+      this.showResult('던전 클리어!', `${this.dungeonDef.name} · 처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}${unlockNote}`);
     }
   }
 

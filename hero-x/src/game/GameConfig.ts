@@ -49,6 +49,8 @@ export interface EnemyTypeConfig {
   projectileSpeed?: number;
   /** 밀려남 저항: 받는 밀침에 곱하는 값 (1 = 보통, 0.3 = 거의 안 밀림) */
   knockbackResist?: number;
+  /** 외형: 기존 모델을 재사용할 때 지정 ('rusher' | 'shooter' | 'tank'). 없으면 종류 이름과 같은 모델 */
+  model?: 'rusher' | 'shooter' | 'tank';
 }
 
 /** 장비 등급 */
@@ -326,7 +328,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.5.0' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.6.0-a.1' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -420,8 +422,44 @@ export const GameConfig: GameConfigType = {
         score: 30,
         knockbackResist: 0.25,
       },
+      // 동굴 박쥐 드론 (수정 동굴): 작고 빠른 근접형. 체력은 낮다. 외형은 드론 모델 재사용
+      stalker: {
+        name: '박쥐 드론',
+        hp: 18,
+        speed: 7.5,
+        radius: 0.45,
+        damage: 7,
+        attackRange: 1.3,
+        attackWindup: 0.25,
+        attackCooldown: 0.9,
+        aggroRange: 16,
+        color: '#8e6cff',
+        score: 14,
+        attackKind: 'melee',
+        model: 'shooter',
+      },
+      // 요새 포대 (강철 요새): 느리고 단단한 원거리형. 멀리서 세게 쏜다. 외형은 철벽 로봇 재사용
+      artillery: {
+        name: '요새 포대',
+        hp: 70,
+        speed: 1.6,
+        radius: 0.8,
+        damage: 16,
+        attackRange: 13,
+        attackWindup: 0.9,
+        attackCooldown: 2.2,
+        aggroRange: 18,
+        color: '#c0392b',
+        score: 40,
+        attackKind: 'ranged',
+        retreatRange: 5,
+        projectileSpeed: 12,
+        knockbackResist: 0.4,
+        model: 'tank',
+      },
     },
     spawns: [
+      // 던전 1 '잊혀진 숲'. 다른 던전의 배치는 src/game/DungeonDefs.ts 에 있다
       { type: 'rusher', x: 12, z: -12 },
       { type: 'rusher', x: -14, z: -6 },
       { type: 'rusher', x: 16, z: 6 },

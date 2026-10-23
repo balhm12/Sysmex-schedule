@@ -643,3 +643,67 @@ body {
 .set-foot {
   margin-top: 14px;
 }
+
+/* 던전 선택 */
+.dungeons-panel {
+  width: min(720px, 94vw);
+  max-height: 88vh;
+  overflow: auto;
+}
+.dungeon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.dungeon-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.dungeon-card.locked {
+  opacity: 0.6;
+}
+.dungeon-index {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(92, 242, 216, 0.18);
+  color: #5cf2d8;
+  font-weight: 800;
+}
+.dungeon-name {
+  font-size: 17px;
+  font-weight: 800;
+}
+.dungeon-sub {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 2px;
+}
+.dungeon-meta {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 4px;
+}
+.dungeon-warn {
+  color: #ffb14f;
+}
+
+/* 창 층위: 메인 메뉴(10) < 결과(15) < 메뉴 위에 여는 창(장비·조작 안내·설정·던전 선택, 20) < 오류 상자 */
+.guide {
+  z-index: 20;
+}
+.guide.menu {
+  z-index: 10;
+}
+.guide.result {
+  z-index: 15;
+}

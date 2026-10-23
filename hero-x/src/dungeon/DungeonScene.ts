@@ -1,14 +1,15 @@
 import * as THREE from 'three';
+import type { DungeonDef } from '../game/DungeonDefs';
 import { GameConfig } from '../game/GameConfig';
 import type { Box, CollisionWorld } from '../player/movement';
 
 /**
- * 던전 1 (1단계: 이동 테스트용 공간)
- * - 바닥, 조명, 경계 벽, 장애물을 만든다. 장애물 배치는 GameConfig.world.obstacles 에서 바꾼다.
+ * 던전 공간 (정의 데이터로 생성)
+ * - 바닥, 조명, 경계 벽, 장애물을 DungeonDef 대로 만든다. 던전 정의는 src/game/DungeonDefs.ts 에 있다.
  * - 텍스처는 코드로 그려서(캔버스) 외부 이미지 파일 없이 동작한다.
- * - 나중에 '잊혀진 숲' 던전(적 배치, 보물 상자, 보스)으로 확장한다.
+ * - 던전을 바꿀 때는 dispose() 한 뒤 새로 만든다 (Game.loadDungeon).
  */
-export class Dungeon01 implements CollisionWorld {
+export class DungeonScene implements CollisionWorld {
   /** 씬에 추가되는 최상위 객체 */
   readonly root = new THREE.Group();
 
@@ -16,11 +17,11 @@ export class Dungeon01 implements CollisionWorld {
   private sun!: THREE.DirectionalLight;
   private readonly disposables: Array<{ dispose(): void }> = [];
 
-  constructor(scene: THREE.Scene) {
-    const w = GameConfig.world;
-    this.root.name = 'Dungeon01';
-    scene.background = new THREE.Color(w.backgroundColor);
-    scene.fog = new THREE.Fog(w.backgroundColor, w.fogNear, w.fogFar);
+  constructor(scene: THREE.Scene, readonly def: DungeonDef) {
+    const t = def.theme;
+    this.root.name = `Dungeon-${def.id}`;
+    scene.background = new THREE.Color(t.backgroundColor);
+    scene.fog = new THREE.Fog(t.backgroundColor, t.fogNear, t.fogFar);
 
     this.buildLights();
     this.buildFloor();
@@ -32,10 +33,11 @@ export class Dungeon01 implements CollisionWorld {
   /** 조명: 전체를 밝히는 반구광 + 그림자를 만드는 태양광 */
   private buildLights(): void {
     const g = GameConfig.graphics;
-    const hemi = new THREE.HemisphereLight(0xdcefff, 0x5f8f3a, 1.1);
+    const t = this.def.theme;
+    const hemi = new THREE.HemisphereLight(new THREE.Color(t.skyColor), new THREE.Color(t.groundColor), 1.1);
     this.root.add(hemi);
 
-    this.sun = new THREE.DirectionalLight(0xfff4de, 2.2);
+    this.sun = new THREE.DirectionalLight(new THREE.Color(t.sunColor), t.sunIntensity);
     this.sun.castShadow = g.shadows;
     this.sun.shadow.mapSize.set(g.shadowMapSize, g.shadowMapSize);
     const cam = this.sun.shadow.camera;
@@ -52,7 +54,7 @@ export class Dungeon01 implements CollisionWorld {
 
   /** 바닥: 체크무늬 텍스처를 코드로 그린다 */
   private buildFloor(): void {
-    const w = GameConfig.world;
+    const w = this.def.theme;
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 256;
     const ctx = canvas.getContext('2d');
@@ -61,15 +63,15 @@ export class Dungeon01 implements CollisionWorld {
       ctx.fillRect(0, 0, 256, 256);
       ctx.fillStyle = w.floorAltColor;
       for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if ((x + y) % 2) ctx.fillRect(x * 32, y * 32, 32, 32);
-      // 풀잎 느낌의 작은 점
+      // 풀잎·수정 조각 느낌의 작은 점 (던전 테마 색)
       for (let i = 0; i < 160; i++) {
-        ctx.fillStyle = Math.random() < 0.5 ? '#8bd268' : '#66ad48';
+        ctx.fillStyle = Math.random() < 0.5 ? w.floorFlecks[0] : w.floorFlecks[1];
         ctx.fillRect(Math.random() * 256, Math.random() * 256, 3, 6);
       }
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    const size = w.arenaHalfSize * 2 + 60;
+    const size = this.def.arenaHalfSize * 2 + 60;
     tex.repeat.set(size / 4, size / 4);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
@@ -84,8 +86,8 @@ export class Dungeon01 implements CollisionWorld {
 
   /** 경계 벽: 이동 가능한 영역의 테두리 */
   private buildWalls(): void {
-    const w = GameConfig.world;
-    const half = w.arenaHalfSize;
+    const w = this.def.theme;
+    const half = this.def.arenaHalfSize;
     const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(w.wallColor) });
     const len = half * 2 + 1;
     const thickness = 0.5;
@@ -109,7 +111,7 @@ export class Dungeon01 implements CollisionWorld {
 
   /** 장애물: 설정 목록을 그대로 박스로 만들고 충돌 상자로 등록한다 */
   private buildObstacles(): void {
-    for (const o of GameConfig.world.obstacles) {
+    for (const o of this.def.obstacles) {
       const geo = new THREE.BoxGeometry(o.w, o.h, o.d);
       const mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(o.color ?? '#9aa3b2') });
       const mesh = new THREE.Mesh(geo, mat);
@@ -143,7 +145,7 @@ export class Dungeon01 implements CollisionWorld {
   }
 
   getArenaHalfSize(): number {
-    return GameConfig.world.arenaHalfSize;
+    return this.def.arenaHalfSize;
   }
 
   dispose(): void {

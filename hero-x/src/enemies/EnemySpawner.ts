@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { GameConfig } from '../game/GameConfig';
+import { GameConfig, type EnemySpawnConfig } from '../game/GameConfig';
 import { Logger } from '../utils/Logger';
 import { Enemy, type EnemyContext } from './Enemy';
 
 /**
  * 적 배치·관리
- * - GameConfig.enemies.spawns 목록대로 적을 만들고, 매 프레임 갱신하며, 사망 연출이 끝난 적을 치운다.
+ * - 던전 정의의 spawns 목록대로 적을 만들고, 매 프레임 갱신하며, 사망 연출이 끝난 적을 치운다.
  * - 설정에 없는 종류가 적혀 있으면 경고를 남기고 건너뛴다 (게임은 계속 실행).
  */
 export class EnemySpawner {
@@ -16,9 +16,9 @@ export class EnemySpawner {
 
   constructor(private readonly scene: THREE.Scene) {}
 
-  /** 설정 목록대로 적 생성 */
-  spawnFromConfig(): void {
-    for (const s of GameConfig.enemies.spawns) {
+  /** 배치 목록대로 적 생성 (기본은 GameConfig.enemies.spawns, 던전마다 다른 목록을 넘긴다) */
+  spawnFromConfig(spawns: EnemySpawnConfig[] = GameConfig.enemies.spawns): void {
+    for (const s of spawns) {
       const def = GameConfig.enemies.types[s.type];
       if (!def) {
         Logger.warn(`적 종류 '${s.type}' 이(가) GameConfig.enemies.types 에 없어 배치를 건너뜁니다.`);

@@ -9,6 +9,8 @@ export interface MainMenuCallbacks {
   openInventory: () => void;
   openGuide: () => void;
   openSettings: () => void;
+  /** 던전 선택 화면 열기 (이어갈 진행이 있을 때) */
+  openDungeons: () => void;
   /** 멈춰 둔 던전이 있는지 */
   hasRun: () => boolean;
   /** 이어갈 진행(멈춘 던전 또는 저장된 성장)이 있는지 (이어하기 버튼 활성화, 새 게임 확인창) */
@@ -47,6 +49,7 @@ export class MainMenu {
         <div class="menu-list">
           <button class="btn" id="menu-new" type="button">새 게임</button>
           <button class="btn secondary" id="menu-continue" type="button">이어하기</button>
+          <button class="btn secondary" id="menu-dungeons" type="button">던전 선택</button>
           <button class="btn secondary" id="menu-inventory" type="button">장비</button>
           <button class="btn secondary" id="menu-guide" type="button">조작 안내</button>
           <button class="btn secondary" id="menu-settings" type="button">설정</button>
@@ -56,7 +59,7 @@ export class MainMenu {
           <p>이어갈 진행이 있습니다. 새로 시작하면 레벨·골드·장비·기록이 초기화되고 저장 데이터도 새로 씁니다. 계속할까요?</p>
           <div class="btns"><button class="btn small" id="menu-confirm-yes" type="button">새로 시작</button><button class="btn small ghost" id="menu-confirm-no" type="button">취소</button></div>
         </div>
-        <p class="guide-note">던전 "${GameConfig.dungeon.name}": 적을 모두 처치하면 보스가 나타나고, 보스를 쓰러뜨리면 클리어입니다. 게임을 끝내려면 브라우저 탭을 닫으세요.</p>
+        <p class="guide-note">던전마다 적을 모두 처치하면 보스가 나타나고, 보스를 쓰러뜨리면 클리어되어 다음 던전이 열립니다. 게임을 끝내려면 브라우저 탭을 닫으세요.</p>
         <p class="menu-save" id="menu-save"></p>
       </div>`;
     parent.appendChild(this.el);
@@ -74,6 +77,7 @@ export class MainMenu {
     q<HTMLButtonElement>('#menu-inventory').addEventListener('click', () => this.cb.openInventory());
     q<HTMLButtonElement>('#menu-guide').addEventListener('click', () => this.cb.openGuide());
     q<HTMLButtonElement>('#menu-settings').addEventListener('click', () => this.cb.openSettings());
+    q<HTMLButtonElement>('#menu-dungeons').addEventListener('click', () => this.cb.openDungeons());
     this.el.querySelectorAll<HTMLButtonElement>('.diff-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         this.cb.difficulty.set(btn.dataset.level as DifficultyLevel);
@@ -98,8 +102,11 @@ export class MainMenu {
     const hasProgress = this.cb.hasProgress();
     const cont = this.el.querySelector('#menu-continue') as HTMLButtonElement;
     cont.disabled = !hasProgress;
-    cont.textContent = hasRun ? '이어하기' : hasProgress ? '이어하기 (던전 입구부터)' : '이어하기';
+    cont.textContent = hasRun ? '이어하기' : hasProgress ? '이어하기 (던전 선택)' : '이어하기';
     cont.title = hasProgress ? '' : '이어갈 진행이 없습니다';
+    const dg = this.el.querySelector('#menu-dungeons') as HTMLButtonElement;
+    dg.disabled = !hasProgress;
+    dg.title = hasProgress ? '' : '새 게임을 먼저 시작하세요';
     const progress = this.el.querySelector('#menu-progress') as HTMLElement;
     const text = this.cb.progressText();
     progress.textContent = text;

@@ -9,7 +9,7 @@
 - 장르: 3인칭 3D 액션 RPG. Minecraft Dungeons 의 진행 방식을 참고하되 캐릭터·맵·아이템·음악·텍스처는 독자 제작 또는 적법한 에셋만 사용한다.
 - 실행 환경: Windows PC 웹 브라우저(Chrome/Edge). 기본 게임은 외부 API·유료 서비스 없이 실행된다.
 - 최우선 원칙: **실제로 실행되는 게임**을 단계적으로 완성한다. 그래픽 품질보다 안정성·유지보수성이 먼저다.
-- 현재 상태: **5단계(설정과 저장) 완료 (v0.5.0)** — 저장 시스템, 설정 화면. 다음: 6단계 콘텐츠 확장(던전 2~3개와 던전 선택, 적·보스·장비 추가, 밸런스).
+- 현재 상태: **6단계(콘텐츠 확장) 진행 중** — 6-a 던전 3개·던전 선택·새 적 2종·새 장비 4종·저장 v2 완료 v0.6.0-a.1. 다음: 6-b 보스별 고유 패턴·외형, 밸런스 조정, (여유가 있으면) 적 종류 추가.
 
 ## 2. 기술 스택
 
@@ -39,6 +39,7 @@ hero-x/
 │  │  ├─ GameConfig.ts     ★ 설정 데이터 + 허용 범위(CONFIG_LIMITS) + 보정 함수
 │  │  ├─ Difficulty.ts     난이도 배율 조회·저장(localStorage, 실패해도 동작)
 │  │  ├─ Settings.ts       ★ 사용자 설정: 항목 정의(SETTING_DEFS)·기본값·보정·저장 (테스트 대상)
+│  │  ├─ DungeonDefs.ts    ★ 던전 정의 목록(DUNGEONS: 공간·장애물·상자·적 배치·보스 덮어쓰기·보상·해금) (테스트 대상)
 │  ├─ save/
 │  │  ├─ SaveData.ts       ★ 저장 형식(SAVE_VERSION)·검증·보정·버전 변환·적용 (순수 함수, 테스트 대상)
 │  │  └─ SaveStorage.ts    localStorage 어댑터: 읽기/쓰기/삭제, 손상 데이터는 *.corrupt 키로 격리
@@ -69,11 +70,12 @@ hero-x/
 │  │  ├─ ItemDatabase.ts   장비 템플릿 12종, 등급 적용 생성, 무작위 생성 (테스트 대상)
 │  │  └─ EquipmentSystem.ts 가방·슬롯 장착/해제, 능력치 합산, 방어력 계산 (테스트 대상)
 │  ├─ dungeon/
-│  │  ├─ Dungeon01.ts      바닥·조명·벽·장애물 (CollisionWorld 구현, 외부 충돌 상자 추가 가능)
+│  │  ├─ DungeonScene.ts   던전 정의로 바닥·조명·벽·장애물 생성 (CollisionWorld 구현, 외부 충돌 상자 추가 가능)
 │  │  └─ Chest.ts          보물 상자 배치·근접 판정·열기 연출 (보상은 loot.rollChestLoot)
 │  ├─ ui/
 │  │  ├─ MainMenu.ts       메인 메뉴 (새 게임/이어하기/장비/조작 안내/설정/난이도, 새 게임 확인창)
 │  │  ├─ SettingsUI.ts     설정 화면 (SETTING_DEFS 로 자동 생성: 슬라이더·스위치·선택)
+│  │  ├─ DungeonSelectUI.ts 던전 선택 화면 (DUNGEONS 카드, 잠김·클리어 횟수·권장 레벨)
 │  │  ├─ ControlsGuide.ts  조작 안내 창 + 하단 상태 표시
 │  │  ├─ HUD.ts            체력바·남은 적·처치·점수·피격 번쩍임
 │  │  ├─ DamageNumbers.ts  피해 숫자 (3D 좌표 → 화면 투영은 Game 이 함수로 제공)
@@ -151,7 +153,10 @@ hero-x/
 - 플레이어 공격력: `CombatSystem` 이 레벨 배율(`() => stats.damageMultiplier`)과 무기 공격력(`(kind) => equipment.weaponAttack(kind)`)을 함수로 받는다. 피해 = (기본 + 무기) × 배율.
 - 방어력은 `Game.damagePlayer` 에서 `applyDefense` 로, 체력 보너스는 `Game.applyStats`, 속도 보너스는 `PlayerController` 의 배율 함수로 적용된다. 새 능력치를 추가하면 이 세 곳을 확인한다.
 - 새 장비 → `ItemDatabase.ts` 의 `ITEM_TEMPLATES` 에 항목 추가 (분류 melee/ranged/armor/trinket, 일반 등급 기준 수치).
-- "상자를 더/보상을 더 좋게" → `dungeon.chests` 배열, `dungeon.chestLoot`. 상자 위치는 장애물·적 배치와 겹치지 않아야 한다 (`tests/chest.test.ts` 가 확인).
+- 던전 추가·수정 → `DungeonDefs.ts` 의 `DUNGEONS` 에 항목 추가/수정 (해금은 `requiresClear`, 보스는 `boss` 에 바꿀 값만). 첫 던전만 `GameConfig.world/dungeon/enemies.spawns/boss` 를 그대로 쓴다. `tests/dungeons.test.ts` 가 모든 던전의 배치 겹침·영역을 검사한다. 던전 교체는 `Game.loadDungeon` 한 곳(공간·상자 새로 생성, 충돌 세계는 껍데기 객체로 공유).
+- 새 적이 기존 외형을 써도 되면 `enemies.types.<종류>.model` 에 'rusher' | 'shooter' | 'tank' 를 적는다.
+- 창 층위는 CSS `.guide`(20) > `.guide.result`(15) > `.guide.menu`(10). 메뉴 위에 여는 새 창은 기본 `.guide` 층위를 그대로 쓴다.
+- "상자를 더/보상을 더 좋게" → 첫 던전은 `dungeon.chests` 배열, 다른 던전은 `DungeonDefs.ts`. 상자 보상은 `dungeon.chestLoot`(공통). 상자 위치는 장애물·적 배치와 겹치지 않아야 한다 (`tests/chest.test.ts` 가 확인).
 - 상호작용(E)이 필요한 새 물체는 `Game.tryInteract` 에 분기를 추가하고 HUD 안내 문구(`currentPrompt`)를 함께 처리한다.
 - "보스를 약하게/세게" → `boss.hp`, `boss.slam.damage`, `boss.contactDamage`, `boss.windup`(예고가 길수록 쉬움). 새 보스 패턴은 `BossAI` 의 패턴 선택과 `Boss.update` 의 실행 분기, `Game.onBossAttack` 의 효과 처리 세 곳에 추가한다.
 - 승리 흐름은 `Game.checkVictory`: 일반 적 전멸 → `spawnBoss` → 보스 사망 → `onBossDefeated`(보상) → 결과 화면. 테스트에서는 `__heroX.debugDefeatRegularEnemies()` 로 바로 보스전으로 간다.
@@ -171,7 +176,7 @@ hero-x/
 3. 아이템과 성장 ✅ (v0.3.0: 드롭, 경험치·레벨, 골드, 장비·장비 화면·능력치 반영)
 4. 던전과 보스 ✅ (v0.4.0: 보물 상자, 보스전, 메인 메뉴·입장·결과 흐름)
 5. 설정 화면과 저장 ✅ (v0.5.0: 자동 저장·이어하기·버전·손상 처리, 설정 화면·기본값 복원)
-6. 콘텐츠 확장
+6. 콘텐츠 확장 🔄 (6-a 던전 3개·던전 선택·새 적·새 장비 ✅ v0.6.0-a.1 / 6-b 보스 차별화·밸런스)
 7. 품질 개선
 
 각 단계는 완료 기준을 만족하고 기존 기능이 정상일 때만 다음 단계로 넘어간다.

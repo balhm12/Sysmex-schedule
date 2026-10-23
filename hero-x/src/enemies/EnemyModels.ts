@@ -31,7 +31,8 @@ export interface EnemyModel {
  * - tank(철벽 로봇): 큰 몸통 + 방패. 예고 때 방패를 들어 올린다. 밀려남 저항이 크다.
  */
 export function createEnemyModel(type: string, def: EnemyTypeConfig): EnemyModel {
-  switch (type) {
+  // def.model 이 있으면 그 외형을, 없으면 종류 이름으로 고른다 (새 종류가 기존 외형을 재사용할 수 있게)
+  switch (def.model ?? type) {
     case 'tank':
       return createTankModel(def);
     case 'shooter':

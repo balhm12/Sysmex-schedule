@@ -3,6 +3,7 @@ import { isDifficultyLevel } from '../game/Difficulty';
 import { EQUIP_SLOTS, slotsForCategory, type EquipmentSystem } from '../items/EquipmentSystem';
 import { createItem, findTemplate, type EquipSlot, type ItemInstance } from '../items/ItemDatabase';
 import type { PlayerStats } from '../player/PlayerStats';
+import { DUNGEONS } from '../game/DungeonDefs';
 
 /**
  * 저장 데이터 형식과 검증 (순수 함수, 화면·Three.js 비의존)
@@ -11,7 +12,7 @@ import type { PlayerStats } from '../player/PlayerStats';
  * - 장비는 '원형 id + 등급'만 저장하고 불러올 때 다시 만든다. 밸런스(GameConfig)를 바꿔도 저장 데이터가 깨지지 않는다.
  * - 형식이 바뀌면 SAVE_VERSION 을 올리고 migrateSaveData 에 변환을 추가한다.
  */
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 /** 저장된 장비 한 개 */
 export interface SavedItem {
@@ -29,6 +30,8 @@ export interface SaveRecords {
   totalKills: number;
   /** 한 판 최고 점수 */
   bestScore: number;
+  /** 던전별 클리어 횟수 (던전 id → 횟수). 해금 판단에 쓴다 (v2) */
+  dungeonClears: Record<string, number>;
 }
 
 export interface SaveData {
@@ -43,7 +46,12 @@ export interface SaveData {
   records: SaveRecords;
 }
 
-export const EMPTY_RECORDS: SaveRecords = { clears: 0, deaths: 0, totalKills: 0, bestScore: 0 };
+export const EMPTY_RECORDS: SaveRecords = { clears: 0, deaths: 0, totalKills: 0, bestScore: 0, dungeonClears: {} };
+
+/** 기록 복사 (중첩 객체까지) */
+export function cloneRecords(r: SaveRecords): SaveRecords {
+  return { ...r, dungeonClears: { ...r.dungeonClears } };
+}
 
 /** 검증 결과: 성공이면 보정된 데이터, 실패면 이유 */
 export type ValidateResult = { ok: true; data: SaveData; warnings: string[] } | { ok: false; reason: 'invalid' | 'newer'; message: string };
@@ -82,7 +90,7 @@ export function serializeSave(input: { stats: PlayerStats; equipment: EquipmentS
     difficulty: input.difficulty,
     stats: { level: input.stats.level, xp: input.stats.xp, gold: input.stats.gold },
     equipment: { inventory: input.equipment.inventory.map(toSavedItem), equipped },
-    records: { ...input.records },
+    records: cloneRecords(input.records),
   };
 }
 
@@ -156,11 +164,21 @@ export function validateSaveData(raw: unknown): ValidateResult {
   }
 
   const r = isRecord(migrated.records) ? migrated.records : {};
+  const dungeonClears: Record<string, number> = {};
+  const rawClears = isRecord(r.dungeonClears) ? r.dungeonClears : {};
+  for (const [id, n] of Object.entries(rawClears)) {
+    if (!DUNGEONS.some((d) => d.id === id)) {
+      warnings.push(`알 수 없는 던전 '${id}' 의 클리어 기록을 버렸습니다.`);
+      continue;
+    }
+    dungeonClears[id] = clampInt(n, 0, 1e9, 0);
+  }
   const records: SaveRecords = {
     clears: clampInt(r.clears, 0, 1e9, 0),
     deaths: clampInt(r.deaths, 0, 1e9, 0),
     totalKills: clampInt(r.totalKills, 0, 1e9, 0),
     bestScore: clampInt(r.bestScore, 0, 1e12, 0),
+    dungeonClears,
   };
 
   return {
@@ -184,8 +202,13 @@ export function validateSaveData(raw: unknown): ValidateResult {
  */
 export function migrateSaveData(raw: Record<string, unknown>, version: number): Record<string, unknown> {
   const data = { ...raw };
-  // 예: if (version < 2) { data.records = { ...EMPTY_RECORDS, ...(data.records as object) }; }
-  void version;
+  if (version < 2) {
+    // v1 → v2: 던전이 하나('forest')뿐이었으므로 전체 클리어 횟수를 그 던전의 기록으로 옮긴다
+    const r = isRecord(data.records) ? { ...data.records } : {};
+    const clears = typeof r.clears === 'number' ? r.clears : 0;
+    r.dungeonClears = clears > 0 ? { [DUNGEONS[0].id]: clears } : {};
+    data.records = r;
+  }
   return data;
 }
 

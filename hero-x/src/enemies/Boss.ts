@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { BossConfig } from '../game/DungeonDefs';
 import { GameConfig, type EnemyTypeConfig } from '../game/GameConfig';
 import { clampToArena, directionToFacing, lerpAngle, resolveCircleVsBoxes, type Vec2 } from '../player/movement';
 import { BossAI, type BossPattern } from './BossAI';
@@ -17,9 +18,8 @@ export interface BossContext extends EnemyContext {
   playerRadius: number;
 }
 
-/** 보스용 적 종류 설정을 GameConfig.boss 에서 만든다 */
-export function bossTypeConfig(): EnemyTypeConfig {
-  const b = GameConfig.boss;
+/** 보스용 적 종류 설정을 보스 설정(기본 GameConfig.boss, 던전별 덮어쓰기)에서 만든다 */
+export function bossTypeConfig(b: BossConfig = GameConfig.boss): EnemyTypeConfig {
   return {
     name: b.name,
     hp: b.hp,
@@ -37,7 +37,7 @@ export function bossTypeConfig(): EnemyTypeConfig {
 }
 
 /**
- * 보스 "숲의 수호 로봇"
+ * 보스 (설정에 따라 '숲의 수호 로봇', '수정 골렘', '요새 사령관' 등)
  * - Enemy 를 상속해 체력·피격·모델은 그대로 쓰고, 행동은 BossAI 가 맡는다.
  * - 2단계(체력 비율 phase2Ratio 이하)에서 패턴이 빨라지고 탄막이 늘어난다.
  */
@@ -45,12 +45,17 @@ export class Boss extends Enemy {
   readonly bossAI = new BossAI();
   private chargeHit = false;
 
-  constructor(pos: Vec2, mul: { hp: number; speed: number }) {
-    super('boss', bossTypeConfig(), pos, mul, (_type, def) => createBossModel(def));
+  constructor(
+    pos: Vec2,
+    mul: { hp: number; speed: number },
+    /** 이 보스의 설정 (던전마다 다르다) */
+    readonly cfg: BossConfig = GameConfig.boss,
+  ) {
+    super('boss', bossTypeConfig(cfg), pos, mul, (_type, def) => createBossModel(def));
   }
 
   get phase2(): boolean {
-    return this.health.ratio <= GameConfig.boss.phase2Ratio;
+    return this.health.ratio <= this.cfg.phase2Ratio;
   }
 
   override hit(damage: number, fromDir: Vec2, knockback: number): boolean {
@@ -71,7 +76,7 @@ export class Boss extends Enemy {
       this.model.update(dt, { state: 'dead', moving: false, windup: 0, death: Math.min(1, this.deathTimer / Math.max(0.01, GameConfig.enemies.deathDuration)) });
       return;
     }
-    const b = GameConfig.boss;
+    const b = this.cfg;
     const p = this.object3d.position;
     const self: Vec2 = { x: p.x, z: p.z };
     const d = this.bossAI.update(dt, self, ctx.playerPos, b, this.phase2);

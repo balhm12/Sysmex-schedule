@@ -14,7 +14,7 @@ interface Chest {
 
 /**
  * 보물 상자
- * - GameConfig.dungeon.chests 위치에 놓이고, 플레이어가 가까이 와서 상호작용 키를 누르면 열린다.
+ * - 던전 정의의 chests 위치에 놓이고, 플레이어가 가까이 와서 상호작용 키를 누르면 열린다.
  * - 한 번 연 상자는 다시 열 수 없다 (뚜껑이 열린 채 어두워진다). 재시작하면 다시 닫힌다.
  * - 보상은 Game 이 rollChestLoot 로 굴려 LootSystem 에 떨어뜨린다.
  */
@@ -27,10 +27,10 @@ export class ChestSystem {
   private readonly trimMat = new THREE.MeshLambertMaterial({ color: 0xffd23f });
   private readonly openedMat = new THREE.MeshLambertMaterial({ color: 0x6b4a26 });
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, positions: Array<{ x: number; z: number }> = GameConfig.dungeon.chests) {
     this.root.name = 'Chests';
     scene.add(this.root);
-    for (const c of GameConfig.dungeon.chests) this.place(c.x, c.z);
+    for (const c of positions) this.place(c.x, c.z);
   }
 
   private place(x: number, z: number): void {

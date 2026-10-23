@@ -26,7 +26,7 @@ function sampleState() {
   equipment.add(createItem(findTemplate('sword_basic')!, 'rare'));
   equipment.add(createItem(findTemplate('ring_vitality')!, 'common'));
   equipment.equip(equipment.inventory[0].uid); // 검 장착
-  const records = { clears: 2, deaths: 1, totalKills: 40, bestScore: 1234 };
+  const records = { clears: 2, deaths: 1, totalKills: 40, bestScore: 1234, dungeonClears: { forest: 2 } };
   return { stats, equipment, records };
 }
 
@@ -89,6 +89,32 @@ describe('저장 데이터 (SaveData)', () => {
     const noEq = validateSaveData({ version: 1, stats: { level: 2 } });
     expect(noEq.ok).toBe(false);
     if (!noEq.ok) expect(noEq.reason).toBe('invalid');
+  });
+
+  it('v1 저장(던전 하나)은 v2 로 변환되어 클리어 횟수가 첫 던전 기록으로 옮겨진다', () => {
+    const v1 = {
+      version: 1,
+      savedAt: '2026-10-23T00:00:00.000Z',
+      gameVersion: '0.5.0',
+      difficulty: 'normal',
+      stats: { level: 3, xp: 5, gold: 120 },
+      equipment: { inventory: [], equipped: {} },
+      records: { clears: 2, deaths: 1, totalKills: 30, bestScore: 900 },
+    };
+    const r = validateSaveData(v1);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.data.version).toBe(SAVE_VERSION);
+    expect(r.data.records.dungeonClears).toEqual({ forest: 2 });
+    expect(r.data.records.clears).toBe(2);
+    expect(r.warnings).toEqual([]);
+    // 알 수 없는 던전 기록은 버린다
+    const r2 = validateSaveData({ ...v1, version: 2, records: { ...v1.records, dungeonClears: { forest: 1, moon: 3 } } });
+    expect(r2.ok).toBe(true);
+    if (r2.ok) {
+      expect(r2.data.records.dungeonClears).toEqual({ forest: 1 });
+      expect(r2.warnings.some((w) => w.includes('moon'))).toBe(true);
+    }
   });
 
   it('처음 상태 그대로면 진행이 없다고 본다', () => {

@@ -39,8 +39,10 @@ export class LootSystem {
   }
 
   /** 적 처치 보상을 굴려 바닥에 떨어뜨린다 */
-  dropFor(enemyScore: number, at: Vec2): Drop[] {
-    const drops = rollLoot(enemyScore, { ...GameConfig.loot, equipChance: GameConfig.equipment.dropChance }, Math.random, () => generateRandomItem());
+  dropFor(enemyScore: number, at: Vec2, rewardMul: { gold: number; xp: number } = { gold: 1, xp: 1 }): Drop[] {
+    const l = GameConfig.loot;
+    const table = { ...l, xpPerScore: l.xpPerScore * rewardMul.xp, goldMin: Math.round(l.goldMin * rewardMul.gold), goldMax: Math.round(l.goldMax * rewardMul.gold), equipChance: GameConfig.equipment.dropChance };
+    const drops = rollLoot(enemyScore, table, Math.random, () => generateRandomItem());
     this.scatter(drops, at, 0.6);
     return drops;
   }
