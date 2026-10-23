@@ -63,8 +63,10 @@ hero-x/
 │  │  └─ groundTexture.ts  노이즈 바닥 색 지도·노멀맵 생성 (파일 없음)
 │  ├─ assets/ModelRegistry.ts  ★ public/models/manifest.json 의 .glb 를 읽어 플레이어·적·보스 모델로 교체 (없으면 임시 모델)
 │  ├─ audio/
-│  │  ├─ soundDefs.ts      ★ 효과음 레시피(SFX)·음악 악절(MUSIC) 데이터 (테스트 대상)
-│  │  └─ AudioSystem.ts    Web Audio 합성 재생: 첫 조작에 켜기, 효과음, 음악 예약 재생·전환, 음량
+│  │  ├─ soundDefs.ts      ★ 효과음 레시피(SFX: 조각·필터 스윕·왜곡·잔향·흔들림)·음악 4마디 악절(MUSIC: 베이스·멜로디·드럼·패드 코드) (테스트 대상)
+│  │  └─ AudioSystem.ts    Web Audio 재생: 첫 조작에 켜기, 효과음 합성(잔향 버스·컴프레서), 음악 예약 재생·전환, 음원 파일 디코딩·재생, 음량
+│  ├─ assets/SoundRegistry.ts  ★ public/sounds/manifest.json 의 음원 파일(.ogg/.mp3/.wav)을 받아 두는 곳 (없으면 합성음)
+├─ public/sounds/           정식 음원 파일과 manifest.json, 넣는 방법·무료 음원 출처 README
 │  ├─ combat/
 │  │  ├─ Health.ts         체력·무적·사망 (플레이어와 적 공용, 테스트 대상)
 │  │  ├─ melee.ts          근접 공격 부채꼴 판정 순수 함수 (테스트 대상)
@@ -172,7 +174,7 @@ hero-x/
 - 게임 루프: `Game.frame()` 이 흐른 시간을 `performance.maxStep`(0.05초) 단위의 `simulate(dt)` 로 나눠 돌리고 한 번 그린다. 시간에 따라 움직이는 로직은 `simulate` 안에, 화면 갱신·FPS 측정은 `frame` 에 둔다.
 - 성능: 자동 화질은 `Game.updateAutoQuality` 가 `GameConfig.performance` 간격으로 `decideQuality` 를 호출해 설정을 낮춘다(올리지 않음). WebGL 끊김은 `contextLost` 플래그로 프레임을 건너뛴다. 프레임 예외는 `loop` 의 try/catch 가 루프를 멈추고 저장한 뒤 다시 던진다(ErrorOverlay 표시).
 - 모델 교체: `.glb` 는 `public/models/` + `manifest.json`. 생성 함수(`createEnemyModel`, `createBossModel`, `Game.swapPlayerModel`)가 `modelRegistry` 에서 먼저 찾고 없으면 임시 모델을 만든다. 적·보스는 다음 생성부터 적용. 얼굴 사진은 `PlayerModel.setFace`(임시 모델만 구현).
-- 소리: 새 효과음은 `soundDefs.SFX` 에 레시피를 추가하고 `Game` 에서 `this.audio.play('이름')`. 음악은 `MUSIC` 에 트랙을 추가하고 `Game.dungeonMusic()` 매핑. 외부 음원 파일은 쓰지 않는다. 소리는 첫 사용자 조작 뒤에만 난다(브라우저 제한) — 테스트에서는 `#menu-new` 클릭 뒤 `audio.ready` 를 본다.
+- 소리: 새 효과음은 `soundDefs.SFX` 에 레시피(`parts` + `reverb/pitchJitter/gainJitter`)를 추가하고 `Game` 에서 `this.audio.play('이름')`. 음악은 `MUSIC` 에 트랙(베이스 16칸 = 멜로디·드럼 32칸, 코드는 베이스와 같은 길이, 첫 칸은 코드 필수)을 추가하고 `Game.dungeonMusic()` 매핑. 저장소에는 음원 파일을 두지 않고 합성으로 동작하되, 사용자가 `public/sounds/manifest.json` 에 적은 파일(CC0 등 라이선스 확인)은 같은 이름의 효과음·음악을 대신한다(`SoundRegistry` 가 받고 `AudioSystem` 이 디코딩, 없거나 실패하면 합성음). 소리는 첫 사용자 조작 뒤에만 난다(브라우저 제한) — 테스트에서는 키 입력 뒤 `audio.ready/voices` 를 보고, 파일 경로는 Playwright `page.route` 로 manifest 와 wav 를 가로채 검증한다(저장소 파일은 건드리지 않음).
 - 진동은 `utils/haptics.ts` 의 `vibrate()` 를 `settings.haptics` 확인 후 호출한다. 터치 전용 표시(자동 조준 고리 `aimRing`)는 `settings.touchControls` 일 때만 보인다.
 - "아이템이 더 자주/레벨이 빨리" → `loot.healChance/goldChance`, `progression.xpBase/xpGrowth`.
 - 플레이어 공격력: `CombatSystem` 이 레벨 배율(`() => stats.damageMultiplier`)과 무기 공격력(`(kind) => equipment.weaponAttack(kind)`)을 함수로 받는다. 피해 = (기본 + 무기) × 배율.

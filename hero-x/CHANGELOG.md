@@ -2,6 +2,25 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-23 · v1.2.0 · 소리 개선 (효과음·음악 합성 고도화 + 음원 파일 교체 구조)
+
+### 변경 내용
+- **효과음 합성 고도화** (`soundDefs.ts`, `AudioSystem.ts`): 효과음마다 여러 조각을 겹치고(저음 쿵 + 소음 크랙 + 금속 링 등) 필터 스윕·왜곡(WaveShaper)·두 겹 오실레이터(detune)를 쓴다. 잔향 버스(합성 임펄스 응답 1.8초)로 일부를 보내고, 재생마다 음높이·음량을 조금씩 바꿔 같은 소리가 반복되는 느낌을 줄였다. 출력 끝에 컴프레서를 달아 겹쳐도 찢어지지 않게.
+- **음악 고도화**: 2줄 8~16박 반복 → 4마디(16박) 악절로 늘리고 드럼(킥·스네어·하이햇 합성), 패드 코드(두 겹 오실레이터 + 저역 통과), 베이스 서브 옥타브, 멜로디 필터 포락선 추가. 메뉴(C장조·드럼 없음)/숲(C장조 C-F-G-Am)/동굴(A단조·긴 잔향)/요새(G단조·톱니파)/보스(G단조·더블 킥) 5곡 재작성.
+- **음원 파일 교체 구조** (`assets/SoundRegistry.ts`, `public/sounds/manifest.json`, `public/sounds/README.md`): `.glb` 모델과 같은 방식. manifest 에 적은 효과음·음악은 파일(.ogg/.mp3/.wav)로 재생하고, 없거나 실패하면 합성음. 효과음은 `files` 여러 개면 무작위 선택, `gain` 음량 배율. 음악 파일은 반복 재생, 디코딩이 끝나면 재생 중인 합성 음악을 즉시 파일로 바꾼다. README 에 이름표·파일 조건·무료 CC0 음원 출처·직접 만드는 도구 안내.
+- 디버그 상태 `audio` 에 `voices`(울리는 소리 수), `fileMusic`, `files`, `fetched` 추가.
+
+### 수정 파일
+`src/audio/soundDefs.ts`, `src/audio/AudioSystem.ts`, `src/assets/SoundRegistry.ts`(새), `public/sounds/manifest.json`(새), `public/sounds/README.md`(새), `src/game/Game.ts`, `tests/sound.test.ts`, `package.json`, `src/game/GameConfig.ts`, `CLAUDE.md`, `GAME_GUIDE.md`, `CHANGELOG.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 113개·빌드). 테스트에 코드 유지 길이(chordAt)·드럼/코드 길이·manifest 검증 추가.
+- Playwright(헤드리스 Chromium): ① 합성 — 메뉴·숲·보스 음악이 각각 울리고(voices > 0) 근접 공격·점프 효과음 뒤 오류 없음. ② 파일 — manifest 와 짧은 wav 를 가로채 넣어 메뉴·숲 음악과 melee·ui 효과음이 파일로 재생되고(fileMusic=true), 파일이 없는 보스 음악은 합성으로 되돌아감. 모두 통과.
+- 실제 소리의 느낌(타격감·음량 균형)은 사람이 들어 봐야 한다. 수치는 모두 `soundDefs.ts` 에 있어 바로 조정 가능.
+
+### 알려진 문제
+- 합성음은 칩튠/신스 느낌 한계가 있다. 더 높은 품질은 `public/sounds/` 에 음원 파일을 넣는 방식으로.
+
 ## 2026-10-23 · v1.1.1 · 휴대폰 회전(가로 → 세로) 화면 깨짐 수정
 
 ### 변경 내용

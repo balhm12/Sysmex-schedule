@@ -22,6 +22,7 @@ import { PlayerController } from '../player/PlayerController';
 import { createPlaceholderModel } from '../player/models/PlaceholderModel';
 import { faceFromFile, faceTexture, loadFace, saveFace } from '../player/FaceTexture';
 import { modelRegistry } from '../assets/ModelRegistry';
+import { soundRegistry } from '../assets/SoundRegistry';
 import type { Vec2 } from '../player/movement';
 import { ControlsGuide } from '../ui/ControlsGuide';
 import { MainMenu } from '../ui/MainMenu';
@@ -60,7 +61,7 @@ export interface GameDebugState {
   floatingJoystick: boolean;
   dash: { active: boolean; cooldown: number; invulnerable: number };
   aimRingVisible: boolean;
-  audio: { ready: boolean; track: string | null };
+  audio: { ready: boolean; track: string | null; voices: number; fileMusic: boolean; files: string[]; fetched: string[] };
   contextLost: boolean;
   face: boolean;
   faceVisible: boolean;
@@ -384,6 +385,7 @@ export class Game {
     void this.applyFace();
     modelRegistry.onPlayerReady = () => this.swapPlayerModel();
     void modelRegistry.load(import.meta.env.BASE_URL);
+    void soundRegistry.load(import.meta.env.BASE_URL);
 
     window.addEventListener('resize', this.resize);
     // 탭을 닫거나 숨길 때 바뀐 것이 있으면 바로 저장한다
@@ -906,7 +908,7 @@ export class Game {
       floatingJoystick: this.touch.isFloating,
       dash: { active: this.controller.dashing, cooldown: this.controller.dashCooldownRatio, invulnerable: this.player.health.invulnerable },
       aimRingVisible: this.aimRing.visible,
-      audio: { ready: this.audio.ready, track: this.audio.currentTrack },
+      audio: { ready: this.audio.ready, track: this.audio.currentTrack, voices: this.audio.voices, fileMusic: this.audio.usingFileMusic, files: this.audio.fileKeys, fetched: soundRegistry.loadedKeys },
       contextLost: this.contextLost,
       face: this.face !== null,
       faceVisible: this.player.faceVisible,
