@@ -159,7 +159,7 @@ hero-x/
 - 새 장비 → `ItemDatabase.ts` 의 `ITEM_TEMPLATES` 에 항목 추가 (분류 melee/ranged/armor/trinket, 일반 등급 기준 수치).
 - 던전 추가·수정 → `DungeonDefs.ts` 의 `DUNGEONS` 에 항목 추가/수정 (해금은 `requiresClear`, 보스는 `boss` 에 바꿀 값만). 첫 던전만 `GameConfig.world/dungeon/enemies.spawns/boss` 를 그대로 쓴다. `tests/dungeons.test.ts` 가 모든 던전의 배치 겹침·영역을 검사한다. 던전 교체는 `Game.loadDungeon` 한 곳(공간·상자 새로 생성, 충돌 세계는 껍데기 객체로 공유).
 - 새 적이 기존 외형을 써도 되면 `enemies.types.<종류>.model` 에 'rusher' | 'shooter' | 'tank' 를 적는다.
-- 터치 조작: 새 동작 버튼은 `TouchControls.ts` 의 HTML 에 `data-code`(GameConfig.controls 의 키 코드)만 적으면 된다. 터치 조작이 켜지면 `Game.getAimPoint` 가 자동 조준(`nearestEnemyPoint`)을 쓴다. 휴대폰 기본값(그림자 끔·해상도 0.8)은 `Settings.defaultSettings` 에서 `isTouchDevice()` 로 정한다. 모바일 검증은 Playwright `devices['Pixel 5']` 에뮬레이션 + `PointerEvent(pointerType: 'touch')` 로 한다.
+- 터치 조작: 조이스틱은 기본 '떠다니는' 방식(`.touch-zone` 전체 화면, 버튼보다 아래 층; 설정 `floatingJoystick`). 새 동작 버튼은 `TouchControls.ts` 의 HTML 에 `data-code`(GameConfig.controls 의 키 코드)만 적으면 된다. 터치 조작이 켜지면 `Game.getAimPoint` 가 자동 조준(`nearestEnemyPoint`)을 쓴다. 휴대폰 기본값(그림자 끔·해상도 0.8)은 `Settings.defaultSettings` 에서 `isTouchDevice()` 로 정한다. 모바일 검증은 Playwright `devices['Pixel 5']` 에뮬레이션 + `PointerEvent(pointerType: 'touch')` 로 한다.
 - 배포: `hero-x` 브랜치에 push 하면 워크플로가 `npm run check` 후 `dist` 를 main 의 `game/` 에 넣는다. main 의 다른 파일은 건드리지 않는다(`keep_files: true`). 배포 주소는 README 3-1.
 - 창 층위는 CSS `.guide`(20) > `.guide.result`(15) > `.guide.menu`(10). 메뉴 위에 여는 새 창은 기본 `.guide` 층위를 그대로 쓴다.
 - "상자를 더/보상을 더 좋게" → 첫 던전은 `dungeon.chests` 배열, 다른 던전은 `DungeonDefs.ts`. 상자 보상은 `dungeon.chestLoot`(공통). 상자 위치는 장애물·적 배치와 겹치지 않아야 한다 (`tests/chest.test.ts` 가 확인).

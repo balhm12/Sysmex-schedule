@@ -12,7 +12,8 @@ function capture(el: Element, pointerId: number): void {
 
 /**
  * 터치 조작 (휴대폰·태블릿)
- * - 왼쪽: 가상 조이스틱(이동). 오른쪽: 근접·원거리·점프 버튼, 상자 앞에서만 보이는 상호작용 버튼, 위쪽에 메뉴·장비 버튼.
+ * - 조이스틱(이동): 기본은 '떠다니는' 방식 — 버튼이 아닌 아무 곳이나 누르면 그 자리에 조이스틱이 나타나고 끌면 움직인다.
+ *   설정에서 끄면 왼쪽 아래 고정 조이스틱만 쓴다. 오른쪽: 근접·원거리·점프 버튼, 상자 앞에서만 보이는 상호작용 버튼, 위쪽에 메뉴·장비 버튼.
  * - 버튼은 GameConfig.controls 의 첫 번째 키 코드를 InputManager 에 '가상으로' 누른다. 그래서 키 설정을 바꿔도 같이 동작한다.
  * - 조준은 Game 이 '가까운 적 자동 조준'으로 처리한다 (터치로 마우스 방향 조준은 불편).
  * - 손가락마다 pointerId 를 따로 추적해 조이스틱을 잡은 채 버튼을 눌러도 된다.
@@ -22,9 +23,12 @@ export class TouchControls {
   private readonly stick: HTMLDivElement;
   private readonly knob: HTMLDivElement;
   private readonly interactBtn: HTMLButtonElement;
+  private readonly zone: HTMLDivElement;
   private stickPointer: number | null = null;
   private stickCenter = { x: 0, y: 0 };
   private readonly radius = 56;
+  /** 누르는 자리에 조이스틱이 나타나는 방식 (false 면 왼쪽 아래 고정) */
+  private floating = true;
 
   constructor(parent: HTMLElement, private readonly input: InputManager, onMenu: () => void, onInventory: () => void) {
     const c = GameConfig.controls;
@@ -32,6 +36,7 @@ export class TouchControls {
     this.el.className = 'touch';
     this.el.hidden = true;
     this.el.innerHTML = `
+      <div class="touch-zone" id="touch-zone" aria-hidden="true"></div>
       <div class="touch-stick" id="touch-stick" aria-label="이동 조이스틱"><div class="touch-knob"></div></div>
       <div class="touch-buttons">
         <button type="button" class="touch-btn touch-melee" data-code="${c.attackMelee[1] ?? c.attackMelee[0]}" aria-label="근접 공격">근접</button>
@@ -47,31 +52,48 @@ export class TouchControls {
     parent.appendChild(this.el);
     this.stick = this.el.querySelector('#touch-stick') as HTMLDivElement;
     this.knob = this.stick.querySelector('.touch-knob') as HTMLDivElement;
+    this.zone = this.el.querySelector('#touch-zone') as HTMLDivElement;
     this.interactBtn = this.el.querySelector('#touch-interact') as HTMLButtonElement;
 
-    // 조이스틱: 누른 자리를 중심으로, 손가락 위치에 따라 축(-1~1)을 계산
-    this.stick.addEventListener('pointerdown', (e) => {
+    // 고정 조이스틱: 누른 자리를 중심으로, 손가락 위치에 따라 축(-1~1)을 계산
+    const beginStick = (target: Element, e: PointerEvent, center: { x: number; y: number }) => {
       if (this.stickPointer !== null) return;
       e.preventDefault();
       this.stickPointer = e.pointerId;
-      capture(this.stick, e.pointerId);
-      const r = this.stick.getBoundingClientRect();
-      this.stickCenter = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      capture(target, e.pointerId);
+      this.stickCenter = center;
       this.moveStick(e.clientX, e.clientY);
-    });
-    this.stick.addEventListener('pointermove', (e) => {
+    };
+    const moveIfStick = (e: PointerEvent) => {
       if (e.pointerId !== this.stickPointer) return;
       e.preventDefault();
       this.moveStick(e.clientX, e.clientY);
-    });
+    };
     const endStick = (e: PointerEvent) => {
       if (e.pointerId !== this.stickPointer) return;
       this.stickPointer = null;
       this.knob.style.transform = 'translate(0px, 0px)';
       this.input.setVirtualAxis(0, 0);
+      if (this.floating) this.stick.classList.remove('active');
     };
+    this.stick.addEventListener('pointerdown', (e) => {
+      const r = this.stick.getBoundingClientRect();
+      beginStick(this.stick, e, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
+    });
+    this.stick.addEventListener('pointermove', moveIfStick);
     this.stick.addEventListener('pointerup', endStick);
     this.stick.addEventListener('pointercancel', endStick);
+
+    // 떠다니는 조이스틱: 버튼이 아닌 곳을 누르면 그 자리에 조이스틱을 옮겨 놓고 시작
+    this.zone.addEventListener('pointerdown', (e) => {
+      if (!this.floating || this.stickPointer !== null) return;
+      this.placeStick(e.clientX, e.clientY);
+      this.stick.classList.add('active');
+      beginStick(this.zone, e, { x: e.clientX, y: e.clientY });
+    });
+    this.zone.addEventListener('pointermove', moveIfStick);
+    this.zone.addEventListener('pointerup', endStick);
+    this.zone.addEventListener('pointercancel', endStick);
 
     // 동작 버튼: 누르는 동안 가상 키를 누른 상태로 둔다 (공격은 누르고 있으면 연속)
     this.el.querySelectorAll<HTMLButtonElement>('.touch-btn').forEach((btn) => {
@@ -91,9 +113,33 @@ export class TouchControls {
       btn.addEventListener('pointercancel', up);
       btn.addEventListener('contextmenu', (e) => e.preventDefault());
     });
+    this.setFloating(true);
     this.el.querySelector('#touch-menu')?.addEventListener('click', onMenu);
     this.el.querySelector('#touch-inventory')?.addEventListener('click', onInventory);
     this.el.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  /** 조이스틱 원을 화면 좌표 (x, y) 가 중심이 되도록 옮긴다 */
+  private placeStick(x: number, y: number): void {
+    const host = this.el.getBoundingClientRect();
+    const half = this.stick.offsetWidth / 2 || 68;
+    this.stick.style.left = `${x - host.left - half}px`;
+    this.stick.style.top = `${y - host.top - half}px`;
+    this.stick.style.bottom = 'auto';
+  }
+
+  /** 조이스틱 방식 바꾸기 (설정). 고정이면 왼쪽 아래 자리로 되돌린다 */
+  setFloating(on: boolean): void {
+    this.floating = on;
+    this.el.classList.toggle('floating', on);
+    this.stick.classList.remove('active');
+    this.stick.style.left = '';
+    this.stick.style.top = '';
+    this.stick.style.bottom = '';
+  }
+
+  get isFloating(): boolean {
+    return this.floating;
   }
 
   private moveStick(x: number, y: number): void {
@@ -128,6 +174,7 @@ export class TouchControls {
   hide(): void {
     this.el.hidden = true;
     this.stickPointer = null;
+    this.stick.classList.remove('active');
     this.knob.style.transform = 'translate(0px, 0px)';
     this.input.setVirtualAxis(0, 0);
     this.el.querySelectorAll<HTMLButtonElement>('.touch-btn').forEach((btn) => {

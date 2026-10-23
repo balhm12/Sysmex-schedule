@@ -884,3 +884,28 @@ body {
 body.touch-mode .hud {
   display: none;
 }
+
+/* 떠다니는 조이스틱: 버튼이 아닌 곳은 모두 이동 영역 */
+.touch-zone {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  touch-action: none;
+}
+.touch.floating .touch-zone {
+  pointer-events: auto;
+}
+.touch-stick,
+.touch-buttons,
+.touch-top {
+  z-index: 1;
+}
+/* 떠다니는 방식일 때 기본 자리의 조이스틱은 흐리게 보이는 안내일 뿐이고, 누르면 그 자리로 옮겨져 진해진다 */
+.touch.floating .touch-stick {
+  opacity: 0.35;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+.touch.floating .touch-stick.active {
+  opacity: 1;
+}

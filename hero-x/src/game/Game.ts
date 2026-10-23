@@ -49,6 +49,7 @@ export interface GameDebugState {
   bossModel: string;
   settingsVisible: boolean;
   touchVisible: boolean;
+  floatingJoystick: boolean;
   pixelRatio: number;
   interactButtonVisible: boolean;
   shadowsEnabled: boolean;
@@ -384,6 +385,7 @@ export class Game {
     this.dungeon.setShadows(s.shadows);
     if (!s.showFps) this.guide.setHudText('');
     this.applyPixelRatio();
+    if (this.touch.isFloating !== s.floatingJoystick) this.touch.setFloating(s.floatingJoystick);
     this.updateTouchVisibility();
     this.applyDifficultyToSpawner();
     this.applyStats();
@@ -750,6 +752,7 @@ export class Game {
       bossModel: this.bossCfg.model,
       settingsVisible: this.settingsUI.visible,
       touchVisible: this.touch.visible,
+      floatingJoystick: this.touch.isFloating,
       pixelRatio: this.renderer.getPixelRatio(),
       interactButtonVisible: this.touch.visible && !(document.getElementById('touch-interact') as HTMLButtonElement | null)?.hidden,
       shadowsEnabled: this.renderer.shadowMap.enabled,
