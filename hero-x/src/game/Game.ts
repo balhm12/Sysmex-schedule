@@ -23,6 +23,8 @@ import { MainMenu } from '../ui/MainMenu';
 import { DamageNumbers } from '../ui/DamageNumbers';
 import { HUD } from '../ui/HUD';
 import { ResultUI } from '../ui/ResultUI';
+import { EMPTY_RECORDS, applySaveData, hasProgress, serializeSave, type SaveRecords } from '../save/SaveData';
+import { browserStorage, clearSave, loadSave, writeSave } from '../save/SaveStorage';
 import { Logger } from '../utils/Logger';
 import { CameraController } from './CameraController';
 import { getDifficultyPreset, loadDifficulty, saveDifficulty } from './Difficulty';
@@ -33,6 +35,7 @@ export interface GameDebugState {
   running: boolean;
   frames: number;
   ended: boolean;
+  save: { status: string; lastSavedAt: string | null; hasSavedProgress: boolean; blocked: boolean; dirty: boolean; records: SaveRecords };
   player: { x: number; z: number; facing: number; moving: boolean; hp: number; maxHp: number };
   camera: { x: number; y: number; z: number };
   guideVisible: boolean;
@@ -96,6 +99,19 @@ export class Game {
   private boss: Boss | null = null;
   private bossDefeated = false;
   private difficulty: DifficultyLevel = loadDifficulty();
+
+  // 저장: 성장·장비·기록을 브라우저 저장소에 자동 저장한다 (던전 안 위치는 저장하지 않는다)
+  private readonly storage = browserStorage();
+  private records: SaveRecords = { ...EMPTY_RECORDS };
+  /** 저장소에 의미 있는 진행이 있는지 (새로고침 뒤 '이어하기' 가능 여부) */
+  private hasSavedProgress = false;
+  /** 더 새로운 버전의 저장이 있어 덮어쓰지 않는 상태 ('새 게임'을 누르면 풀린다) */
+  private saveBlocked = false;
+  private saveDirty = false;
+  private saveTimer = 0;
+  private lastSavedAt: string | null = null;
+  /** 메뉴에 보여줄 저장 상태 문구 */
+  private saveStatus = '';
   private readonly projTmp = new THREE.Vector3();
 
   private readonly raycaster = new THREE.Raycaster();
@@ -163,16 +179,23 @@ export class Game {
     this.hud = new HUD(uiRoot);
     this.hud.setDungeonName(GameConfig.dungeon.name);
     this.result = new ResultUI(uiRoot, () => this.retry(), () => this.openMenu());
+    this.loadFromStorage();
     this.menu = new MainMenu(uiRoot, {
       newGame: () => this.newGame(),
       continueGame: () => this.continueGame(),
+      hasProgress: () => this.runActive || this.hasSavedProgress,
+      progressText: () => this.progressText(),
+      saveNote: () => this.saveStatus,
       openInventory: () => this.toggleInventory(true),
       openGuide: () => this.guide.show(),
       hasRun: () => this.runActive,
       difficulty: { get: () => this.difficulty, set: (level) => this.setDifficulty(level) },
     });
     this.inventoryUI = new InventoryUI(uiRoot, this.equipment, {
-      onChange: () => this.applyStats(),
+      onChange: () => {
+        this.applyStats();
+        this.markDirty();
+      },
       onClose: () => this.toggleInventory(false),
       getSummary: () => this.statSummary(),
     });
@@ -200,6 +223,9 @@ export class Game {
     this.menu.show();
 
     window.addEventListener('resize', this.resize);
+    // 탭을 닫거나 숨길 때 바뀐 것이 있으면 바로 저장한다
+    window.addEventListener('beforeunload', this.flushSave);
+    document.addEventListener('visibilitychange', this.onVisibility);
     this.resize();
     Logger.info(`${GameConfig.meta.title} v${GameConfig.meta.version} 준비 완료 (적 ${this.spawner.aliveCount}마리)`);
   }
@@ -222,6 +248,7 @@ export class Game {
   setDifficulty(level: DifficultyLevel): void {
     if (level === this.difficulty) return;
     this.difficulty = level;
+    this.markDirty();
     saveDifficulty(level);
     this.applyDifficulty();
     this.restart();
@@ -242,20 +269,29 @@ export class Game {
     this.menu?.refresh();
   }
 
-  /** 새 게임: 레벨·골드·장비를 모두 초기화하고 던전에 들어간다 */
+  /** 새 게임: 레벨·골드·장비·기록을 모두 초기화하고 던전에 들어간다. 저장 데이터도 새로 쓴다 */
   newGame(): void {
     this.stats.reset();
     this.equipment.reset();
+    this.records = { ...EMPTY_RECORDS };
+    this.saveBlocked = false;
+    clearSave(this.storage);
     this.restart();
     this.runActive = true;
+    this.saveNow();
     this.enterPlay();
     this.hud.showBanner(`${GameConfig.dungeon.name}`, 1800);
     Logger.info('새 게임을 시작합니다.');
   }
 
-  /** 이어하기: 메뉴에서 진행 중인 던전으로 돌아간다 */
+  /** 이어하기: 멈춰 둔 던전으로 돌아간다. 새로고침 뒤라면(저장만 있음) 성장을 유지한 채 던전 입구부터 */
   continueGame(): void {
-    if (!this.runActive) return;
+    if (!this.runActive) {
+      if (!this.hasSavedProgress) return;
+      this.restart();
+      this.runActive = true;
+      this.hud.showBanner(`${GameConfig.dungeon.name}`, 1800);
+    }
     this.enterPlay();
   }
 
@@ -273,7 +309,90 @@ export class Game {
     this.paused = false;
     this.result.hide();
     this.hud.hide();
+    this.saveNow();
     this.menu.show();
+  }
+
+  // ---------- 저장 ----------
+
+  /** 시작할 때 저장 데이터를 읽어 적용한다. 손상·버전 문제는 메뉴 문구와 콘솔로 알린다 */
+  private loadFromStorage(): void {
+    const r = loadSave(this.storage);
+    switch (r.kind) {
+      case 'loaded':
+        applySaveData(r.data, { stats: this.stats, equipment: this.equipment });
+        this.records = { ...r.data.records };
+        this.difficulty = r.data.difficulty;
+        saveDifficulty(this.difficulty);
+        this.hasSavedProgress = hasProgress(r.data);
+        this.lastSavedAt = r.data.savedAt;
+        this.saveStatus = `마지막 저장: ${formatSavedAt(r.data.savedAt)}`;
+        if (r.warnings.length > 0) {
+          this.saveStatus += ' · 일부 항목을 보정했습니다 (F12 콘솔 참고)';
+          for (const w of r.warnings) Logger.warn(`저장 데이터 보정: ${w}`);
+        }
+        Logger.info(`저장 데이터를 불러왔습니다. 레벨 ${this.stats.level} · 골드 ${this.stats.gold}`);
+        break;
+      case 'corrupt':
+        this.saveStatus = '저장 데이터가 손상되어 새로 시작합니다. 손상된 데이터는 따로 보관했습니다.';
+        Logger.warn(r.message);
+        break;
+      case 'newer':
+        this.saveBlocked = true;
+        this.saveStatus = '이 저장 데이터는 더 새로운 버전의 게임에서 만든 것이라 읽지 않습니다. 새 게임을 누르면 덮어씁니다.';
+        Logger.warn(r.message);
+        break;
+      case 'unavailable':
+        this.saveStatus = '이 브라우저에서는 저장이 되지 않습니다 (사생활 보호 모드 등).';
+        Logger.warn('브라우저 저장소를 쓸 수 없어 진행이 저장되지 않습니다.');
+        break;
+      default:
+        this.saveStatus = '저장된 진행이 없습니다.';
+    }
+  }
+
+  /** 바뀐 것이 있다고 표시한다. 자동 저장 간격이 지나면 저장된다 */
+  private markDirty(): void {
+    this.saveDirty = true;
+  }
+
+  /** 지금 바로 저장한다. 성공하면 true (저장소가 없거나 막혀 있으면 false) */
+  saveNow(): boolean {
+    this.saveDirty = false;
+    this.saveTimer = 0;
+    if (this.saveBlocked) return false;
+    const data = serializeSave({ stats: this.stats, equipment: this.equipment, difficulty: this.difficulty, records: this.records });
+    const ok = writeSave(this.storage, data);
+    if (ok) {
+      this.hasSavedProgress = hasProgress(data);
+      this.lastSavedAt = data.savedAt;
+      this.saveStatus = `마지막 저장: ${formatSavedAt(data.savedAt)}`;
+      if (this.menu?.visible) this.menu.refresh();
+    }
+    return ok;
+  }
+
+  private readonly flushSave = (): void => {
+    if (this.saveDirty) this.saveNow();
+  };
+
+  private readonly onVisibility = (): void => {
+    if (document.visibilityState === 'hidden') this.flushSave();
+  };
+
+  /** 메뉴에 보여줄 진행 요약 */
+  private progressText(): string {
+    if (!this.runActive && !this.hasSavedProgress) return '';
+    const r = this.records;
+    const parts = [`레벨 ${this.stats.level}`, `골드 ${this.stats.gold}`, `클리어 ${r.clears}회`];
+    if (r.bestScore > 0) parts.push(`최고 점수 ${r.bestScore}`);
+    if (!this.runActive) parts.push('이어하기는 던전 입구부터');
+    return parts.join(' · ');
+  }
+
+  /** 누적 기록 (테스트·디버그용) */
+  getRecords(): SaveRecords {
+    return { ...this.records };
   }
 
   private enterPlay(): void {
@@ -357,6 +476,10 @@ export class Game {
     this.runActive = false;
     this.inventoryUI.hide();
     this.paused = false;
+    // 한 판의 기록을 누적하고 저장한다
+    this.records.totalKills += this.combat.kills;
+    this.records.bestScore = Math.max(this.records.bestScore, this.combat.score);
+    this.saveNow();
     this.result.show(title, sub);
   }
 
@@ -365,6 +488,8 @@ export class Game {
     this.stop();
     this.input.detach();
     window.removeEventListener('resize', this.resize);
+    window.removeEventListener('beforeunload', this.flushSave);
+    document.removeEventListener('visibilitychange', this.onVisibility);
     this.spawner.dispose();
     this.projectiles.dispose();
     this.loot.dispose();
@@ -396,6 +521,7 @@ export class Game {
       running: this.running,
       frames: this.frames,
       ended: this.ended,
+      save: { status: this.saveStatus, lastSavedAt: this.lastSavedAt, hasSavedProgress: this.hasSavedProgress, blocked: this.saveBlocked, dirty: this.saveDirty, records: { ...this.records } },
       player: { x: p.x, z: p.z, facing: this.player.facing, moving: this.player.moving, hp: this.player.health.hp, maxHp: this.player.health.maxHp },
       camera: { x: cam.x, y: cam.y, z: cam.z },
       guideVisible: this.guide.visible,
@@ -474,6 +600,7 @@ export class Game {
     this.hud.flashHit();
     if (GameConfig.hud.showDamageNumbers) this.damageNumbers.show(new THREE.Vector3(p.x, 2.0, p.z), damage, 'player');
     if (this.player.health.isDead) {
+      this.records.deaths++;
       this.showResult('쓰러졌습니다', `처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}`);
       Logger.info('플레이어가 쓰러졌습니다.');
     }
@@ -488,10 +615,12 @@ export class Game {
       if (GameConfig.hud.showDamageNumbers) this.damageNumbers.show(pos, drop.amount, 'heal');
     } else if (drop.kind === 'gold') {
       this.stats.addGold(drop.amount);
+      this.markDirty();
       this.effects.burst(pos, 0xffd23f, 4, 2);
     } else if (drop.kind === 'equip') {
       if (!drop.item) return;
       if (this.equipment.add(drop.item)) {
+        this.markDirty();
         const color = GameConfig.equipment.rarities[drop.item.rarity].color;
         this.effects.burst(pos, color, 10, 4);
         this.damageNumbers.showText(pos, `획득: ${drop.item.name}`, color);
@@ -502,6 +631,7 @@ export class Game {
       }
     } else {
       const gained = this.stats.addXp(drop.amount);
+      this.markDirty();
       this.effects.burst(pos, 0x5cf2d8, 4, 2);
       if (gained > 0) {
         // 레벨 업: 최대 체력을 올리고 일부 회복
@@ -563,6 +693,8 @@ export class Game {
     this.loot.spawn({ kind: 'xp', amount: b.reward.xp }, { x: at.x + 1, z: at.z });
     this.loot.spawn({ kind: 'equip', amount: 0, item: generateItemAtLeast(b.reward.equipMinRarity) }, { x: at.x, z: at.z + 1 });
     this.loot.spawn({ kind: 'heal', amount: GameConfig.loot.healAmount * 2 }, { x: at.x, z: at.z - 1 });
+    this.records.clears++;
+    this.markDirty();
     this.hud.showBanner('던전 클리어!', 3000);
     Logger.info('보스를 처치했습니다. 던전 클리어!');
   }
@@ -636,6 +768,10 @@ export class Game {
     this.dungeon.updateLight(p);
     this.checkVictory();
 
+    // 자동 저장: 바뀐 것이 있고 간격이 지났으면
+    this.saveTimer += dt;
+    if (this.saveDirty && this.saveTimer >= GameConfig.save.autoSaveInterval) this.saveNow();
+
     this.hud.update({
       hp: this.player.health.hp,
       maxHp: this.player.health.maxHp,
@@ -673,4 +809,12 @@ export class Game {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   };
+}
+
+/** 저장 시각을 '2026-10-23 14:05' 처럼 보여준다 */
+function formatSavedAt(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime()) || d.getTime() === 0) return '알 수 없음';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

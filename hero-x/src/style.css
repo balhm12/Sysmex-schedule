@@ -539,3 +539,18 @@ body {
   gap: 8px;
   justify-content: center;
 }
+
+/* 메인 메뉴: 진행 요약·저장 상태 */
+.menu-progress {
+  margin: 4px 0 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(92, 242, 216, 0.12);
+  color: #bffbf0;
+  font-size: 13px;
+}
+.menu-save {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}

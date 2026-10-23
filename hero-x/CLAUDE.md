@@ -9,7 +9,7 @@
 - 장르: 3인칭 3D 액션 RPG. Minecraft Dungeons 의 진행 방식을 참고하되 캐릭터·맵·아이템·음악·텍스처는 독자 제작 또는 적법한 에셋만 사용한다.
 - 실행 환경: Windows PC 웹 브라우저(Chrome/Edge). 기본 게임은 외부 API·유료 서비스 없이 실행된다.
 - 최우선 원칙: **실제로 실행되는 게임**을 단계적으로 완성한다. 그래픽 품질보다 안정성·유지보수성이 먼저다.
-- 현재 상태: **1단계(기반 구축) 완료, 2단계(전투) 진행 중** — **4단계(던전과 보스) 완료 (v0.4.0)** — 보물 상자, 보스전, 메인 메뉴와 입장·결과 흐름. 다음: 5단계 설정과 저장(게임 내 설정 화면: 난이도·전투 수치·편의 기능, 설정 저장·기본값 복원, 자동 저장·이어하기, 저장 데이터 버전·손상 처리).
+- 현재 상태: **5단계(설정과 저장) 진행 중** — 5-a 저장 시스템(자동 저장·이어하기·버전·손상 처리) 완료 v0.5.0-a.1. 다음: 5-b 게임 내 설정 화면(난이도·전투 수치·편의 기능을 허용 범위 안에서 조절, 설정 저장·기본값 복원).
 
 ## 2. 기술 스택
 
@@ -38,6 +38,9 @@ hero-x/
 │  │  ├─ Game.ts           게임 본체: 렌더러·씬·루프, 시스템 연결
 │  │  ├─ GameConfig.ts     ★ 설정 데이터 + 허용 범위(CONFIG_LIMITS) + 보정 함수
 │  │  ├─ Difficulty.ts     난이도 배율 조회·저장(localStorage, 실패해도 동작)
+│  ├─ save/
+│  │  ├─ SaveData.ts       ★ 저장 형식(SAVE_VERSION)·검증·보정·버전 변환·적용 (순수 함수, 테스트 대상)
+│  │  └─ SaveStorage.ts    localStorage 어댑터: 읽기/쓰기/삭제, 손상 데이터는 *.corrupt 키로 격리
 │  │  └─ CameraController.ts  3인칭 추적 카메라
 │  ├─ input/InputManager.ts   키보드·마우스 입력 (키 설정은 GameConfig.controls, 마우스는 'Mouse0' 등)
 │  ├─ player/
@@ -150,6 +153,7 @@ hero-x/
 - 상호작용(E)이 필요한 새 물체는 `Game.tryInteract` 에 분기를 추가하고 HUD 안내 문구(`currentPrompt`)를 함께 처리한다.
 - "보스를 약하게/세게" → `boss.hp`, `boss.slam.damage`, `boss.contactDamage`, `boss.windup`(예고가 길수록 쉬움). 새 보스 패턴은 `BossAI` 의 패턴 선택과 `Boss.update` 의 실행 분기, `Game.onBossAttack` 의 효과 처리 세 곳에 추가한다.
 - 승리 흐름은 `Game.checkVictory`: 일반 적 전멸 → `spawnBoss` → 보스 사망 → `onBossDefeated`(보상) → 결과 화면. 테스트에서는 `__heroX.debugDefeatRegularEnemies()` 로 바로 보스전으로 간다.
+- 저장: 성장·장비·난이도·기록만 저장하고 던전 안 상태는 저장하지 않는다. 저장 형식을 바꾸면 `SAVE_VERSION` 을 올리고 `migrateSaveData` 에 변환을 추가한 뒤 `tests/save.test.ts` 에 옛 형식 → 새 형식 테스트를 더한다. 장비는 원형 id·등급만 저장하고 `createItem` 으로 다시 만든다. 저장 시점은 `Game.markDirty()`(자동 저장 간격 뒤) 또는 `Game.saveNow()`(메뉴·결과·탭 닫기)로만 다룬다. 저장 데이터 초기화는 사용자가 '새 게임'을 확인했을 때만 한다.
 - 게임 흐름은 `Game.mode`('menu' | 'play' | 'result') 하나로 관리한다. 메뉴·결과 전환은 `newGame / continueGame / retry / openMenu / showResult` 만 사용하고, 루프는 `mode !== 'play'` 이거나 `paused` 면 그리기만 한다. 브라우저 자동 검증은 `#menu-new` 버튼으로 시작한다.
 - 주의: 3D 효과의 방향을 바꿀 때는 `node -e` 로 벡터에 회전을 적용해 보고 확인한다 (2-b 의 부채꼴 반대 방향 버그 참고). 키를 '누르는 순간' 반응해야 하는 동작(점프 등)은 폴링이 아니라 `InputManager.onPress` 로 받는다 (낮은 FPS 에서 짧은 탭을 놓침).
 - 새 적 종류 → `enemies.types` 에 능력치 추가 + `EnemyModels.ts` 에 외형 분기 + (행동이 다르면) `EnemyAI.ts` 확장.
@@ -163,7 +167,7 @@ hero-x/
 2. 전투 시스템 ✅ (v0.2.0: 적 3종, 근접·원거리, 점프, 난이도, 피해 숫자)
 3. 아이템과 성장 ✅ (v0.3.0: 드롭, 경험치·레벨, 골드, 장비·장비 화면·능력치 반영)
 4. 던전과 보스 ✅ (v0.4.0: 보물 상자, 보스전, 메인 메뉴·입장·결과 흐름)
-5. 설정 화면과 저장
+5. 설정 화면과 저장 🔄 (5-a 저장 시스템 ✅ v0.5.0-a.1 / 5-b 설정 화면)
 6. 콘텐츠 확장
 7. 품질 개선
 
