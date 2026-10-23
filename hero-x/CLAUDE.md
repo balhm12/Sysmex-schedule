@@ -9,7 +9,7 @@
 - 장르: 3인칭 3D 액션 RPG. Minecraft Dungeons 의 진행 방식을 참고하되 캐릭터·맵·아이템·음악·텍스처는 독자 제작 또는 적법한 에셋만 사용한다.
 - 실행 환경: Windows PC 웹 브라우저(Chrome/Edge). 기본 게임은 외부 API·유료 서비스 없이 실행된다.
 - 최우선 원칙: **실제로 실행되는 게임**을 단계적으로 완성한다. 그래픽 품질보다 안정성·유지보수성이 먼저다.
-- 현재 상태: **지시서 1~7단계 모두 완료 (v1.0.0)**. 이후 작업은 사용자 플레이 의견 기반 조정(밸런스·조작 느낌·음악), 정식 .glb 모델 투입, 추가 콘텐츠(던전·적·장비)다. 새 작업도 같은 절차(최소 단위 구현 → `npm run check` → 브라우저 확인 → 문서 → 커밋)로 한다.
+- 현재 상태: **지시서 1~7단계 완료 (v1.0.0)** → 그래픽 개선 진행 중: 1 렌더링 품질 ✅ v1.1.0-a.1 / 2 환경 연출(풀·나무·입자·카메라 흔들림) / 3 캐릭터·적 모델 고도화. 이후 작업은 사용자 플레이 의견 기반 조정(밸런스·조작 느낌·음악), 정식 .glb 모델 투입, 추가 콘텐츠(던전·적·장비)다. 새 작업도 같은 절차(최소 단위 구현 → `npm run check` → 브라우저 확인 → 문서 → 커밋)로 한다.
 
 ## 2. 기술 스택
 
@@ -56,6 +56,11 @@ hero-x/
 │  │  ├─ FaceTexture.ts    얼굴 사진 자르기·저장(localStorage)·텍스처 (cropRect 는 테스트 대상)
 │  │  └─ models/PlaceholderModel.ts  임시 캐릭터 모델 + PlayerModel 인터페이스 (setFace 로 얼굴 사진)
 ├─ public/models/           정식 .glb 모델과 manifest.json, 넣는 방법 README
+│  ├─ render/
+│  │  ├─ materials.ts      PBR 재질 도우미 (pbr/metal/glow). 새 물체는 Lambert 대신 이걸 쓴다
+│  │  ├─ Quality.ts        화질 프리셋(낮음/중간/높음: 블룸·MSAA·그림자 해상도·바닥 선명도)
+│  │  ├─ RenderPipeline.ts 렌더러·톤매핑·환경광·후처리(블룸) 한 곳 관리. Game 은 pipeline.render() 만 호출
+│  │  └─ groundTexture.ts  노이즈 바닥 색 지도·노멀맵 생성 (파일 없음)
 │  ├─ assets/ModelRegistry.ts  ★ public/models/manifest.json 의 .glb 를 읽어 플레이어·적·보스 모델로 교체 (없으면 임시 모델)
 │  ├─ audio/
 │  │  ├─ soundDefs.ts      ★ 효과음 레시피(SFX)·음악 악절(MUSIC) 데이터 (테스트 대상)
@@ -160,6 +165,8 @@ hero-x/
 - "적을 두 배로" → `GameConfig.enemies.spawns` 에 항목 추가. "적 체력 30% 올려" → `enemies.types.rusher.hp` 조정.
 - "공격을 더 세게/넓게" → `GameConfig.combat.melee` 의 `damage`, `range`, `arcDegrees`. 원거리는 `combat.ranged`.
 - "점프를 더 높게" → `player.jumpSpeed` 올리기 (또는 `player.gravity` 내리기). "회피를 더 멀리/자주" → `player.dash.speed/duration/cooldown`. 회피 키는 `controls.dodge`, 터치 버튼은 `TouchControls` 의 `#touch-dodge`.
+- 그래픽: 재질은 반드시 `render/materials.ts` 의 `pbr()/glow()` 로 만든다(블룸은 emissiveIntensity ≥ 1.5 에 걸림). 던전 분위기(하늘·노출·바닥)는 `DungeonDefs.theme` 수치만 바꾼다. 후처리 켜고 끄기는 `RenderPipeline.setQuality`, 그림자 해상도는 `DungeonScene.applyQuality`.
+- 게임 루프: `Game.frame()` 이 흐른 시간을 `performance.maxStep`(0.05초) 단위의 `simulate(dt)` 로 나눠 돌리고 한 번 그린다. 시간에 따라 움직이는 로직은 `simulate` 안에, 화면 갱신·FPS 측정은 `frame` 에 둔다.
 - 성능: 자동 화질은 `Game.updateAutoQuality` 가 `GameConfig.performance` 간격으로 `decideQuality` 를 호출해 설정을 낮춘다(올리지 않음). WebGL 끊김은 `contextLost` 플래그로 프레임을 건너뛴다. 프레임 예외는 `loop` 의 try/catch 가 루프를 멈추고 저장한 뒤 다시 던진다(ErrorOverlay 표시).
 - 모델 교체: `.glb` 는 `public/models/` + `manifest.json`. 생성 함수(`createEnemyModel`, `createBossModel`, `Game.swapPlayerModel`)가 `modelRegistry` 에서 먼저 찾고 없으면 임시 모델을 만든다. 적·보스는 다음 생성부터 적용. 얼굴 사진은 `PlayerModel.setFace`(임시 모델만 구현).
 - 소리: 새 효과음은 `soundDefs.SFX` 에 레시피를 추가하고 `Game` 에서 `this.audio.play('이름')`. 음악은 `MUSIC` 에 트랙을 추가하고 `Game.dungeonMusic()` 매핑. 외부 음원 파일은 쓰지 않는다. 소리는 첫 사용자 조작 뒤에만 난다(브라우저 제한) — 테스트에서는 `#menu-new` 클릭 뒤 `audio.ready` 를 본다.

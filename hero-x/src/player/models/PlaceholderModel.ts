@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { glow, pbr } from '../../render/materials';
 
 /** 모델이 매 프레임 받는 상태 */
 export interface PlayerModelState {
@@ -43,12 +44,12 @@ export function createPlaceholderModel(colors: PlaceholderColors): PlayerModel {
   const root = new THREE.Group();
   root.name = 'PlaceholderHero';
 
-  const mat = (color: string) => new THREE.MeshLambertMaterial({ color: new THREE.Color(color) });
+  const mat = (color: string) => pbr({ color, roughness: 0.55, metalness: 0.15 });
   const bodyMat = mat(colors.body);
   const accentMat = mat(colors.accent);
   const skinMat = mat(colors.skin);
-  const visorMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(colors.visor) });
-  const bladeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(colors.visor) });
+  const visorMat = glow(colors.visor, 1.6);
+  const bladeMat = glow(colors.visor, 2.2);
   const darkMat = mat('#2c3e6b');
 
   const addMesh = (parent: THREE.Object3D, geo: THREE.BufferGeometry, m: THREE.Material, x = 0, y = 0, z = 0) => {

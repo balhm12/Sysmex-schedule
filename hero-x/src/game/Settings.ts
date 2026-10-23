@@ -3,6 +3,8 @@ import { isDifficultyLevel } from './Difficulty';
 import type { StorageLike } from '../save/SaveStorage';
 import { Logger } from '../utils/Logger';
 import { isTouchDevice } from '../utils/device';
+import { difficultyLevels, getDifficultyPreset } from './Difficulty';
+import { QUALITY_ORDER, QUALITY_PRESETS, isQualityLevel, type QualityLevel } from '../render/Quality';
 
 /**
  * 사용자 설정 (게임 안 설정 화면에서 바꾸는 값)
@@ -35,6 +37,8 @@ export interface UserSettings {
   soundMaster: number;
   soundSfx: number;
   soundMusic: number;
+  /** 화질 프리셋: 낮음·중간·높음 (높음 = 빛 번짐·MSAA 후처리) */
+  quality: QualityLevel;
   /** 렌더 해상도 배율 (낮추면 휴대폰에서 부드러워진다) */
   resolution: number;
   /** 화면이 끊기면 그림자·해상도를 자동으로 낮춘다 */
@@ -53,14 +57,14 @@ export type SettingKey = keyof UserSettings;
 
 /** 설정 항목 정의: 화면을 이 정의로 자동 생성한다 */
 export type SettingDef =
-  | { key: 'difficulty'; kind: 'choice'; group: string; label: string; description: string }
+  | { key: 'difficulty' | 'quality'; kind: 'choice'; group: string; label: string; description: string; options: Array<{ value: string; label: string }> }
   | { key: SettingKey; kind: 'range'; group: string; label: string; description: string; min: number; max: number; step: number; unit?: string }
   | { key: SettingKey; kind: 'toggle'; group: string; label: string; description: string };
 
 export const SETTING_GROUPS = ['게임', '소리', '전투 수치', '화면'] as const;
 
 export const SETTING_DEFS: SettingDef[] = [
-  { key: 'difficulty', kind: 'choice', group: '게임', label: '난이도', description: '적의 체력·공격력·속도 배율. 바꾸면 던전을 처음부터 다시 시작합니다.' },
+  { key: 'difficulty', kind: 'choice', group: '게임', label: '난이도', description: '적의 체력·공격력·속도 배율. 바꾸면 던전을 처음부터 다시 시작합니다.', options: difficultyLevels().map((lv) => ({ value: lv, label: getDifficultyPreset(lv).label })) },
   { key: 'cameraDistance', kind: 'range', group: '게임', label: '카메라 거리', description: '1.0 이 기본. 멀리 두면 넓게 보이고 가까우면 캐릭터가 크게 보입니다.', min: 0.6, max: 1.6, step: 0.1, unit: '×' },
   { key: 'touchControls', kind: 'toggle', group: '게임', label: '터치 조작', description: '화면에 조이스틱·버튼을 띄우고 가까운 적을 자동으로 조준합니다. 휴대폰·태블릿은 기본 켜짐.' },
   { key: 'floatingJoystick', kind: 'toggle', group: '게임', label: '조이스틱: 누르는 자리에', description: '켜면 버튼이 아닌 아무 곳이나 눌러 그 자리에서 끌면 움직입니다. 끄면 왼쪽 아래 고정 조이스틱.' },
@@ -73,6 +77,7 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: 'playerHpMul', kind: 'range', group: '전투 수치', label: '내 최대 체력', description: '레벨·장비 보너스를 더한 최대 체력에 곱합니다.', min: 0.5, max: 3, step: 0.1, unit: '×' },
   { key: 'playerDamageMul', kind: 'range', group: '전투 수치', label: '내 공격력', description: '근접·원거리 공격 피해에 곱합니다.', min: 0.5, max: 3, step: 0.1, unit: '×' },
   { key: 'enemyHpMul', kind: 'range', group: '전투 수치', label: '적 체력', description: '난이도 배율에 다시 곱합니다. 다음 던전 입장부터 적용됩니다.', min: 0.5, max: 3, step: 0.1, unit: '×' },
+  { key: 'quality', kind: 'choice', group: '화면', label: '화질', description: '높음: 빛 번짐·고급 안티앨리어싱 (PC 권장). 중간: 기본. 낮음: 그림자 해상도·바닥 선명도 낮춤.', options: QUALITY_ORDER.map((q) => ({ value: q, label: QUALITY_PRESETS[q].label })) },
   { key: 'showDamageNumbers', kind: 'toggle', group: '화면', label: '피해 숫자 표시', description: '공격하거나 맞을 때 숫자를 띄웁니다.' },
   { key: 'hitFlash', kind: 'toggle', group: '화면', label: '피격 시 화면 번쩍임', description: '맞았을 때 화면 테두리를 붉게 비춥니다.' },
   { key: 'shadows', kind: 'toggle', group: '화면', label: '그림자', description: '느린 PC·휴대폰에서는 끄면 부드러워집니다.' },
@@ -98,7 +103,8 @@ export function defaultSettings(): UserSettings {
     soundMaster: 0.8,
     soundSfx: 1,
     soundMusic: 0.6,
-    // 휴대폰은 그림자를 끄고 해상도를 낮춰 시작한다 (설정에서 올릴 수 있다)
+    // 휴대폰은 중간 화질·그림자 끔·해상도 0.8 로 시작한다 (설정에서 올릴 수 있다)
+    quality: touch ? 'medium' : 'high',
     resolution: touch ? 0.8 : 1,
     autoQuality: true,
     showDamageNumbers: GameConfig.hud.showDamageNumbers,
@@ -130,8 +136,11 @@ export function sanitizeSettings(raw: unknown): { settings: UserSettings; warnin
     const v = raw[def.key];
     if (v === undefined) continue;
     if (def.kind === 'choice') {
-      if (typeof v === 'string' && isDifficultyLevel(v)) out.difficulty = v;
-      else warnings.push(`난이도 값 '${String(v)}' 이(가) 잘못되어 기본값으로 바꿨습니다.`);
+      if (def.key === 'difficulty') {
+        if (typeof v === 'string' && isDifficultyLevel(v)) out.difficulty = v;
+        else warnings.push(`난이도 값 '${String(v)}' 이(가) 잘못되어 기본값으로 바꿨습니다.`);
+      } else if (isQualityLevel(v)) out.quality = v;
+      else warnings.push(`화질 값 '${String(v)}' 이(가) 잘못되어 기본값으로 바꿨습니다.`);
     } else if (def.kind === 'toggle') {
       if (typeof v === 'boolean') (out[def.key] as boolean) = v;
       else warnings.push(`'${def.label}' 값이 참/거짓이 아니라 기본값으로 바꿨습니다.`);

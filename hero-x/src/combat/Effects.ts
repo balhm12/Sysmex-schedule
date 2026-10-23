@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { glow } from '../render/materials';
 
 /**
  * 전투 시각 효과: 근접 공격 휘두르기 부채꼴, 타격·처치 파편
@@ -16,7 +17,7 @@ export class Effects {
     this.root.name = 'Effects';
     scene.add(this.root);
     for (let i = 0; i < particleCount; i++) {
-      const mesh = new THREE.Mesh(this.particleGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      const mesh = new THREE.Mesh(this.particleGeo, glow(0xffffff, 1.8));
       mesh.visible = false;
       this.root.add(mesh);
       this.particles.push({ mesh, v: new THREE.Vector3(), life: 0, max: 1 });
@@ -70,7 +71,9 @@ export class Effects {
       if (p.life > 0) continue;
       p.mesh.visible = true;
       p.mesh.position.copy(pos);
-      (p.mesh.material as THREE.MeshBasicMaterial).color.set(color);
+      const pm = p.mesh.material as THREE.MeshStandardMaterial;
+      pm.emissive.set(color);
+      pm.color.set(color).multiplyScalar(0.3);
       p.v.set(Math.random() - 0.5, Math.random() * 0.8 + 0.3, Math.random() - 0.5).normalize().multiplyScalar(power * (0.5 + Math.random() * 0.5));
       p.life = p.max = 0.4 + Math.random() * 0.4;
       p.mesh.scale.setScalar(0.6 + Math.random() * 0.8);

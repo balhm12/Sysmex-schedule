@@ -35,6 +35,15 @@ export interface DungeonTheme {
   groundColor: string;
   sunColor: string;
   sunIntensity: number;
+  /** 물리 기반 하늘(태양 포함). 없으면 단색 배경 */
+  sky?: { elevation: number; azimuth: number; turbidity: number; rayleigh: number };
+  /** 톤매핑 노출 (1 = 기본, 어두운 던전은 낮게) */
+  exposure: number;
+  /** 바닥 요철 세기·노이즈 축척 */
+  groundBump: number;
+  groundScale: number;
+  /** 바닥 재질 거칠기 */
+  groundRoughness: number;
 }
 
 export interface DungeonDef {
@@ -68,7 +77,12 @@ const forestTheme: DungeonTheme = {
   skyColor: '#dcefff',
   groundColor: '#5f8f3a',
   sunColor: '#fff4de',
-  sunIntensity: 2.2,
+  sunIntensity: 2.6,
+  sky: { elevation: 32, azimuth: 160, turbidity: 6, rayleigh: 1.6 },
+  exposure: 1.0,
+  groundBump: 3.2,
+  groundScale: 4,
+  groundRoughness: 0.95,
 };
 
 export const DUNGEONS: DungeonDef[] = [
@@ -104,7 +118,11 @@ export const DUNGEONS: DungeonDef[] = [
       skyColor: '#6f7fd6',
       groundColor: '#1f2340',
       sunColor: '#c9d6ff',
-      sunIntensity: 1.5,
+      sunIntensity: 1.3,
+      exposure: 0.9,
+      groundBump: 3.2,
+      groundScale: 5,
+      groundRoughness: 0.75,
     },
     obstacles: [
       // 수정 기둥
@@ -185,7 +203,12 @@ export const DUNGEONS: DungeonDef[] = [
       skyColor: '#b9bcc6',
       groundColor: '#3a3c44',
       sunColor: '#ffd9c7',
-      sunIntensity: 1.9,
+      sunIntensity: 3.2,
+      sky: { elevation: 18, azimuth: 220, turbidity: 12, rayleigh: 0.6 },
+      exposure: 1.1,
+      groundBump: 1.6,
+      groundScale: 9,
+      groundRoughness: 0.55,
     },
     obstacles: [
       // 중앙 격벽

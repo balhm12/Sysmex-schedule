@@ -2,6 +2,29 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-23 · v1.1.0-a.1 · 그래픽 개선 1 (렌더링 품질: PBR·톤매핑·하늘·블룸·화질 프리셋)
+
+### 변경 내용
+- **재질을 PBR(MeshStandardMaterial)로 전면 교체**: 로봇·보스는 금속성, 돌·나무는 무광, 수정은 빛남. 도우미 `src/render/materials.ts` (`pbr`, `metal`, `glow`).
+- **렌더 파이프라인** `src/render/RenderPipeline.ts`: ACES Filmic 톤매핑, sRGB 출력, 코드로 만든 실내 환경광(RoomEnvironment → PMREM)으로 금속·광택 반사. '높음' 화질에서는 EffectComposer(장면 → 블룸 → 출력) + MSAA 4x.
+- **물리 기반 하늘**(three `Sky`): 숲·요새에 태양 위치·탁도로 하늘색이 정해지고, 태양광 방향을 하늘의 태양과 맞춤. 동굴은 어두운 배경 유지.
+- **바닥 텍스처를 노이즈로 생성** `src/render/groundTexture.ts`: 색 지도 + 노멀맵(요철). 던전 테마마다 색·요철·축척·거칠기(`groundBump/groundScale/groundRoughness`), 톤매핑 노출(`exposure`).
+- **빛나는 요소**: 바이저·검·눈·탄·파편·수정이 emissive 로 빛나고 '높음'에서 블룸이 번진다 (`graphics.bloom` 세기·반지름·문턱).
+- **게임 루프 고정 단계**: 한 프레임의 흐른 시간을 최대 0.05초(`performance.maxStep`) 단위로 여러 번 시뮬레이션하고 한 번만 그린다. 프레임이 10~20 FPS 로 떨어져도 게임이 느려지지 않고(이전에는 슬로모션), 판정 간격은 그대로 유지된다. 한 프레임에 최대 0.2초까지만 따라잡는다.
+- **화질 프리셋** 설정 → 화면 → `화질` 낮음/중간/높음 (휴대폰 기본 중간, PC 높음). 자동 화질 조절은 높음→중간→그림자 끔→해상도 순으로 내린다. 설정 화면의 선택 항목이 일반화되어(`options`) 난이도와 화질이 같은 방식.
+
+### 수정 파일
+- 신규: `src/render/{materials,Quality,RenderPipeline,groundTexture}.ts`
+- 수정: `src/dungeon/{DungeonScene,Chest}.ts`, `src/game/{Game,GameConfig,DungeonDefs,Settings,AutoQuality}.ts`, `src/enemies/{EnemyModels,Boss}.ts`, `src/player/models/PlaceholderModel.ts`, `src/combat/{Effects,Projectile}.ts`, `src/items/LootSystem.ts`, `src/ui/SettingsUI.ts`, `tests/autoQuality.test.ts`, `package.json`
+
+### 테스트 결과 (실제 실행)
+- `npm run typecheck`: 통과 · `npm test`: 106개 통과 · `npm run build`: 성공
+- 브라우저: 세 던전·보스 스크린샷 전후 비교(블룸·하늘·요철 바닥 확인), 설정(화질 버튼 포함)·휴대폰 터치·메뉴 흐름 회귀 통과. 콘솔 오류 없음.
+- 헤드리스 소프트웨어 렌더에서는 PBR·후처리로 프레임이 더 낮아져(≈ 60→70 프레임/장면) 자동 검증의 대기 시간을 늘렸다. 실제 GPU 에서의 체감 성능은 사용자 확인 필요(끊기면 화질 '중간'·자동 화질 조절).
+
+### 알려진 문제
+- 풀·나무·입자 등 환경 장식은 2번 묶음에서. 캐릭터·적 모델 고도화는 3번 묶음에서.
+
 ## 2026-10-23 · v1.0.0 · 7단계 완료 (성능·오류 처리·문서) — 지시서 1~7단계 모두 완료
 
 ### 변경 내용

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { pbr } from '../render/materials';
 import { GameConfig } from '../game/GameConfig';
 import type { Box, Vec2 } from '../player/movement';
 
@@ -23,9 +24,9 @@ export class ChestSystem {
   private readonly chests: Chest[] = [];
   private readonly bodyGeo = new THREE.BoxGeometry(1.2, 0.7, 0.8);
   private readonly lidGeo = new THREE.BoxGeometry(1.24, 0.3, 0.84);
-  private readonly woodMat = new THREE.MeshLambertMaterial({ color: 0xb5793a });
-  private readonly trimMat = new THREE.MeshLambertMaterial({ color: 0xffd23f });
-  private readonly openedMat = new THREE.MeshLambertMaterial({ color: 0x6b4a26 });
+  private readonly woodMat = pbr({ color: 0xb5793a });
+  private readonly trimMat = pbr({ color: 0xffd23f, roughness: 0.3, metalness: 0.9 });
+  private readonly openedMat = pbr({ color: 0x6b4a26 });
 
   constructor(scene: THREE.Scene, positions: Array<{ x: number; z: number }> = GameConfig.dungeon.chests) {
     this.root.name = 'Chests';

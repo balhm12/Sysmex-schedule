@@ -3,13 +3,16 @@ import { decideQuality } from '../src/game/AutoQuality';
 
 describe('자동 화질 조절 (decideQuality)', () => {
   it('프레임이 충분하면 그대로', () => {
-    const r = decideQuality([60, 58, 55], { shadows: true, resolution: 1 });
-    expect(r.next).toEqual({ shadows: true, resolution: 1 });
+    const r = decideQuality([60, 58, 55], { quality: 'high', shadows: true, resolution: 1 });
+    expect(r.next).toEqual({ quality: 'high', shadows: true, resolution: 1 });
     expect(r.message).toBeNull();
-    expect(decideQuality([], { shadows: true, resolution: 1 }).message).toBeNull();
+    expect(decideQuality([], { quality: 'high', shadows: true, resolution: 1 }).message).toBeNull();
   });
-  it('낮으면 그림자부터 끄고, 그 다음 해상도를 0.2 씩 낮추되 0.5 아래로는 안 간다', () => {
-    const a = decideQuality([20, 25], { shadows: true, resolution: 1 });
+  it('낮으면 높음→중간, 그림자 끄기, 그 다음 해상도를 0.2 씩 낮추되 0.5 아래로는 안 간다', () => {
+    const q = decideQuality([20, 25], { quality: 'high', shadows: true, resolution: 1 });
+    expect(q.next.quality).toBe('medium');
+    expect(q.message).toContain('중간');
+    const a = decideQuality([20, 25], q.next);
     expect(a.next.shadows).toBe(false);
     expect(a.next.resolution).toBe(1);
     expect(a.message).toContain('그림자');

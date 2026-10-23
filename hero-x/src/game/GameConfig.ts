@@ -224,6 +224,8 @@ export interface GameConfigType {
     maxPixelRatio: number;
     antialias: boolean;
     shadowMapSize: number;
+    /** 빛 번짐(블룸, '높음' 화질) */
+    bloom: { strength: number; radius: number; threshold: number };
   };
   /** 난이도 */
   difficulty: {
@@ -346,6 +348,8 @@ export interface GameConfigType {
     autoQualityInterval: number;
     /** 이 FPS 미만이면 화질을 한 단계 내린다 */
     autoQualityFps: number;
+    /** 시뮬레이션 한 단계의 최대 시간(초). 프레임이 느리면 이 단위로 여러 번 돌린다 */
+    maxStep: number;
   };
   /** 저장 */
   save: {
@@ -360,7 +364,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.0.0' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.1.0-a.1' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -552,6 +556,7 @@ export const GameConfig: GameConfigType = {
     maxPixelRatio: 2,
     antialias: true,
     shadowMapSize: 2048,
+    bloom: { strength: 0.42, radius: 0.35, threshold: 0.85 },
   },
 
   difficulty: {
@@ -651,6 +656,7 @@ export const GameConfig: GameConfigType = {
   performance: {
     autoQualityInterval: 6,
     autoQualityFps: 30,
+    maxStep: 0.05,
   },
   save: {
     autoSaveInterval: 3,
@@ -739,6 +745,7 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'save.autoSaveInterval': { min: 0.5, max: 600 },
   'performance.autoQualityInterval': { min: 2, max: 60 },
   'performance.autoQualityFps': { min: 10, max: 60 },
+  'performance.maxStep': { min: 0.01, max: 0.1 },
   'progression.levelUpHealRatio': { min: 0, max: 1 },
   'enemies.deathDuration': { min: 0, max: 5 },
   'camera.fov': { min: 30, max: 90 },
@@ -747,6 +754,9 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'camera.smoothing': { min: 0.5, max: 30 },
   'world.arenaHalfSize': { min: 10, max: 200 },
   'graphics.maxPixelRatio': { min: 1, max: 3 },
+  'graphics.bloom.strength': { min: 0, max: 3 },
+  'graphics.bloom.radius': { min: 0, max: 1 },
+  'graphics.bloom.threshold': { min: 0, max: 2 },
 };
 
 /** 적 종류 능력치 중 숫자 항목 */

@@ -34,6 +34,7 @@ import { browserStorage, clearSave, loadSave, writeSave } from '../save/SaveStor
 import { vibrate } from '../utils/haptics';
 import { AudioSystem } from '../audio/AudioSystem';
 import { decideQuality } from './AutoQuality';
+import { RenderPipeline } from '../render/RenderPipeline';
 import type { MusicName } from '../audio/soundDefs';
 import { Logger } from '../utils/Logger';
 import { CameraController } from './CameraController';
@@ -66,6 +67,9 @@ export interface GameDebugState {
   pixelRatio: number;
   interactButtonVisible: boolean;
   shadowsEnabled: boolean;
+  quality: string;
+  bloomEnabled: boolean;
+  exposure: number;
   cameraDistanceScale: number;
   player: { x: number; z: number; facing: number; moving: boolean; hp: number; maxHp: number };
   camera: { x: number; y: number; z: number };
@@ -99,6 +103,8 @@ export interface GameDebugState {
  */
 export class Game {
   private readonly renderer: THREE.WebGLRenderer;
+  /** 톤매핑·환경광·후처리(블룸)를 맡는 렌더 파이프라인 */
+  private readonly pipeline: RenderPipeline;
   private readonly scene = new THREE.Scene();
   private readonly camera: THREE.PerspectiveCamera;
   private readonly input = new InputManager();
@@ -203,11 +209,9 @@ export class Game {
     this.loadSettingsFromStorage();
 
     const g = GameConfig.graphics;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: g.antialias, powerPreference: 'high-performance' });
+    this.pipeline = new RenderPipeline(canvas);
+    this.renderer = this.pipeline.renderer;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, g.maxPixelRatio));
-    this.renderer.shadowMap.enabled = g.shadows;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     // 그래픽 장치 연결이 끊기면(메모리 부족·절전 등) 멈췄다가 복구되면 이어서 그린다
     canvas.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
@@ -227,7 +231,9 @@ export class Game {
     this.camera = new THREE.PerspectiveCamera(c.fov, 1, c.near, c.far);
 
     // 시스템 구성
-    this.dungeon = new DungeonScene(this.scene, this.dungeonDef);
+    this.scene.environment = this.pipeline.environment();
+    this.dungeon = new DungeonScene(this.scene, this.dungeonDef, this.settings.quality);
+    this.pipeline.setExposure(this.dungeonDef.theme.exposure);
     this.chests = new ChestSystem(this.scene, this.dungeonDef.chests);
     this.dungeon.addCollisionBoxes(this.chests.getCollisionBoxes());
     // 충돌 세계는 던전이 바뀌어도 같은 객체를 쓰도록 현재 던전으로 넘겨주는 껍데기를 준다
@@ -470,6 +476,8 @@ export class Game {
       });
     }
     this.dungeon.setShadows(s.shadows);
+    this.pipeline.setQuality(s.quality);
+    this.dungeon.applyQuality(s.quality);
     if (!s.showFps) this.guide.setHudText('');
     this.applyPixelRatio();
     this.audio.setVolumes({ master: s.soundMaster, sfx: s.soundSfx, music: s.soundMusic });
@@ -484,7 +492,7 @@ export class Game {
   /** 렌더 해상도: 기기 배율(상한 graphics.maxPixelRatio) × 사용자 설정 */
   private applyPixelRatio(): void {
     const base = Math.min(window.devicePixelRatio || 1, GameConfig.graphics.maxPixelRatio);
-    this.renderer.setPixelRatio(Math.max(0.3, base * this.settings.resolution));
+    this.pipeline.setPixelRatio(Math.max(0.3, base * this.settings.resolution));
   }
 
   getSettings(): UserSettings {
@@ -540,7 +548,8 @@ export class Game {
     this.dungeon.dispose();
     this.dungeonDef = def;
     this.bossCfg = resolveBossConfig(def);
-    this.dungeon = new DungeonScene(this.scene, def);
+    this.dungeon = new DungeonScene(this.scene, def, this.settings.quality);
+    this.pipeline.setExposure(def.theme.exposure);
     this.chests = new ChestSystem(this.scene, def.chests);
     this.dungeon.addCollisionBoxes(this.chests.getCollisionBoxes());
     this.hud.setDungeonName(def.name);
@@ -856,7 +865,7 @@ export class Game {
     this.effects.dispose();
     this.player.dispose();
     this.dungeon.dispose();
-    this.renderer.dispose();
+    this.pipeline.dispose();
   }
 
   /** 플레이어를 지정한 위치로 옮긴다 (테스트·디버그용, 나중에 리스폰·순간이동에도 사용) */
@@ -899,6 +908,9 @@ export class Game {
       pixelRatio: this.renderer.getPixelRatio(),
       interactButtonVisible: this.touch.visible && !(document.getElementById('touch-interact') as HTMLButtonElement | null)?.hidden,
       shadowsEnabled: this.renderer.shadowMap.enabled,
+      quality: this.pipeline.currentQuality,
+      bloomEnabled: this.pipeline.bloomEnabled,
+      exposure: this.renderer.toneMappingExposure,
       cameraDistanceScale: this.cameraCtrl.distanceScale,
       save: { status: this.saveStatus, lastSavedAt: this.lastSavedAt, hasSavedProgress: this.hasSavedProgress, blocked: this.saveBlocked, dirty: this.saveDirty, records: { ...this.records } },
       player: { x: p.x, z: p.z, facing: this.player.facing, moving: this.player.moving, hp: this.player.health.hp, maxHp: this.player.health.maxHp },
@@ -1204,17 +1216,48 @@ export class Game {
 
   /** 한 프레임 갱신·그리기 */
   private frame(now: number): void {
-    // 탭을 오래 비웠다 돌아와도 한 번에 크게 움직이지 않도록 dt 상한을 둔다
-    const dt = Math.min(0.05, (now - this.lastTime) / 1000);
+    // 실제 흐른 시간. 탭을 오래 비웠다 돌아와도 한 번에 크게 움직이지 않도록 상한(0.2초)을 둔다
+    const elapsed = Math.min(0.2, Math.max(0, (now - this.lastTime) / 1000));
     this.lastTime = now;
 
     if (this.contextLost) return;
     if (this.paused || this.mode === 'menu') {
       // 장비 화면이 열렸거나 메인 메뉴 중에는 그리기만 한다
-      this.renderer.render(this.scene, this.camera);
+      this.pipeline.render(this.scene, this.camera);
       return;
     }
 
+    // 시뮬레이션은 최대 0.05초 단위로 여러 번 돌린다: 프레임이 느려져도(휴대폰 10~20 FPS) 게임 속도가 느려지지 않고
+    // 충돌·공격 판정은 작은 간격으로 유지된다. 그리기는 한 번만.
+    let remaining = elapsed;
+    while (remaining > 1e-6 && this.mode === 'play') {
+      const dt = Math.min(GameConfig.performance.maxStep, remaining);
+      remaining -= dt;
+      this.simulate(dt);
+    }
+
+    this.hud.update({
+      hp: this.player.health.hp,
+      maxHp: this.player.health.maxHp,
+      enemies: this.spawner.aliveCount,
+      kills: this.combat.kills,
+      score: this.combat.score,
+      level: this.stats.level,
+      xp: this.stats.xp,
+      xpToNext: this.stats.xpToNext,
+      gold: this.stats.gold,
+    });
+
+    this.pipeline.render(this.scene, this.camera);
+    this.frames++;
+    // 복구 뒤 한 프레임이라도 정상으로 그려지면 복구 완료
+    if (this.restoreGraceUntil > 0) this.restoreGraceUntil = 0;
+    this.updateFps(elapsed);
+    this.updateAutoQuality(elapsed);
+  }
+
+  /** 게임 한 단계(dt 초) 갱신: 조작·적·투사체·아이템·카메라·승리 판정·자동 저장 */
+  private simulate(dt: number): void {
     const p = this.player.position;
     this.controller.update(dt);
     if (!this.ended) this.combat.update(dt);
@@ -1261,25 +1304,6 @@ export class Game {
     // 자동 저장: 바뀐 것이 있고 간격이 지났으면
     this.saveTimer += dt;
     if (this.saveDirty && this.saveTimer >= GameConfig.save.autoSaveInterval) this.saveNow();
-
-    this.hud.update({
-      hp: this.player.health.hp,
-      maxHp: this.player.health.maxHp,
-      enemies: this.spawner.aliveCount,
-      kills: this.combat.kills,
-      score: this.combat.score,
-      level: this.stats.level,
-      xp: this.stats.xp,
-      xpToNext: this.stats.xpToNext,
-      gold: this.stats.gold,
-    });
-
-    this.renderer.render(this.scene, this.camera);
-    this.frames++;
-    // 복구 뒤 한 프레임이라도 정상으로 그려지면 복구 완료
-    if (this.restoreGraceUntil > 0) this.restoreGraceUntil = 0;
-    this.updateFps(dt);
-    this.updateAutoQuality(dt);
   }
 
   /** 자동 화질: 일정 시간마다 평균 FPS 를 보고 낮으면 그림자·해상도를 한 단계 내린다 */
@@ -1292,10 +1316,10 @@ export class Game {
     this.qualitySamples.push(this.qualityFrames / this.qualityTime);
     this.qualityFrames = 0;
     this.qualityTime = 0;
-    const d = decideQuality(this.qualitySamples, { shadows: this.settings.shadows, resolution: this.settings.resolution }, p.autoQualityFps);
+    const d = decideQuality(this.qualitySamples, { quality: this.settings.quality, shadows: this.settings.shadows, resolution: this.settings.resolution }, p.autoQualityFps);
     this.qualitySamples.length = 0;
     if (!d.message) return;
-    this.settings = { ...this.settings, shadows: d.next.shadows, resolution: d.next.resolution };
+    this.settings = { ...this.settings, quality: d.next.quality, shadows: d.next.shadows, resolution: d.next.resolution };
     saveSettings(this.storage, this.settings);
     this.settingsUI.refresh();
     this.applySettings();
@@ -1319,7 +1343,7 @@ export class Game {
   private readonly resize = (): void => {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
-    this.renderer.setSize(w, h, false);
+    this.pipeline.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   };

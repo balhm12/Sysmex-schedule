@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { glow, pbr } from '../render/materials';
 import { modelRegistry } from '../assets/ModelRegistry';
 import type { EnemyTypeConfig } from '../game/GameConfig';
 import type { EnemyState } from './EnemyAI';
@@ -53,10 +54,10 @@ function createTankModel(def: EnemyTypeConfig): EnemyModel {
   root.name = `Enemy-${def.name}`;
   const r = def.radius;
 
-  const bodyMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(def.color) });
-  const darkMat = new THREE.MeshLambertMaterial({ color: 0x2a2f3d });
-  const steelMat = new THREE.MeshLambertMaterial({ color: 0x9aa3b2 });
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffd23f });
+  const bodyMat = pbr({ color: new THREE.Color(def.color) });
+  const darkMat = pbr({ color: 0x2a2f3d });
+  const steelMat = pbr({ color: 0x9aa3b2 });
+  const eyeMat = glow(0xffd23f, 2.2);
 
   const body = new THREE.Mesh(new THREE.BoxGeometry(r * 1.7, r * 1.5, r * 1.4), bodyMat);
   body.position.y = r * 1.1;
@@ -127,9 +128,9 @@ function createShooterModel(def: EnemyTypeConfig): EnemyModel {
   root.name = `Enemy-${def.name}`;
   const r = def.radius;
 
-  const bodyMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(def.color), flatShading: true });
-  const darkMat = new THREE.MeshLambertMaterial({ color: 0x2a2f3d });
-  const glowMat = new THREE.MeshBasicMaterial({ color: 0xff5577 });
+  const bodyMat = pbr({ color: new THREE.Color(def.color), flatShading: true, roughness: 0.5, metalness: 0.5 });
+  const darkMat = pbr({ color: 0x2a2f3d });
+  const glowMat = glow(0xff5577, 2.5);
 
   const hover = new THREE.Group();
   root.add(hover);
@@ -197,10 +198,10 @@ function createRusherModel(def: EnemyTypeConfig): EnemyModel {
   root.name = `Enemy-${def.name}`;
   const r = def.radius;
 
-  const bodyMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(def.color) });
-  const darkMat = new THREE.MeshLambertMaterial({ color: 0x2a2f3d });
-  const eyeWhite = new THREE.MeshLambertMaterial({ color: 0xffffff });
-  const pupilMat = new THREE.MeshBasicMaterial({ color: 0x1a1a22 });
+  const bodyMat = pbr({ color: new THREE.Color(def.color) });
+  const darkMat = pbr({ color: 0x2a2f3d });
+  const eyeWhite = pbr({ color: 0xffffff });
+  const pupilMat = pbr({ color: 0x1a1a22, roughness: 0.3 });
 
   const body = new THREE.Mesh(new THREE.BoxGeometry(r * 1.6, r * 1.4, r * 1.6), bodyMat);
   body.position.y = r * 1.1;
@@ -222,7 +223,7 @@ function createRusherModel(def: EnemyTypeConfig): EnemyModel {
   const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, r * 0.8, 6), darkMat);
   antenna.position.set(0, r * 2.1, 0);
   root.add(antenna);
-  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), new THREE.MeshBasicMaterial({ color: def.color }));
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), glow(def.color, 2.5));
   tip.position.set(0, r * 2.5, 0);
   root.add(tip);
 
@@ -246,7 +247,7 @@ function createRusherModel(def: EnemyTypeConfig): EnemyModel {
       // 공격 예고: 눈이 커지고 붉어지며 몸이 뒤로 젖혀졌다가 튀어나간다
       const w = s.windup;
       pupil.scale.setScalar(1 + w * 1.2);
-      (pupil.material as THREE.MeshBasicMaterial).color.setRGB(0.1 + w * 0.9, 0.1, 0.13);
+      (pupil.material as THREE.MeshStandardMaterial).emissive.setRGB(0.1 + w * 0.9, 0.1, 0.13);
       body.rotation.x = -w * 0.35;
       // 피격 번쩍임
       if (flashTimer > 0) {

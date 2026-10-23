@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { glow } from '../render/materials';
 import type { Enemy } from '../enemies/Enemy';
 import { hitsObstacle, type CollisionWorld, type Vec2 } from '../player/movement';
 
@@ -55,7 +56,7 @@ export class ProjectileSystem {
 
   /** 발사. origin 에서 dir(길이 1) 방향으로 */
   spawn(origin: Vec2, dir: Vec2, spec: ProjectileSpec): void {
-    const mesh = new THREE.Mesh(this.geo, new THREE.MeshBasicMaterial({ color: spec.color }));
+    const mesh = new THREE.Mesh(this.geo, glow(spec.color, 2.5));
     mesh.position.set(origin.x, FLIGHT_Y, origin.z);
     mesh.scale.set(spec.radius, spec.radius, spec.radius * 2.2);
     mesh.lookAt(origin.x + dir.x, FLIGHT_Y, origin.z + dir.z);

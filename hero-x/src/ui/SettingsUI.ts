@@ -1,5 +1,3 @@
-import { difficultyLevels, getDifficultyPreset } from '../game/Difficulty';
-import type { DifficultyLevel } from '../game/GameConfig';
 import { SETTING_DEFS, SETTING_GROUPS, type SettingKey, type UserSettings } from '../game/Settings';
 
 export interface SettingsUICallbacks {
@@ -32,9 +30,8 @@ export class SettingsUI {
         .map((d) => {
           let control = '';
           if (d.kind === 'choice') {
-            control = difficultyLevels()
-              .map((lv) => `<button type="button" class="diff-btn" data-key="difficulty" data-level="${lv}">${getDifficultyPreset(lv).label}</button>`)
-              .join('');
+            // data-level 은 난이도 버튼의 옛 이름(자동 검증·메뉴와 호환)
+            control = d.options.map((o) => `<button type="button" class="diff-btn" data-key="${d.key}" data-value="${o.value}"${d.key === 'difficulty' ? ` data-level="${o.value}"` : ''}>${o.label}</button>`).join('');
           } else if (d.kind === 'toggle') {
             control = `<button type="button" class="toggle" role="switch" data-key="${d.key}" aria-checked="false"><span class="toggle-knob"></span></button>`;
           } else {
@@ -105,7 +102,7 @@ export class SettingsUI {
     });
     this.el.querySelectorAll<HTMLButtonElement>('.diff-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        this.cb.set('difficulty', btn.dataset.level as DifficultyLevel);
+        this.cb.set(btn.dataset.key as SettingKey, btn.dataset.value as never);
         this.refresh();
       });
     });
@@ -131,7 +128,8 @@ export class SettingsUI {
     (this.el.querySelector('#face-clear') as HTMLButtonElement).disabled = !face;
     for (const d of SETTING_DEFS) {
       if (d.kind === 'choice') {
-        this.el.querySelectorAll<HTMLButtonElement>('.diff-btn[data-key="difficulty"]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.level === s.difficulty)));
+        const cur = String(s[d.key]);
+        this.el.querySelectorAll<HTMLButtonElement>(`.diff-btn[data-key="${d.key}"]`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === cur)));
       } else if (d.kind === 'toggle') {
         const b = this.el.querySelector<HTMLButtonElement>(`button.toggle[data-key="${d.key}"]`);
         b?.setAttribute('aria-checked', String(s[d.key]));

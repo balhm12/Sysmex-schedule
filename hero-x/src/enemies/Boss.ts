@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { glow, pbr } from '../render/materials';
 import { modelRegistry } from '../assets/ModelRegistry';
 import type { BossConfig } from '../game/DungeonDefs';
 import { GameConfig, type EnemyTypeConfig } from '../game/GameConfig';
@@ -158,10 +159,10 @@ function createBossModel(def: EnemyTypeConfig, kind: BossModelKind = 'guardian')
   const root = new THREE.Group();
   root.name = `Boss-${def.name}`;
   const r = def.radius;
-  const bodyMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(def.color) });
-  const darkMat = new THREE.MeshLambertMaterial({ color: kind === 'commander' ? 0x3a3c44 : 0x2a2f3d });
-  const goldMat = new THREE.MeshLambertMaterial({ color: kind === 'golem' ? 0x8fe8ff : kind === 'commander' ? 0xb0392f : 0xffd23f });
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x5cf2d8 });
+  const bodyMat = pbr({ color: new THREE.Color(def.color) });
+  const darkMat = pbr({ color: kind === 'commander' ? 0x3a3c44 : 0x2a2f3d });
+  const goldMat = pbr({ color: kind === 'golem' ? 0x8fe8ff : kind === 'commander' ? 0xb0392f : 0xffd23f });
+  const eyeMat = glow(0x5cf2d8, 2.5);
   const glowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 });
 
   // 몸통: 골렘은 둥글게, 사령관은 넓고 각지게, 수호 로봇은 기본 상자

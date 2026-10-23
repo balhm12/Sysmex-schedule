@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { pbr } from '../render/materials';
 import { GameConfig } from '../game/GameConfig';
 import type { Vec2 } from '../player/movement';
 import { generateRandomItem } from './ItemDatabase';
@@ -27,10 +28,10 @@ export class LootSystem {
     equip: new THREE.BoxGeometry(0.5, 0.36, 0.34),
   };
   private readonly mats: Record<ItemKind, THREE.Material> = {
-    heal: new THREE.MeshLambertMaterial({ color: 0xff4f79, emissive: 0x551122 }),
-    xp: new THREE.MeshLambertMaterial({ color: 0x5cf2d8, emissive: 0x0f4a44 }),
-    gold: new THREE.MeshLambertMaterial({ color: 0xffd23f, emissive: 0x4d3a00 }),
-    equip: new THREE.MeshLambertMaterial({ color: 0xcdd6f4, emissive: 0x333a55 }),
+    heal: pbr({ color: 0xff4f79, emissive: 0x551122, emissiveIntensity: 1.2, roughness: 0.35, metalness: 0.3 }),
+    xp: pbr({ color: 0x5cf2d8, emissive: 0x0f4a44, emissiveIntensity: 1.2, roughness: 0.35, metalness: 0.3 }),
+    gold: pbr({ color: 0xffd23f, emissive: 0x4d3a00, emissiveIntensity: 1.2, roughness: 0.35, metalness: 0.3 }),
+    equip: pbr({ color: 0xcdd6f4, emissive: 0x333a55, emissiveIntensity: 1.2, roughness: 0.35, metalness: 0.3 }),
   };
 
   constructor(scene: THREE.Scene) {
