@@ -29,6 +29,8 @@ export class PlayerController {
   private readonly dash = createDashState();
   /** 대시가 시작될 때 호출 (효과·소리용) */
   onDash: ((dir: Vec2) => void) | null = null;
+  /** 점프가 시작될 때 호출 (소리용) */
+  onJump: (() => void) | null = null;
 
   constructor(
     private readonly player: Player,
@@ -87,6 +89,7 @@ export class PlayerController {
     if (this.jumpQueued && !this.player.airborne) {
       this.player.jumpVy = cfg.jumpSpeed;
       this.player.jumpY = 0.001;
+      this.onJump?.();
     }
     this.jumpQueued = false;
     if (this.player.airborne) {

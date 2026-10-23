@@ -23,6 +23,8 @@ export class CombatSystem {
 
   private meleeCooldown = 0;
   private rangedCooldown = 0;
+  /** 공격을 시작할 때 알림 (효과음용) */
+  onAttack: ((kind: 'melee' | 'ranged') => void) | null = null;
   private readonly tmp = new THREE.Vector3();
 
   constructor(
@@ -92,6 +94,7 @@ export class CombatSystem {
   private meleeAttack(): void {
     const cfg = GameConfig.combat.melee;
     this.meleeCooldown = cfg.cooldown;
+    this.onAttack?.('melee');
     this.faceAim();
     const pos = this.player.position;
     this.player.triggerAttack(cfg.swingTime);
@@ -111,6 +114,7 @@ export class CombatSystem {
   private rangedAttack(): void {
     const cfg = GameConfig.combat.ranged;
     this.rangedCooldown = cfg.cooldown;
+    this.onAttack?.('ranged');
     const dir = this.faceAim();
     const pos = this.player.position;
     this.player.triggerAttack(0.15);

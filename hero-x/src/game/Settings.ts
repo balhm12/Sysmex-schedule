@@ -31,6 +31,10 @@ export interface UserSettings {
   touchButtonScale: number;
   /** 진동 피드백 (지원 기기만) */
   haptics: boolean;
+  /** 소리: 전체·효과음·음악 음량 0~1 */
+  soundMaster: number;
+  soundSfx: number;
+  soundMusic: number;
   /** 렌더 해상도 배율 (낮추면 휴대폰에서 부드러워진다) */
   resolution: number;
   /** 피해 숫자 표시 */
@@ -51,7 +55,7 @@ export type SettingDef =
   | { key: SettingKey; kind: 'range'; group: string; label: string; description: string; min: number; max: number; step: number; unit?: string }
   | { key: SettingKey; kind: 'toggle'; group: string; label: string; description: string };
 
-export const SETTING_GROUPS = ['게임', '전투 수치', '화면'] as const;
+export const SETTING_GROUPS = ['게임', '소리', '전투 수치', '화면'] as const;
 
 export const SETTING_DEFS: SettingDef[] = [
   { key: 'difficulty', kind: 'choice', group: '게임', label: '난이도', description: '적의 체력·공격력·속도 배율. 바꾸면 던전을 처음부터 다시 시작합니다.' },
@@ -61,6 +65,9 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: 'leftHanded', kind: 'toggle', group: '게임', label: '왼손 모드', description: '공격·점프·회피 버튼을 왼쪽에, 고정 조이스틱을 오른쪽에 둡니다.' },
   { key: 'touchButtonScale', kind: 'range', group: '게임', label: '터치 버튼 크기', description: '버튼이 작거나 크면 조절하세요.', min: 0.8, max: 1.4, step: 0.1, unit: '×' },
   { key: 'haptics', kind: 'toggle', group: '게임', label: '진동', description: '맞거나 처치할 때 짧게 진동합니다 (지원하는 휴대폰만, iPhone 은 안 됨).' },
+  { key: 'soundMaster', kind: 'range', group: '소리', label: '전체 음량', description: '0 이면 무음. 소리는 첫 조작(터치·키) 뒤부터 납니다.', min: 0, max: 1, step: 0.1 },
+  { key: 'soundSfx', kind: 'range', group: '소리', label: '효과음', description: '공격·피격·획득·보스 소리.', min: 0, max: 1, step: 0.1 },
+  { key: 'soundMusic', kind: 'range', group: '소리', label: '음악', description: '던전·보스·메뉴 배경 음악.', min: 0, max: 1, step: 0.1 },
   { key: 'playerHpMul', kind: 'range', group: '전투 수치', label: '내 최대 체력', description: '레벨·장비 보너스를 더한 최대 체력에 곱합니다.', min: 0.5, max: 3, step: 0.1, unit: '×' },
   { key: 'playerDamageMul', kind: 'range', group: '전투 수치', label: '내 공격력', description: '근접·원거리 공격 피해에 곱합니다.', min: 0.5, max: 3, step: 0.1, unit: '×' },
   { key: 'enemyHpMul', kind: 'range', group: '전투 수치', label: '적 체력', description: '난이도 배율에 다시 곱합니다. 다음 던전 입장부터 적용됩니다.', min: 0.5, max: 3, step: 0.1, unit: '×' },
@@ -85,6 +92,9 @@ export function defaultSettings(): UserSettings {
     leftHanded: false,
     touchButtonScale: 1,
     haptics: touch,
+    soundMaster: 0.8,
+    soundSfx: 1,
+    soundMusic: 0.6,
     // 휴대폰은 그림자를 끄고 해상도를 낮춰 시작한다 (설정에서 올릴 수 있다)
     resolution: touch ? 0.8 : 1,
     showDamageNumbers: GameConfig.hud.showDamageNumbers,

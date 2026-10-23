@@ -9,7 +9,7 @@
 - 장르: 3인칭 3D 액션 RPG. Minecraft Dungeons 의 진행 방식을 참고하되 캐릭터·맵·아이템·음악·텍스처는 독자 제작 또는 적법한 에셋만 사용한다.
 - 실행 환경: Windows PC 웹 브라우저(Chrome/Edge). 기본 게임은 외부 API·유료 서비스 없이 실행된다.
 - 최우선 원칙: **실제로 실행되는 게임**을 단계적으로 완성한다. 그래픽 품질보다 안정성·유지보수성이 먼저다.
-- 현재 상태: **6단계(콘텐츠 확장) 완료 (v0.6.2)** — 던전 3개·던전 선택·새 적·새 장비·저장 v2, 모바일 지원(v0.6.1), 보스별 고유 패턴(소환·포격)·외형. 다음: 7단계 품질 개선(효과음·음악 자체 제작, 정식 모델 교체 구조(glb), 성능·오류 처리, 밸런스 조정은 플레이 의견 반영).
+- 현재 상태: **7단계(품질 개선) 진행 중** — 6단계까지 완료(v0.6.x: 던전 3개·모바일·조작 개선·보스 차별화), 7-a 효과음·음악(코드 합성) 완료 v0.7.0-a.1. 다음: 7-b 정식 모델 교체 구조(glb 로딩, 아들 얼굴 모델 연결), 7-c 성능·오류 처리·최종 문서.
 
 ## 2. 기술 스택
 
@@ -53,6 +53,9 @@ hero-x/
 │  │  ├─ PlayerStats.ts     레벨·경험치·골드 (최대 체력·공격력 배율 계산, 테스트 대상)
 │  │  ├─ movement.ts       이동·충돌 순수 함수 (테스트 대상)
 │  │  └─ models/PlaceholderModel.ts  임시 캐릭터 모델 + PlayerModel 인터페이스
+│  ├─ audio/
+│  │  ├─ soundDefs.ts      ★ 효과음 레시피(SFX)·음악 악절(MUSIC) 데이터 (테스트 대상)
+│  │  └─ AudioSystem.ts    Web Audio 합성 재생: 첫 조작에 켜기, 효과음, 음악 예약 재생·전환, 음량
 │  ├─ combat/
 │  │  ├─ Health.ts         체력·무적·사망 (플레이어와 적 공용, 테스트 대상)
 │  │  ├─ melee.ts          근접 공격 부채꼴 판정 순수 함수 (테스트 대상)
@@ -153,6 +156,7 @@ hero-x/
 - "적을 두 배로" → `GameConfig.enemies.spawns` 에 항목 추가. "적 체력 30% 올려" → `enemies.types.rusher.hp` 조정.
 - "공격을 더 세게/넓게" → `GameConfig.combat.melee` 의 `damage`, `range`, `arcDegrees`. 원거리는 `combat.ranged`.
 - "점프를 더 높게" → `player.jumpSpeed` 올리기 (또는 `player.gravity` 내리기). "회피를 더 멀리/자주" → `player.dash.speed/duration/cooldown`. 회피 키는 `controls.dodge`, 터치 버튼은 `TouchControls` 의 `#touch-dodge`.
+- 소리: 새 효과음은 `soundDefs.SFX` 에 레시피를 추가하고 `Game` 에서 `this.audio.play('이름')`. 음악은 `MUSIC` 에 트랙을 추가하고 `Game.dungeonMusic()` 매핑. 외부 음원 파일은 쓰지 않는다. 소리는 첫 사용자 조작 뒤에만 난다(브라우저 제한) — 테스트에서는 `#menu-new` 클릭 뒤 `audio.ready` 를 본다.
 - 진동은 `utils/haptics.ts` 의 `vibrate()` 를 `settings.haptics` 확인 후 호출한다. 터치 전용 표시(자동 조준 고리 `aimRing`)는 `settings.touchControls` 일 때만 보인다.
 - "아이템이 더 자주/레벨이 빨리" → `loot.healChance/goldChance`, `progression.xpBase/xpGrowth`.
 - 플레이어 공격력: `CombatSystem` 이 레벨 배율(`() => stats.damageMultiplier`)과 무기 공격력(`(kind) => equipment.weaponAttack(kind)`)을 함수로 받는다. 피해 = (기본 + 무기) × 배율.
@@ -184,6 +188,6 @@ hero-x/
 4. 던전과 보스 ✅ (v0.4.0: 보물 상자, 보스전, 메인 메뉴·입장·결과 흐름)
 5. 설정 화면과 저장 ✅ (v0.5.0: 자동 저장·이어하기·버전·손상 처리, 설정 화면·기본값 복원)
 6. 콘텐츠 확장 ✅ (v0.6.0-a.1 던전 3개·던전 선택·새 적·새 장비 / v0.6.1 모바일 / v0.6.2 보스별 패턴·외형)
-7. 품질 개선
+7. 품질 개선 🔄 (7-a 효과음·음악 ✅ v0.7.0-a.1 / 7-b 모델 교체 구조 / 7-c 성능·오류 처리)
 
 각 단계는 완료 기준을 만족하고 기존 기능이 정상일 때만 다음 단계로 넘어간다.

@@ -30,6 +30,8 @@ import { SettingsUI } from '../ui/SettingsUI';
 import { EMPTY_RECORDS, applySaveData, cloneRecords, hasProgress, serializeSave, type SaveRecords } from '../save/SaveData';
 import { browserStorage, clearSave, loadSave, writeSave } from '../save/SaveStorage';
 import { vibrate } from '../utils/haptics';
+import { AudioSystem } from '../audio/AudioSystem';
+import type { MusicName } from '../audio/soundDefs';
 import { Logger } from '../utils/Logger';
 import { CameraController } from './CameraController';
 import { getDifficultyPreset, loadDifficulty, saveDifficulty } from './Difficulty';
@@ -53,6 +55,7 @@ export interface GameDebugState {
   floatingJoystick: boolean;
   dash: { active: boolean; cooldown: number; invulnerable: number };
   aimRingVisible: boolean;
+  audio: { ready: boolean; track: string | null };
   pixelRatio: number;
   interactButtonVisible: boolean;
   shadowsEnabled: boolean;
@@ -101,6 +104,8 @@ export class Game {
   private readonly dungeonSelect: DungeonSelectUI;
   /** 이번 클리어로 새로 열린 던전 (결과 화면 안내용) */
   private unlockedNow: DungeonDef | null = null;
+  /** 소리 (효과음·음악, 코드 합성) */
+  private readonly audio = new AudioSystem();
   /** 자동 조준 표시: 터치 조작 중 겨누는 적 발밑의 고리 */
   private readonly aimRing: THREE.Mesh;
   /** 보스 포격: 예고 뒤 터질 지점들 */
@@ -198,7 +203,9 @@ export class Game {
     this.scene.add(this.player.object3d);
     this.cameraCtrl = new CameraController(this.camera);
     this.controller = new PlayerController(this.player, this.input, world, () => this.cameraCtrl.getYaw(), () => 1 + this.equipment.totals().moveSpeed);
+    this.controller.onJump = () => this.audio.play('jump');
     this.controller.onDash = (dir) => {
+      this.audio.play('dash');
       const p = this.player.position;
       // 뒤쪽으로 파편을 흩어 '휙' 하는 느낌
       this.effects.burst(new THREE.Vector3(p.x - dir.x * 0.5, 0.4, p.z - dir.z * 0.5), 0x5cf2d8, 10, 4);
@@ -217,6 +224,7 @@ export class Game {
     this.combat = new CombatSystem(
       this.player, this.input, () => this.spawner.getEnemies(), () => this.getAimPoint(), this.effects, this.projectiles,
       (enemy, damage, killed) => {
+        this.audio.play(killed ? 'kill' : 'enemyHit', 0.05);
         if (killed) {
           this.loot.dropFor(enemy.def.score, { x: enemy.position.x, z: enemy.position.z }, this.dungeonDef.rewardMul);
           if (this.settings.haptics) vibrate(enemy.type === 'boss' ? [60, 40, 120] : 18);
@@ -228,6 +236,7 @@ export class Game {
       () => this.effectiveDamageMultiplier(),
       (kind) => this.equipment.weaponAttack(kind),
     );
+    this.combat.onAttack = (kind) => this.audio.play(kind);
     this.loot = new LootSystem(this.scene);
 
     // UI
@@ -285,6 +294,12 @@ export class Game {
 
     // 입력 연결
     this.input.attach(window, canvas);
+    this.audio.attach(window);
+    // 메뉴·창의 버튼을 누르면 짧은 효과음
+    uiRoot.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('button')) this.audio.play('ui');
+    });
+    this.audio.playMusic('menu');
     this.input.onPress(GameConfig.controls.toggleGuide, () => this.guide.toggle());
     this.input.onPress(GameConfig.controls.restart, () => {
       if (this.mode === 'result') this.retry();
@@ -404,6 +419,7 @@ export class Game {
     this.dungeon.setShadows(s.shadows);
     if (!s.showFps) this.guide.setHudText('');
     this.applyPixelRatio();
+    this.audio.setVolumes({ master: s.soundMaster, sfx: s.soundSfx, music: s.soundMusic });
     if (this.touch.isFloating !== s.floatingJoystick) this.touch.setFloating(s.floatingJoystick);
     this.touch.setLeftHanded(s.leftHanded);
     this.touch.setButtonScale(s.touchButtonScale);
@@ -528,6 +544,13 @@ export class Game {
     this.touch.hide();
     this.saveNow();
     this.menu.show();
+    this.audio.playMusic('menu');
+  }
+
+  /** 현재 던전의 음악 트랙 (정의가 없으면 숲) */
+  private dungeonMusic(): MusicName {
+    const id = this.dungeonDef.id;
+    return id === 'cave' || id === 'fortress' || id === 'forest' ? id : 'forest';
   }
 
   /** 터치 조작은 설정이 켜져 있고 플레이 중일 때만 보인다 */
@@ -631,6 +654,7 @@ export class Game {
     this.result.hide();
     this.hud.show();
     this.updateTouchVisibility();
+    this.audio.playMusic(this.boss && this.boss.alive ? 'boss' : this.dungeonMusic());
     this.lastTime = performance.now();
     this.canvas.focus();
   }
@@ -644,6 +668,7 @@ export class Game {
     const chest = this.chests.nearest({ x: p.x, z: p.z });
     if (!chest || !this.chests.open(chest)) return;
     const drops = this.loot.dropChest({ x: chest.x, z: chest.z });
+    this.audio.play('chest');
     if (this.settings.haptics) vibrate(25);
     this.effects.burst(new THREE.Vector3(chest.x, 1, chest.z), 0xffd23f, 16, 5);
     this.damageNumbers.showText(new THREE.Vector3(chest.x, 1.8, chest.z), '보물 상자!', '#ffd23f');
@@ -724,6 +749,8 @@ export class Game {
     // 한 판의 기록을 누적하고 저장한다
     this.records.totalKills += this.combat.kills;
     this.records.bestScore = Math.max(this.records.bestScore, this.combat.score);
+    this.audio.play(this.player.health.isDead ? 'defeat' : 'clear');
+    this.audio.playMusic(null);
     this.saveNow();
     this.result.show(title, sub);
   }
@@ -732,6 +759,7 @@ export class Game {
   dispose(): void {
     this.stop();
     this.input.detach();
+    this.audio.dispose();
     window.removeEventListener('resize', this.resize);
     window.removeEventListener('beforeunload', this.flushSave);
     document.removeEventListener('visibilitychange', this.onVisibility);
@@ -780,6 +808,7 @@ export class Game {
       floatingJoystick: this.touch.isFloating,
       dash: { active: this.controller.dashing, cooldown: this.controller.dashCooldownRatio, invulnerable: this.player.health.invulnerable },
       aimRingVisible: this.aimRing.visible,
+      audio: { ready: this.audio.ready, track: this.audio.currentTrack },
       pixelRatio: this.renderer.getPixelRatio(),
       interactButtonVisible: this.touch.visible && !(document.getElementById('touch-interact') as HTMLButtonElement | null)?.hidden,
       shadowsEnabled: this.renderer.shadowMap.enabled,
@@ -877,6 +906,7 @@ export class Game {
     const p = this.player.position;
     const len = Math.hypot(p.x - from.x, p.z - from.z) || 1;
     this.controller.applyKnockback({ x: (p.x - from.x) / len, z: (p.z - from.z) / len }, GameConfig.player.hitKnockback);
+    this.audio.play('hurt', 0.1);
     if (this.settings.haptics) vibrate(40);
     this.effects.burst(new THREE.Vector3(p.x, 1, p.z), 0xff4f79, 6, 4);
     if (this.settings.hitFlash) this.hud.flashHit();
@@ -892,16 +922,19 @@ export class Game {
   private onCollect(drop: Drop, at: Vec2): void {
     const pos = new THREE.Vector3(at.x, 1.4, at.z);
     if (drop.kind === 'heal') {
+      this.audio.play('heal');
       this.player.health.heal(drop.amount);
       this.effects.burst(pos, 0xff4f79, 6, 3);
       if (this.settings.showDamageNumbers) this.damageNumbers.show(pos, drop.amount, 'heal');
     } else if (drop.kind === 'gold') {
+      this.audio.play('pickup', 0.06);
       this.stats.addGold(drop.amount);
       this.markDirty();
       this.effects.burst(pos, 0xffd23f, 4, 2);
     } else if (drop.kind === 'equip') {
       if (!drop.item) return;
       if (this.equipment.add(drop.item)) {
+        this.audio.play('equip');
         this.markDirty();
         const color = GameConfig.equipment.rarities[drop.item.rarity].color;
         this.effects.burst(pos, color, 10, 4);
@@ -914,6 +947,8 @@ export class Game {
     } else {
       const gained = this.stats.addXp(drop.amount);
       this.markDirty();
+      if (gained === 0) this.audio.play('pickup', 0.06);
+      else this.audio.play('levelup');
       this.effects.burst(pos, 0x5cf2d8, 4, 2);
       if (gained > 0) {
         // 레벨 업: 최대 체력을 올리고 일부 회복
@@ -935,6 +970,8 @@ export class Game {
     this.boss = new Boss({ x: b.spawn.x, z: b.spawn.z }, { hp: mul.hp, speed: mul.speed }, b);
     this.spawner.addEnemy(this.boss);
     this.hud.showBanner(`${b.name} 등장!`);
+    this.audio.play('bossAppear');
+    this.audio.playMusic('boss');
     this.effects.burst(new THREE.Vector3(b.spawn.x, 1.5, b.spawn.z), b.color, 30, 9);
     Logger.info(`보스 등장: ${b.name} (체력 ${this.boss.health.maxHp})`);
   }
@@ -948,6 +985,7 @@ export class Game {
     if (attack.kind === 'contact') {
       this.damagePlayer(attack.damage * dmgMul, { x: bp.x, z: bp.z });
     } else if (attack.kind === 'slam') {
+      this.audio.play('slam');
       this.effects.shockwave(new THREE.Vector3(bp.x, 0, bp.z), attack.radius);
       this.effects.burst(new THREE.Vector3(bp.x, 0.5, bp.z), 0xff4f79, 20, 6);
       // 점프로 피할 수 있다 (높이 1 이상)
@@ -964,7 +1002,10 @@ export class Game {
         const e = this.spawner.spawn(attack.type, sx, sz);
         if (e) this.effects.burst(new THREE.Vector3(sx, 1, sz), 0x8fe8ff, 10, 5);
       }
-      if (n > 0) this.hud.showBanner('부하 소환!', 900);
+      if (n > 0) {
+        this.hud.showBanner('부하 소환!', 900);
+        this.audio.play('summon');
+      }
     } else if (attack.kind === 'mortar') {
       // 포격 낙하: 플레이어 자리 주변에 예고 원을 찍고 delay 뒤에 터진다
       for (let i = 0; i < attack.count; i++) {
@@ -998,6 +1039,7 @@ export class Game {
       m.t -= dt;
       if (m.t > 0) continue;
       this.mortars.splice(i, 1);
+      this.audio.play('boom', 0.08);
       this.effects.shockwave(new THREE.Vector3(m.x, 0, m.z), m.radius, 0.4, 0xffb14f);
       this.effects.burst(new THREE.Vector3(m.x, 0.6, m.z), 0xff7a45, 14, 6);
       if (this.ended) continue;
