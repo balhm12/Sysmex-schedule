@@ -72,12 +72,21 @@ describe('던전 정의 (DungeonDefs)', () => {
     const cave = resolveBossConfig(getDungeon('cave')!);
     expect(cave.name).toBe('수정 골렘');
     expect(cave.hp).toBeGreaterThan(GameConfig.boss.hp);
-    expect(cave.windup).toEqual(GameConfig.boss.windup); // 덮어쓰지 않은 중첩 객체
+    expect(cave.windup.charge).toBe(GameConfig.boss.windup.charge); // 중첩 객체에서 덮어쓰지 않은 값은 기본 유지
+    expect(cave.windup.summon).toBe(1.0);
     expect(cave.slam.radius).toBe(5.5);
     expect(cave.charge.speed).toBe(GameConfig.boss.charge.speed);
+    // 보스별 패턴·외형
+    expect(cave.useCharge).toBe(false);
+    expect(cave.closePatterns).toContain('summon');
+    expect(cave.model).toBe('golem');
+    expect(forest.model).toBe('guardian');
     const fort = resolveBossConfig(getDungeon('fortress')!);
     expect(fort.hp).toBeGreaterThan(cave.hp);
     expect(fort.reward.equipMinRarity).toBe('epic');
+    expect(fort.closePatterns).toContain('mortar');
+    expect(fort.model).toBe('commander');
+    expect(fort.useCharge).toBe(true);
   });
 
   it('새 적 종류(박쥐 드론·요새 포대)는 능력치가 허용 범위 안이고 기존 외형을 재사용한다', () => {

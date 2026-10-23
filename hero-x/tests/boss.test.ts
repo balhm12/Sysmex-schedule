@@ -5,7 +5,7 @@ import { generateItemAtLeast } from '../src/items/ItemDatabase';
 
 const params: BossParams = {
   engageRange: 11, chargeMinRange: 5,
-  windup: { charge: 0.8, slam: 0.7, barrage: 0.6 },
+  windup: { charge: 0.8, slam: 0.7, barrage: 0.6, summon: 0.9, mortar: 0.8 },
   chargeDuration: 0.55, recover: 0.7, cooldown: 1.3, phase2TimeMul: 0.7,
 };
 
@@ -53,6 +53,23 @@ describe('BossAI (보스 패턴)', () => {
       return runUntil(ai, self, player, (d) => d.execute !== null, phase2)!.steps; // 두 번째 패턴까지
     };
     expect(steps(true)).toBeLessThan(steps(false));
+  });
+
+  it('closePatterns 를 주면 그 순서대로 순환하고, useCharge=false 면 멀어도 돌진하지 않는다', () => {
+    const ai = new BossAI();
+    const p2: BossParams = { ...params, closePatterns: ['mortar', 'barrage', 'slam'], useCharge: false };
+    const self = { x: 0, z: 0 }, player = { x: 0, z: 9 }; // chargeMinRange(5) 보다 멀다
+    const seen: string[] = [];
+    for (let k = 0; k < 4; k++) {
+      let got: string | null = null;
+      for (let i = 0; i < 300 && !got; i++) {
+        const d = ai.update(0.05, self, player, p2, false);
+        if (d.execute) got = d.execute;
+      }
+      seen.push(got ?? 'none');
+    }
+    expect(seen).toEqual(['mortar', 'barrage', 'slam', 'mortar']);
+    expect(seen).not.toContain('charge');
   });
 
   it('죽으면 아무것도 하지 않는다', () => {

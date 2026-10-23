@@ -1,7 +1,9 @@
 import type { Vec2 } from '../player/movement';
 
-/** 보스 공격 패턴 */
-export type BossPattern = 'charge' | 'slam' | 'barrage';
+/** 보스 공격 패턴
+ * - charge: 돌진 (멀 때) · slam: 내려찍기 · barrage: 탄막 · summon: 부하 소환 · mortar: 포격 낙하(플레이어 자리에 예고 후 폭발)
+ */
+export type BossPattern = 'charge' | 'slam' | 'barrage' | 'summon' | 'mortar';
 
 /** 보스 상태 */
 export type BossState = 'idle' | 'chase' | 'windup' | 'charge' | 'recover' | 'dead';
@@ -13,6 +15,10 @@ export interface BossParams {
   /** 이 거리보다 멀면 돌진을 고른다 */
   chargeMinRange: number;
   windup: Record<BossPattern, number>;
+  /** 가까울 때 쓰는 패턴 순서 (순환). 비어 있으면 slam ↔ barrage */
+  closePatterns?: BossPattern[];
+  /** 돌진 사용 여부 (기본 true). false 면 멀어도 가까운 패턴만 쓴다 */
+  useCharge?: boolean;
   chargeDuration: number;
   recover: number;
   cooldown: number;
@@ -44,7 +50,7 @@ export class BossAI {
   private timer = 0;
   private total = 0;
   private cooldown = 0;
-  private lastClose: BossPattern = 'barrage';
+  private closeIndex = -1;
   private chargeDir: Vec2 = { x: 0, z: 1 };
 
   update(dt: number, self: Vec2, player: Vec2, p: BossParams, phase2: boolean): BossDecision {
@@ -68,11 +74,12 @@ export class BossAI {
 
       case 'chase': {
         if (this.cooldown <= 0 && dist <= p.engageRange) {
-          // 패턴 선택: 멀면 돌진, 가까우면 내려찍기/탄막 교대
-          if (dist > p.chargeMinRange) this.pattern = 'charge';
+          // 패턴 선택: 멀면 돌진(쓰는 보스만), 가까우면 설정된 근접 패턴을 순서대로
+          if (dist > p.chargeMinRange && p.useCharge !== false) this.pattern = 'charge';
           else {
-            this.pattern = this.lastClose === 'slam' ? 'barrage' : 'slam';
-            this.lastClose = this.pattern;
+            const list: BossPattern[] = p.closePatterns && p.closePatterns.length > 0 ? p.closePatterns : ['slam', 'barrage'];
+            this.closeIndex = (this.closeIndex + 1) % list.length;
+            this.pattern = list[this.closeIndex];
           }
           this.state = 'windup';
           this.timer = this.total = p.windup[this.pattern] * mul;

@@ -45,6 +45,8 @@ export interface GameDebugState {
   dungeon: { id: string; name: string; arenaHalfSize: number; obstacles: number };
   dungeonSelectVisible: boolean;
   unlockedNow: string | null;
+  mortars: number;
+  bossModel: string;
   settingsVisible: boolean;
   touchVisible: boolean;
   pixelRatio: number;
@@ -95,6 +97,8 @@ export class Game {
   private readonly dungeonSelect: DungeonSelectUI;
   /** 이번 클리어로 새로 열린 던전 (결과 화면 안내용) */
   private unlockedNow: DungeonDef | null = null;
+  /** 보스 포격: 예고 뒤 터질 지점들 */
+  private mortars: Array<{ x: number; z: number; t: number; radius: number; damage: number }> = [];
   private readonly player: Player;
   private readonly controller: PlayerController;
   private readonly cameraCtrl: CameraController;
@@ -672,6 +676,7 @@ export class Game {
     this.chests.reset();
     this.boss = null;
     this.bossDefeated = false;
+    this.mortars.length = 0;
     this.hud.setBoss(null);
     // 레벨·골드·장비는 유지하고(성장), 체력은 보너스를 포함해 가득 채운다
     // (player.reset 이 기본 최대 체력으로 되돌리므로 그 뒤에 보너스를 적용해야 한다)
@@ -741,6 +746,8 @@ export class Game {
       dungeon: { id: this.dungeonDef.id, name: this.dungeonDef.name, arenaHalfSize: this.dungeon.getArenaHalfSize(), obstacles: this.dungeon.getObstacleBoxes().length },
       dungeonSelectVisible: this.dungeonSelect.visible,
       unlockedNow: this.unlockedNow?.id ?? null,
+      mortars: this.mortars.length,
+      bossModel: this.bossCfg.model,
       settingsVisible: this.settingsUI.visible,
       touchVisible: this.touch.visible,
       pixelRatio: this.renderer.getPixelRatio(),
@@ -915,6 +922,28 @@ export class Game {
       // 점프로 피할 수 있다 (높이 1 이상)
       const dist = Math.hypot(p.x - bp.x, p.z - bp.z);
       if (dist <= attack.radius + GameConfig.player.radius && this.player.jumpY < 1.0) this.damagePlayer(attack.damage * dmgMul, { x: bp.x, z: bp.z });
+    } else if (attack.kind === 'summon') {
+      // 부하 소환: 같은 종류가 maxAlive 마리 이상 살아 있으면 더 부르지 않는다
+      const alive = this.spawner.getEnemies().filter((e) => e.alive && e.type === attack.type).length;
+      const n = Math.max(0, Math.min(attack.count, attack.maxAlive - alive));
+      for (let i = 0; i < n; i++) {
+        const a = (i / Math.max(1, n)) * Math.PI * 2 + Math.random() * 0.5;
+        const sx = bp.x + Math.sin(a) * (boss.radius + 1.2);
+        const sz = bp.z + Math.cos(a) * (boss.radius + 1.2);
+        const e = this.spawner.spawn(attack.type, sx, sz);
+        if (e) this.effects.burst(new THREE.Vector3(sx, 1, sz), 0x8fe8ff, 10, 5);
+      }
+      if (n > 0) this.hud.showBanner('부하 소환!', 900);
+    } else if (attack.kind === 'mortar') {
+      // 포격 낙하: 플레이어 자리 주변에 예고 원을 찍고 delay 뒤에 터진다
+      for (let i = 0; i < attack.count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = i === 0 ? 0 : Math.random() * attack.spread;
+        const x = p.x + Math.sin(a) * d;
+        const z = p.z + Math.cos(a) * d;
+        this.mortars.push({ x, z, t: attack.delay + i * 0.12, radius: attack.radius, damage: attack.damage * dmgMul });
+        this.effects.marker(new THREE.Vector3(x, 0, z), attack.radius, attack.delay + i * 0.12, 0xffb14f);
+      }
     } else {
       const base = Math.atan2(p.x - bp.x, p.z - bp.z);
       for (let i = 0; i < attack.count; i++) {
@@ -926,6 +955,23 @@ export class Game {
           { damage: attack.damage * dmgMul, speed: attack.speed, lifetime: 4, radius: 0.25, knockback: 0, color: 0xb06bff, friendly: false },
         );
       }
+    }
+  }
+
+  /** 포격 낙하 진행: 시간이 되면 터지고, 범위 안이면(점프 중 제외) 피해 */
+  private updateMortars(dt: number): void {
+    if (this.mortars.length === 0) return;
+    const p = this.player.position;
+    for (let i = this.mortars.length - 1; i >= 0; i--) {
+      const m = this.mortars[i];
+      m.t -= dt;
+      if (m.t > 0) continue;
+      this.mortars.splice(i, 1);
+      this.effects.shockwave(new THREE.Vector3(m.x, 0, m.z), m.radius, 0.4, 0xffb14f);
+      this.effects.burst(new THREE.Vector3(m.x, 0.6, m.z), 0xff7a45, 14, 6);
+      if (this.ended) continue;
+      const dist = Math.hypot(p.x - m.x, p.z - m.z);
+      if (dist <= m.radius + GameConfig.player.radius && this.player.jumpY < 1.0) this.damagePlayer(m.damage, { x: m.x, z: m.z });
     }
   }
 
@@ -1004,6 +1050,7 @@ export class Game {
       onHitPlayer: (spec, _dir, from) => this.damagePlayer(spec.damage, from),
     });
     this.loot.update(dt, { x: p.x, z: p.z }, (drop, at) => this.onCollect(drop, at));
+    this.updateMortars(dt);
     this.chests.update(dt);
     const nearChest = !this.ended && this.chests.nearest({ x: p.x, z: p.z }) !== null;
     this.currentPrompt = nearChest ? `${GameConfig.controls.interact[0].replace('Key', '')} 보물 상자 열기` : '';

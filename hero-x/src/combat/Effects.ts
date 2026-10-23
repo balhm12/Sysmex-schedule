@@ -7,7 +7,8 @@ import * as THREE from 'three';
  */
 export class Effects {
   private readonly root = new THREE.Group();
-  private readonly swings: Array<{ mesh: THREE.Mesh; life: number; max: number; grow?: boolean }> = [];
+  /** 바닥·공중에 잠깐 보이는 도형들: 휘두르기 부채꼴, 충격파(grow), 예고 원(warn) */
+  private readonly swings: Array<{ mesh: THREE.Mesh; life: number; max: number; grow?: boolean; warn?: boolean }> = [];
   private readonly particles: Array<{ mesh: THREE.Mesh; v: THREE.Vector3; life: number; max: number }> = [];
   private readonly particleGeo = new THREE.BoxGeometry(0.16, 0.16, 0.16);
 
@@ -51,6 +52,17 @@ export class Effects {
     this.swings.push({ mesh, life: duration, max: duration, grow: true });
   }
 
+  /** 예고 표시: 바닥에 원을 그려 duration 동안 점점 진해지다가 사라진다 (포격 낙하 지점 등) */
+  marker(center: THREE.Vector3, radius: number, duration: number, color = 0xff7a45): void {
+    const geo = new THREE.RingGeometry(radius * 0.7, radius, 40);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(center.x, 0.07, center.z);
+    mesh.rotation.x = -Math.PI / 2;
+    this.root.add(mesh);
+    this.swings.push({ mesh, life: duration, max: duration, grow: false, warn: true });
+  }
+
   /** 파편 터뜨리기 (타격: 적게, 처치: 많이) */
   burst(pos: THREE.Vector3, color: THREE.ColorRepresentation, count = 8, power = 5): void {
     let spawned = 0;
@@ -71,9 +83,15 @@ export class Effects {
       const s = this.swings[i];
       s.life -= dt;
       const k = Math.max(0, s.life / s.max);
-      (s.mesh.material as THREE.MeshBasicMaterial).opacity = 0.75 * k;
-      // 휘두르기는 살짝 커지고, 충격파는 0.2 → 1 로 끝까지 퍼진다
-      s.mesh.scale.setScalar(s.grow ? 0.2 + (1 - k) * 0.8 : 1 + (1 - k) * 0.15);
+      if (s.warn) {
+        // 예고 원: 시간이 갈수록 진해지고 깜빡인다
+        (s.mesh.material as THREE.MeshBasicMaterial).opacity = 0.25 + (1 - k) * 0.6 * (0.7 + 0.3 * Math.sin(s.life * 25));
+        s.mesh.scale.setScalar(1);
+      } else {
+        (s.mesh.material as THREE.MeshBasicMaterial).opacity = 0.75 * k;
+        // 휘두르기는 살짝 커지고, 충격파는 0.2 → 1 로 끝까지 퍼진다
+        s.mesh.scale.setScalar(s.grow ? 0.2 + (1 - k) * 0.8 : 1 + (1 - k) * 0.15);
+      }
       if (s.life <= 0) {
         this.root.remove(s.mesh);
         s.mesh.geometry.dispose();

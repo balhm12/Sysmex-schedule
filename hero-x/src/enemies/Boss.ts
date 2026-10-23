@@ -10,7 +10,9 @@ import type { EnemyModel, EnemyModelState } from './EnemyModels';
 export type BossAttack =
   | { kind: 'contact'; damage: number }
   | { kind: 'slam'; radius: number; damage: number }
-  | { kind: 'barrage'; count: number; aimed: boolean; damage: number; speed: number };
+  | { kind: 'barrage'; count: number; aimed: boolean; damage: number; speed: number }
+  | { kind: 'summon'; type: string; count: number; maxAlive: number }
+  | { kind: 'mortar'; count: number; delay: number; radius: number; damage: number; spread: number };
 
 export interface BossContext extends EnemyContext {
   onBossAttack: (boss: Boss, attack: BossAttack) => void;
@@ -51,7 +53,7 @@ export class Boss extends Enemy {
     /** 이 보스의 설정 (던전마다 다르다) */
     readonly cfg: BossConfig = GameConfig.boss,
   ) {
-    super('boss', bossTypeConfig(cfg), pos, mul, (_type, def) => createBossModel(def));
+    super('boss', bossTypeConfig(cfg), pos, mul, (_type, def) => createBossModel(def, cfg.model));
   }
 
   get phase2(): boolean {
@@ -106,6 +108,10 @@ export class Boss extends Enemy {
     if (d.execute === 'barrage') {
       bctx.onBossAttack(this, { kind: 'barrage', count: this.phase2 ? b.barrage.phase2Count : b.barrage.count, aimed: this.phase2, damage: b.barrage.damage, speed: b.barrage.speed });
     }
+    if (d.execute === 'summon') bctx.onBossAttack(this, { kind: 'summon', type: b.summon.type, count: this.phase2 ? b.summon.phase2Count : b.summon.count, maxAlive: b.summon.maxAlive });
+    if (d.execute === 'mortar') {
+      bctx.onBossAttack(this, { kind: 'mortar', count: this.phase2 ? b.mortar.phase2Count : b.mortar.count, delay: b.mortar.delay, radius: b.mortar.radius, damage: b.mortar.damage, spread: b.mortar.spread });
+    }
     // 돌진 접촉 (돌진 한 번에 한 번만)
     if (d.state === 'charge' && !this.chargeHit) {
       const dist = Math.hypot(ctx.playerPos.x - p.x, ctx.playerPos.z - p.z);
@@ -134,18 +140,29 @@ interface BossModelState extends EnemyModelState {
   phase2?: boolean;
 }
 
-/** 보스 임시 모델: 큰 로봇, 두 팔(망치), 왕관 안테나. 예고 때 패턴별로 다른 색·동작 */
-function createBossModel(def: EnemyTypeConfig): EnemyModel {
+/** 보스 외형 종류 */
+export type BossModelKind = 'guardian' | 'golem' | 'commander';
+
+/**
+ * 보스 임시 모델. 공통: 큰 몸통·팔·예고용 바닥 원. 종류별 차이:
+ * - guardian(숲 수호 로봇): 왕관 안테나, 망치 팔
+ * - golem(수정 골렘): 둥근 바위 몸통에 수정 뿔, 주먹 팔
+ * - commander(요새 사령관): 각진 몸통에 어깨 포탑, 포신 팔
+ * 예고 때 패턴별로 다른 색·동작.
+ */
+function createBossModel(def: EnemyTypeConfig, kind: BossModelKind = 'guardian'): EnemyModel {
   const root = new THREE.Group();
   root.name = `Boss-${def.name}`;
   const r = def.radius;
   const bodyMat = new THREE.MeshLambertMaterial({ color: new THREE.Color(def.color) });
-  const darkMat = new THREE.MeshLambertMaterial({ color: 0x2a2f3d });
-  const goldMat = new THREE.MeshLambertMaterial({ color: 0xffd23f });
+  const darkMat = new THREE.MeshLambertMaterial({ color: kind === 'commander' ? 0x3a3c44 : 0x2a2f3d });
+  const goldMat = new THREE.MeshLambertMaterial({ color: kind === 'golem' ? 0x8fe8ff : kind === 'commander' ? 0xb0392f : 0xffd23f });
   const eyeMat = new THREE.MeshBasicMaterial({ color: 0x5cf2d8 });
   const glowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 });
 
-  const body = new THREE.Mesh(new THREE.BoxGeometry(r * 1.5, r * 1.3, r * 1.2), bodyMat);
+  // 몸통: 골렘은 둥글게, 사령관은 넓고 각지게, 수호 로봇은 기본 상자
+  const bodyGeo = kind === 'golem' ? new THREE.DodecahedronGeometry(r * 0.95, 0) : kind === 'commander' ? new THREE.BoxGeometry(r * 1.9, r * 1.2, r * 1.3) : new THREE.BoxGeometry(r * 1.5, r * 1.3, r * 1.2);
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
   body.position.y = r * 1.3;
   body.castShadow = true;
   root.add(body);
@@ -153,7 +170,8 @@ function createBossModel(def: EnemyTypeConfig): EnemyModel {
   legs.position.y = r * 0.35;
   legs.castShadow = true;
   root.add(legs);
-  const head = new THREE.Mesh(new THREE.BoxGeometry(r * 0.8, r * 0.6, r * 0.8), bodyMat);
+  const headGeo = kind === 'golem' ? new THREE.IcosahedronGeometry(r * 0.42, 0) : new THREE.BoxGeometry(r * 0.8, r * 0.6, r * 0.8);
+  const head = new THREE.Mesh(headGeo, bodyMat);
   head.position.y = r * 2.3;
   head.castShadow = true;
   root.add(head);
@@ -161,26 +179,53 @@ function createBossModel(def: EnemyTypeConfig): EnemyModel {
     const eye = new THREE.Mesh(new THREE.SphereGeometry(r * 0.1, 8, 6), eyeMat);
     eye.position.set(sx * r * 0.2, r * 2.35, r * 0.42);
     root.add(eye);
-    const spike = new THREE.Mesh(new THREE.ConeGeometry(r * 0.12, r * 0.4, 5), goldMat);
-    spike.position.set(sx * r * 0.25, r * 2.75, 0);
-    root.add(spike);
+    if (kind === 'golem') {
+      // 수정 뿔: 어깨 위로 큼직하게
+      const horn = new THREE.Mesh(new THREE.ConeGeometry(r * 0.22, r * 0.9, 5), goldMat);
+      horn.position.set(sx * r * 0.6, r * 2.2, -r * 0.3);
+      horn.rotation.z = -sx * 0.5;
+      root.add(horn);
+    } else if (kind === 'commander') {
+      // 어깨 포탑
+      const turret = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.16, r * 0.2, r * 0.9, 8), darkMat);
+      turret.position.set(sx * r * 0.75, r * 2.2, r * 0.2);
+      turret.rotation.x = Math.PI / 2 - 0.35;
+      root.add(turret);
+    } else {
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(r * 0.12, r * 0.4, 5), goldMat);
+      spike.position.set(sx * r * 0.25, r * 2.75, 0);
+      root.add(spike);
+    }
   }
-  const crown = new THREE.Mesh(new THREE.ConeGeometry(r * 0.16, r * 0.5, 5), goldMat);
-  crown.position.y = r * 2.85;
-  root.add(crown);
-  // 팔: 어깨 축, 끝에 망치
+  if (kind === 'guardian') {
+    const crown = new THREE.Mesh(new THREE.ConeGeometry(r * 0.16, r * 0.5, 5), goldMat);
+    crown.position.y = r * 2.85;
+    root.add(crown);
+  }
+  if (kind === 'golem') {
+    // 몸통 둘레의 수정 조각
+    for (let i = 0; i < 5; i++) {
+      const crystal = new THREE.Mesh(new THREE.ConeGeometry(r * 0.12, r * 0.5 + (i % 2) * r * 0.2, 4), goldMat);
+      const a = (i / 5) * Math.PI * 2;
+      crystal.position.set(Math.cos(a) * r * 0.8, r * 1.5 + Math.sin(i) * r * 0.2, Math.sin(a) * r * 0.8);
+      crystal.rotation.set(Math.sin(a) * 0.9, 0, -Math.cos(a) * 0.9);
+      root.add(crystal);
+    }
+  }
+  // 팔: 어깨 축, 끝에 망치(수호 로봇) / 주먹(골렘) / 포신(사령관)
   const arms: THREE.Group[] = [];
   for (const sx of [-1, 1]) {
     const shoulder = new THREE.Group();
-    shoulder.position.set(sx * r * 0.95, r * 1.8, 0);
+    shoulder.position.set(sx * r * (kind === 'commander' ? 1.15 : 0.95), r * 1.8, 0);
     const arm = new THREE.Mesh(new THREE.BoxGeometry(r * 0.3, r * 1.1, r * 0.3), darkMat);
     arm.position.y = -r * 0.55;
     arm.castShadow = true;
     shoulder.add(arm);
-    const hammer = new THREE.Mesh(new THREE.BoxGeometry(r * 0.55, r * 0.4, r * 0.55), goldMat);
-    hammer.position.y = -r * 1.2;
-    hammer.castShadow = true;
-    shoulder.add(hammer);
+    const tipGeo = kind === 'golem' ? new THREE.SphereGeometry(r * 0.34, 8, 6) : kind === 'commander' ? new THREE.CylinderGeometry(r * 0.18, r * 0.24, r * 0.9, 8) : new THREE.BoxGeometry(r * 0.55, r * 0.4, r * 0.55);
+    const tip = new THREE.Mesh(tipGeo, kind === 'commander' ? darkMat : goldMat);
+    tip.position.y = -r * 1.2;
+    tip.castShadow = true;
+    shoulder.add(tip);
     root.add(shoulder);
     arms.push(shoulder);
   }
@@ -192,7 +237,7 @@ function createBossModel(def: EnemyTypeConfig): EnemyModel {
 
   let flashTimer = 0;
   let t = 0;
-  const patternColor: Record<BossPattern, number> = { charge: 0xff7a45, slam: 0xff4f79, barrage: 0xb06bff };
+  const patternColor: Record<BossPattern, number> = { charge: 0xff7a45, slam: 0xff4f79, barrage: 0xb06bff, summon: 0x8fe8ff, mortar: 0xffb14f };
 
   return {
     root,
@@ -214,7 +259,8 @@ function createBossModel(def: EnemyTypeConfig): EnemyModel {
       glowMat.opacity = pat && s.state === 'windup' ? 0.25 + w * 0.55 : pat === 'charge' ? 0.5 : 0;
       if (pat) glowMat.color.set(patternColor[pat]);
       ring.scale.setScalar(pat === 'slam' ? 1 + w * 1.6 : 1);
-      const armTarget = pat === 'slam' ? -2.6 * w : pat === 'charge' ? -1.2 : pat === 'barrage' ? -1.6 * w : 0;
+      // 소환: 팔을 위로 벌리고, 포격: 팔을 앞으로 든다
+      const armTarget = pat === 'slam' ? -2.6 * w : pat === 'charge' ? -1.2 : pat === 'barrage' ? -1.6 * w : pat === 'summon' ? -3.0 * w : pat === 'mortar' ? -1.4 : 0;
       for (const a of arms) a.rotation.x += (armTarget - a.rotation.x) * (1 - Math.exp(-12 * dt));
       body.rotation.x = pat === 'charge' ? 0.25 : pat === 'slam' ? -0.15 * w : 0;
       if (flashTimer > 0) {

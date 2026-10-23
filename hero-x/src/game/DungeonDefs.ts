@@ -10,11 +10,13 @@ import { GameConfig, type EnemySpawnConfig, type GameConfigType, type ObstacleCo
 export type BossConfig = GameConfigType['boss'];
 
 /** 보스 덮어쓰기: 1단계 필드는 자유롭게, 중첩 객체(windup/charge/slam/barrage/reward)는 통째로 교체 */
-export type BossOverride = Partial<Omit<BossConfig, 'windup' | 'charge' | 'slam' | 'barrage' | 'reward'>> & {
+export type BossOverride = Partial<Omit<BossConfig, 'windup' | 'charge' | 'slam' | 'barrage' | 'summon' | 'mortar' | 'reward'>> & {
   windup?: Partial<BossConfig['windup']>;
   charge?: Partial<BossConfig['charge']>;
   slam?: Partial<BossConfig['slam']>;
   barrage?: Partial<BossConfig['barrage']>;
+  summon?: Partial<BossConfig['summon']>;
+  mortar?: Partial<BossConfig['mortar']>;
   reward?: Partial<BossConfig['reward']>;
 };
 
@@ -150,8 +152,15 @@ export const DUNGEONS: DungeonDef[] = [
       score: 500,
       spawn: { x: 0, z: -17 },
       contactDamage: 24,
+      model: 'golem',
+      // 돌진 대신 박쥐 드론을 소환한다. 느리지만 내려찍기가 넓다
+      useCharge: false,
+      closePatterns: ['slam', 'summon', 'barrage'],
+      engageRange: 9,
+      windup: { slam: 0.9, barrage: 0.7, summon: 1.0 },
       slam: { radius: 5.5, damage: 30 },
       barrage: { count: 10, phase2Count: 14, damage: 11, speed: 9.5 },
+      summon: { type: 'stalker', count: 2, phase2Count: 3, maxAlive: 4 },
       phase2SpeedMul: 1.4,
       reward: { goldMin: 150, goldMax: 240, xp: 220, equipMinRarity: 'rare' },
     },
@@ -230,7 +239,11 @@ export const DUNGEONS: DungeonDef[] = [
       score: 800,
       spawn: { x: 0, z: -22 },
       contactDamage: 28,
-      windup: { charge: 0.65, slam: 0.6, barrage: 0.5 },
+      model: 'commander',
+      // 포격을 플레이어 자리에 떨어뜨린다 (예고 원이 보이면 자리를 옮기거나 점프)
+      closePatterns: ['mortar', 'barrage', 'slam', 'mortar'],
+      windup: { charge: 0.65, slam: 0.6, barrage: 0.5, mortar: 0.7 },
+      mortar: { count: 4, phase2Count: 6, delay: 1.0, radius: 2.6, damage: 22, spread: 4 },
       charge: { speed: 21 },
       slam: { radius: 5, damage: 34 },
       barrage: { count: 12, phase2Count: 18, damage: 12, speed: 11 },
@@ -266,6 +279,8 @@ export function resolveBossConfig(def: DungeonDef): BossConfig {
     charge: { ...base.charge, ...(o.charge ?? {}) },
     slam: { ...base.slam, ...(o.slam ?? {}) },
     barrage: { ...base.barrage, ...(o.barrage ?? {}) },
+    summon: { ...base.summon, ...(o.summon ?? {}) },
+    mortar: { ...base.mortar, ...(o.mortar ?? {}) },
     reward: { ...base.reward, ...(o.reward ?? {}) },
   };
 }

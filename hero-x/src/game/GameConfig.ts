@@ -273,7 +273,13 @@ export interface GameConfigType {
     engageRange: number;
     /** 이 거리보다 멀면 돌진 선택 */
     chargeMinRange: number;
-    windup: { charge: number; slam: number; barrage: number };
+    windup: { charge: number; slam: number; barrage: number; summon: number; mortar: number };
+    /** 가까울 때 쓰는 패턴 순서 (순환) */
+    closePatterns: Array<'slam' | 'barrage' | 'summon' | 'mortar'>;
+    /** 돌진 사용 여부 */
+    useCharge: boolean;
+    /** 외형: 'guardian'(숲 수호 로봇) | 'golem'(수정 골렘) | 'commander'(요새 사령관) */
+    model: 'guardian' | 'golem' | 'commander';
     chargeDuration: number;
     recover: number;
     cooldown: number;
@@ -284,6 +290,10 @@ export interface GameConfigType {
     charge: { speed: number };
     slam: { radius: number; damage: number };
     barrage: { count: number; phase2Count: number; damage: number; speed: number };
+    /** 부하 소환: 종류, 마리 수, 동시에 살아 있을 수 있는 최대 수 */
+    summon: { type: string; count: number; phase2Count: number; maxAlive: number };
+    /** 포격 낙하: 낙하 수, 예고 시간(초), 반지름, 피해, 플레이어 주변 흩어짐 */
+    mortar: { count: number; phase2Count: number; delay: number; radius: number; damage: number; spread: number };
     /** 처치 보상 */
     reward: { goldMin: number; goldMax: number; xp: number; equipMinRarity: Rarity };
   };
@@ -330,7 +340,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.6.1' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.6.2' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -572,7 +582,10 @@ export const GameConfig: GameConfigType = {
     contactDamage: 22,
     engageRange: 11,
     chargeMinRange: 5,
-    windup: { charge: 0.8, slam: 0.7, barrage: 0.6 },
+    windup: { charge: 0.8, slam: 0.7, barrage: 0.6, summon: 0.9, mortar: 0.8 },
+    closePatterns: ['slam', 'barrage'],
+    useCharge: true,
+    model: 'guardian',
     chargeDuration: 0.55,
     recover: 0.7,
     cooldown: 1.3,
@@ -582,6 +595,8 @@ export const GameConfig: GameConfigType = {
     charge: { speed: 18 },
     slam: { radius: 4.5, damage: 26 },
     barrage: { count: 8, phase2Count: 12, damage: 10, speed: 9 },
+    summon: { type: 'stalker', count: 2, phase2Count: 3, maxAlive: 4 },
+    mortar: { count: 3, phase2Count: 5, delay: 1.1, radius: 2.4, damage: 18, spread: 3.5 },
     reward: { goldMin: 80, goldMax: 150, xp: 120, equipMinRarity: 'rare' },
   },
 
@@ -629,6 +644,12 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'player.jumpSpeed': { min: 1, max: 30 },
   'player.gravity': { min: 1, max: 100 },
   'combat.autoAimRange': { min: 2, max: 60 },
+  'boss.summon.count': { min: 0, max: 10 },
+  'boss.summon.maxAlive': { min: 0, max: 20 },
+  'boss.mortar.count': { min: 0, max: 20 },
+  'boss.mortar.delay': { min: 0.3, max: 5 },
+  'boss.mortar.radius': { min: 0.5, max: 10 },
+  'boss.mortar.damage': { min: 0, max: 999 },
   'combat.ranged.damage': { min: 1, max: 9999 },
   'combat.ranged.speed': { min: 1, max: 100 },
   'combat.ranged.cooldown': { min: 0.05, max: 5 },
