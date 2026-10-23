@@ -498,3 +498,44 @@ body {
   from { transform: scale(0.4); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+
+/* ---- 메인 메뉴 (4단계-c) ---- */
+.menu-panel {
+  width: min(92vw, 420px);
+}
+.menu-list {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 14px;
+}
+.btn.secondary {
+  background: #273055;
+  color: #eef2ff;
+  box-shadow: none;
+  font-size: 16px;
+  padding: 11px;
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.menu-confirm {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 79, 121, 0.12);
+  border: 1px solid rgba(255, 79, 121, 0.4);
+  font-size: 13px;
+}
+.menu-confirm p {
+  margin: 0 0 8px;
+}
+.btns .btn {
+  width: auto;
+  min-width: 140px;
+}
+.result-panel .btns {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}

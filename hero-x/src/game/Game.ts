@@ -19,6 +19,7 @@ import { PlayerController } from '../player/PlayerController';
 import { createPlaceholderModel } from '../player/models/PlaceholderModel';
 import type { Vec2 } from '../player/movement';
 import { ControlsGuide } from '../ui/ControlsGuide';
+import { MainMenu } from '../ui/MainMenu';
 import { DamageNumbers } from '../ui/DamageNumbers';
 import { HUD } from '../ui/HUD';
 import { ResultUI } from '../ui/ResultUI';
@@ -36,6 +37,9 @@ export interface GameDebugState {
   camera: { x: number; y: number; z: number };
   guideVisible: boolean;
   resultVisible: boolean;
+  mode: string;
+  menuVisible: boolean;
+  runActive: boolean;
   enemies: Array<{ type: string; x: number; z: number; hp: number; state: string }>;
   aliveEnemies: number;
   projectiles: number;
@@ -73,6 +77,11 @@ export class Game {
   private readonly projectiles: ProjectileSystem;
   private readonly combat: CombatSystem;
   private readonly guide: ControlsGuide;
+  private readonly menu: MainMenu;
+  /** 게임 흐름: menu(메인 메뉴) → play(던전) → result(결과) */
+  private mode: 'menu' | 'play' | 'result' = 'menu';
+  /** 진행 중인 게임이 있는지 (메뉴에서 '이어하기' 가능) */
+  private runActive = false;
   private readonly hud: HUD;
   private readonly result: ResultUI;
   private readonly damageNumbers: DamageNumbers;
@@ -150,13 +159,18 @@ export class Game {
 
     // UI
     this.damageNumbers = new DamageNumbers(uiRoot, (pos) => this.projectToScreen(pos));
-    this.guide = new ControlsGuide(uiRoot, () => this.canvas.focus(), {
-      get: () => this.difficulty,
-      set: (level) => this.setDifficulty(level),
-    });
+    this.guide = new ControlsGuide(uiRoot, () => this.guide.hide());
     this.hud = new HUD(uiRoot);
     this.hud.setDungeonName(GameConfig.dungeon.name);
-    this.result = new ResultUI(uiRoot, () => this.restart());
+    this.result = new ResultUI(uiRoot, () => this.retry(), () => this.openMenu());
+    this.menu = new MainMenu(uiRoot, {
+      newGame: () => this.newGame(),
+      continueGame: () => this.continueGame(),
+      openInventory: () => this.toggleInventory(true),
+      openGuide: () => this.guide.show(),
+      hasRun: () => this.runActive,
+      difficulty: { get: () => this.difficulty, set: (level) => this.setDifficulty(level) },
+    });
     this.inventoryUI = new InventoryUI(uiRoot, this.equipment, {
       onChange: () => this.applyStats(),
       onClose: () => this.toggleInventory(false),
@@ -168,13 +182,22 @@ export class Game {
     this.input.attach(window, canvas);
     this.input.onPress(GameConfig.controls.toggleGuide, () => this.guide.toggle());
     this.input.onPress(GameConfig.controls.restart, () => {
-      if (this.ended) this.restart();
+      if (this.mode === 'result') this.retry();
     });
-    this.input.onPress(GameConfig.controls.toggleInventory, () => this.toggleInventory());
+    this.input.onPress(GameConfig.controls.toggleInventory, () => {
+      if (this.mode !== 'menu') this.toggleInventory();
+    });
     this.input.onPress(GameConfig.controls.interact, () => this.tryInteract());
     this.input.onPress(['Escape'], () => {
-      if (this.inventoryUI.visible) this.toggleInventory(false);
+      if (this.guide.visible) this.guide.hide();
+      else if (this.inventoryUI.visible) this.toggleInventory(false);
+      else if (this.mode === 'play') this.openMenu();
     });
+    this.input.onPress(['Enter'], () => {
+      if (this.mode === 'menu' && !this.inventoryUI.visible && !this.guide.visible) this.menu.pressPrimary();
+    });
+    this.hud.hide();
+    this.menu.show();
 
     window.addEventListener('resize', this.resize);
     this.resize();
@@ -216,7 +239,51 @@ export class Game {
 
   private applyDifficulty(): void {
     this.applyDifficultyToSpawner();
-    this.guide?.refreshDifficulty();
+    this.menu?.refresh();
+  }
+
+  /** 새 게임: 레벨·골드·장비를 모두 초기화하고 던전에 들어간다 */
+  newGame(): void {
+    this.stats.reset();
+    this.equipment.reset();
+    this.restart();
+    this.runActive = true;
+    this.enterPlay();
+    this.hud.showBanner(`${GameConfig.dungeon.name}`, 1800);
+    Logger.info('새 게임을 시작합니다.');
+  }
+
+  /** 이어하기: 메뉴에서 진행 중인 던전으로 돌아간다 */
+  continueGame(): void {
+    if (!this.runActive) return;
+    this.enterPlay();
+  }
+
+  /** 결과 화면에서 다시 도전 (레벨·골드·장비 유지) */
+  retry(): void {
+    this.restart();
+    this.runActive = true;
+    this.enterPlay();
+  }
+
+  /** 메인 메뉴 열기 (던전은 그대로 멈춘다) */
+  openMenu(): void {
+    this.mode = 'menu';
+    this.inventoryUI.hide();
+    this.paused = false;
+    this.result.hide();
+    this.hud.hide();
+    this.menu.show();
+  }
+
+  private enterPlay(): void {
+    this.mode = 'play';
+    this.menu.hide();
+    this.guide.hide();
+    this.result.hide();
+    this.hud.show();
+    this.lastTime = performance.now();
+    this.canvas.focus();
   }
 
   private currentPrompt = '';
@@ -243,6 +310,7 @@ export class Game {
       this.paused = false;
       this.lastTime = performance.now();
     }
+    if (this.mode === 'menu') this.menu.refresh();
   }
 
   /** 레벨·장비 보너스를 플레이어 체력에 반영 (최대 체력이 줄면 현재 체력도 그 안으로) */
@@ -280,6 +348,16 @@ export class Game {
     this.result.hide();
     this.ended = false;
     Logger.info('전투를 다시 시작합니다.');
+  }
+
+  /** 결과 화면 표시 (쓰러짐·클리어 공용) */
+  private showResult(title: string, sub: string): void {
+    this.ended = true;
+    this.mode = 'result';
+    this.runActive = false;
+    this.inventoryUI.hide();
+    this.paused = false;
+    this.result.show(title, sub);
   }
 
   /** 모든 자원 정리 (페이지를 떠나거나 게임을 완전히 종료할 때) */
@@ -322,6 +400,9 @@ export class Game {
       camera: { x: cam.x, y: cam.y, z: cam.z },
       guideVisible: this.guide.visible,
       resultVisible: this.result.visible,
+      mode: this.mode,
+      menuVisible: this.menu.visible,
+      runActive: this.runActive,
       enemies: this.spawner.getEnemies().map((e) => ({ type: e.type, x: e.position.x, z: e.position.z, hp: e.health.hp, state: e.ai.state })),
       aliveEnemies: this.spawner.aliveCount,
       projectiles: this.projectiles.count,
@@ -393,8 +474,7 @@ export class Game {
     this.hud.flashHit();
     if (GameConfig.hud.showDamageNumbers) this.damageNumbers.show(new THREE.Vector3(p.x, 2.0, p.z), damage, 'player');
     if (this.player.health.isDead) {
-      this.ended = true;
-      this.result.show('쓰러졌습니다', `처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}`);
+      this.showResult('쓰러졌습니다', `처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}`);
       Logger.info('플레이어가 쓰러졌습니다.');
     }
   }
@@ -501,8 +581,7 @@ export class Game {
     }
     // 보상을 줍거나 3초가 지나면 결과 화면
     if (this.bossDefeated && (this.loot.count === 0 || this.boss.removable)) {
-      this.ended = true;
-      this.result.show('던전 클리어!', `${GameConfig.dungeon.name} · 처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}`);
+      this.showResult('던전 클리어!', `${GameConfig.dungeon.name} · 처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}`);
     }
   }
 
@@ -515,8 +594,8 @@ export class Game {
     const dt = Math.min(0.05, (now - this.lastTime) / 1000);
     this.lastTime = now;
 
-    if (this.paused) {
-      // 장비 화면이 열린 동안은 그리기만 한다
+    if (this.paused || this.mode === 'menu') {
+      // 장비 화면이 열렸거나 메인 메뉴 중에는 그리기만 한다
       this.renderer.render(this.scene, this.camera);
       return;
     }
