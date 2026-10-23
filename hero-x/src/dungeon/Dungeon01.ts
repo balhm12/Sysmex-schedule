@@ -122,6 +122,11 @@ export class Dungeon01 implements CollisionWorld {
     }
   }
 
+  /** 그림자 켜기/끄기 (사용자 설정) */
+  setShadows(on: boolean): void {
+    this.sun.castShadow = on;
+  }
+
   /** 그림자 영역이 플레이어를 따라가도록 태양광을 옮긴다 */
   updateLight(target: THREE.Vector3): void {
     this.sun.position.set(target.x + 12, 26, target.z + 10);

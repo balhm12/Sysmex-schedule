@@ -10,13 +10,16 @@ export class CameraController {
   private readonly desired = new THREE.Vector3();
   private readonly lookTarget = new THREE.Vector3();
   private first = true;
+  /** 카메라 거리 배율 (사용자 설정). 1 이 GameConfig.camera.offset 그대로 */
+  distanceScale = 1;
 
   constructor(readonly camera: THREE.PerspectiveCamera) {}
 
   /** 매 프레임: target(플레이어 위치)을 따라간다 */
   update(dt: number, target: THREE.Vector3): void {
     const c = GameConfig.camera;
-    this.desired.set(target.x + c.offset.x, target.y + c.offset.y, target.z + c.offset.z);
+    const k0 = this.distanceScale;
+    this.desired.set(target.x + c.offset.x * k0, target.y + c.offset.y * k0, target.z + c.offset.z * k0);
     if (this.first) {
       // 첫 프레임에는 바로 제자리로 (시작할 때 카메라가 날아오는 느낌 방지)
       this.camera.position.copy(this.desired);

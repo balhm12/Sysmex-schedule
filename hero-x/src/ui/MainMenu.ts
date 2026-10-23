@@ -8,6 +8,7 @@ export interface MainMenuCallbacks {
   continueGame: () => void;
   openInventory: () => void;
   openGuide: () => void;
+  openSettings: () => void;
   /** 멈춰 둔 던전이 있는지 */
   hasRun: () => boolean;
   /** 이어갈 진행(멈춘 던전 또는 저장된 성장)이 있는지 (이어하기 버튼 활성화, 새 게임 확인창) */
@@ -22,7 +23,7 @@ export interface MainMenuCallbacks {
 /**
  * 메인 메뉴
  * - 게임을 켜면 가장 먼저 보이고, 플레이 중 Esc 로 돌아올 수 있다.
- * - 새 게임 / 이어하기 / 장비 / 조작 안내 / 설정(5단계 예정) / 난이도
+ * - 새 게임 / 이어하기 / 장비 / 조작 안내 / 설정 / 난이도
  * - 진행 요약과 저장 상태(마지막 저장 시각, 손상 안내)를 보여준다.
  * - 브라우저 게임이라 '게임 종료' 대신 탭을 닫으면 된다는 안내만 둔다.
  */
@@ -48,7 +49,7 @@ export class MainMenu {
           <button class="btn secondary" id="menu-continue" type="button">이어하기</button>
           <button class="btn secondary" id="menu-inventory" type="button">장비</button>
           <button class="btn secondary" id="menu-guide" type="button">조작 안내</button>
-          <button class="btn secondary" id="menu-settings" type="button" disabled title="5단계에서 추가됩니다">설정 (준비 중)</button>
+          <button class="btn secondary" id="menu-settings" type="button">설정</button>
         </div>
         <div class="diff-row"><span class="hud-label">난이도</span>${diffButtons}</div>
         <div class="menu-confirm" id="menu-confirm" hidden>
@@ -72,6 +73,7 @@ export class MainMenu {
     q<HTMLButtonElement>('#menu-continue').addEventListener('click', () => this.cb.continueGame());
     q<HTMLButtonElement>('#menu-inventory').addEventListener('click', () => this.cb.openInventory());
     q<HTMLButtonElement>('#menu-guide').addEventListener('click', () => this.cb.openGuide());
+    q<HTMLButtonElement>('#menu-settings').addEventListener('click', () => this.cb.openSettings());
     this.el.querySelectorAll<HTMLButtonElement>('.diff-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         this.cb.difficulty.set(btn.dataset.level as DifficultyLevel);

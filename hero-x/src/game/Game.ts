@@ -23,12 +23,14 @@ import { MainMenu } from '../ui/MainMenu';
 import { DamageNumbers } from '../ui/DamageNumbers';
 import { HUD } from '../ui/HUD';
 import { ResultUI } from '../ui/ResultUI';
+import { SettingsUI } from '../ui/SettingsUI';
 import { EMPTY_RECORDS, applySaveData, hasProgress, serializeSave, type SaveRecords } from '../save/SaveData';
 import { browserStorage, clearSave, loadSave, writeSave } from '../save/SaveStorage';
 import { Logger } from '../utils/Logger';
 import { CameraController } from './CameraController';
 import { getDifficultyPreset, loadDifficulty, saveDifficulty } from './Difficulty';
 import { GameConfig, sanitizeGameConfig, type DifficultyLevel } from './GameConfig';
+import { defaultSettings, loadSettings, saveSettings, sanitizeSettings, type SettingKey, type UserSettings } from './Settings';
 
 /** 테스트·디버그용으로 밖에서 읽을 수 있는 상태 */
 export interface GameDebugState {
@@ -36,6 +38,10 @@ export interface GameDebugState {
   frames: number;
   ended: boolean;
   save: { status: string; lastSavedAt: string | null; hasSavedProgress: boolean; blocked: boolean; dirty: boolean; records: SaveRecords };
+  settings: UserSettings;
+  settingsVisible: boolean;
+  shadowsEnabled: boolean;
+  cameraDistanceScale: number;
   player: { x: number; z: number; facing: number; moving: boolean; hp: number; maxHp: number };
   camera: { x: number; y: number; z: number };
   guideVisible: boolean;
@@ -81,6 +87,9 @@ export class Game {
   private readonly combat: CombatSystem;
   private readonly guide: ControlsGuide;
   private readonly menu: MainMenu;
+  private readonly settingsUI: SettingsUI;
+  /** 사용자 설정 (설정 화면에서 바꾸고 브라우저에 저장) */
+  private settings: UserSettings = defaultSettings();
   /** 게임 흐름: menu(메인 메뉴) → play(던전) → result(결과) */
   private mode: 'menu' | 'play' | 'result' = 'menu';
   /** 진행 중인 게임이 있는지 (메뉴에서 '이어하기' 가능) */
@@ -137,6 +146,9 @@ export class Game {
       Logger.warn(`설정 '${w.path}' 값 ${w.from} 은(는) 허용 범위를 벗어나 ${w.to} 로 보정했습니다.`);
     }
 
+    // 사용자 설정은 적을 생성하기 전에 읽는다 (적 체력 배율·난이도가 생성 시 적용되므로)
+    this.loadSettingsFromStorage();
+
     const g = GameConfig.graphics;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: g.antialias, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, g.maxPixelRatio));
@@ -164,11 +176,11 @@ export class Game {
       this.player, this.input, () => this.spawner.getEnemies(), () => this.getAimPoint(), this.effects, this.projectiles,
       (enemy, damage, killed) => {
         if (killed) this.loot.dropFor(enemy.def.score, { x: enemy.position.x, z: enemy.position.z });
-        if (!GameConfig.hud.showDamageNumbers) return;
+        if (!this.settings.showDamageNumbers) return;
         this.projTmp.set(enemy.position.x, 1.6, enemy.position.z);
         this.damageNumbers.show(this.projTmp, killed ? enemy.def.score : damage, killed ? 'kill' : 'enemy');
       },
-      () => this.stats.damageMultiplier,
+      () => this.effectiveDamageMultiplier(),
       (kind) => this.equipment.weaponAttack(kind),
     );
     this.loot = new LootSystem(this.scene);
@@ -183,6 +195,7 @@ export class Game {
     this.menu = new MainMenu(uiRoot, {
       newGame: () => this.newGame(),
       continueGame: () => this.continueGame(),
+      openSettings: () => this.openSettings(),
       hasProgress: () => this.runActive || this.hasSavedProgress,
       progressText: () => this.progressText(),
       saveNote: () => this.saveStatus,
@@ -190,6 +203,12 @@ export class Game {
       openGuide: () => this.guide.show(),
       hasRun: () => this.runActive,
       difficulty: { get: () => this.difficulty, set: (level) => this.setDifficulty(level) },
+    });
+    this.settingsUI = new SettingsUI(uiRoot, {
+      get: () => this.settings,
+      set: (key, value) => this.updateSetting(key, value),
+      resetAll: () => this.resetSettings(),
+      onClose: () => this.closeSettings(),
     });
     this.inventoryUI = new InventoryUI(uiRoot, this.equipment, {
       onChange: () => {
@@ -200,6 +219,7 @@ export class Game {
       getSummary: () => this.statSummary(),
     });
     this.applyDifficulty();
+    this.applySettings();
 
     // 입력 연결
     this.input.attach(window, canvas);
@@ -213,11 +233,12 @@ export class Game {
     this.input.onPress(GameConfig.controls.interact, () => this.tryInteract());
     this.input.onPress(['Escape'], () => {
       if (this.guide.visible) this.guide.hide();
+      else if (this.settingsUI.visible) this.settingsUI.pressBack();
       else if (this.inventoryUI.visible) this.toggleInventory(false);
       else if (this.mode === 'play') this.openMenu();
     });
     this.input.onPress(['Enter'], () => {
-      if (this.mode === 'menu' && !this.inventoryUI.visible && !this.guide.visible) this.menu.pressPrimary();
+      if (this.mode === 'menu' && !this.inventoryUI.visible && !this.guide.visible && !this.settingsUI.visible) this.menu.pressPrimary();
     });
     this.hud.hide();
     this.menu.show();
@@ -248,6 +269,9 @@ export class Game {
   setDifficulty(level: DifficultyLevel): void {
     if (level === this.difficulty) return;
     this.difficulty = level;
+    this.settings.difficulty = level;
+    saveSettings(this.storage, this.settings);
+    this.settingsUI?.refresh();
     this.markDirty();
     saveDifficulty(level);
     this.applyDifficulty();
@@ -261,7 +285,78 @@ export class Game {
 
   private applyDifficultyToSpawner(): void {
     const p = getDifficultyPreset(this.difficulty);
-    this.spawner.multipliers = { hp: p.enemyHp, speed: p.enemySpeed };
+    // 사용자 설정의 적 체력 배율은 난이도 배율에 곱한다 (새로 생성되는 적부터)
+    this.spawner.multipliers = { hp: p.enemyHp * this.settings.enemyHpMul, speed: p.enemySpeed };
+  }
+
+  // ---------- 사용자 설정 ----------
+
+  /** 저장된 사용자 설정을 읽는다. 없으면 옛 난이도 저장값을 이어받는다 */
+  private loadSettingsFromStorage(): void {
+    const r = loadSettings(this.storage);
+    this.settings = r.settings;
+    for (const w of r.warnings) Logger.warn(`설정 보정: ${w}`);
+    if (!r.found) this.settings.difficulty = this.difficulty;
+    this.difficulty = this.settings.difficulty;
+  }
+
+  /** 설정 하나를 바꾸고 바로 적용·저장한다 */
+  updateSetting<K extends SettingKey>(key: K, value: UserSettings[K]): void {
+    const next = sanitizeSettings({ ...this.settings, [key]: value }).settings;
+    if (key === 'difficulty') {
+      this.settings = next;
+      saveSettings(this.storage, this.settings);
+      this.setDifficulty(next.difficulty);
+      return;
+    }
+    this.settings = next;
+    saveSettings(this.storage, this.settings);
+    this.applySettings();
+  }
+
+  /** 모든 설정을 기본값으로 */
+  resetSettings(): void {
+    const prevDifficulty = this.settings.difficulty;
+    this.settings = defaultSettings();
+    saveSettings(this.storage, this.settings);
+    this.applySettings();
+    if (prevDifficulty !== this.settings.difficulty) this.setDifficulty(this.settings.difficulty);
+    Logger.info('설정을 기본값으로 되돌렸습니다.');
+  }
+
+  /** 현재 설정을 게임 시스템에 반영한다 (난이도·적 체력 배율은 다음 생성부터) */
+  private applySettings(): void {
+    const s = this.settings;
+    this.cameraCtrl.distanceScale = s.cameraDistance;
+    if (this.renderer.shadowMap.enabled !== s.shadows) {
+      this.renderer.shadowMap.enabled = s.shadows;
+      // 그림자 켜고 끄기는 재질을 다시 컴파일해야 바로 반영된다
+      this.scene.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const m of mats) m.needsUpdate = true;
+      });
+    }
+    this.dungeon.setShadows(s.shadows);
+    if (!s.showFps) this.guide.setHudText('');
+    this.applyDifficultyToSpawner();
+    this.applyStats();
+  }
+
+  getSettings(): UserSettings {
+    return { ...this.settings };
+  }
+
+  openSettings(): void {
+    this.inventoryUI.hide();
+    this.guide.hide();
+    this.settingsUI.show();
+  }
+
+  closeSettings(): void {
+    this.settingsUI.hide();
+    if (this.mode === 'menu') this.menu.refresh();
   }
 
   private applyDifficulty(): void {
@@ -399,6 +494,7 @@ export class Game {
     this.mode = 'play';
     this.menu.hide();
     this.guide.hide();
+    this.settingsUI.hide();
     this.result.hide();
     this.hud.show();
     this.lastTime = performance.now();
@@ -435,15 +531,25 @@ export class Game {
   /** 레벨·장비 보너스를 플레이어 체력에 반영 (최대 체력이 줄면 현재 체력도 그 안으로) */
   private applyStats(): void {
     const h = this.player.health;
-    h.maxHp = Math.max(1, this.stats.maxHp + this.equipment.totals().maxHp);
+    h.maxHp = this.effectiveMaxHp();
     if (h.hp > h.maxHp) h.hp = h.maxHp;
+  }
+
+  /** 레벨·장비 보너스에 사용자 설정 배율까지 곱한 최대 체력 */
+  private effectiveMaxHp(): number {
+    return Math.max(1, Math.round((this.stats.maxHp + this.equipment.totals().maxHp) * this.settings.playerHpMul));
+  }
+
+  /** 레벨 보너스에 사용자 설정 배율을 곱한 공격력 배율 */
+  private effectiveDamageMultiplier(): number {
+    return this.stats.damageMultiplier * this.settings.playerDamageMul;
   }
 
   /** 장비 화면 위에 보여줄 요약 */
   private statSummary(): string {
     const t = this.equipment.totals();
-    const melee = Math.round((GameConfig.combat.melee.damage + this.equipment.weaponAttack('melee')) * this.stats.damageMultiplier);
-    const ranged = Math.round((GameConfig.combat.ranged.damage + this.equipment.weaponAttack('ranged')) * this.stats.damageMultiplier);
+    const melee = Math.round((GameConfig.combat.melee.damage + this.equipment.weaponAttack('melee')) * this.effectiveDamageMultiplier());
+    const ranged = Math.round((GameConfig.combat.ranged.damage + this.equipment.weaponAttack('ranged')) * this.effectiveDamageMultiplier());
     const speed = Math.round((1 + t.moveSpeed) * 100);
     return `레벨 ${this.stats.level} · 골드 ${this.stats.gold} · 근접 ${melee} · 원거리 ${ranged} · 방어 ${t.defense} · 최대 체력 ${this.player.health.maxHp} · 속도 ${speed}%`;
   }
@@ -460,8 +566,9 @@ export class Game {
     this.bossDefeated = false;
     this.hud.setBoss(null);
     // 레벨·골드·장비는 유지하고(성장), 체력은 보너스를 포함해 가득 채운다
-    this.player.health.reset(Math.max(1, this.stats.maxHp + this.equipment.totals().maxHp));
+    // (player.reset 이 기본 최대 체력으로 되돌리므로 그 뒤에 보너스를 적용해야 한다)
     this.player.reset(GameConfig.player.startPosition);
+    this.player.health.reset(this.effectiveMaxHp());
     this.controller.reset();
     this.combat.reset();
     this.result.hide();
@@ -521,6 +628,10 @@ export class Game {
       running: this.running,
       frames: this.frames,
       ended: this.ended,
+      settings: { ...this.settings },
+      settingsVisible: this.settingsUI.visible,
+      shadowsEnabled: this.renderer.shadowMap.enabled,
+      cameraDistanceScale: this.cameraCtrl.distanceScale,
       save: { status: this.saveStatus, lastSavedAt: this.lastSavedAt, hasSavedProgress: this.hasSavedProgress, blocked: this.saveBlocked, dirty: this.saveDirty, records: { ...this.records } },
       player: { x: p.x, z: p.z, facing: this.player.facing, moving: this.player.moving, hp: this.player.health.hp, maxHp: this.player.health.maxHp },
       camera: { x: cam.x, y: cam.y, z: cam.z },
@@ -597,8 +708,8 @@ export class Game {
     const len = Math.hypot(p.x - from.x, p.z - from.z) || 1;
     this.controller.applyKnockback({ x: (p.x - from.x) / len, z: (p.z - from.z) / len }, GameConfig.player.hitKnockback);
     this.effects.burst(new THREE.Vector3(p.x, 1, p.z), 0xff4f79, 6, 4);
-    this.hud.flashHit();
-    if (GameConfig.hud.showDamageNumbers) this.damageNumbers.show(new THREE.Vector3(p.x, 2.0, p.z), damage, 'player');
+    if (this.settings.hitFlash) this.hud.flashHit();
+    if (this.settings.showDamageNumbers) this.damageNumbers.show(new THREE.Vector3(p.x, 2.0, p.z), damage, 'player');
     if (this.player.health.isDead) {
       this.records.deaths++;
       this.showResult('쓰러졌습니다', `처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}`);
@@ -612,7 +723,7 @@ export class Game {
     if (drop.kind === 'heal') {
       this.player.health.heal(drop.amount);
       this.effects.burst(pos, 0xff4f79, 6, 3);
-      if (GameConfig.hud.showDamageNumbers) this.damageNumbers.show(pos, drop.amount, 'heal');
+      if (this.settings.showDamageNumbers) this.damageNumbers.show(pos, drop.amount, 'heal');
     } else if (drop.kind === 'gold') {
       this.stats.addGold(drop.amount);
       this.markDirty();
@@ -791,7 +902,7 @@ export class Game {
 
   /** FPS 표시 (0.5초마다 갱신) */
   private updateFps(dt: number): void {
-    if (!GameConfig.debug.showFps) return;
+    if (!this.settings.showFps) return;
     this.fpsFrames++;
     this.fpsTime += dt;
     if (this.fpsTime >= 0.5) {
