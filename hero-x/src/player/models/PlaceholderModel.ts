@@ -106,7 +106,8 @@ export function createPlaceholderModel(colors: PlaceholderColors): PlayerModel {
   hair.rotation.x = -0.3;
   // 얼굴 사진: 머리 앞면에 살짝 둥근 판을 두고 사진 텍스처를 붙인다 (사진이 없으면 숨김)
   const faceMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 1 });
-  const facePlane = new THREE.Mesh(new THREE.SphereGeometry(0.405, 24, 18, Math.PI * 0.72, Math.PI * 0.56, Math.PI * 0.22, Math.PI * 0.56), faceMat);
+  // SphereGeometry 의 phi 는 +X 에서 시작해 +Z 가 π/2 이므로, 정면(+Z)을 중심으로 0.56π 만큼 잘라낸다
+  const facePlane = new THREE.Mesh(new THREE.SphereGeometry(0.405, 24, 18, Math.PI * 0.22, Math.PI * 0.56, Math.PI * 0.22, Math.PI * 0.56), faceMat);
   facePlane.visible = false;
   head.add(facePlane);
   const visor = head.children[1];
@@ -118,6 +119,12 @@ export function createPlaceholderModel(colors: PlaceholderColors): PlayerModel {
     root,
     setFace(texture) {
       if (faceMat.map && faceMat.map !== texture) faceMat.map.dispose();
+      if (texture) {
+        // 구면 조각의 u 방향이 보는 사람 기준 오른쪽→왼쪽이라 좌우를 뒤집어 거울상이 되지 않게 한다
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.repeat.x = -1;
+        texture.needsUpdate = true;
+      }
       faceMat.map = texture;
       faceMat.needsUpdate = true;
       facePlane.visible = texture !== null;
