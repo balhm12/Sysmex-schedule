@@ -7,6 +7,7 @@ export function keyLabel(code: string): string {
   if (code === 'Mouse1') return '마우스 가운데';
   if (code === 'Space') return 'Space';
   if (code === 'Escape') return 'Esc';
+  if (code === 'ShiftLeft' || code === 'ShiftRight') return 'Shift';
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Arrow')) return { Up: '↑', Down: '↓', Left: '←', Right: '→' }[code.slice(5)] ?? code;
   return code;
@@ -39,6 +40,7 @@ export class ControlsGuide {
           <li>${keys(c.attackMelee)} 근접 공격 (마우스가 가리키는 쪽으로)</li>
           <li>${keys(c.attackRanged)} 원거리 공격 (에너지 탄 발사)</li>
           <li>${keys(c.jump)} 점프 (떠 있는 동안 탄·충격파를 피함)</li>
+          <li>${keys(c.dodge)} 회피 (이동 방향으로 짧게 빠르게, 잠깐 무적)</li>
           <li>${keys(c.toggleInventory)} 장비 화면 열기/닫기 (게임 일시정지)</li>
           <li>${keys(c.interact)} 보물 상자 열기 (가까이 가면 안내가 뜸)</li>
           <li>${keys(['Escape'])} 메인 메뉴 (게임 일시정지)</li>

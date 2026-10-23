@@ -909,3 +909,39 @@ body.touch-mode .hud {
 .touch.floating .touch-stick.active {
   opacity: 1;
 }
+
+/* 터치 버튼 크기 배율·회피 버튼·왼손 모드 */
+.touch {
+  --touch-scale: 1;
+}
+.touch-buttons {
+  transform: scale(var(--touch-scale));
+  transform-origin: bottom right;
+}
+.touch-dodge {
+  right: 150px;
+  bottom: 100px;
+  width: 64px;
+  height: 64px;
+  background: rgba(92, 242, 216, 0.35);
+}
+.touch-dodge.cooling {
+  border-style: dashed;
+}
+.touch.lefty .touch-buttons {
+  right: auto;
+  left: max(18px, env(safe-area-inset-left));
+  transform: scale(calc(var(--touch-scale) * -1), var(--touch-scale));
+  transform-origin: bottom left;
+}
+.touch.lefty .touch-btn {
+  transform: scaleX(-1); /* 글자가 거울상이 되지 않게 되돌림 */
+}
+.touch.lefty .touch-stick {
+  left: auto;
+  right: max(18px, env(safe-area-inset-right));
+}
+.touch.lefty .touch-top {
+  right: auto;
+  left: max(14px, env(safe-area-inset-left));
+}

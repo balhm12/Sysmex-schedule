@@ -42,6 +42,9 @@ export class Player {
     return this.object3d.position;
   }
 
+  /** 회피(대시) 중인지 (PlayerController 가 갱신) */
+  dashing = false;
+
   /** 공격 동작 중인지 */
   get attacking(): boolean {
     return this.attackTimer > 0;

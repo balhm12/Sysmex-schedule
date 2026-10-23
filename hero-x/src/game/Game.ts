@@ -29,6 +29,7 @@ import { ResultUI } from '../ui/ResultUI';
 import { SettingsUI } from '../ui/SettingsUI';
 import { EMPTY_RECORDS, applySaveData, cloneRecords, hasProgress, serializeSave, type SaveRecords } from '../save/SaveData';
 import { browserStorage, clearSave, loadSave, writeSave } from '../save/SaveStorage';
+import { vibrate } from '../utils/haptics';
 import { Logger } from '../utils/Logger';
 import { CameraController } from './CameraController';
 import { getDifficultyPreset, loadDifficulty, saveDifficulty } from './Difficulty';
@@ -50,6 +51,8 @@ export interface GameDebugState {
   settingsVisible: boolean;
   touchVisible: boolean;
   floatingJoystick: boolean;
+  dash: { active: boolean; cooldown: number; invulnerable: number };
+  aimRingVisible: boolean;
   pixelRatio: number;
   interactButtonVisible: boolean;
   shadowsEnabled: boolean;
@@ -98,6 +101,8 @@ export class Game {
   private readonly dungeonSelect: DungeonSelectUI;
   /** 이번 클리어로 새로 열린 던전 (결과 화면 안내용) */
   private unlockedNow: DungeonDef | null = null;
+  /** 자동 조준 표시: 터치 조작 중 겨누는 적 발밑의 고리 */
+  private readonly aimRing: THREE.Mesh;
   /** 보스 포격: 예고 뒤 터질 지점들 */
   private mortars: Array<{ x: number; z: number; t: number; radius: number; damage: number }> = [];
   private readonly player: Player;
@@ -193,6 +198,17 @@ export class Game {
     this.scene.add(this.player.object3d);
     this.cameraCtrl = new CameraController(this.camera);
     this.controller = new PlayerController(this.player, this.input, world, () => this.cameraCtrl.getYaw(), () => 1 + this.equipment.totals().moveSpeed);
+    this.controller.onDash = (dir) => {
+      const p = this.player.position;
+      // 뒤쪽으로 파편을 흩어 '휙' 하는 느낌
+      this.effects.burst(new THREE.Vector3(p.x - dir.x * 0.5, 0.4, p.z - dir.z * 0.5), 0x5cf2d8, 10, 4);
+      if (this.settings.haptics) vibrate(10);
+    };
+    this.aimRing = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.72, 32), new THREE.MeshBasicMaterial({ color: 0x5cf2d8, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
+    this.aimRing.rotation.x = -Math.PI / 2;
+    this.aimRing.position.y = 0.06;
+    this.aimRing.visible = false;
+    this.scene.add(this.aimRing);
     this.effects = new Effects(this.scene);
     this.projectiles = new ProjectileSystem(this.scene);
     this.spawner = new EnemySpawner(this.scene);
@@ -201,7 +217,10 @@ export class Game {
     this.combat = new CombatSystem(
       this.player, this.input, () => this.spawner.getEnemies(), () => this.getAimPoint(), this.effects, this.projectiles,
       (enemy, damage, killed) => {
-        if (killed) this.loot.dropFor(enemy.def.score, { x: enemy.position.x, z: enemy.position.z }, this.dungeonDef.rewardMul);
+        if (killed) {
+          this.loot.dropFor(enemy.def.score, { x: enemy.position.x, z: enemy.position.z }, this.dungeonDef.rewardMul);
+          if (this.settings.haptics) vibrate(enemy.type === 'boss' ? [60, 40, 120] : 18);
+        }
         if (!this.settings.showDamageNumbers) return;
         this.projTmp.set(enemy.position.x, 1.6, enemy.position.z);
         this.damageNumbers.show(this.projTmp, killed ? enemy.def.score : damage, killed ? 'kill' : 'enemy');
@@ -386,6 +405,8 @@ export class Game {
     if (!s.showFps) this.guide.setHudText('');
     this.applyPixelRatio();
     if (this.touch.isFloating !== s.floatingJoystick) this.touch.setFloating(s.floatingJoystick);
+    this.touch.setLeftHanded(s.leftHanded);
+    this.touch.setButtonScale(s.touchButtonScale);
     this.updateTouchVisibility();
     this.applyDifficultyToSpawner();
     this.applyStats();
@@ -623,6 +644,7 @@ export class Game {
     const chest = this.chests.nearest({ x: p.x, z: p.z });
     if (!chest || !this.chests.open(chest)) return;
     const drops = this.loot.dropChest({ x: chest.x, z: chest.z });
+    if (this.settings.haptics) vibrate(25);
     this.effects.burst(new THREE.Vector3(chest.x, 1, chest.z), 0xffd23f, 16, 5);
     this.damageNumbers.showText(new THREE.Vector3(chest.x, 1.8, chest.z), '보물 상자!', '#ffd23f');
     Logger.info(`보물 상자 개봉: ${drops.map((d) => (d.kind === 'equip' ? d.item?.name : `${d.kind} ${d.amount}`)).join(', ')}`);
@@ -713,6 +735,9 @@ export class Game {
     window.removeEventListener('resize', this.resize);
     window.removeEventListener('beforeunload', this.flushSave);
     document.removeEventListener('visibilitychange', this.onVisibility);
+    this.aimRing.removeFromParent();
+    this.aimRing.geometry.dispose();
+    (this.aimRing.material as THREE.Material).dispose();
     this.spawner.dispose();
     this.projectiles.dispose();
     this.loot.dispose();
@@ -753,6 +778,8 @@ export class Game {
       settingsVisible: this.settingsUI.visible,
       touchVisible: this.touch.visible,
       floatingJoystick: this.touch.isFloating,
+      dash: { active: this.controller.dashing, cooldown: this.controller.dashCooldownRatio, invulnerable: this.player.health.invulnerable },
+      aimRingVisible: this.aimRing.visible,
       pixelRatio: this.renderer.getPixelRatio(),
       interactButtonVisible: this.touch.visible && !(document.getElementById('touch-interact') as HTMLButtonElement | null)?.hidden,
       shadowsEnabled: this.renderer.shadowMap.enabled,
@@ -850,6 +877,7 @@ export class Game {
     const p = this.player.position;
     const len = Math.hypot(p.x - from.x, p.z - from.z) || 1;
     this.controller.applyKnockback({ x: (p.x - from.x) / len, z: (p.z - from.z) / len }, GameConfig.player.hitKnockback);
+    if (this.settings.haptics) vibrate(40);
     this.effects.burst(new THREE.Vector3(p.x, 1, p.z), 0xff4f79, 6, 4);
     if (this.settings.hitFlash) this.hud.flashHit();
     if (this.settings.showDamageNumbers) this.damageNumbers.show(new THREE.Vector3(p.x, 2.0, p.z), damage, 'player');
@@ -1059,6 +1087,11 @@ export class Game {
     this.currentPrompt = nearChest ? `${GameConfig.controls.interact[0].replace('Key', '')} 보물 상자 열기` : '';
     this.hud.setPrompt(this.currentPrompt);
     this.touch.setInteract(nearChest);
+    this.touch.setDodgeCooldown(this.controller.dashCooldownRatio);
+    // 자동 조준 표시: 터치 조작 중 겨누는 적 발밑에 고리
+    const aim = this.settings.touchControls && !this.ended ? this.nearestEnemyPoint(GameConfig.combat.autoAimRange) : null;
+    this.aimRing.visible = aim !== null;
+    if (aim) this.aimRing.position.set(aim.x, 0.06, aim.z);
     this.hud.setChests(this.chests.openedCount, this.chests.total);
     this.player.update(dt);
     this.effects.update(dt);

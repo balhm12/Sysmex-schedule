@@ -104,6 +104,8 @@ export interface GameConfigType {
     attackMelee: string[];
     attackRanged: string[];
     jump: string[];
+    /** 회피(대시): 이동 방향으로 짧게 빠르게 움직이며 무적 */
+    dodge: string[];
     restart: string[];
     toggleGuide: string[];
     toggleInventory: string[];
@@ -123,6 +125,17 @@ export interface GameConfigType {
     /** 공격 중 이동 속도 비율 (0~1) */
     attackMoveFactor: number;
     /** 점프 시작 속도 (클수록 높이 뜀) */
+    /** 회피(대시) */
+    dash: {
+      /** 대시 중 이동 속도 (유닛/초) */
+      speed: number;
+      /** 대시 시간(초) */
+      duration: number;
+      /** 다음 대시까지 대기(초) */
+      cooldown: number;
+      /** 대시 중 무적 여부 */
+      invulnerable: boolean;
+    };
     jumpSpeed: number;
     /** 중력 (클수록 빨리 떨어짐) */
     gravity: number;
@@ -340,7 +353,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.6.3' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '0.6.4' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -350,6 +363,7 @@ export const GameConfig: GameConfigType = {
     attackMelee: ['Mouse0', 'KeyJ'],
     attackRanged: ['Mouse2', 'KeyK'],
     jump: ['Space'],
+    dodge: ['ShiftLeft', 'ShiftRight', 'KeyL'],
     restart: ['KeyR'],
     toggleGuide: ['KeyH'],
     toggleInventory: ['KeyI', 'Tab'],
@@ -362,6 +376,7 @@ export const GameConfig: GameConfigType = {
     hitKnockback: 6,
     moveSpeed: 7,
     attackMoveFactor: 0.6,
+    dash: { speed: 20, duration: 0.22, cooldown: 0.9, invulnerable: true },
     jumpSpeed: 8,
     gravity: 24,
     turnSpeed: 14,
@@ -643,6 +658,9 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'player.attackMoveFactor': { min: 0, max: 1 },
   'player.jumpSpeed': { min: 1, max: 30 },
   'player.gravity': { min: 1, max: 100 },
+  'player.dash.speed': { min: 1, max: 60 },
+  'player.dash.duration': { min: 0.05, max: 2 },
+  'player.dash.cooldown': { min: 0, max: 10 },
   'combat.autoAimRange': { min: 2, max: 60 },
   'boss.summon.count': { min: 0, max: 10 },
   'boss.summon.maxAlive': { min: 0, max: 20 },

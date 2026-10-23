@@ -25,6 +25,12 @@ export interface UserSettings {
   touchControls: boolean;
   /** 조이스틱이 누르는 자리에 나타남 (false: 왼쪽 아래 고정) */
   floatingJoystick: boolean;
+  /** 왼손 모드: 버튼을 왼쪽에 */
+  leftHanded: boolean;
+  /** 터치 버튼 크기 배율 */
+  touchButtonScale: number;
+  /** 진동 피드백 (지원 기기만) */
+  haptics: boolean;
   /** 렌더 해상도 배율 (낮추면 휴대폰에서 부드러워진다) */
   resolution: number;
   /** 피해 숫자 표시 */
@@ -52,6 +58,9 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: 'cameraDistance', kind: 'range', group: '게임', label: '카메라 거리', description: '1.0 이 기본. 멀리 두면 넓게 보이고 가까우면 캐릭터가 크게 보입니다.', min: 0.6, max: 1.6, step: 0.1, unit: '×' },
   { key: 'touchControls', kind: 'toggle', group: '게임', label: '터치 조작', description: '화면에 조이스틱·버튼을 띄우고 가까운 적을 자동으로 조준합니다. 휴대폰·태블릿은 기본 켜짐.' },
   { key: 'floatingJoystick', kind: 'toggle', group: '게임', label: '조이스틱: 누르는 자리에', description: '켜면 버튼이 아닌 아무 곳이나 눌러 그 자리에서 끌면 움직입니다. 끄면 왼쪽 아래 고정 조이스틱.' },
+  { key: 'leftHanded', kind: 'toggle', group: '게임', label: '왼손 모드', description: '공격·점프·회피 버튼을 왼쪽에, 고정 조이스틱을 오른쪽에 둡니다.' },
+  { key: 'touchButtonScale', kind: 'range', group: '게임', label: '터치 버튼 크기', description: '버튼이 작거나 크면 조절하세요.', min: 0.8, max: 1.4, step: 0.1, unit: '×' },
+  { key: 'haptics', kind: 'toggle', group: '게임', label: '진동', description: '맞거나 처치할 때 짧게 진동합니다 (지원하는 휴대폰만, iPhone 은 안 됨).' },
   { key: 'playerHpMul', kind: 'range', group: '전투 수치', label: '내 최대 체력', description: '레벨·장비 보너스를 더한 최대 체력에 곱합니다.', min: 0.5, max: 3, step: 0.1, unit: '×' },
   { key: 'playerDamageMul', kind: 'range', group: '전투 수치', label: '내 공격력', description: '근접·원거리 공격 피해에 곱합니다.', min: 0.5, max: 3, step: 0.1, unit: '×' },
   { key: 'enemyHpMul', kind: 'range', group: '전투 수치', label: '적 체력', description: '난이도 배율에 다시 곱합니다. 다음 던전 입장부터 적용됩니다.', min: 0.5, max: 3, step: 0.1, unit: '×' },
@@ -73,6 +82,9 @@ export function defaultSettings(): UserSettings {
     cameraDistance: 1,
     touchControls: touch,
     floatingJoystick: true,
+    leftHanded: false,
+    touchButtonScale: 1,
+    haptics: touch,
     // 휴대폰은 그림자를 끄고 해상도를 낮춰 시작한다 (설정에서 올릴 수 있다)
     resolution: touch ? 0.8 : 1,
     showDamageNumbers: GameConfig.hud.showDamageNumbers,

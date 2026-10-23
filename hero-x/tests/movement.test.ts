@@ -98,3 +98,21 @@ describe('hitsObstacle / integrateJump (투사체·점프)', () => {
     expect(s.vy).toBe(0);
   });
 });
+
+describe('회피(대시) 상태', () => {
+  it('시작하면 방향이 정규화되고, 대시 중·쿨다운 중에는 다시 시작할 수 없다', async () => {
+    const { createDashState, startDash, tickDash } = await import('../src/player/movement');
+    const d = createDashState();
+    expect(startDash(d, { x: 3, z: 4 }, 0.2, 1.0)).toBe(true);
+    expect(d.dir.x).toBeCloseTo(0.6, 6);
+    expect(d.dir.z).toBeCloseTo(0.8, 6);
+    expect(startDash(d, { x: 1, z: 0 }, 0.2, 1.0)).toBe(false); // 대시 중
+    tickDash(d, 0.25);
+    expect(d.timer).toBe(0);
+    expect(d.cooldown).toBeCloseTo(0.75, 6);
+    expect(startDash(d, { x: 1, z: 0 }, 0.2, 1.0)).toBe(false); // 쿨다운 중
+    tickDash(d, 0.8);
+    expect(startDash(d, { x: 0, z: 0 }, 0.2, 1.0)).toBe(true); // 방향이 없으면 앞(+Z)
+    expect(d.dir).toEqual({ x: 0, z: 1 });
+  });
+});

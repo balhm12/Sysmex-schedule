@@ -152,7 +152,8 @@ hero-x/
 - "키를 방향키로만" → `GameConfig.controls` 수정.
 - "적을 두 배로" → `GameConfig.enemies.spawns` 에 항목 추가. "적 체력 30% 올려" → `enemies.types.rusher.hp` 조정.
 - "공격을 더 세게/넓게" → `GameConfig.combat.melee` 의 `damage`, `range`, `arcDegrees`. 원거리는 `combat.ranged`.
-- "점프를 더 높게" → `player.jumpSpeed` 올리기 (또는 `player.gravity` 내리기).
+- "점프를 더 높게" → `player.jumpSpeed` 올리기 (또는 `player.gravity` 내리기). "회피를 더 멀리/자주" → `player.dash.speed/duration/cooldown`. 회피 키는 `controls.dodge`, 터치 버튼은 `TouchControls` 의 `#touch-dodge`.
+- 진동은 `utils/haptics.ts` 의 `vibrate()` 를 `settings.haptics` 확인 후 호출한다. 터치 전용 표시(자동 조준 고리 `aimRing`)는 `settings.touchControls` 일 때만 보인다.
 - "아이템이 더 자주/레벨이 빨리" → `loot.healChance/goldChance`, `progression.xpBase/xpGrowth`.
 - 플레이어 공격력: `CombatSystem` 이 레벨 배율(`() => stats.damageMultiplier`)과 무기 공격력(`(kind) => equipment.weaponAttack(kind)`)을 함수로 받는다. 피해 = (기본 + 무기) × 배율.
 - 방어력은 `Game.damagePlayer` 에서 `applyDefense` 로, 체력 보너스는 `Game.applyStats`, 속도 보너스는 `PlayerController` 의 배율 함수로 적용된다. 새 능력치를 추가하면 이 세 곳을 확인한다.

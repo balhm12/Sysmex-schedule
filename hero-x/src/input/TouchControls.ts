@@ -42,6 +42,7 @@ export class TouchControls {
         <button type="button" class="touch-btn touch-melee" data-code="${c.attackMelee[1] ?? c.attackMelee[0]}" aria-label="근접 공격">근접</button>
         <button type="button" class="touch-btn touch-ranged" data-code="${c.attackRanged[1] ?? c.attackRanged[0]}" aria-label="원거리 공격">원거리</button>
         <button type="button" class="touch-btn touch-jump" data-code="${c.jump[0]}" aria-label="점프">점프</button>
+        <button type="button" class="touch-btn touch-dodge" id="touch-dodge" data-code="${c.dodge[0]}" aria-label="회피">회피</button>
         <button type="button" class="touch-btn touch-interact" id="touch-interact" data-code="${c.interact[0]}" aria-label="상자 열기" hidden>열기</button>
       </div>
       <div class="rotate-hint">휴대폰을 가로로 돌리면 더 넓게 보입니다</div>
@@ -160,6 +161,24 @@ export class TouchControls {
 
   get visible(): boolean {
     return !this.el.hidden;
+  }
+
+  /** 왼손 모드: 버튼을 왼쪽, 고정 조이스틱을 오른쪽으로 */
+  setLeftHanded(on: boolean): void {
+    this.el.classList.toggle('lefty', on);
+  }
+
+  /** 버튼 크기 배율 */
+  setButtonScale(k: number): void {
+    this.el.style.setProperty('--touch-scale', String(k));
+  }
+
+  /** 회피 버튼의 쿨다운 표시 (0 = 바로 쓸 수 있음, 1 = 방금 씀) */
+  setDodgeCooldown(ratio: number): void {
+    const btn = this.el.querySelector<HTMLButtonElement>('#touch-dodge');
+    if (!btn) return;
+    btn.style.opacity = ratio > 0 ? String(0.35 + (1 - ratio) * 0.3) : '';
+    btn.classList.toggle('cooling', ratio > 0);
   }
 
   /** 상호작용 버튼 표시 (상자 근처일 때만) */

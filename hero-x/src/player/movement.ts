@@ -117,3 +117,30 @@ export function integrateJump(state: JumpState, dt: number, gravity: number): Ju
   }
   return { y, vy };
 }
+
+/** 회피(대시) 상태: timer > 0 이면 대시 중, cooldown > 0 이면 다시 쓸 수 없음 */
+export interface DashState {
+  timer: number;
+  cooldown: number;
+  dir: Vec2;
+}
+
+export function createDashState(): DashState {
+  return { timer: 0, cooldown: 0, dir: { x: 0, z: 1 } };
+}
+
+/** 대시 시작 시도. 쿨다운 중이거나 이미 대시 중이면 false */
+export function startDash(state: DashState, dir: Vec2, duration: number, cooldown: number): boolean {
+  if (state.timer > 0 || state.cooldown > 0) return false;
+  const len = Math.hypot(dir.x, dir.z);
+  state.dir = len > 1e-6 ? { x: dir.x / len, z: dir.z / len } : { x: 0, z: 1 };
+  state.timer = duration;
+  state.cooldown = cooldown;
+  return true;
+}
+
+/** 대시 한 프레임 진행 (대시 시간과 쿨다운을 줄인다) */
+export function tickDash(state: DashState, dt: number): void {
+  if (state.timer > 0) state.timer = Math.max(0, state.timer - dt);
+  if (state.cooldown > 0) state.cooldown = Math.max(0, state.cooldown - dt);
+}
