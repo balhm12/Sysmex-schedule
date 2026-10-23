@@ -53,6 +53,7 @@ export interface GameDebugState {
   dungeonSelectVisible: boolean;
   unlockedNow: string | null;
   mortars: number;
+  hitStop: number;
   bossModel: string;
   settingsVisible: boolean;
   touchVisible: boolean;
@@ -125,6 +126,8 @@ export class Game {
   private contextLost = false;
   /** 복구 직후 잠시 동안은 프레임 오류를 치명적으로 보지 않는다 (셰이더 재컴파일 중 일시 오류) */
   private restoreGraceUntil = 0;
+  /** 히트 스톱: 남은 시간 동안 시뮬레이션 시간이 느리게 흐른다 */
+  private hitStopTime = 0;
   /** 얼굴 사진 (data URL). null 이면 기본 얼굴 */
   private face: string | null = loadFace();
   /** 플레이어가 정식 glb 모델을 쓰는 중인지 */
@@ -265,6 +268,8 @@ export class Game {
       (enemy, damage, killed) => {
         this.audio.play(killed ? 'kill' : 'enemyHit', 0.05);
         if (killed) {
+          this.hitStopTime = Math.max(this.hitStopTime, enemy.type === 'boss' ? GameConfig.juice.bossHitStop : GameConfig.juice.hitStop.duration);
+          if (enemy.type === 'boss') this.cameraCtrl.shake(GameConfig.juice.slamShake.amp, 0.6);
           this.loot.dropFor(enemy.def.score, { x: enemy.position.x, z: enemy.position.z }, this.dungeonDef.rewardMul);
           if (this.settings.haptics) vibrate(enemy.type === 'boss' ? [60, 40, 120] : 18);
         }
@@ -894,6 +899,7 @@ export class Game {
       dungeonSelectVisible: this.dungeonSelect.visible,
       unlockedNow: this.unlockedNow?.id ?? null,
       mortars: this.mortars.length,
+      hitStop: this.hitStopTime,
       bossModel: this.bossCfg.model,
       settingsVisible: this.settingsUI.visible,
       touchVisible: this.touch.visible,
@@ -1006,6 +1012,7 @@ export class Game {
     const len = Math.hypot(p.x - from.x, p.z - from.z) || 1;
     this.controller.applyKnockback({ x: (p.x - from.x) / len, z: (p.z - from.z) / len }, GameConfig.player.hitKnockback);
     this.audio.play('hurt', 0.1);
+    this.cameraCtrl.shake(GameConfig.juice.hitShake.amp, GameConfig.juice.hitShake.duration);
     if (this.settings.haptics) vibrate(40);
     this.effects.burst(new THREE.Vector3(p.x, 1, p.z), 0xff4f79, 6, 4);
     if (this.settings.hitFlash) this.hud.flashHit();
@@ -1071,6 +1078,7 @@ export class Game {
     this.hud.showBanner(`${b.name} 등장!`);
     this.audio.play('bossAppear');
     this.audio.playMusic('boss');
+    this.cameraCtrl.shake(GameConfig.juice.slamShake.amp * 0.8, 0.8);
     this.effects.burst(new THREE.Vector3(b.spawn.x, 1.5, b.spawn.z), b.color, 30, 9);
     Logger.info(`보스 등장: ${b.name} (체력 ${this.boss.health.maxHp})`);
   }
@@ -1085,6 +1093,7 @@ export class Game {
       this.damagePlayer(attack.damage * dmgMul, { x: bp.x, z: bp.z });
     } else if (attack.kind === 'slam') {
       this.audio.play('slam');
+      this.cameraCtrl.shake(GameConfig.juice.slamShake.amp, GameConfig.juice.slamShake.duration);
       this.effects.shockwave(new THREE.Vector3(bp.x, 0, bp.z), attack.radius);
       this.effects.burst(new THREE.Vector3(bp.x, 0.5, bp.z), 0xff4f79, 20, 6);
       // 점프로 피할 수 있다 (높이 1 이상)
@@ -1139,6 +1148,7 @@ export class Game {
       if (m.t > 0) continue;
       this.mortars.splice(i, 1);
       this.audio.play('boom', 0.08);
+      this.cameraCtrl.shake(GameConfig.juice.slamShake.amp * 0.6, 0.3);
       this.effects.shockwave(new THREE.Vector3(m.x, 0, m.z), m.radius, 0.4, 0xffb14f);
       this.effects.burst(new THREE.Vector3(m.x, 0.6, m.z), 0xff7a45, 14, 6);
       if (this.ended) continue;
@@ -1229,7 +1239,12 @@ export class Game {
 
     // 시뮬레이션은 최대 0.05초 단위로 여러 번 돌린다: 프레임이 느려져도(휴대폰 10~20 FPS) 게임 속도가 느려지지 않고
     // 충돌·공격 판정은 작은 간격으로 유지된다. 그리기는 한 번만.
+    // 히트 스톱: 처치 순간 아주 짧게 시간이 느려져 타격감을 준다 (그리기는 계속)
     let remaining = elapsed;
+    if (this.hitStopTime > 0) {
+      this.hitStopTime = Math.max(0, this.hitStopTime - elapsed);
+      remaining = elapsed * GameConfig.juice.hitStop.timeScale;
+    }
     while (remaining > 1e-6 && this.mode === 'play') {
       const dt = Math.min(GameConfig.performance.maxStep, remaining);
       remaining -= dt;
@@ -1299,6 +1314,7 @@ export class Game {
     this.camTarget.set(p.x, 0, p.z);
     this.cameraCtrl.update(dt, this.camTarget);
     this.dungeon.updateLight(p);
+    this.dungeon.update(dt);
     this.checkVictory();
 
     // 자동 저장: 바뀐 것이 있고 간격이 지났으면

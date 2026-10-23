@@ -6,6 +6,8 @@ import type { Box, CollisionWorld } from '../player/movement';
 import { createGroundTextures } from '../render/groundTexture';
 import { pbr } from '../render/materials';
 import { QUALITY_PRESETS, type QualityLevel } from '../render/Quality';
+import { Decor } from './Decor';
+import { resolveBossConfig } from '../game/DungeonDefs';
 
 /**
  * 던전 공간 (정의 데이터로 생성)
@@ -22,6 +24,7 @@ export class DungeonScene implements CollisionWorld {
   private readonly disposables: Array<{ dispose(): void }> = [];
   private sky: Sky | null = null;
   private floorMat: THREE.MeshStandardMaterial | null = null;
+  private decor: Decor | null = null;
   private groundMaps: { map: THREE.Texture; normalMap: THREE.Texture } | null = null;
 
   constructor(scene: THREE.Scene, readonly def: DungeonDef, quality: QualityLevel = 'medium') {
@@ -35,8 +38,15 @@ export class DungeonScene implements CollisionWorld {
     this.buildFloor();
     this.buildWalls();
     this.buildObstacles();
+    this.decor = new Decor(def, resolveBossConfig(def).spawn, quality);
+    this.root.add(this.decor.root);
     this.applyQuality(quality);
     scene.add(this.root);
+  }
+
+  /** 장식 애니메이션(풀 바람·입자·경고등) */
+  update(dt: number): void {
+    this.decor?.update(dt);
   }
 
   /** 물리 기반 하늘: 태양 높이·방위, 탁도·산란으로 색이 정해진다 (코드 생성, 파일 없음) */
@@ -70,7 +80,11 @@ export class DungeonScene implements CollisionWorld {
       this.groundMaps.normalMap.needsUpdate = true;
     }
     this.floorMat?.normalScale.set(p.normalScale, p.normalScale);
+    if (this.decor && this.lastQuality !== q) this.decor.applyQuality(q);
+    this.lastQuality = q;
   }
+
+  private lastQuality: QualityLevel | null = null;
 
   /** 조명: 전체를 밝히는 반구광 + 그림자를 만드는 태양광 */
   private buildLights(): void {
@@ -154,7 +168,7 @@ export class DungeonScene implements CollisionWorld {
       const crystal = this.def.id === 'cave' && hsl.l > 0.6;
       const metallic = this.def.id === 'fortress';
       const mat = crystal
-        ? pbr({ color: c, roughness: 0.2, metalness: 0.1, emissive: c, emissiveIntensity: 0.45, flatShading: true })
+        ? pbr({ color: c, roughness: 0.2, metalness: 0.1, emissive: c, emissiveIntensity: 0.22, flatShading: true })
         : pbr({ color: c, roughness: metallic ? 0.45 : 0.85, metalness: metallic ? 0.6 : 0.05 });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(o.x, o.h / 2, o.z);
@@ -193,6 +207,7 @@ export class DungeonScene implements CollisionWorld {
   }
 
   dispose(): void {
+    this.decor?.dispose();
     if (this.sky) {
       this.sky.geometry.dispose();
       this.sky.material.dispose();

@@ -342,6 +342,17 @@ export interface GameConfigType {
     /** 피해 숫자 표시 */
     showDamageNumbers: boolean;
   };
+  /** 연출 */
+  juice: {
+    /** 피격 시 카메라 흔들림 세기·시간 */
+    hitShake: { amp: number; duration: number };
+    /** 보스 내려찍기·포격 폭발 흔들림 */
+    slamShake: { amp: number; duration: number };
+    /** 처치 순간 짧은 멈춤(초)과 그때의 시간 배율 */
+    hitStop: { duration: number; timeScale: number };
+    /** 보스 처치 멈춤(초) */
+    bossHitStop: number;
+  };
   /** 성능 */
   performance: {
     /** 자동 화질 판단 간격(초): 이 시간 동안의 평균 FPS 로 판단 */
@@ -364,7 +375,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.1.0-a.1' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.1.0-b.1' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -653,6 +664,12 @@ export const GameConfig: GameConfigType = {
     showDamageNumbers: true,
   },
 
+  juice: {
+    hitShake: { amp: 0.25, duration: 0.25 },
+    slamShake: { amp: 0.5, duration: 0.4 },
+    hitStop: { duration: 0.06, timeScale: 0.1 },
+    bossHitStop: 0.35,
+  },
   performance: {
     autoQualityInterval: 6,
     autoQualityFps: 30,
@@ -746,6 +763,11 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'performance.autoQualityInterval': { min: 2, max: 60 },
   'performance.autoQualityFps': { min: 10, max: 60 },
   'performance.maxStep': { min: 0.01, max: 0.1 },
+  'juice.hitShake.amp': { min: 0, max: 2 },
+  'juice.slamShake.amp': { min: 0, max: 3 },
+  'juice.hitStop.duration': { min: 0, max: 0.5 },
+  'juice.hitStop.timeScale': { min: 0, max: 1 },
+  'juice.bossHitStop': { min: 0, max: 2 },
   'progression.levelUpHealRatio': { min: 0, max: 1 },
   'enemies.deathDuration': { min: 0, max: 5 },
   'camera.fov': { min: 30, max: 90 },

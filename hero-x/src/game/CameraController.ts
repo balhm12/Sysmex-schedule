@@ -12,6 +12,16 @@ export class CameraController {
   private first = true;
   /** 카메라 거리 배율 (사용자 설정). 1 이 GameConfig.camera.offset 그대로 */
   distanceScale = 1;
+  private shakeAmp = 0;
+  private shakeTime = 0;
+  private shakeTotal = 0;
+  private readonly shakeOffset = new THREE.Vector3();
+
+  /** 카메라 흔들기 (피격·내려찍기·폭발). amp: 유닛, duration: 초 */
+  shake(amp: number, duration: number): void {
+    this.shakeAmp = Math.max(this.shakeAmp, amp);
+    this.shakeTime = this.shakeTotal = Math.max(this.shakeTime, duration);
+  }
 
   constructor(readonly camera: THREE.PerspectiveCamera) {}
 
@@ -29,6 +39,15 @@ export class CameraController {
       this.camera.position.lerp(this.desired, k);
     }
     this.lookTarget.set(target.x, target.y + c.lookAtHeight, target.z);
+    // 흔들림: 남은 시간에 비례해 줄어드는 무작위 오프셋
+    if (this.shakeTime > 0) {
+      this.shakeTime = Math.max(0, this.shakeTime - dt);
+      const k = this.shakeTotal > 0 ? this.shakeTime / this.shakeTotal : 0;
+      const a = this.shakeAmp * k * k;
+      this.shakeOffset.set((Math.random() - 0.5) * 2 * a, (Math.random() - 0.5) * 2 * a, (Math.random() - 0.5) * 2 * a);
+      this.camera.position.add(this.shakeOffset);
+      if (this.shakeTime === 0) this.shakeAmp = 0;
+    }
     this.camera.lookAt(this.lookTarget);
   }
 

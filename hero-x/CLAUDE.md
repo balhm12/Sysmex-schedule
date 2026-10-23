@@ -9,7 +9,7 @@
 - 장르: 3인칭 3D 액션 RPG. Minecraft Dungeons 의 진행 방식을 참고하되 캐릭터·맵·아이템·음악·텍스처는 독자 제작 또는 적법한 에셋만 사용한다.
 - 실행 환경: Windows PC 웹 브라우저(Chrome/Edge). 기본 게임은 외부 API·유료 서비스 없이 실행된다.
 - 최우선 원칙: **실제로 실행되는 게임**을 단계적으로 완성한다. 그래픽 품질보다 안정성·유지보수성이 먼저다.
-- 현재 상태: **지시서 1~7단계 완료 (v1.0.0)** → 그래픽 개선 진행 중: 1 렌더링 품질 ✅ v1.1.0-a.1 / 2 환경 연출(풀·나무·입자·카메라 흔들림) / 3 캐릭터·적 모델 고도화. 이후 작업은 사용자 플레이 의견 기반 조정(밸런스·조작 느낌·음악), 정식 .glb 모델 투입, 추가 콘텐츠(던전·적·장비)다. 새 작업도 같은 절차(최소 단위 구현 → `npm run check` → 브라우저 확인 → 문서 → 커밋)로 한다.
+- 현재 상태: **지시서 1~7단계 완료 (v1.0.0)** → 그래픽 개선 진행 중: 1 렌더링 품질 ✅ v1.1.0-a.1 / 2 환경 연출 ✅ v1.1.0-b.1 / 3 캐릭터·적 모델 고도화. 이후 작업은 사용자 플레이 의견 기반 조정(밸런스·조작 느낌·음악), 정식 .glb 모델 투입, 추가 콘텐츠(던전·적·장비)다. 새 작업도 같은 절차(최소 단위 구현 → `npm run check` → 브라우저 확인 → 문서 → 커밋)로 한다.
 
 ## 2. 기술 스택
 
@@ -85,7 +85,9 @@ hero-x/
 │  │  └─ EquipmentSystem.ts 가방·슬롯 장착/해제, 능력치 합산, 방어력 계산 (테스트 대상)
 │  ├─ dungeon/
 │  │  ├─ DungeonScene.ts   던전 정의로 바닥·조명·벽·장애물 생성 (CollisionWorld 구현, 외부 충돌 상자 추가 가능)
-│  │  └─ Chest.ts          보물 상자 배치·근접 판정·열기 연출 (보상은 loot.rollChestLoot)
+│  │  ├─ Chest.ts          보물 상자 배치·근접 판정·열기 연출 (보상은 loot.rollChestLoot)
+│  │  ├─ decorLayout.ts    장식 배치 계산 (결정적 난수, 금지 영역 회피, 테스트 대상)
+│  │  └─ Decor.ts          장식 소품·인스턴싱 풀(바람 셰이더)·입자·경고등 (화질별 개수)
 │  ├─ ui/
 │  │  ├─ MainMenu.ts       메인 메뉴 (새 게임/이어하기/장비/조작 안내/설정/난이도, 새 게임 확인창)
 │  │  ├─ SettingsUI.ts     설정 화면 (SETTING_DEFS 로 자동 생성: 슬라이더·스위치·선택)
@@ -165,6 +167,7 @@ hero-x/
 - "적을 두 배로" → `GameConfig.enemies.spawns` 에 항목 추가. "적 체력 30% 올려" → `enemies.types.rusher.hp` 조정.
 - "공격을 더 세게/넓게" → `GameConfig.combat.melee` 의 `damage`, `range`, `arcDegrees`. 원거리는 `combat.ranged`.
 - "점프를 더 높게" → `player.jumpSpeed` 올리기 (또는 `player.gravity` 내리기). "회피를 더 멀리/자주" → `player.dash.speed/duration/cooldown`. 회피 키는 `controls.dodge`, 터치 버튼은 `TouchControls` 의 `#touch-dodge`.
+- 장식 추가: 종류·개수는 `decorLayout.DECOR_KINDS`, 외형은 `Decor.makeProp` 의 분기. 장식은 충돌이 없으므로 통행에 방해되는 큰 것은 `outside` 에만 둔다. 타격감 수치는 `GameConfig.juice`.
 - 그래픽: 재질은 반드시 `render/materials.ts` 의 `pbr()/glow()` 로 만든다(블룸은 emissiveIntensity ≥ 1.5 에 걸림). 던전 분위기(하늘·노출·바닥)는 `DungeonDefs.theme` 수치만 바꾼다. 후처리 켜고 끄기는 `RenderPipeline.setQuality`, 그림자 해상도는 `DungeonScene.applyQuality`.
 - 게임 루프: `Game.frame()` 이 흐른 시간을 `performance.maxStep`(0.05초) 단위의 `simulate(dt)` 로 나눠 돌리고 한 번 그린다. 시간에 따라 움직이는 로직은 `simulate` 안에, 화면 갱신·FPS 측정은 `frame` 에 둔다.
 - 성능: 자동 화질은 `Game.updateAutoQuality` 가 `GameConfig.performance` 간격으로 `decideQuality` 를 호출해 설정을 낮춘다(올리지 않음). WebGL 끊김은 `contextLost` 플래그로 프레임을 건너뛴다. 프레임 예외는 `loop` 의 try/catch 가 루프를 멈추고 저장한 뒤 다시 던진다(ErrorOverlay 표시).
