@@ -1,6 +1,11 @@
 # 정식 3D 모델 넣기 (.glb)
 
-## 현재 플레이어 모델: KayKit Adventurers 기사 (CC0)
+## 현재 플레이어 모델: 둥근 복셀 아들 캐릭터 `player-chibi.glb` (자체 제작)
+
+- `tools/make_player_chibi_glb.py` 로 생성(1,158 KB, 상자 160개 + 복셀 메시 32개 6,490칸, 재질 28개). 둥근 머리·머리카락·몸·팔다리는 `tools/voxel_shapes.py` 의 껍데기 복셀(타원체·둥근 상자·캡슐·고리)로, 눈·둥근 안경테·장식은 상자로 만든다. 부품 이름 규칙(PartRig)을 따르므로 걷기·공격·회피·점프·피격 동작과 장비 부착이 그대로 동작한다.
+- 외형을 바꾸려면 스크립트의 치수·색(MAT)·배치를 고치고 다시 실행한다. 확인은 스크래치 `view-glb3.cjs player-chibi`(정면·¾·옆·뒤·얼굴).
+
+## 대안 플레이어 모델: KayKit Adventurers 기사 (CC0) — `player-knight.glb`
 
 - 파일: `player-knight.glb` (1,133 KB) — 원본 `Knight.glb`(3,574 KB, 애니메이션 76개)에서 게임에 쓰는 18개 클립만 남겨 `tools/prune_glb.mjs` 로 줄인 것.
 - 출처: **KayKit : Adventurers Character Pack 1.0**, Kay Lousberg (https://kaylousberg.itch.io/kaykit-adventurers, GitHub `KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0`)
@@ -9,7 +14,7 @@
 - 남긴 클립: Idle, Walking_A, Running_A, 1H_Melee_Attack_Chop / Slice_Horizontal / Slice_Diagonal / Stab, 2H_Melee_Attack_Spin, 1H_Ranged_Shoot, Spellcast_Shoot, Dodge_Forward, Jump_Full_Short, Jump_Idle, Jump_Land, Hit_A, Death_A, Cheer, PickUp.
 - 손 슬롯 뼈(`handslot.r`/`handslot.l`) 아래에 검·방패 변형이 전부 들어 있어 `manifest.json` 의 `defaultParts` 로 기본 표시(`1H_Sword`, `Round_Shield`)만 남긴다. 장비를 들면 그 손의 기본 무기·방패는 숨고 게임의 장비 외형이 같은 뼈에 붙는다.
 - 같은 팩의 다른 캐릭터(Barbarian/Mage/Rogue/Rogue_Hooded)도 같은 뼈·클립 이름이라 파일만 바꿔 쓸 수 있다: `node tools/prune_glb.mjs <원본.glb> public/models/player-xxx.glb "<클립 목록>"` 뒤 manifest 의 `file` 변경.
-- 예전 복셀 캐릭터(아들 모델)로 되돌리려면 manifest 의 `player.file` 을 `player.glb` 로 바꾸면 된다(파일은 그대로 두었다).
+- 기사로 바꾸려면 manifest 의 `player` 를 `{ "file": "player-knight.glb", "defaultParts": ["1H_Sword", "Round_Shield"] }` 로. 예전 각진 복셀 캐릭터는 `player.glb`.
 
 이 폴더에 `.glb` 파일을 넣고 `manifest.json` 에 파일 이름을 적으면 게임이 그 모델을 씁니다. 파일이 없거나 항목이 `null` 이면 코드로 그린 임시 모델을 그대로 씁니다. 파일을 넣은 뒤 `git push` 하면 휴대폰(GitHub Pages)에도 반영됩니다.
 
