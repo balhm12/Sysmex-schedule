@@ -97,6 +97,19 @@ function glbNodeNames(file: string): string[] {
   return (json.nodes ?? []).map((n) => n.name ?? '');
 }
 
+describe('둥근 복셀 플레이어 모델 (public/models/player-chibi.glb)', () => {
+  const file: string = resolve(new URL('.', import.meta.url).pathname, '../public/models/player-chibi.glb');
+  it('리그에 필요한 부품(양 다리·양 팔·머리·검)과 얼굴 부품이 들어 있고 모두 분류된다', () => {
+    expect(existsSync(file)).toBe(true);
+    const names = glbNodeNames(file);
+    const kinds = new Set(names.map((n) => classifyPart(n)));
+    for (const k of ['leftLeg', 'rightLeg', 'leftArm', 'rightArm', 'head', 'weapon']) expect(kinds.has(k as never), k).toBe(true);
+    for (const n of ['head_ball', 'hair_cap', 'glass_rim_l', 'glass_rim_r', 'eye_white_l', 'mouth_mid', 'left_boot', 'right_hand', 'sword_blade', 'torso', 'backpack']) expect(names, n).toContain(n);
+    // 얼굴·머리 부품은 전부 head 로 분류돼야 머리와 함께 돈다
+    for (const n of names.filter((x) => /^(glass|eye|brow|mouth|nose|fringe|hair|ear|glint|pupil)/.test(x))) expect(classifyPart(n), n).toBe('head');
+  });
+});
+
 describe('보스 복셀 모델 (public/models/boss-*.glb)', () => {
   const dir: string = resolve(new URL('.', import.meta.url).pathname, '../public/models');
   const manifest = JSON.parse(readFileSync(resolve(dir, 'manifest.json'), 'utf8') as string) as { bosses: Record<string, { file: string } | null> };

@@ -2,6 +2,24 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.22.0 · 둥근(치비) 복셀 아들 캐릭터로 교체
+
+### 변경 내용
+- **새 기본 플레이어 모델** `public/models/player-chibi.glb`(자체 제작, 1,158 KB): 사용자가 보내 준 참고 그림(둥근 얼굴·갈색 머리·안경·파란 모험가 복장·빛나는 검)에 맞춰 만든 둥근 복셀 캐릭터. 머리는 복셀 구, 머리카락은 둥근 모자+앞머리 갈래+정수리 뭉치, 큰 눈·둥근 안경테(구면을 따라 놓은 작은 정육면체 고리)·미소·홍조, 둥근 몸통·캡슐 팔다리·둥근 장화, 스카프·허리띠·주머니·배낭, 톱니 날 빛 검. 비율은 머리가 전체의 약 40%.
+- `tools/voxel_shapes.py`(새): 껍데기 복셀 도우미 — `ellipsoid`, `rounded_box`, `capsule_y`, `ring_xy`(안쪽 칸은 버려 칸 수를 줄임). `tools/voxel_glb.py` 에 `voxels(name, cubes, 재질)` 추가: 작은 상자 수백 개를 한 메시로 내보낸다(노드 수 34개).
+- `tools/make_player_chibi_glb.py`(새) 생성기. 부품 이름은 PartRig 규칙 그대로라 기존 리그 동작(걷기·3단 콤보·회피·점프·피격·쓰러짐)과 장비 부착이 그대로 동작한다. manifest 의 `player.file` 을 `player-chibi.glb` 로. KayKit 기사(`player-knight.glb`)와 예전 각진 복셀(`player.glb`)은 파일을 남겨 manifest 한 줄로 바꿀 수 있다.
+- `PartRig` 몸통 상자: 이름이 torso/body/chest 로 시작하는 메시만 기준(배낭·스카프·어깨 보호대 제외) → 갑옷 외형이 몸에 맞는다. 강철 갑옷 재질을 덜 번쩍이게.
+
+### 수정 파일
+`public/models/{player-chibi.glb(새),manifest.json,README.md}`, `tools/{make_player_chibi_glb.py(새),voxel_shapes.py(새),voxel_glb.py}`, `src/assets/PartRig.ts`, `src/player/EquipmentVisuals.ts`, `tests/models.test.ts`, `package.json`, `CHANGELOG.md`, `CLAUDE.md`, `GAME_GUIDE.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 224개·빌드). 새 테스트: player-chibi.glb 에 양 다리·양 팔·머리·검 부품과 얼굴 부품이 있고 얼굴·머리 부품이 모두 head 로 분류됨.
+- 모델 뷰어(정면·¾·옆·뒤·얼굴)와 게임 안 근접 화면(정지·달리기·공격·회피·장비)으로 확인. 관절 5개(joint:leftLeg/rightLeg/leftArm/rightArm/head) 생성, 메시 34개. 장비(smoke36)·콤보(smoke35) 회귀 통과.
+
+### 알려진 문제
+- 복셀 상자 모델이라 애니메이션은 관절 회전뿐(손가락·표정 없음). 다음 단계(이동 가속·감속, 카메라, 공격 타격 시점 동기화)는 지시서 4~9 순서대로 진행.
+
 ## 2026-10-24 · v1.21.0 · 플레이어 캐릭터 교체 1~3단계 (KayKit 기사 모델, 뼈대 애니메이션 재생기)
 
 ### 변경 내용

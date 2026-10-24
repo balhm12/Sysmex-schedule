@@ -1,9 +1,9 @@
 {
   "_설명": "정식 3D 모델(.glb)을 이 폴더에 넣고 아래에 파일 이름을 적으면 게임이 그 모델을 씁니다. null 이면 코드로 그린 임시 모델을 씁니다. 자세한 방법은 README.md 참고.",
   "player": {
-    "file": "player-knight.glb",
-    "defaultParts": ["1H_Sword", "Round_Shield"]
+    "file": "player-chibi.glb"
   },
+  "_설명_player": "player-chibi.glb = 둥근 복셀 아들 캐릭터(tools/make_player_chibi_glb.py). 대안: player-knight.glb(KayKit 기사, CC0, defaultParts [\"1H_Sword\", \"Round_Shield\"] 필요) / player.glb(예전 각진 복셀).",
   "enemies": {
     "rusher": {
       "file": "monster-rusher.glb"

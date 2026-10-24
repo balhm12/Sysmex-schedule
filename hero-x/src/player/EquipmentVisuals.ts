@@ -119,7 +119,7 @@ export function buildArmorModel(e: EquipmentLook, torso: THREE.Box3): THREE.Grou
   const size = torso.getSize(new THREE.Vector3());
   const w = size.x, h = size.y, d = size.z;
   const pad = Math.max(0.02, w * 0.06);
-  const main = e.look === 'plate' ? metal(e.color, 0.35) : pbr({ color: e.color, roughness: e.look === 'suit' ? 0.3 : 0.8 });
+  const main = e.look === 'plate' ? pbr({ color: e.color, roughness: 0.5, metalness: 0.3 }) : pbr({ color: e.color, roughness: e.look === 'suit' ? 0.3 : 0.8 });
   const trim = glow(e.rarityColor, 1.3);
   switch (e.look) {
     case 'vest': {

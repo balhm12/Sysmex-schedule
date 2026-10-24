@@ -118,12 +118,16 @@ export function buildPartRig(root: THREE.Object3D): PartRig | null {
     return { group, length: box.max.y - box.min.y };
   };
   // 몸통(분류되지 않은 메시) 범위는 관절을 만들기 전에 잰다 (장비 외형 배치용)
+  // 이름이 torso/body/chest 로 시작하는 메시가 있으면 그것만(배낭·스카프·어깨 보호대 제외), 없으면 분류되지 않은 메시 전부
   const torsoMeshes: THREE.Mesh[] = [];
+  const bodyNamed: THREE.Mesh[] = [];
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
-    if (mesh.isMesh && classifyPart(mesh.name) === null) torsoMeshes.push(mesh);
+    if (!mesh.isMesh || classifyPart(mesh.name) !== null) return;
+    torsoMeshes.push(mesh);
+    if (/^(torso|body|chest)/i.test(mesh.name)) bodyNamed.push(mesh);
   });
-  const torsoBox = torsoMeshes.length ? boxOf(torsoMeshes) : new THREE.Box3(new THREE.Vector3(-0.3, 0.6, -0.2), new THREE.Vector3(0.3, 1.3, 0.2));
+  const torsoBox = bodyNamed.length ? boxOf(bodyNamed) : torsoMeshes.length ? boxOf(torsoMeshes) : new THREE.Box3(new THREE.Vector3(-0.3, 0.6, -0.2), new THREE.Vector3(0.3, 1.3, 0.2));
   const lLeg = hasLegs ? makeJoint('leftLeg', true) : null;
   const rLeg = hasLegs ? makeJoint('rightLeg', true) : null;
   const lArm = hasArms ? makeJoint('leftArm', true) : null;

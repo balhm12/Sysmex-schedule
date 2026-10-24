@@ -44,10 +44,17 @@ class VoxelModel:
         self.name = name
         self.materials = materials
         self.boxes = []  # (이름, 중심, 크기, 재질 이름)
+        self.voxel_meshes = []  # (이름, [(cx,cy,cz,sx,sy,sz), …], 재질 이름) — 한 메시로 합쳐 내보낸다
 
     def box(self, name, cx, cy, cz, sx, sy, sz, m):
         assert m in self.materials, f'재질 없음: {m}'
         self.boxes.append((name, (cx, cy, cz), (sx, sy, sz), m))
+
+    def voxels(self, name, cubes, m):
+        """작은 상자 여러 개를 '한 메시'로 (둥근 머리·몸처럼 상자가 수백 개인 부품용). cubes: (cx, cy, cz, sx, sy, sz) 목록"""
+        assert m in self.materials, f'재질 없음: {m}'
+        if cubes:
+            self.voxel_meshes.append((name, list(cubes), m))
 
     def mirror(self, name_l, name_r, x, y, z, sx, sy, sz, m):
         """좌우 대칭 두 개 (x 는 +쪽 값)"""
@@ -76,6 +83,30 @@ class VoxelModel:
             view = add_view(struct.pack('<24f', *[v for p in verts for v in p]), 34962)
             accessors.append({'bufferView': view, 'componentType': 5126, 'count': 8, 'type': 'VEC3', 'min': list(mn), 'max': list(mx)})
             meshes.append({'name': name, 'primitives': [{'attributes': {'POSITION': len(accessors) - 1}, 'indices': 0, 'material': mat_index[m], 'mode': 4}]})
+            nodes.append({'name': name, 'mesh': len(meshes) - 1})
+        total_cubes = 0
+        for name, cubes, m in self.voxel_meshes:
+            positions, indices = [], []
+            mn_all = [1e9, 1e9, 1e9]
+            mx_all = [-1e9, -1e9, -1e9]
+            for (cx, cy, cz, sx, sy, sz) in cubes:
+                mn = (cx - sx / 2, cy - sy / 2, cz - sz / 2)
+                mx = (cx + sx / 2, cy + sy / 2, cz + sz / 2)
+                verts, tris = _face_tris(mn, mx)
+                base = len(positions)
+                positions += verts
+                indices += [base + t for t in tris]
+                for i in range(3):
+                    mn_all[i] = min(mn_all[i], mn[i])
+                    mx_all[i] = max(mx_all[i], mx[i])
+            total_cubes += len(cubes)
+            pos_view = add_view(struct.pack(f'<{len(positions) * 3}f', *[v for p in positions for v in p]), 34962)
+            accessors.append({'bufferView': pos_view, 'componentType': 5126, 'count': len(positions), 'type': 'VEC3', 'min': mn_all, 'max': mx_all})
+            pos_acc = len(accessors) - 1
+            wide = len(positions) > 65535
+            idx_view = add_view(struct.pack(f'<{len(indices)}{"I" if wide else "H"}', *indices), 34963)
+            accessors.append({'bufferView': idx_view, 'componentType': 5125 if wide else 5123, 'count': len(indices), 'type': 'SCALAR', 'max': [len(positions) - 1], 'min': [0]})
+            meshes.append({'name': name, 'primitives': [{'attributes': {'POSITION': pos_acc}, 'indices': len(accessors) - 1, 'material': mat_index[m], 'mode': 4}]})
             nodes.append({'name': name, 'mesh': len(meshes) - 1})
         materials = []
         for k, m in self.materials.items():
@@ -108,4 +139,4 @@ class VoxelModel:
             f.write(b'glTF' + struct.pack('<II', 2, total))
             f.write(struct.pack('<I', len(json_bytes)) + b'JSON' + json_bytes)
             f.write(struct.pack('<I', len(bin_data)) + b'BIN\0' + bin_data)
-        print(f'{out.name}: 박스 {len(self.boxes)}개, 재질 {len(materials)}개, {total / 1024:.1f} KB')
+        print(f'{out.name}: 박스 {len(self.boxes)}개 + 복셀 메시 {len(self.voxel_meshes)}개({total_cubes} 칸), 재질 {len(materials)}개, {total / 1024:.1f} KB')
