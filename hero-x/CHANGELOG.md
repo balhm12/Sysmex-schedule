@@ -2,6 +2,25 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.27.0 · 지시서 4~5단계: 애니메이션 상태 개선 + 공격 타격 시점 동기화
+
+### 변경 내용
+- **근접 타격 시점** `combat.melee.hitFraction`(0.35): 누르는 즉시 판정하던 것을 휘두르기 시간의 35%(기본 검 0.22초 → 약 0.08초 뒤, 검이 앞을 지나는 순간)에 판정한다. `CombatSystem.pendingHit` 이 그때의 위치·방향으로 부채꼴 판정(`applyMeleeHit`). 효과(궤적·충격파)는 누르는 순간 그대로. 0 이면 예전처럼 즉시. 재시작·사망 시 예약 취소.
+- **걷기/달리기 구분** `heroAnimator`: 최고 속도의 55% 부터 달리기 자세로 섞인다(보폭·무릎·팔 흔들림 커짐, 앞으로 기울임, 들썩임 큼). `PlayerModelState.speedRatio`(Player 가 넘김).
+- **착지 눌림**: 점프에서 땅에 닿는 순간 0.18초 동안 몸이 눌렸다 펴지고 무릎이 접힌다.
+- **방향 전환 기울임**: 몸을 돌리는 속도(`PlayerModelState.turnRate`, Player 가 각속도 계산)에 따라 안쪽으로 살짝 기울인다(상한 0.22 rad, 완만한 보간 → 떨림 없음).
+- 상태 우선순위는 그대로(사망 > 회피 > 공중 > 이동/정지 + 공격·피격 겹침).
+
+### 수정 파일
+`src/combat/CombatSystem.ts`, `src/game/GameConfig.ts`, `src/player/Player.ts`, `src/player/models/{heroAnimator.ts,PlaceholderModel.ts}`, `tests/combatTiming.test.ts`(새), `package.json`, `CHANGELOG.md`, `CLAUDE.md`, `GAME_GUIDE.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 236개·빌드). 새 테스트: 누른 직후 안 맞고 시간이 지나면 맞음, hitFraction 0 이면 즉시, reset 시 예약 취소.
+- Playwright `smoke35`(콤보 3단·피해·끊김·원거리)·`smoke36`(장비·무기 방식·관통) 회귀 통과.
+
+### 알려진 문제
+- 타격이 0.08초 늦어진 만큼 아주 빠른 적에게는 헛칠 수 있다. 느낌이 느리면 `hitFraction` 을 0.25 로.
+
 ## 2026-10-24 · v1.26.0 · 넓은 가로 화면 시야 좁히기 + 가로 전용 안내
 
 ### 변경 내용

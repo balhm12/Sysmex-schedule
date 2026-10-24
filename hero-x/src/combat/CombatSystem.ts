@@ -30,6 +30,8 @@ export class CombatSystem {
   comboStep = -1;
   /** 콤보를 이어갈 수 있는 남은 시간(초). 쿨다운이 끝난 뒤부터 줄어든다 */
   private comboTimer = 0;
+  /** 휘두르는 중 아직 판정하지 않은 타격 (동작의 타격 시점에 맞춰 적용) */
+  private pendingHit: { time: number; damage: number; range: number; arcDegrees: number; knockback: number } | null = null;
   /** 공격을 시작할 때 알림 (효과음용). step 은 근접 콤보 단계(0부터), finisher 는 마무리 단계인지 */
   onAttack: ((kind: 'melee' | 'ranged', step: number, finisher: boolean) => void) | null = null;
   private readonly tmp = new THREE.Vector3();
@@ -59,6 +61,7 @@ export class CombatSystem {
     this.rangedCooldown = 0;
     this.comboStep = -1;
     this.comboTimer = 0;
+    this.pendingHit = null;
   }
 
   /** 지금까지 휘두른/쏜 횟수 (디버그·검증용) */
@@ -87,7 +90,17 @@ export class CombatSystem {
     if (this.rangedCooldown > 0) this.rangedCooldown -= dt;
     if (this.player.health.isDead) {
       this.meleeQueued = this.rangedQueued = false;
+      this.pendingHit = null;
       return;
+    }
+    // 타격 시점이 되면 그때의 위치·방향으로 부채꼴 판정 (동작과 판정이 맞는다)
+    if (this.pendingHit) {
+      this.pendingHit.time -= dt;
+      if (this.pendingHit.time <= 0) {
+        const h = this.pendingHit;
+        this.pendingHit = null;
+        this.applyMeleeHit(h.damage, h.range, h.arcDegrees, h.knockback);
+      }
     }
 
     const c = GameConfig.controls;
@@ -158,14 +171,22 @@ export class CombatSystem {
       this.effects.burst(this.tmp, color, 10, 4);
     }
 
-    const origin: Vec2 = { x: pos.x, z: pos.z };
     const damage = Math.round((cfg.damage + this.getWeaponAttack('melee')) * step.damageMul * this.getDamageMultiplier());
+    const delay = step.swingTime * cfg.hitFraction;
+    if (delay <= 0) this.applyMeleeHit(damage, range, step.arcDegrees, cfg.knockback * step.knockbackMul);
+    else this.pendingHit = { time: delay, damage, range, arcDegrees: step.arcDegrees, knockback: cfg.knockback * step.knockbackMul };
+  }
+
+  /** 부채꼴 안의 살아 있는 적에게 피해·밀침 */
+  private applyMeleeHit(damage: number, range: number, arcDegrees: number, knockback: number): void {
+    const pos = this.player.position;
+    const origin: Vec2 = { x: pos.x, z: pos.z };
     for (const enemy of this.getEnemies()) {
       if (!enemy.alive) continue;
       const ep = enemy.position;
-      if (!isInMeleeArc(origin, this.player.facing, { x: ep.x, z: ep.z }, enemy.radius, range, step.arcDegrees)) continue;
+      if (!isInMeleeArc(origin, this.player.facing, { x: ep.x, z: ep.z }, enemy.radius, range, arcDegrees)) continue;
       const len = Math.hypot(ep.x - pos.x, ep.z - pos.z) || 1;
-      this.damageEnemy(enemy, damage, { x: (ep.x - pos.x) / len, z: (ep.z - pos.z) / len }, cfg.knockback * step.knockbackMul);
+      this.damageEnemy(enemy, damage, { x: (ep.x - pos.x) / len, z: (ep.z - pos.z) / len }, knockback);
     }
   }
 

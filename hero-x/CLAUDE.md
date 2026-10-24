@@ -243,6 +243,8 @@ hero-x/
 - "상자를 더/보상을 더 좋게" → 첫 던전은 `dungeon.chests` 배열, 다른 던전은 `DungeonDefs.ts`. 상자 보상은 `dungeon.chestLoot`(공통). 상자 위치는 장애물·적 배치와 겹치지 않아야 한다 (`tests/chest.test.ts` 가 확인).
 - 상호작용(E)이 필요한 새 물체는 `Game.tryInteract` 에 분기를 추가하고 HUD 안내 문구(`currentPrompt`)를 함께 처리한다. 보물 상자는 설정 `chestQuiz`(기본 켬)가 켜져 있으면 `QuizUI` 로 수학 문제를 먼저 풀고(`paused`), 맞히면 `openChestNow`. 문제 범위를 바꾸려면 `mathQuiz.ts` 의 종류별 숫자 범위만 고친다.
 - 클리어 뒤 흐름: `showResult(title, sub, next)` 에 다음 던전을 넘기면 `ResultUI` 가 '다음 던전' 버튼과 카운트다운(`dungeon.autoAdvanceSeconds`, 0 이면 버튼만)을 보여주고 끝나면 `enterDungeon(next)`. 다른 버튼을 누르면 취소.
+- 근접 타격 시점: `combat.melee.hitFraction`(휘두르기 시간 비율) 뒤에 `pendingHit` → `applyMeleeHit`. 동작의 검이 앞을 지나는 순간(PartRig/heroAnimator 는 진행 35~50%)에 맞춘다. 테스트 `tests/combatTiming.test.ts`.
+- 코드 모델 동작(`heroAnimator`): `speedRatio` 0.55 부터 달리기 자세 섞임, 착지 눌림(airborne 끝 감지), `turnRate` 로 방향 전환 기울임. 수치는 함수 안 상수.
 - 공격 입력: `CombatSystem` 은 `onPress` 로 예약 플래그를 세워 쿨다운 중이나 프레임 사이의 짧은 탭도 쿨다운이 끝나는 즉시 한 번 나가게 한다. 반응 속도는 `combat.melee.cooldown`(0.34)과 `PartRig` 의 뒤로 당김 비율(12%)로 조정.
 - 근접 콤보: `combat.melee.combo.steps`(단계별 배율·각도·방향 sweep·색)와 `combo.window`(쿨다운이 끝난 뒤 이어가기 시간). `CombatSystem.comboStep/comboTimer` 가 단계를 추적하고 `combo.ts` 의 `nextComboStep` 이 다음 단계를 정한다(마무리 뒤·시간 초과면 0). 단계는 `player.triggerAttack(swingTime, 'melee', step)` → `PlayerModelState.attackStep` 으로 모델에 전달(`PartRig`: 1단 가로, 2단 반대쪽, 3단 회전 `spin`; 원거리 `attackKind: 'ranged'` 는 팔 뻗기+반동). 단계를 늘리면 `PartRig`/`PlaceholderModel` 의 `step >= 2` 분기가 그대로 회전 베기로 쓰인다. 마무리 연출은 `juice.comboFinish`, 소리는 `Game` 의 `combat.onAttack(kind, step, finisher)` 에서 `audio.play(name, gap, pitchMul)`. HUD 표시는 `hud.showCombo`. 테스트는 `getDebugState().combo`(스크래치 `smoke35.cjs`: 공격이 나간 직후 바로 다음 키를 눌러야 헤드리스에서도 이어진다).
 - 원거리 연출: 총구 섬광·파편은 `CombatSystem.rangedAttack`(`effects.flash`), 꼬리는 `ProjectileSystem`(탄마다 꼬리 메시, `juice.ranged.trailLength`), 명중·벽 충돌 연출은 `ProjectileContext.onImpact` 를 `Game` 이 받아 `effects.flash/burst/shockwave`. 섬광 시간(`muzzleTime/impactTime`)은 헤드리스 검증 때 늘려서 관찰한다(한 프레임에 0.3초 이상 흐르면 0.18초 섬광을 못 본다).
@@ -269,6 +271,6 @@ hero-x/
 6. 콘텐츠 확장 ✅ (v0.6.0-a.1 던전 3개·던전 선택·새 적·새 장비 / v0.6.1 모바일 / v0.6.2 보스별 패턴·외형)
 7. 품질 개선 ✅ (v0.7.0-a.1 효과음·음악 / v0.7.0-b.1 얼굴 사진·glb 교체 구조 / v1.0.0 자동 화질·오류 처리·문서)
 8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장(동굴·요새 여정형, 로봇 공장 테마) ✅ v1.11.0 / 적 10종 ✅ v1.12.0 / 메시 합치기 ✅ v1.13.0 / 네 번째 던전 얼음 봉우리 ✅ v1.14.0 / 소품 합치기·구역 음악 분위기 ✅ v1.15.0 / 벽·장애물 그래픽 ✅ v1.16.0 / 보스 등장 팝업 ✅ v1.17.0 / 앱처럼 설치(PWA) ✅ v1.18.0 / 근접 3단 콤보·원거리 연출 ✅ v1.19.0 / 장비 자동 장착·무기별 공격 방식·장비 외형 ✅ v1.20.0
-9. 캐릭터 리뉴얼·애니메이션 개선(지시서 2차): 1~3 분석·모델 확보(KayKit CC0)·교체 호환 ✅ v1.21.0 / 둥근 복셀 아들 캐릭터로 교체 ✅ v1.22.0 / 매끈한 카툰 치비(코드 모델) ✅ v1.23.0 / 코드 모델 고급화(머리카락 결·네모 안경·후드 코트·질감) ✅ v1.24.0 / 적·보스 전체 매끈한 스타일 ✅ v1.25.0 / 넓은 화면 시야 좁히기·가로 전용 ✅ v1.26.0 / 4~5 애니메이션 상태·공격 동기화 / 6 이동 가속·감속 / 7 회전·카메라 / 8~9 충돌·모바일·로딩 표시
+9. 캐릭터 리뉴얼·애니메이션 개선(지시서 2차): 1~3 분석·모델 확보(KayKit CC0)·교체 호환 ✅ v1.21.0 / 둥근 복셀 아들 캐릭터로 교체 ✅ v1.22.0 / 매끈한 카툰 치비(코드 모델) ✅ v1.23.0 / 코드 모델 고급화(머리카락 결·네모 안경·후드 코트·질감) ✅ v1.24.0 / 적·보스 전체 매끈한 스타일 ✅ v1.25.0 / 넓은 화면 시야 좁히기·가로 전용 ✅ v1.26.0 / 4~5 애니메이션 상태·공격 동기화 ✅ v1.27.0 / 6 이동 가속·감속 / 7 회전·카메라 / 8~9 충돌·모바일·로딩 표시 / ② 툰 외곽선·림 라이트
 
 각 단계는 완료 기준을 만족하고 기존 기능이 정상일 때만 다음 단계로 넘어간다.

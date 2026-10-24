@@ -108,6 +108,7 @@ export class Player {
     this.health.invulnerableTime = GameConfig.player.invulnerableTime;
     this.object3d.position.set(start.x, 0, start.z);
     this.facing = 0;
+    this.prevFacing = 0;
     this.moving = false;
     this.speed = 0;
     this.attackTimer = 0;
@@ -117,10 +118,18 @@ export class Player {
     this.object3d.visible = true;
   }
 
+  private prevFacing = 0;
+
   /** 매 프레임 호출: 회전 적용 + 모델 동작 갱신 */
   update(dt: number): void {
     this.health.update(dt);
     if (this.attackTimer > 0) this.attackTimer -= dt;
+    // 방향 전환 속도 (-π~π 로 감아서)
+    let dFacing = this.facing - this.prevFacing;
+    while (dFacing > Math.PI) dFacing -= Math.PI * 2;
+    while (dFacing < -Math.PI) dFacing += Math.PI * 2;
+    const turnRate = dt > 0 ? dFacing / dt : 0;
+    this.prevFacing = this.facing;
     this.object3d.rotation.y = this.facing;
     this.object3d.position.y = this.jumpY;
     this.model.update(dt, {
@@ -130,6 +139,8 @@ export class Player {
       attackKind: this.attackKind,
       attackStep: this.attackStep,
       attackDuration: this.attackDuration,
+      turnRate,
+      speedRatio: Math.min(1, this.speed / Math.max(0.01, GameConfig.player.moveSpeed)),
       airborne: this.airborne,
       dead: this.health.isDead,
       dashing: this.dashing,

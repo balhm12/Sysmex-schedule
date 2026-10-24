@@ -15,6 +15,10 @@ export interface PlayerModelState {
   attackStep?: number;
   /** 이번 공격 동작의 전체 시간(초). 클립 속도를 맞출 때 쓴다 */
   attackDuration?: number;
+  /** 몸을 돌리는 속도(rad/s, 왼쪽 +). 방향 전환 때 몸을 기울이는 데 쓴다 */
+  turnRate?: number;
+  /** 최고 이동 속도 대비 지금 속도 0~1 (걷기/달리기 구분) */
+  speedRatio?: number;
   /** 점프 중 */
   airborne: boolean;
   /** 쓰러진 상태 */

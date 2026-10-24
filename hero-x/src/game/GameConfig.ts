@@ -243,6 +243,8 @@ export interface GameConfigType {
       knockback: number;
       /** 휘두르기 동작 시간(초) */
       swingTime: number;
+      /** 타격 시점: 휘두르기 시간의 이 비율이 지난 뒤 판정한다 (0 = 누르는 즉시). 동작의 검이 앞을 지나는 순간에 맞춘다 */
+      hitFraction: number;
       /**
        * 연속 공격(콤보): 근접을 연달아 누르면 steps 순서대로 다른 베기가 나간다.
        * - window: 한 번 휘두른 뒤(쿨다운이 끝난 시점부터) 이 시간(초) 안에 다시 누르면 다음 단계로 이어진다.
@@ -494,7 +496,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.26.0', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.27.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -536,6 +538,7 @@ export const GameConfig: GameConfigType = {
       cooldown: 0.34,
       knockback: 7,
       swingTime: 0.22,
+      hitFraction: 0.35,
       combo: {
         window: 0.55,
         steps: [
@@ -1028,6 +1031,7 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'combat.melee.cooldown': { min: 0.05, max: 5 },
   'combat.melee.knockback': { min: 0, max: 50 },
   'combat.melee.swingTime': { min: 0.05, max: 2 },
+  'combat.melee.hitFraction': { min: 0, max: 0.9 },
   'combat.melee.combo.window': { min: 0.05, max: 3 },
   'equipment.autoEquipWeights.attack': { min: 0, max: 100 },
   'equipment.autoEquipWeights.defense': { min: 0, max: 100 },

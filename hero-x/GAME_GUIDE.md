@@ -359,6 +359,7 @@
 | `cooldown` | 0.45 | 0.05 ~ 5 | 다음 공격까지(초) |
 | `knockback` | 7 | 0 ~ 50 | 맞은 적이 밀리는 세기 |
 | `swingTime` | 0.22 | 0.05 ~ 2 | 휘두르기 동작 시간(초) |
+| `hitFraction` | 0.35 | 0 ~ 0.9 | 휘두르기 시간의 이 비율이 지난 뒤 판정 (동작과 타격을 맞춤, 0 = 즉시) |
 | `combo.window` | 0.55 | 0.05 ~ 3 | 쿨다운이 끝난 뒤 이 시간(초) 안에 다시 누르면 다음 단계로 이어짐 |
 | `combo.steps` | 3단계 | 자유 | 단계별 `damageMul`·`rangeMul`·`arcDegrees`·`swingTime`·`cooldownMul`·`knockbackMul`·`sweep`(right/left/spin)·`color`. 기본: 1단 1×/110°/right, 2단 1.15×/130°/left, 3단 1.6×/360°/spin(대기 1.7배) |
 

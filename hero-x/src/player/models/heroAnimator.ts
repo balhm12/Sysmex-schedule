@@ -32,6 +32,11 @@ export function createHeroAnimator(rig: HeroRig): (dt: number, state: PlayerMode
   const { root, torso, head, legL, legR, armL, armR } = rig;
   let walkT = 0;
   let idleT = Math.random() * 10;
+  let prevAirborne = false;
+  /** 착지 눌림 남은 시간 */
+  let landT = 0;
+  /** 몸 기울임(옆) 부드럽게 */
+  let lean = 0;
   const ease = (dt: number, k: number) => 1 - Math.exp(-k * dt);
   const toward = (obj: { rotation: THREE.Euler }, axis: 'x' | 'y' | 'z', target: number, k: number) => {
     obj.rotation[axis] += (target - obj.rotation[axis]) * k;
@@ -76,7 +81,19 @@ export function createHeroAnimator(rig: HeroRig): (dt: number, state: PlayerMode
       root.position.y = 0;
       return;
     }
-    toward(torso, 'x', hurt * -0.35 + (state.moving ? 0.08 : 0), k);
+    // 걷기(0)~달리기(1): 최고 속도의 55% 부터 달리기 자세로 (보폭·팔 흔들림·앞기울임이 커진다)
+    const ratio = state.speedRatio ?? (state.moving ? Math.min(1, state.speed / 7) : 0);
+    const run = state.moving ? Math.min(1, Math.max(0, (ratio - 0.55) / 0.45)) : 0;
+    // 방향 전환 때 몸을 안쪽으로 살짝 기울인다 (급회전 흔들림 방지: 상한·완만한 보간)
+    const targetLean = state.moving ? Math.max(-0.22, Math.min(0.22, -(state.turnRate ?? 0) * 0.025)) : 0;
+    lean += (targetLean - lean) * ease(dt, 10);
+    torso.rotation.z = lean;
+    // 착지: 점프 끝에 몸이 눌렸다 펴진다
+    if (prevAirborne && !state.airborne) landT = 0.18;
+    prevAirborne = state.airborne;
+    landT = Math.max(0, landT - dt);
+    const squash = landT > 0 ? Math.sin((landT / 0.18) * Math.PI) * 0.12 : 0;
+    toward(torso, 'x', hurt * -0.35 + (state.moving ? 0.08 + run * 0.16 : 0), k);
 
     if (state.airborne) {
       // 점프: 무릎을 접고 팔을 벌린다
@@ -90,22 +107,23 @@ export function createHeroAnimator(rig: HeroRig): (dt: number, state: PlayerMode
       root.position.y = 0;
       return;
     }
-    // 걷기: 허벅지는 앞뒤로, 정강이는 뒤로 갈 때 접힌다. 팔은 반대로
+    // 걷기/달리기: 허벅지는 앞뒤로, 정강이는 뒤로 갈 때 접힌다. 팔은 반대로. 달리기는 보폭·무릎·팔이 크고 들썩임이 세다
     const amount = state.moving ? 1 : 0;
-    walkT += dt * (state.speed > 0 ? state.speed * 1.7 : 0);
-    const swing = Math.sin(walkT) * 0.8 * amount;
-    const kneeL = Math.max(0, -Math.sin(walkT)) * 0.9 * amount;
-    const kneeR = Math.max(0, Math.sin(walkT)) * 0.9 * amount;
-    toward(legL.upper, 'x', swing, k);
-    toward(legR.upper, 'x', -swing, k);
-    toward(legL.lower, 'x', kneeL, k);
-    toward(legR.lower, 'x', kneeR, k);
-    toward(armL.upper, 'x', -swing * 0.8, k);
-    toward(armL.lower, 'x', -0.3 - Math.max(0, -swing) * 0.4, k);
-    // 숨쉬기(정지)·들썩임(이동)
+    walkT += dt * (state.speed > 0 ? state.speed * (1.7 - run * 0.3) : 0);
+    const stride = 0.8 + run * 0.35;
+    const swing = Math.sin(walkT) * stride * amount;
+    const kneeL = Math.max(0, -Math.sin(walkT)) * (0.9 + run * 0.5) * amount;
+    const kneeR = Math.max(0, Math.sin(walkT)) * (0.9 + run * 0.5) * amount;
+    toward(legL.upper, 'x', swing + squash * 2, k);
+    toward(legR.upper, 'x', -swing + squash * 2, k);
+    toward(legL.lower, 'x', kneeL + squash * 3, k);
+    toward(legR.lower, 'x', kneeR + squash * 3, k);
+    toward(armL.upper, 'x', -swing * (0.8 + run * 0.4), k);
+    toward(armL.lower, 'x', -0.3 - Math.max(0, -swing) * 0.4 - run * 0.6, k);
+    // 숨쉬기(정지)·들썩임(이동)·착지 눌림
     const breathe = state.moving ? 0 : Math.sin(idleT * 2.2) * 0.012;
-    torso.scale.set(1, 1 + breathe, 1);
-    root.position.y = Math.abs(Math.sin(walkT)) * 0.06 * amount;
+    torso.scale.set(1 + squash * 0.5, 1 + breathe - squash, 1 + squash * 0.5);
+    root.position.y = Math.abs(Math.sin(walkT)) * (0.06 + run * 0.03) * amount - squash * 0.3;
 
     if (state.attack !== null && state.attackKind === 'ranged') {
       // 쏘기: 팔을 앞으로 뻗고 반동으로 살짝 튄다
@@ -131,7 +149,7 @@ export function createHeroAnimator(rig: HeroRig): (dt: number, state: PlayerMode
       torso.rotation.y = step >= 2 ? p * Math.PI * 2 : (0.5 - p) * 0.55 * dirSign;
       head.rotation.y = step >= 2 ? 0 : (0.5 - p) * 0.3 * dirSign;
     } else {
-      toward(armR.upper, 'x', swing * 0.8 - 0.1, ease(dt, 10));
+      toward(armR.upper, 'x', swing * (0.8 + run * 0.4) - 0.1, ease(dt, 10));
       toward(armR.upper, 'y', 0, ease(dt, 10));
       toward(armR.lower, 'x', -0.35 + Math.sin(idleT * 2.2) * 0.03, ease(dt, 10));
       toward(torso, 'y', 0, ease(dt, 10));
