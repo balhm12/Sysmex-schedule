@@ -62,6 +62,9 @@
     },
     "commander": {
       "file": "boss-commander.glb"
+    },
+    "frost": {
+      "file": "boss-frost.glb"
     }
   },
   "_설명2": "enemies 의 'robot-*' 항목은 적 배치(spawns)의 skin 으로 고르는 보조 외형(강철 요새 = 로봇 공장). 종류 이름 항목이 기본 외형."
