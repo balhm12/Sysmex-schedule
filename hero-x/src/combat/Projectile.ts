@@ -70,7 +70,7 @@ export class ProjectileSystem {
 
   update(dt: number, ctx: ProjectileContext): void {
     const boxes = ctx.world.getObstacleBoxes();
-    const half = ctx.world.getArenaHalfSize();
+    const half = ctx.world.getArenaBounds();
     for (let i = this.shots.length - 1; i >= 0; i--) {
       const s = this.shots[i];
       s.life -= dt;

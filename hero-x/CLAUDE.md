@@ -98,7 +98,9 @@ hero-x/
 │  │  ├─ ItemDatabase.ts   장비 템플릿 12종, 등급 적용 생성, 무작위 생성 (테스트 대상)
 │  │  └─ EquipmentSystem.ts 가방·슬롯 장착/해제, 능력치 합산, 방어력 계산 (테스트 대상)
 │  ├─ dungeon/
-│  │  ├─ DungeonScene.ts   던전 정의로 바닥·조명·벽·장애물 생성 (CollisionWorld 구현, 외부 충돌 상자 추가 가능)
+│  │  ├─ journey.ts        ★ 여정형 던전 정의(구역·통로·문)와 계산: 격자 래스터화 → 울타리 벽 상자, BFS 연결 검증, 구역 판정 (순수 함수, 테스트 대상)
+│  │  ├─ ZoneSystem.ts     여정 진행기: 구역 진입 → 적 등장(enter 파도), 절반 이하 → 증원(half 파도), 전멸 → 클리어·문 열림, 보스 구역 → 보스 등장, 목표·진행도·빛 기둥 위치 (테스트 대상)
+│  │  ├─ DungeonScene.ts   던전 정의로 바닥·조명·벽·장애물 생성 (CollisionWorld 구현, 직사각형 범위, 여정 울타리 InstancedMesh·문 openGate, 외부 충돌 상자 추가/제거)
 │  │  ├─ Chest.ts          보물 상자 배치·근접 판정·열기 연출 (보상은 loot.rollChestLoot)
 │  │  ├─ decorLayout.ts    장식 배치 계산 (결정적 난수, 금지 영역 회피, 테스트 대상)
 │  │  └─ Decor.ts          장식 소품·인스턴싱 풀(바람 셰이더)·입자·경고등 (화질별 개수)
@@ -192,7 +194,7 @@ hero-x/
 - 플레이어 공격력: `CombatSystem` 이 레벨 배율(`() => stats.damageMultiplier`)과 무기 공격력(`(kind) => equipment.weaponAttack(kind)`)을 함수로 받는다. 피해 = (기본 + 무기) × 배율.
 - 방어력은 `Game.damagePlayer` 에서 `applyDefense` 로, 체력 보너스는 `Game.applyStats`, 속도 보너스는 `PlayerController` 의 배율 함수로 적용된다. 새 능력치를 추가하면 이 세 곳을 확인한다.
 - 새 장비 → `ItemDatabase.ts` 의 `ITEM_TEMPLATES` 에 항목 추가 (분류 melee/ranged/armor/trinket, 일반 등급 기준 수치).
-- 던전 추가·수정 → `DungeonDefs.ts` 의 `DUNGEONS` 에 항목 추가/수정 (해금은 `requiresClear`, 보스는 `boss` 에 바꿀 값만). 첫 던전만 `GameConfig.world/dungeon/enemies.spawns/boss` 를 그대로 쓴다. `tests/dungeons.test.ts` 가 모든 던전의 배치 겹침·영역을 검사한다. 던전 교체는 `Game.loadDungeon` 한 곳(공간·상자 새로 생성, 충돌 세계는 껍데기 객체로 공유).
+- 던전 추가·수정 → `DungeonDefs.ts` 의 `DUNGEONS` 에 항목 추가/수정 (해금은 `requiresClear`, 보스는 `boss` 에 바꿀 값만). **여정형 던전**은 `journey`(구역 `zones`·통로 `corridors`·문 `gates`, `halfX/halfZ` 직사각형 범위, `start`)를 적는다: 적은 `spawns: []` 로 두고 구역 `waves`(`enter`/`half`)로 등장, 정예는 `elite`(체력 배율, 1.5 이상이면 몸집·이름 배너), 보스는 `boss.spawn` 을 보스 구역 안에, 상자·장애물은 걷는 사각형 안에. 벽은 적지 않는다(`buildWallBoxes` 가 격자로 만든다). 메인 경로는 `mainIndex` 순서, 선택 경로는 `mainIndex` 없이. `tests/journey.test.ts` 가 연결성(BFS)·구역 안 배치·문 위치·벽 구멍을 검사한다. 지도를 눈으로 보려면 Playwright 로 `/src/game/DungeonDefs.ts` 를 import 해 캔버스에 그린다(스크래치 `map-journey.cjs`). `GameConfig.world.obstacles/dungeon.chests/enemies.spawns` 는 여정이 없는 열린 경기장 던전의 기본값(현재 숲은 안 씀). `tests/dungeons.test.ts` 가 모든 던전의 배치 겹침·영역을 검사한다. 던전 교체는 `Game.loadDungeon` 한 곳(공간·상자 새로 생성, 충돌 세계는 껍데기 객체로 공유).
 - 새 적이 기존 외형을 써도 되면 `enemies.types.<종류>.model` 에 'rusher' | 'shooter' | 'tank' 를 적는다.
 - 터치 조작: 조이스틱은 기본 '떠다니는' 방식(`.touch-zone` 전체 화면, 버튼보다 아래 층; 설정 `floatingJoystick`). 새 동작 버튼은 `TouchControls.ts` 의 HTML 에 `data-code`(GameConfig.controls 의 키 코드)만 적으면 된다. 터치 조작이 켜지면 `Game.getAimPoint` 가 자동 조준(`nearestEnemyPoint`)을 쓴다. 휴대폰 기본값(그림자 끔·해상도 0.8)은 `Settings.defaultSettings` 에서 `isTouchDevice()` 로 정한다. 모바일 검증은 Playwright `devices['Pixel 5']` 에뮬레이션 + `PointerEvent(pointerType: 'touch')` 로 한다.
 - 배포: `hero-x` 브랜치에 push 하면 워크플로가 `npm run check` 후 `dist` 를 main 의 `game/` 에 넣는다. main 의 다른 파일은 건드리지 않는다(`keep_files: true`). 배포 주소는 README 3-1.
@@ -202,7 +204,7 @@ hero-x/
 - 클리어 뒤 흐름: `showResult(title, sub, next)` 에 다음 던전을 넘기면 `ResultUI` 가 '다음 던전' 버튼과 카운트다운(`dungeon.autoAdvanceSeconds`, 0 이면 버튼만)을 보여주고 끝나면 `enterDungeon(next)`. 다른 버튼을 누르면 취소.
 - 공격 입력: `CombatSystem` 은 `onPress` 로 예약 플래그를 세워 쿨다운 중이나 프레임 사이의 짧은 탭도 쿨다운이 끝나는 즉시 한 번 나가게 한다. 반응 속도는 `combat.melee.cooldown`(0.34)과 `PartRig` 의 뒤로 당김 비율(12%)로 조정.
 - "보스를 약하게/세게" → `boss.hp`, `boss.slam.damage`, `boss.contactDamage`, `boss.windup`(예고가 길수록 쉬움). 던전별 보스는 `DungeonDefs.ts` 의 `boss` 덮어쓰기. 패턴 구성은 `boss.closePatterns`(순환 순서)와 `boss.useCharge`, 외형은 `boss.model`('guardian' | 'golem' | 'commander'). 새 보스 패턴은 `BossPattern` 타입 + `boss.windup` 항목 + `Boss.update` 의 실행 분기 + `Game.onBossAttack` 의 효과 처리에 추가한다(시간이 걸리는 효과는 `Game.updateMortars` 처럼 루프에서 진행). 새 외형은 `createBossModel` 의 `kind` 분기.
-- 승리 흐름은 `Game.checkVictory`: 일반 적 전멸 → `spawnBoss` → 보스 사망 → `onBossDefeated`(보상) → 결과 화면. 테스트에서는 `__heroX.debugDefeatRegularEnemies()` 로 바로 보스전으로 간다.
+- 승리 흐름은 `Game.checkVictory`: 열린 경기장은 일반 적 전멸 → `spawnBoss`, 여정 던전은 보스 구역 진입(`ZoneSystem.onBossZone`) → `spawnBoss` → 보스 사망 → `onBossDefeated`(보상) → 결과 화면(다음 던전 카운트다운). HUD 목표는 `hud.setObjective`, 다음 목표 구역엔 빛 기둥 `beacon`. 테스트에서는 `__heroX.debugDefeatRegularEnemies()` 로 바로 보스전으로 간다.
 - 사용자 설정은 `Settings.ts` 의 `UserSettings`/`SETTING_DEFS` 에만 추가한다(화면은 자동 생성). 게임 코드는 `GameConfig.hud/debug/graphics` 대신 `this.settings` 를 읽는다. 플레이어 체력·공격력은 `effectiveMaxHp()`/`effectiveDamageMultiplier()` 를 거친다. 난이도는 `setDifficulty` 한 곳에서 설정·저장·메뉴를 함께 갱신한다.
 - 저장: 성장·장비·난이도·기록만 저장하고 던전 안 상태는 저장하지 않는다. 저장 형식을 바꾸면 `SAVE_VERSION` 을 올리고 `migrateSaveData` 에 변환을 추가한 뒤 `tests/save.test.ts` 에 옛 형식 → 새 형식 테스트를 더한다. 장비는 원형 id·등급만 저장하고 `createItem` 으로 다시 만든다. 저장 시점은 `Game.markDirty()`(자동 저장 간격 뒤) 또는 `Game.saveNow()`(메뉴·결과·탭 닫기)로만 다룬다. 저장 데이터 초기화는 사용자가 '새 게임'을 확인했을 때만 한다.
 - 인트로 연출: `Game.startIntro(next)` 가 숲 던전을 초기화하고 `IntroSet`(교실 세트, 학교 이름은 `GameConfig.meta.school`)을 올린 뒤 `mode = 'intro'` 로 `IntroDirector` 를 돌린다(메뉴 '인트로 보기', 처음 '새 게임' 때 한 번 — `hero-x.introSeen` 플래그). `frame()` 은 인트로 시간 배율을 곱해 `simulate()` 하고 연출기가 카메라·자막을 덮어쓴다. 인트로 중에는 피해 없음(`damagePlayer` 반환), 드롭 없음, 승리 판정·자동 저장 없음. 아무 키·화면 터치·건너뛰기 버튼이 `endIntro()` 를 부르고 `restart()` 로 던전을 복구한다. 장면·카메라 수치는 `introTimeline.ts` 만 고친다. 브라우저 테스트는 시작 전에 `localStorage.setItem('hero-x.introSeen','1')` 을 넣어 인트로를 건너뛴다.

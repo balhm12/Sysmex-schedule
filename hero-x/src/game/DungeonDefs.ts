@@ -1,3 +1,4 @@
+import type { JourneyDef } from '../dungeon/journey';
 import { GameConfig, type EnemySpawnConfig, type GameConfigType, type ObstacleConfig } from './GameConfig';
 
 /**
@@ -59,11 +60,90 @@ export interface DungeonDef {
   theme: DungeonTheme;
   obstacles: ObstacleConfig[];
   chests: Array<{ x: number; z: number }>;
+  /** 처음부터 배치되는 적 (여정 던전은 비우고 journey 의 구역 파도로 등장) */
   spawns: EnemySpawnConfig[];
   boss: BossOverride;
   /** 적 처치 보상 배율 (골드·경험치) */
   rewardMul: { gold: number; xp: number };
+  /** 여정형 구조(구역·통로·문). 있으면 정사각 경기장 대신 이 길을 따라 진행한다 */
+  journey?: JourneyDef;
+  /** 플레이어 시작 위치 (없으면 GameConfig.player.startPosition) */
+  start?: { x: number; z: number };
 }
+
+/**
+ * 잊혀진 숲 여정 (목표 플레이 10~15분)
+ * 출발 → 첫 전투 → 좁은 숲길(박쥐 매복) → 둘째 전투 → [서쪽 보물방] → 갈림길(봉쇄 문) → [동쪽 비밀 방: 미니 보스+희귀 상자]
+ * → 매복 광장(증원) → 휴식(상자·회복) → 대전투 광장(증원) → 봉쇄 문 → 보스.
+ * 좌표: 남쪽(+Z)에서 출발해 북쪽(-Z)으로. 벽은 journey.ts 가 격자로 만든다.
+ */
+export const FOREST_JOURNEY: JourneyDef = {
+  halfX: 36,
+  halfZ: 104,
+  cell: 2,
+  wallHeight: 2.4,
+  start: { x: 0, z: 90 },
+  bossZone: 'boss',
+  zones: [
+    { id: 'start', name: '숲 입구', kind: 'start', rect: { x: 0, z: 88, w: 16, d: 16 }, mainIndex: 0, objective: '북쪽 숲길로 나아가자 (빛 기둥을 따라가세요)' },
+    {
+      id: 'fight1', name: '첫 번째 공터', kind: 'fight', rect: { x: 0, z: 52, w: 24, d: 24 }, mainIndex: 1, objective: '고블린을 모두 물리쳐라',
+      waves: [{ when: 'enter', spawns: [{ type: 'rusher', x: -6, z: 56 }, { type: 'rusher', x: 6, z: 56 }, { type: 'rusher', x: -4, z: 46 }, { type: 'rusher', x: 5, z: 45 }] }],
+    },
+    {
+      id: 'path1', name: '좁은 숲길', kind: 'path', rect: { x: -24, z: 24, w: 8, d: 16 }, mainIndex: 2, objective: '좁은 숲길을 지나라 — 박쥐를 조심!',
+      waves: [{ when: 'enter', spawns: [{ type: 'stalker', x: -24, z: 20 }, { type: 'stalker', x: -24, z: 28 }] }],
+    },
+    {
+      id: 'fight2', name: '두 번째 공터', kind: 'fight', rect: { x: -20, z: 4, w: 26, d: 24 }, mainIndex: 3, objective: '고블린과 마법사를 물리쳐라',
+      waves: [{ when: 'enter', spawns: [{ type: 'rusher', x: -28, z: 10 }, { type: 'rusher', x: -12, z: 10 }, { type: 'rusher', x: -26, z: -2 }, { type: 'rusher', x: -14, z: -3 }, { type: 'rusher', x: -20, z: 2 }, { type: 'shooter', x: -20, z: 12 }] }],
+    },
+    {
+      id: 'treasure', name: '숨은 보물 터', kind: 'treasure', rect: { x: -24, z: -18, w: 14, d: 12 }, objective: '보물 상자를 열어라',
+      waves: [{ when: 'enter', spawns: [{ type: 'rusher', x: -27, z: -20 }, { type: 'rusher', x: -21, z: -16 }] }],
+    },
+    {
+      id: 'junction', name: '갈림길', kind: 'branch', rect: { x: 20, z: 4, w: 10, d: 12 }, mainIndex: 4, objective: '갈림길의 적을 물리치면 북쪽 문이 열린다 (동쪽에도 길이…)',
+      waves: [{ when: 'enter', spawns: [{ type: 'rusher', x: 20, z: 8 }, { type: 'rusher', x: 20, z: 0 }, { type: 'shooter', x: 22, z: 4 }] }],
+    },
+    {
+      id: 'secret', name: '거인의 은신처', kind: 'secret', rect: { x: 30, z: 16, w: 12, d: 14 }, objective: '숲의 거인 대장을 물리쳐라 (희귀 상자)',
+      waves: [{ when: 'enter', spawns: [{ type: 'tank', x: 30, z: 18, elite: 2.2, name: '숲의 거인 대장' }, { type: 'rusher', x: 26, z: 12 }, { type: 'rusher', x: 34, z: 12 }] }],
+    },
+    {
+      id: 'ambush', name: '매복 광장', kind: 'ambush', rect: { x: 14, z: -22, w: 24, d: 16 }, mainIndex: 5, objective: '매복이다! 모두 물리쳐라',
+      waves: [
+        { when: 'enter', spawns: [{ type: 'stalker', x: 4, z: -16 }, { type: 'stalker', x: 24, z: -16 }, { type: 'stalker', x: 4, z: -28 }, { type: 'stalker', x: 24, z: -28 }, { type: 'rusher', x: 8, z: -26 }, { type: 'rusher', x: 20, z: -26 }] },
+        { when: 'half', spawns: [{ type: 'stalker', x: 14, z: -16 }, { type: 'stalker', x: 14, z: -28 }] },
+      ],
+    },
+    { id: 'rest', name: '쉼터', kind: 'rest', rect: { x: 0, z: -44, w: 14, d: 12 }, mainIndex: 6, objective: '잠시 쉬어가자 — 상자와 회복 아이템' },
+    {
+      id: 'arena', name: '큰 전투 광장', kind: 'arena', rect: { x: 0, z: -70, w: 34, d: 24 }, mainIndex: 7, objective: '큰 전투! 모두 물리치면 보스의 문이 열린다',
+      waves: [
+        { when: 'enter', spawns: [{ type: 'rusher', x: -12, z: -64 }, { type: 'rusher', x: 12, z: -64 }, { type: 'rusher', x: -8, z: -76 }, { type: 'rusher', x: 8, z: -76 }, { type: 'rusher', x: -14, z: -72 }, { type: 'shooter', x: -10, z: -60 }, { type: 'shooter', x: 10, z: -60 }, { type: 'tank', x: 0, z: -74 }] },
+        { when: 'half', spawns: [{ type: 'rusher', x: -6, z: -62 }, { type: 'rusher', x: 6, z: -62 }, { type: 'rusher', x: 0, z: -80 }, { type: 'shooter', x: 0, z: -66 }] },
+      ],
+    },
+    { id: 'boss', name: '수호 로봇의 터', kind: 'boss', rect: { x: 0, z: -97, w: 30, d: 14 }, mainIndex: 8, objective: '보스를 쓰러뜨려라!' },
+  ],
+  corridors: [
+    { x: 0, z: 72, w: 8, d: 16 },
+    { x: -12, z: 36, w: 28, d: 8 },
+    { x: -24, z: -10, w: 6, d: 4 },
+    { x: 4, z: 4, w: 22, d: 8 },
+    { x: 30, z: 4, w: 10, d: 6 },
+    { x: 30, z: 8, w: 6, d: 6 },
+    { x: 20, z: -8, w: 8, d: 12 },
+    { x: 4, z: -34, w: 8, d: 8 },
+    { x: 0, z: -54, w: 8, d: 8 },
+    { x: 0, z: -86, w: 8, d: 8 },
+  ],
+  gates: [
+    { id: 'gate-north', rect: { x: 20, z: -8, w: 8, d: 1.2 }, opensWhenCleared: 'junction' },
+    { id: 'gate-boss', rect: { x: 0, z: -86, w: 8, d: 1.2 }, opensWhenCleared: 'arena' },
+  ],
+};
 
 const forestTheme: DungeonTheme = {
   backgroundColor: GameConfig.world.backgroundColor,
@@ -89,15 +169,31 @@ export const DUNGEONS: DungeonDef[] = [
   {
     id: 'forest',
     name: GameConfig.dungeon.name,
-    subtitle: '햇살이 드는 숲. 로봇 3종과 숲의 수호 로봇.',
+    subtitle: '햇살이 드는 숲길을 따라 고블린·박쥐·거인을 물리치고 수호 로봇에게로.',
     recommendedLevel: 1,
     arenaHalfSize: GameConfig.world.arenaHalfSize,
     theme: forestTheme,
-    obstacles: GameConfig.world.obstacles,
-    chests: GameConfig.dungeon.chests,
-    spawns: GameConfig.enemies.spawns,
-    boss: {},
+    // 여정 던전: 장애물은 구역 안 소품(오를 수 있는 상자·기둥·폐허 돌담), 적은 구역에 들어설 때 등장
+    obstacles: [
+      { x: 6, z: 48, w: 2, d: 2, h: 2, color: '#d9a066', kind: 'crate' },
+      { x: 8.2, z: 48, w: 2, d: 2, h: 2, color: '#d9a066', kind: 'crate' },
+      { x: 7, z: 45.8, w: 2, d: 2, h: 1.4, color: '#e0ad6c', kind: 'crate' },
+      { x: -10, z: -70, w: 1.2, d: 1.2, h: 4, color: '#9aa3b2', kind: 'pillar' },
+      { x: 10, z: -70, w: 1.2, d: 1.2, h: 4, color: '#9aa3b2', kind: 'pillar' },
+      { x: -5, z: -41, w: 3, d: 0.7, h: 1.6, color: '#8f8a7e', kind: 'ruin' },
+      { x: 5, z: -47, w: 3, d: 0.7, h: 1.2, color: '#8f8a7e', kind: 'ruin' },
+      { x: 26, z: 20, w: 1.6, d: 1.6, h: 2, color: '#d9a066', kind: 'crate' },
+    ],
+    chests: [
+      { x: -24, z: -20 },
+      { x: 30, z: 21 },
+      { x: 0, z: -46 },
+    ],
+    spawns: [],
+    boss: { spawn: { x: 0, z: -98 } },
     rewardMul: { gold: 1, xp: 1 },
+    journey: FOREST_JOURNEY,
+    start: FOREST_JOURNEY.start,
   },
   {
     id: 'cave',

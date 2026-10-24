@@ -23,8 +23,8 @@ describe('던전 장식 배치 (planDecor)', () => {
     expect(plan.inside.length).toBeGreaterThan(10);
     expect(plan.outside.length).toBeGreaterThan(10);
     for (const it of plan.inside) {
-      expect(Math.abs(it.x)).toBeLessThan(d.arenaHalfSize);
-      expect(Math.abs(it.z)).toBeLessThan(d.arenaHalfSize);
+      expect(Math.abs(it.x)).toBeLessThan(d.journey?.halfX ?? d.arenaHalfSize);
+      expect(Math.abs(it.z)).toBeLessThan(d.journey?.halfZ ?? d.arenaHalfSize);
       expect(Math.hypot(it.x, it.z)).toBeGreaterThan(4);
       expect(Math.hypot(it.x - boss.x, it.z - boss.z)).toBeGreaterThan(4);
       for (const o of d.obstacles) expect(Math.abs(it.x - o.x) < o.w / 2 + 0.6 && Math.abs(it.z - o.z) < o.d / 2 + 0.6, `장식 (${it.x.toFixed(1)}, ${it.z.toFixed(1)}) 이 장애물과 겹침`).toBe(false);
@@ -32,6 +32,6 @@ describe('던전 장식 배치 (planDecor)', () => {
       for (const sp of d.spawns) expect(Math.hypot(it.x - sp.x, it.z - sp.z)).toBeGreaterThan(1.8);
       expect(DECOR_KINDS[d.id].inside.map((k) => k[0])).toContain(it.kind);
     }
-    for (const it of plan.outside) expect(Math.max(Math.abs(it.x), Math.abs(it.z))).toBeGreaterThan(d.arenaHalfSize + 1);
+    for (const it of plan.outside) expect(Math.abs(it.x) > (d.journey?.halfX ?? d.arenaHalfSize) + 1 || Math.abs(it.z) > (d.journey?.halfZ ?? d.arenaHalfSize) + 1).toBe(true);
   });
 });

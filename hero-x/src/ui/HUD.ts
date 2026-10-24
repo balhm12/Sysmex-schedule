@@ -37,7 +37,8 @@ export class HUD {
         <div><span class="hud-label">남은 적</span><b id="hud-enemies">0</b></div>
         <div><span class="hud-label">처치</span><b id="hud-kills">0</b></div>
         <div><span class="hud-label">점수</span><b id="hud-score">0</b></div>
-      </div>`;
+      </div>
+      <div class="hud-panel hud-objective" id="hud-objective" hidden><span class="hud-label">목표</span><b id="hud-objective-text"></b><span class="hud-progress" id="hud-objective-progress"></span></div>`;
     parent.appendChild(this.root);
     this.hpFill = this.root.querySelector('#hud-hp-fill') as HTMLElement;
     this.hpText = this.root.querySelector('#hud-hp-text') as HTMLElement;
@@ -62,6 +63,14 @@ export class HUD {
     this.banner.className = 'banner';
     this.banner.hidden = true;
     parent.appendChild(this.banner);
+  }
+
+  /** 여정 목표 표시 (text 가 비면 숨김) */
+  setObjective(text: string, done: number, total: number): void {
+    const el = this.root.querySelector('#hud-objective') as HTMLElement;
+    el.hidden = text === '';
+    (this.root.querySelector('#hud-objective-text') as HTMLElement).textContent = text;
+    (this.root.querySelector('#hud-objective-progress') as HTMLElement).textContent = total > 0 ? `${done} / ${total}` : '';
   }
 
   /** 보스 체력바. null 이면 숨김 */

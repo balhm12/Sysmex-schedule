@@ -155,14 +155,15 @@ export class Decor {
         );
     };
     const mesh = new THREE.InstancedMesh(geo, mat, count);
-    const half = this.def.arenaHalfSize;
+    const halfX = this.def.journey?.halfX ?? this.def.arenaHalfSize;
+    const halfZ = this.def.journey?.halfZ ?? this.def.arenaHalfSize;
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const s = new THREE.Vector3();
     const p = new THREE.Vector3();
     const color = new THREE.Color();
     for (let i = 0; i < count; i++) {
-      p.set((this.rnd() * 2 - 1) * (half - 0.5), 0, (this.rnd() * 2 - 1) * (half - 0.5));
+      p.set((this.rnd() * 2 - 1) * (halfX - 0.5), 0, (this.rnd() * 2 - 1) * (halfZ - 0.5));
       q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.rnd() * Math.PI);
       const k = 0.6 + this.rnd() * 0.9;
       s.set(k, k, k);
@@ -186,7 +187,7 @@ export class Decor {
   private buildParticles(quality: QualityLevel): void {
     const count = QUALITY_PRESETS[quality].particleCount;
     if (count <= 0) return;
-    const half = this.def.arenaHalfSize + 6;
+    const half = Math.max(this.def.journey?.halfX ?? this.def.arenaHalfSize, this.def.journey?.halfZ ?? this.def.arenaHalfSize) + 6;
     const positions = new Float32Array(count * 3);
     this.particleVel = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
@@ -234,7 +235,7 @@ export class Decor {
     if (this.particles && this.particleVel) {
       const pos = this.particles.geometry.attributes.position as THREE.BufferAttribute;
       const arr = pos.array as Float32Array;
-      const half = this.def.arenaHalfSize + 6;
+      const half = Math.max(this.def.journey?.halfX ?? this.def.arenaHalfSize, this.def.journey?.halfZ ?? this.def.arenaHalfSize) + 6;
       const n = pos.count;
       for (let i = 0; i < n; i++) {
         const j = i * 3;

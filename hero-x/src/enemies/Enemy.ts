@@ -120,7 +120,7 @@ export class Enemy {
     }
 
     next = resolveCircleVsBoxes(next, this.radius, ctx.world.getObstacleBoxes());
-    next = clampToArena(next, ctx.world.getArenaHalfSize(), this.radius);
+    next = clampToArena(next, ctx.world.getArenaBounds(), this.radius);
     p.x = next.x;
     p.z = next.z;
 

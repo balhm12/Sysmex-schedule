@@ -126,7 +126,7 @@ export class PlayerController {
     // 발이 윗면에 닿은 상자는 가로막지 않고(위로 지나감), 그 밖의 상자는 밀어낸다
     const boxes = this.world.getObstacleBoxes();
     next = resolveCircleVsBoxes(next, cfg.radius, boxes, this.player.jumpY, cfg.climbAssist);
-    next = clampToArena(next, this.world.getArenaHalfSize(), cfg.radius);
+    next = clampToArena(next, this.world.getArenaBounds(), cfg.radius);
     pos.x = next.x;
     pos.z = next.z;
 

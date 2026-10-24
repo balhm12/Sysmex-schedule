@@ -58,13 +58,15 @@ function isFree(p: Vec2, def: DungeonDef, radius: number, bossSpawn: Vec2): bool
 export function planDecor(def: DungeonDef, bossSpawn: Vec2, seed = 1, outsideDepth = 14): DecorPlan {
   const rnd = seededRandom(seed + def.id.length * 7919);
   const kinds = DECOR_KINDS[def.id] ?? DECOR_KINDS.forest;
-  const half = def.arenaHalfSize;
+  const halfX = def.journey?.halfX ?? def.arenaHalfSize;
+  const halfZ = def.journey?.halfZ ?? def.arenaHalfSize;
+  const half = Math.max(halfX, halfZ);
   const inside: DecorItem[] = [];
   const outside: DecorItem[] = [];
   for (const [kind, count] of kinds.inside) {
     let placed = 0;
     for (let tries = 0; tries < count * 30 && placed < count; tries++) {
-      const p = { x: (rnd() * 2 - 1) * (half - 1.5), z: (rnd() * 2 - 1) * (half - 1.5) };
+      const p = { x: (rnd() * 2 - 1) * (halfX - 1.5), z: (rnd() * 2 - 1) * (halfZ - 1.5) };
       if (!isFree(p, def, 0.6, bossSpawn)) continue;
       if (inside.some((d) => Math.hypot(d.x - p.x, d.z - p.z) < 1.4)) continue;
       inside.push({ kind, x: p.x, z: p.z, scale: 0.75 + rnd() * 0.6, rot: rnd() * Math.PI * 2 });
@@ -77,7 +79,7 @@ export function planDecor(def: DungeonDef, bossSpawn: Vec2, seed = 1, outsideDep
       // 벽 바깥 띠: 네 변 중 하나를 골라 바깥쪽으로
       const side = Math.floor(rnd() * 4);
       const along = (rnd() * 2 - 1) * (half + outsideDepth);
-      const depth = half + 1.5 + rnd() * outsideDepth;
+      const depth = (side < 2 ? halfZ : halfX) + 1.5 + rnd() * outsideDepth;
       const p = side === 0 ? { x: along, z: -depth } : side === 1 ? { x: along, z: depth } : side === 2 ? { x: -depth, z: along } : { x: depth, z: along };
       if (outside.some((d) => Math.hypot(d.x - p.x, d.z - p.z) < 2.6)) continue;
       outside.push({ kind, x: p.x, z: p.z, scale: 0.8 + rnd() * 0.7, rot: rnd() * Math.PI * 2 });

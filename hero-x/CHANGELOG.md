@@ -2,6 +2,31 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.9.0 · 첫 던전을 여정형 구조로 (2차 개선 3단계: 구역·통로·문·매복·증원·미니 보스·진행도)
+
+### 변경 내용
+- **여정 모듈** `src/dungeon/journey.ts`(새): 구역(zone)·통로(corridor)·문(gate) 사각형으로 던전을 적으면 격자(2유닛)로 래스터화해 걷는 칸과 맞닿은 칸을 **울타리 벽 상자**로 만든다(가로로 이어 붙여 242개). BFS 로 시작→모든 구역 연결 검증, `zoneAt`, 메인 경로 길이.
+- **구역 진행기** `src/dungeon/ZoneSystem.ts`(새): 구역에 들어서면 `enter` 파도의 적 등장, 처음 등장한 적이 절반 이하가 되면 `half` 파도(증원), 전멸하면 클리어 → 조건이 맞는 문이 열린다. 적 없는 구역(출발·쉼터)은 들어서면 클리어. 보스 구역 진입 → 보스 등장. 목표(메인 경로의 첫 미클리어 구역)·진행도·빛 기둥 자리.
+- **잊혀진 숲 여정** (`DungeonDefs.FOREST_JOURNEY`): 72×208 범위, 구역 11개(출발·첫 공터·좁은 숲길·둘째 공터·숨은 보물 터·갈림길·거인의 은신처·매복 광장·쉼터·큰 전투 광장·보스 터), 통로 10개, 문 2개(갈림길 정리 → 북쪽 문, 큰 전투 정리 → 보스 문), 적 41마리(고블린 24·박쥐 10·마법사 5·트롤 2) + 정예 미니 보스(숲의 거인 대장, 체력 2.2배·몸집 1.25배) + 보스, 증원 파도 2곳, 상자 3개(선택 경로 2), 오를 수 있는 상자·기둥·폐허 돌담 소품. 플레이어 시작 (0, 90), 보스 (0, −98). 메인 경로 직선 길이 239유닛(걷기만 약 40초) + 전투 ≈ 10분대.
+- **직사각형 이동 범위**: `CollisionWorld.getArenaBounds()`(halfX/halfZ), `clampToArena`/`hitsObstacle` 이 직사각형을 받는다. 바닥·경계 벽·장식(풀·입자)도 직사각형. 다른 던전은 정사각형 그대로.
+- `DungeonScene`: 울타리는 InstancedMesh 한 번에 그림, 장애물 `kind`(crate/pillar/hedge/ruin/gate)별 재질, 문 메시(널빤지+쇠띠) → `openGate` 로 충돌 상자 제거.
+- `EnemySpawner.spawn(..., elite)`: 정예 배율. HUD **목표 패널**(PC: 위쪽 가운데, 휴대폰 가로: 아래 가운데, 세로: 세 번째 줄)과 **빛 기둥**(다음 목표 구역, 들어가면 사라짐). 구역 진입 배너, 매복 때 화면 흔들림, 쉼터 회복 아이템, 문 열림 효과.
+- 인트로 무대를 여정 숲의 첫 공터(0, 55)로 옮김(`INTRO_ORIGIN`). 인트로 중에는 구역 진행기가 돌지 않는다.
+- `GameConfig.world.obstacles/dungeon.chests/enemies.spawns` 는 열린 경기장 던전용 기본값으로 남김(숲은 여정 정의 사용).
+
+### 수정 파일
+`src/dungeon/journey.ts`(새), `src/dungeon/ZoneSystem.ts`(새), `src/game/DungeonDefs.ts`, `src/game/GameConfig.ts`, `src/player/movement.ts`, `src/player/PlayerController.ts`, `src/enemies/{Enemy,Boss,EnemySpawner}.ts`, `src/combat/Projectile.ts`, `src/dungeon/{DungeonScene,Decor,decorLayout}.ts`, `src/ui/HUD.ts`, `src/game/Game.ts`, `src/cinematic/{introTimeline,IntroDirector}.ts`, `src/style.css`, `tests/{journey,zones}.test.ts`(새), `tests/{dungeons,decor}.test.ts`, `package.json`, `CLAUDE.md`, `GAME_GUIDE.md`, `CHANGELOG.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 135개·빌드). 여정 테스트: 연결성, 구역 모양 다양성, 적·상자·장애물이 걷는 곳 안, 문이 통로 안, 벽에 구멍 없음, 경로 길이. 구역 진행기 테스트: 진입 등장·증원·증원까지 잡아야 클리어·문 열림·보스 진입 1회.
+- Playwright 여정 시나리오: 출발 구역(적 0, 목표 1/9) → 첫 공터 4 등장 → 정리 → 숲길 2 → 둘째 공터 6 → 갈림길 3 → 정리 → 문 열림(벽 −1) → 매복 6 → 전멸 → 증원 2 → 정리 → 쉼터(회복 아이템) → 큰 전투 8 → 증원 4 → 정리 → 보스 문 열림 → 보스 구역에서 보스 등장 → 처치 → 결과 9/9 → 비밀 방 정예 배너. 지도 캔버스로 전체 배치 확인(스크린샷).
+- 회귀: 상자 오르기(좌표 갱신), 인트로(교실, 적 0 복귀), 던전 선택·해금·저장 변환, 보스 패턴(동굴·요새·숲) 통과. 모바일 가로/세로 레이아웃 재확인(목표 패널 겹침 없음).
+
+### 알려진 문제
+- 적은 길 찾기가 없어 울타리 뒤에서 플레이어를 보면 벽에 막힌다(구역 안에서 등장하므로 대체로 괜찮음). 다음 단계에서 간단한 우회 이동 검토.
+- 실제 플레이 시간은 사람이 재야 한다(10~15분 목표). 적 수·체력은 `FOREST_JOURNEY` 의 파도 수치로 조정.
+- 동굴·요새는 아직 열린 경기장(다음 단계).
+
 ## 2026-10-24 · v1.8.1 · 모바일 UI 다듬기 (2차 개선 1단계)
 
 ### 변경 내용

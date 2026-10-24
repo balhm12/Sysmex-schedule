@@ -1,3 +1,4 @@
+import { zoneSpawns } from '../src/dungeon/journey';
 import { describe, expect, it } from 'vitest';
 import { DUNGEONS, getDungeon, isDungeonUnlocked, nextDungeonAfter, resolveBossConfig } from '../src/game/DungeonDefs';
 import { ENEMY_TYPE_LIMITS, GameConfig } from '../src/game/GameConfig';
@@ -14,8 +15,8 @@ describe('던전 정의 (DungeonDefs)', () => {
     expect(new Set(DUNGEONS.map((d) => d.id)).size).toBe(DUNGEONS.length);
     expect(DUNGEONS[0].requiresClear).toBeUndefined();
     expect(DUNGEONS[0].name).toBe(GameConfig.dungeon.name);
-    expect(DUNGEONS[0].spawns).toBe(GameConfig.enemies.spawns);
-    expect(DUNGEONS[0].obstacles).toBe(GameConfig.world.obstacles);
+    expect(DUNGEONS[0].journey, '첫 던전은 여정형').toBeDefined();
+    expect(DUNGEONS[0].spawns).toEqual([]); // 적은 구역 파도로 등장
     expect(getDungeon('forest')).toBe(DUNGEONS[0]);
   });
 
@@ -36,31 +37,35 @@ describe('던전 정의 (DungeonDefs)', () => {
   });
 
   it.each(DUNGEONS.map((d) => [d.id, d] as const))('던전 %s: 적·상자·보스·장애물 배치가 영역 안이고 서로 겹치지 않는다', (_id, d) => {
-    const half = d.arenaHalfSize;
-    const s = GameConfig.player.startPosition;
+    const halfX = d.journey?.halfX ?? d.arenaHalfSize;
+    const halfZ = d.journey?.halfZ ?? d.arenaHalfSize;
+    const half = Math.min(halfX, halfZ);
+    const s = d.start ?? GameConfig.player.startPosition;
     expect(overlaps(d.obstacles, s.x, s.z, GameConfig.player.radius)).toBe(false);
     for (const o of d.obstacles) {
-      expect(Math.abs(o.x) + o.w / 2).toBeLessThanOrEqual(half);
-      expect(Math.abs(o.z) + o.d / 2).toBeLessThanOrEqual(half);
+      expect(Math.abs(o.x) + o.w / 2).toBeLessThanOrEqual(halfX);
+      expect(Math.abs(o.z) + o.d / 2).toBeLessThanOrEqual(halfZ);
     }
-    for (const sp of d.spawns) {
+    const allSpawns = [...d.spawns, ...(d.journey ? d.journey.zones.flatMap((z) => zoneSpawns(z)) : [])];
+    for (const sp of allSpawns) {
       const def = GameConfig.enemies.types[sp.type];
       expect(def, `적 종류 '${sp.type}' 이 types 에 없음`).toBeDefined();
       expect(overlaps(d.obstacles, sp.x, sp.z, def.radius), `적 (${sp.x}, ${sp.z}) 이 장애물과 겹침`).toBe(false);
       expect(Math.hypot(sp.x - s.x, sp.z - s.z), `적 (${sp.x}, ${sp.z}) 이 시작 위치와 너무 가까움`).toBeGreaterThan(6);
-      expect(Math.abs(sp.x)).toBeLessThan(half - def.radius);
-      expect(Math.abs(sp.z)).toBeLessThan(half - def.radius);
+      expect(Math.abs(sp.x)).toBeLessThan(halfX - def.radius);
+      expect(Math.abs(sp.z)).toBeLessThan(halfZ - def.radius);
     }
     for (const c of d.chests) {
-      expect(Math.abs(c.x)).toBeLessThan(half - 1);
-      expect(Math.abs(c.z)).toBeLessThan(half - 1);
+      expect(Math.abs(c.x)).toBeLessThan(halfX - 1);
+      expect(Math.abs(c.z)).toBeLessThan(halfZ - 1);
       expect(Math.hypot(c.x - s.x, c.z - s.z)).toBeGreaterThan(3);
       expect(overlaps(d.obstacles, c.x, c.z, 1), `상자 (${c.x}, ${c.z}) 가 장애물과 겹침`).toBe(false);
-      for (const sp of d.spawns) expect(Math.hypot(c.x - sp.x, c.z - sp.z), `상자 (${c.x}, ${c.z}) 가 적과 너무 가까움`).toBeGreaterThan(2);
+      for (const sp of allSpawns) expect(Math.hypot(c.x - sp.x, c.z - sp.z), `상자 (${c.x}, ${c.z}) 가 적과 너무 가까움`).toBeGreaterThan(2);
     }
     const b = resolveBossConfig(d);
-    expect(Math.abs(b.spawn.x)).toBeLessThan(half - b.radius);
-    expect(Math.abs(b.spawn.z)).toBeLessThan(half - b.radius);
+    expect(Math.abs(b.spawn.x)).toBeLessThan(halfX - b.radius);
+    expect(Math.abs(b.spawn.z)).toBeLessThan(halfZ - b.radius);
+    void half;
     expect(overlaps(d.obstacles, b.spawn.x, b.spawn.z, b.radius)).toBe(false);
     expect(b.hp).toBeGreaterThan(0);
     expect(d.rewardMul.gold).toBeGreaterThanOrEqual(1);
@@ -68,7 +73,7 @@ describe('던전 정의 (DungeonDefs)', () => {
 
   it('보스 설정은 GameConfig.boss 위에 던전 값만 덮어쓴다 (중첩 객체도 빠진 값은 기본 유지)', () => {
     const forest = resolveBossConfig(DUNGEONS[0]);
-    expect(forest).toEqual(GameConfig.boss);
+    expect(forest).toEqual({ ...GameConfig.boss, spawn: DUNGEONS[0].boss.spawn }); // 숲은 보스 자리만 덮어쓴다(보스 구역)
     const cave = resolveBossConfig(getDungeon('cave')!);
     expect(cave.name).toBe('수정 골렘');
     expect(cave.hp).toBeGreaterThan(GameConfig.boss.hp);

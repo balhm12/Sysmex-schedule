@@ -15,6 +15,8 @@ export interface ObstacleConfig {
   d: number;
   h: number;
   color?: string;
+  /** 외형: 상자(기본)·기둥·울타리(여정 던전 벽)·폐허 돌담·문(열리면 사라짐) */
+  kind?: 'crate' | 'pillar' | 'hedge' | 'ruin' | 'gate';
 }
 
 /** 적 종류 하나의 능력치 */
@@ -90,6 +92,10 @@ export interface EnemySpawnConfig {
   type: string;
   x: number;
   z: number;
+  /** 정예(미니 보스): 체력 배율. 1.5 이상이면 몸집도 커지고 이름이 붙는다 */
+  elite?: number;
+  /** 정예 이름 (배너·디버그용) */
+  name?: string;
 }
 
 export interface GameConfigType {
@@ -380,7 +386,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.8.1', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.9.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],

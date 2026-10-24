@@ -93,7 +93,7 @@ export class Boss extends Enemy {
     this.knock.x *= decay;
     this.knock.z *= decay;
     next = resolveCircleVsBoxes(next, this.radius, ctx.world.getObstacleBoxes());
-    next = clampToArena(next, ctx.world.getArenaHalfSize(), this.radius);
+    next = clampToArena(next, ctx.world.getArenaBounds(), this.radius);
     // 돌진이 벽·장애물에 막히면 멈춘다
     if (d.state === 'charge' && Math.hypot(next.x - p.x, next.z - p.z) < speed * dt * 0.3) this.bossAI.stopCharge();
     p.x = next.x;

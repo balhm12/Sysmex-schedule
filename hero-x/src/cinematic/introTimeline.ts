@@ -39,7 +39,9 @@ export const INTRO_TIMES = { establish: 3, approach: 6.5, fight: 11, slowmo: 13,
 export const INTRO_DURATION = INTRO_TIMES.finale;
 /** 몬스터가 등장하는 시각(초) */
 export const INTRO_SPAWN_AT = INTRO_TIMES.establish;
-/** 인트로에서 주인공과 싸울 몬스터 배치 (주인공은 (0, 3) 에서 -Z 를 본다) */
+/** 인트로 무대 중심(숲 여정의 첫 공터 안). 주인공은 여기서 책상을 보고(-Z) 서 있다 */
+export const INTRO_ORIGIN = { x: 0, z: 55 };
+/** 인트로에서 주인공과 싸울 몬스터 배치 (INTRO_ORIGIN 기준 상대 좌표, -Z 쪽에서 온다) */
 export const INTRO_SPAWNS: Array<{ type: string; x: number; z: number }> = [
   { type: 'rusher', x: -3, z: -11 },
   { type: 'rusher', x: 3, z: -11 },

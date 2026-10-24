@@ -1213,3 +1213,59 @@ body {
     font-size: 13px;
   }
 }
+
+/* ---- 여정 목표 표시 ---- */
+/* PC: 위쪽 패널 줄의 가운데 (체력 | 목표 | 던전 정보) */
+.hud-top .hud-hp {
+  order: 1;
+}
+.hud-objective {
+  order: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  padding: 6px 14px;
+  font-size: 14px;
+  align-self: flex-start;
+}
+.hud-top .hud-stats {
+  order: 3;
+}
+.hud-objective b {
+  color: #ffd23f;
+  font-size: 15px;
+}
+.hud-progress {
+  color: #9fabc9;
+  font-size: 13px;
+}
+.hud-objective[hidden] {
+  display: none;
+}
+/* 휴대폰 가로: 아래 가운데(조이스틱과 버튼 사이) */
+@media (max-height: 520px) and (orientation: landscape) {
+  .hud-objective {
+    /* .hud-top(위쪽 띠) 기준이 아니라 화면 기준으로 아래 가운데에 */
+    position: fixed;
+    left: 50%;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    max-width: 44vw;
+    white-space: normal;
+    text-align: center;
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+  .hud-objective b {
+    font-size: 14px;
+  }
+}
+/* 세로: 패널 아래 세 번째 줄 */
+@media (max-width: 600px) and (orientation: portrait) {
+  .hud-objective {
+    white-space: normal;
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+}

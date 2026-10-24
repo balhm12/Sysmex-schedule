@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 import { GameConfig } from '../game/GameConfig';
 import type { IntroOverlay } from '../ui/IntroOverlay';
-import { INTRO_SPAWNS, INTRO_SPAWN_AT, introAt, type HeroPose, type IntroFrame } from './introTimeline';
+import { INTRO_ORIGIN, INTRO_SPAWNS, INTRO_SPAWN_AT, introAt, type HeroPose, type IntroFrame } from './introTimeline';
 
 /** 인트로가 게임에 요구하는 것들 (Game 이 함수로 넘긴다) */
 export interface IntroHooks {
@@ -75,7 +75,7 @@ export class IntroDirector {
     if (!this.spawned && this.t >= INTRO_SPAWN_AT) {
       this.spawned = true;
       this.hooks.onMonsters?.();
-      for (const s of INTRO_SPAWNS) this.hooks.spawn(s.type, s.x, s.z);
+      for (const s of INTRO_SPAWNS) this.hooks.spawn(s.type, INTRO_ORIGIN.x + s.x, INTRO_ORIGIN.z + s.z);
     }
     // 이동: 접근 장면에서는 앞으로, 전투 장면에서는 적이 멀면 다가간다
     const near = this.hooks.nearestEnemy();

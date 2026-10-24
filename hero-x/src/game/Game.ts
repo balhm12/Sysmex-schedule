@@ -26,7 +26,9 @@ import { IntroDirector } from '../cinematic/IntroDirector';
 import { IntroSet } from '../cinematic/IntroSet';
 import { makeMathProblem } from './mathQuiz';
 import { QuizUI } from '../ui/QuizUI';
-import { INTRO_ENEMY_HP } from '../cinematic/introTimeline';
+import { INTRO_ENEMY_HP, INTRO_ORIGIN } from '../cinematic/introTimeline';
+import { ZoneSystem } from '../dungeon/ZoneSystem';
+import type { ZoneDef } from '../dungeon/journey';
 import { IntroOverlay } from '../ui/IntroOverlay';
 import { soundRegistry } from '../assets/SoundRegistry';
 import type { Vec2 } from '../player/movement';
@@ -56,7 +58,7 @@ export interface GameDebugState {
   ended: boolean;
   save: { status: string; lastSavedAt: string | null; hasSavedProgress: boolean; blocked: boolean; dirty: boolean; records: SaveRecords };
   settings: UserSettings;
-  dungeon: { id: string; name: string; arenaHalfSize: number; obstacles: number };
+  dungeon: { id: string; name: string; arenaHalfSize: number; arenaHalfZ: number; obstacles: number };
   dungeonSelectVisible: boolean;
   unlockedNow: string | null;
   mortars: number;
@@ -98,6 +100,7 @@ export interface GameDebugState {
   equipment: { inventory: number; equipped: Record<string, string | null>; totals: { attack: number; defense: number; maxHp: number; moveSpeed: number } };
   paused: boolean;
   chestsOpened: number;
+  zones: { current: string | null; objective: string; done: number; total: number; cleared: string[]; entered: string[] } | null;
   chestPositions: Array<{ x: number; z: number }>;
   attacks: number;
   inventoryVisible: boolean;
@@ -170,6 +173,10 @@ export class Game {
   private intro: IntroDirector | null = null;
   private introOverlay!: IntroOverlay;
   private introSet: IntroSet | null = null;
+  /** 여정 던전 진행기 (여정이 없는 던전이면 null) */
+  private zones: ZoneSystem | null = null;
+  /** 다음 목표를 가리키는 빛 기둥 */
+  private beacon!: THREE.Mesh;
   /** 보물 상자 수학 문제 창 */
   private quizUI!: QuizUI;
   private introNext: 'menu' | 'newGame' = 'menu';
@@ -259,9 +266,10 @@ export class Game {
     this.dungeon = new DungeonScene(this.scene, this.dungeonDef, this.settings.quality);
     this.pipeline.setExposure(this.dungeonDef.theme.exposure);
     this.chests = new ChestSystem(this.scene, this.dungeonDef.chests);
+    this.setupZones();
     this.dungeon.addCollisionBoxes(this.chests.getCollisionBoxes());
     // 충돌 세계는 던전이 바뀌어도 같은 객체를 쓰도록 현재 던전으로 넘겨주는 껍데기를 준다
-    const world = { getObstacleBoxes: () => this.dungeon.getObstacleBoxes(), getArenaHalfSize: () => this.dungeon.getArenaHalfSize() };
+    const world = { getObstacleBoxes: () => this.dungeon.getObstacleBoxes(), getArenaBounds: () => this.dungeon.getArenaBounds() };
     this.player = new Player(createPlaceholderModel(GameConfig.player.colors), GameConfig.player.startPosition);
     this.scene.add(this.player.object3d);
     this.cameraCtrl = new CameraController(this.camera);
@@ -279,6 +287,14 @@ export class Game {
     this.aimRing.position.y = 0.06;
     this.aimRing.visible = false;
     this.scene.add(this.aimRing);
+    this.beacon = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.7, 0.9, 40, 16, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0x5cf2d8, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }),
+    );
+    this.beacon.position.y = 20;
+    this.beacon.visible = false;
+    this.beacon.name = 'Beacon';
+    this.scene.add(this.beacon);
     this.effects = new Effects(this.scene);
     this.projectiles = new ProjectileSystem(this.scene);
     this.spawner = new EnemySpawner(this.scene);
@@ -610,6 +626,7 @@ export class Game {
     this.dungeon = new DungeonScene(this.scene, def, this.settings.quality);
     this.pipeline.setExposure(def.theme.exposure);
     this.chests = new ChestSystem(this.scene, def.chests);
+    this.setupZones();
     this.dungeon.addCollisionBoxes(this.chests.getCollisionBoxes());
     this.hud.setDungeonName(def.name);
     Logger.info(`던전 '${def.name}' 을(를) 불러왔습니다 (적 ${def.spawns.length}마리, 상자 ${def.chests.length}개).`);
@@ -678,7 +695,6 @@ export class Game {
     this.loadDungeon(DUNGEONS[0]);
     this.restart();
     this.spawner.clear();
-    this.player.position.set(0, 0, 3);
     this.mode = 'intro';
     this.paused = false;
     this.menu.hide();
@@ -692,7 +708,8 @@ export class Game {
     this.introOverlay.show();
     this.audio.playMusic('menu');
     // 교실 세트 (주인공은 칠판 쪽(+Z)을 보며 공부 중)
-    this.introSet = new IntroSet({ x: 0, z: 3 }, GameConfig.meta.school);
+    this.player.position.set(INTRO_ORIGIN.x, 0, INTRO_ORIGIN.z);
+    this.introSet = new IntroSet(INTRO_ORIGIN, GameConfig.meta.school);
     this.scene.add(this.introSet.root);
     this.dungeon.addCollisionBoxes(this.introSet.boxes);
     this.player.facing = Math.PI; // 책상(-Z 쪽)을 보고 공부 중 → 카메라에 얼굴이 보인다
@@ -979,6 +996,53 @@ export class Game {
   }
 
   /** 전투 재시작: 플레이어 회복·복귀, 적 재배치, 기록 초기화 */
+  /** 여정 던전이면 구역 진행기를 만든다 (구역 진입 → 적 등장·배너, 클리어 → 문 열림, 보스 구역 → 보스 등장) */
+  private setupZones(): void {
+    const j = this.dungeonDef.journey;
+    if (!j) {
+      this.zones = null;
+      this.hud.setObjective('', 0, 0);
+      return;
+    }
+    this.zones = new ZoneSystem(j, {
+      spawn: (sp) => {
+        const e = this.spawner.spawn(sp.type, sp.x, sp.z, sp.elite ?? 1);
+        if (e && sp.elite && sp.elite >= 1.5) this.hud.showBanner(`${sp.name ?? GameConfig.enemies.types[sp.type]?.name ?? sp.type} 등장!`, 1800);
+        return e;
+      },
+      onEnter: (z: ZoneDef) => {
+        if (this.mode !== 'play') return;
+        this.hud.showBanner(z.name, 1400);
+        if (z.kind === 'ambush') {
+          this.audio.play('summon');
+          this.cameraCtrl.shake(0.25, 0.4);
+        } else if (z.kind === 'rest') {
+          // 쉼터: 회복 아이템 둘
+          this.loot.spawn({ kind: 'heal', amount: GameConfig.loot.healAmount }, { x: z.rect.x - 2, z: z.rect.z + 2 });
+          this.loot.spawn({ kind: 'heal', amount: GameConfig.loot.healAmount }, { x: z.rect.x + 2, z: z.rect.z + 2 });
+          this.audio.play('heal');
+        } else if ((z.waves?.length ?? 0) > 0) {
+          this.audio.play('ui');
+        }
+      },
+      onCleared: (z: ZoneDef) => {
+        if (this.mode !== 'play' || (z.waves?.length ?? 0) === 0) return;
+        this.hud.showBanner(`${z.name} 정리 완료!`, 1400);
+        this.audio.play('levelup');
+      },
+      openGate: (id) => {
+        const at = this.dungeon.gatePosition(id);
+        if (!this.dungeon.openGate(id) || !at) return;
+        this.effects.burst(new THREE.Vector3(at.x, 1.2, at.z), 0xffd23f, 24, 6);
+        this.hud.showBanner('문이 열렸다!', 1600);
+        this.audio.play('chest');
+      },
+      onBossZone: () => {
+        if (!this.boss) this.spawnBoss();
+      },
+    });
+  }
+
   restart(): void {
     this.spawner.clear();
     this.spawner.spawnFromConfig(this.dungeonDef.spawns);
@@ -993,8 +1057,11 @@ export class Game {
     this.hud.setBoss(null);
     // 레벨·골드·장비는 유지하고(성장), 체력은 보너스를 포함해 가득 채운다
     // (player.reset 이 기본 최대 체력으로 되돌리므로 그 뒤에 보너스를 적용해야 한다)
-    this.player.reset(GameConfig.player.startPosition);
+    this.player.reset(this.dungeonDef.start ?? GameConfig.player.startPosition);
     this.player.health.reset(this.effectiveMaxHp());
+    this.zones?.reset();
+    this.hud.setObjective('', 0, 0);
+    this.beacon.visible = false;
     this.controller.reset();
     this.combat.reset();
     this.result.hide();
@@ -1068,7 +1135,7 @@ export class Game {
       frames: this.frames,
       ended: this.ended,
       settings: { ...this.settings },
-      dungeon: { id: this.dungeonDef.id, name: this.dungeonDef.name, arenaHalfSize: this.dungeon.getArenaHalfSize(), obstacles: this.dungeon.getObstacleBoxes().length },
+      dungeon: { id: this.dungeonDef.id, name: this.dungeonDef.name, arenaHalfSize: this.dungeon.getArenaBounds().halfX, arenaHalfZ: this.dungeon.getArenaBounds().halfZ, obstacles: this.dungeon.getObstacleBoxes().length },
       dungeonSelectVisible: this.dungeonSelect.visible,
       unlockedNow: this.unlockedNow?.id ?? null,
       mortars: this.mortars.length,
@@ -1115,6 +1182,7 @@ export class Game {
       },
       paused: this.paused,
       chestsOpened: this.chests.openedCount,
+      zones: this.zones?.snapshot() ?? null,
       chestPositions: this.dungeonDef.chests.map((c) => ({ x: c.x, z: c.z })),
       attacks: this.combat.attacks,
       inventoryVisible: this.inventoryUI.visible,
@@ -1358,14 +1426,16 @@ export class Game {
 
   /** 승리 흐름: 일반 적 모두 처치 → 보스 등장 → 보스 처치 → 클리어 */
   private checkVictory(): void {
-    if (this.ended || this.dungeonDef.spawns.length === 0) return;
+    if (this.ended || (this.dungeonDef.spawns.length === 0 && !this.dungeonDef.journey)) return;
     if (!this.boss) {
-      if (this.spawner.aliveCount === 0) this.spawnBoss();
+      // 열린 경기장 던전: 적 전멸 → 보스. 여정 던전: 보스 구역에 들어서면 등장(ZoneSystem)
+      if (!this.dungeonDef.journey && this.spawner.aliveCount === 0) this.spawnBoss();
       return;
     }
     this.hud.setBoss(this.boss.alive ? { name: this.bossCfg.name, hp: this.boss.health.hp, maxHp: this.boss.health.maxHp, phase2: this.boss.phase2 } : null);
     if (!this.boss.alive && !this.bossDefeated) {
       this.bossDefeated = true;
+      this.zones?.markBossCleared();
       this.onBossDefeated();
     }
     // 보상을 줍거나 3초가 지나면 결과 화면
@@ -1478,6 +1548,17 @@ export class Game {
       onBossAttack: (boss: Boss, attack: BossAttack) => this.onBossAttack(boss, attack),
       playerRadius: GameConfig.player.radius,
     });
+    if (this.zones && !this.ended && this.mode === 'play') {
+      this.zones.update({ x: p.x, z: p.z });
+      const o = this.zones.objective;
+      this.hud.setObjective(o.text, o.done, o.total);
+      const b = this.zones.beacon;
+      this.beacon.visible = b !== null;
+      if (b) {
+        this.beacon.position.set(b.x, 20, b.z);
+        (this.beacon.material as THREE.MeshBasicMaterial).opacity = 0.2 + 0.12 * Math.sin(performance.now() * 0.004);
+      }
+    }
     this.projectiles.update(dt, {
       world: this.dungeon,
       enemies: this.spawner.getEnemies(),

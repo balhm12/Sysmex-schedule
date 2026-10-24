@@ -27,10 +27,16 @@ export function isAboveBox(b: Box, feetY: number, climbAssist = 0): boolean {
   return b.h !== undefined && feetY >= b.h - climbAssist;
 }
 
+/** 이동 가능한 직사각형 범위 (중심 0,0). 정사각형 던전은 halfX = halfZ */
+export interface ArenaBounds {
+  halfX: number;
+  halfZ: number;
+}
+
 /** 충돌 정보를 제공하는 세계(던전)의 인터페이스. 던전 파일을 바꿔도 플레이어 코드는 그대로 쓴다. */
 export interface CollisionWorld {
   getObstacleBoxes(): Box[];
-  getArenaHalfSize(): number;
+  getArenaBounds(): ArenaBounds;
 }
 
 const clamp = (v: number, a: number, b: number): number => Math.max(a, Math.min(b, v));
@@ -82,10 +88,12 @@ export function resolveCircleVsBoxes(pos: Vec2, radius: number, boxes: Box[], fe
   return out;
 }
 
-/** 이동 가능 영역 밖으로 나가지 못하게 한다 */
-export function clampToArena(pos: Vec2, halfSize: number, radius: number): Vec2 {
-  const limit = Math.max(0, halfSize - radius);
-  return { x: clamp(pos.x, -limit, limit), z: clamp(pos.z, -limit, limit) };
+/** 이동 가능 영역 밖으로 나가지 못하게 한다 (숫자 하나면 정사각형) */
+export function clampToArena(pos: Vec2, bounds: number | ArenaBounds, radius: number): Vec2 {
+  const b = typeof bounds === 'number' ? { halfX: bounds, halfZ: bounds } : bounds;
+  const lx = Math.max(0, b.halfX - radius);
+  const lz = Math.max(0, b.halfZ - radius);
+  return { x: clamp(pos.x, -lx, lx), z: clamp(pos.z, -lz, lz) };
 }
 
 /** 각도(라디안)를 최단 방향으로 보간한다. t는 0~1 */
@@ -102,8 +110,9 @@ export function directionToFacing(dir: Vec2): number {
 }
 
 /** 점(투사체 등)이 장애물이나 영역 밖에 닿았는지 */
-export function hitsObstacle(pos: Vec2, radius: number, boxes: Box[], halfSize: number): boolean {
-  if (Math.abs(pos.x) > halfSize || Math.abs(pos.z) > halfSize) return true;
+export function hitsObstacle(pos: Vec2, radius: number, boxes: Box[], bounds: number | ArenaBounds): boolean {
+  const b = typeof bounds === 'number' ? { halfX: bounds, halfZ: bounds } : bounds;
+  if (Math.abs(pos.x) > b.halfX || Math.abs(pos.z) > b.halfZ) return true;
   for (const b of boxes) {
     const cx = clamp(pos.x, b.x - b.w / 2, b.x + b.w / 2);
     const cz = clamp(pos.z, b.z - b.d / 2, b.z + b.d / 2);
