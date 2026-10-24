@@ -53,6 +53,8 @@ export interface UserSettings {
   showFps: boolean;
   /** 보물 상자를 열 때 초등 3학년 수학 문제 풀기 */
   chestQuiz: boolean;
+  /** 보스가 나타나면 설명 팝업(패턴·피하는 법)을 띄우고 잠시 멈춤 */
+  bossIntro: boolean;
 }
 
 export type SettingKey = keyof UserSettings;
@@ -73,6 +75,7 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: 'leftHanded', kind: 'toggle', group: '게임', label: '왼손 모드', description: '공격·점프·회피 버튼을 왼쪽에, 고정 조이스틱을 오른쪽에 둡니다.' },
   { key: 'touchButtonScale', kind: 'range', group: '게임', label: '터치 버튼 크기', description: '버튼이 작거나 크면 조절하세요.', min: 0.8, max: 1.4, step: 0.1, unit: '×' },
   { key: 'chestQuiz', kind: 'toggle', group: '게임', label: '상자 수학 문제', description: '보물 상자를 열 때 초등 3학년 수학 문제(덧셈·뺄셈·곱셈·나눗셈)를 하나 풀어야 열립니다.' },
+  { key: 'bossIntro', kind: 'toggle', group: '게임', label: '보스 등장 설명', description: '보스가 나타나면 게임을 잠시 멈추고 보스의 생김새·패턴·피하는 법을 보여줍니다.' },
   { key: 'haptics', kind: 'toggle', group: '게임', label: '진동', description: '맞거나 처치할 때 짧게 진동합니다 (지원하는 휴대폰만, iPhone 은 안 됨).' },
   { key: 'soundMaster', kind: 'range', group: '소리', label: '전체 음량', description: '0 이면 무음. 소리는 첫 조작(터치·키) 뒤부터 납니다.', min: 0, max: 1, step: 0.1 },
   { key: 'soundSfx', kind: 'range', group: '소리', label: '효과음', description: '공격·피격·획득·보스 소리.', min: 0, max: 1, step: 0.1 },
@@ -115,6 +118,7 @@ export function defaultSettings(): UserSettings {
     shadows: touch ? false : GameConfig.graphics.shadows,
     showFps: GameConfig.debug.showFps,
     chestQuiz: true,
+    bossIntro: true,
   };
 }
 

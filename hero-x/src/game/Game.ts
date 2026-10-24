@@ -26,6 +26,7 @@ import { IntroDirector } from '../cinematic/IntroDirector';
 import { IntroSet } from '../cinematic/IntroSet';
 import { makeMathProblem } from './mathQuiz';
 import { QuizUI } from '../ui/QuizUI';
+import { BossIntroUI } from '../ui/BossIntroUI';
 import { INTRO_ENEMY_HP, INTRO_ORIGIN } from '../cinematic/introTimeline';
 import { ZoneSystem } from '../dungeon/ZoneSystem';
 import type { ZoneDef } from '../dungeon/journey';
@@ -184,6 +185,7 @@ export class Game {
   private beacon!: THREE.Mesh;
   /** 보물 상자 수학 문제 창 */
   private quizUI!: QuizUI;
+  private bossIntroUI!: BossIntroUI;
   private introNext: 'menu' | 'newGame' = 'menu';
   /** 인트로를 건너뛴 직후 같은 키가 메뉴를 누르지 않게 하는 잠깐의 보호 시간 */
   private skipGuardUntil = 0;
@@ -343,6 +345,7 @@ export class Game {
     this.hud = new HUD(uiRoot);
     this.hud.setDungeonName(this.dungeonDef.name);
     this.introOverlay = new IntroOverlay(uiRoot, () => this.endIntro());
+    this.bossIntroUI = new BossIntroUI(uiRoot);
     this.quizUI = new QuizUI(uiRoot, {
       onCorrect: () => {
         this.paused = false;
@@ -431,6 +434,10 @@ export class Game {
     });
     this.input.onPress(GameConfig.controls.interact, () => this.tryInteract());
     this.input.onPress(['Escape'], () => {
+      if (this.bossIntroUI.visible) {
+        this.bossIntroUI.close();
+        return;
+      }
       if (this.quizUI.visible) this.quizUI.close();
       else if (this.guide.visible) this.guide.hide();
       else if (this.settingsUI.visible) this.settingsUI.pressBack();
@@ -1407,6 +1414,14 @@ export class Game {
     this.effects.shockwave(new THREE.Vector3(b.spawn.x, 0, b.spawn.z), be.shockRadius, 0.9, bossColor.getHex());
     this.hitStopTime = Math.max(this.hitStopTime, be.slowMo);
     Logger.info(`보스 등장: ${b.name} (체력 ${this.boss.health.maxHp})`);
+    // 등장 팝업: 보스 설명·패턴·피하는 법. 닫을 때까지 멈춘다 (인트로 중에는 띄우지 않음)
+    if (this.settings.bossIntro && this.mode === 'play') {
+      this.paused = true;
+      this.bossIntroUI.show(b, this.boss.health.maxHp, () => {
+        this.paused = false;
+        this.lastTime = performance.now();
+      });
+    }
   }
 
   /** 보스의 공격 실행 */

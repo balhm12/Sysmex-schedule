@@ -476,6 +476,8 @@ export const DUNGEONS: DungeonDef[] = [
     spawns: [],
     boss: {
       name: '수정 골렘',
+      title: '동굴 깊은 곳의 수정 심장',
+      lore: '수정 동굴의 수정이 수백 년 동안 모여 생명을 얻은 바위 거인. 가슴의 보라 수정이 심장이며, 돌진하지 않는 대신 땅을 내려찍고 동굴 박쥐를 불러냅니다.',
       hp: 650,
       color: '#8f6cff',
       speed: 2.6,
@@ -545,6 +547,8 @@ export const DUNGEONS: DungeonDef[] = [
     spawns: [],
     boss: {
       name: '요새 사령관',
+      title: '강철 요새의 지휘관',
+      lore: '로봇 공장을 지휘하는 붉은 강철 전투 로봇. 어깨 포탑과 오른팔 대포로 포격을 퍼붓고, 체력이 떨어지면 포탄 수를 늘립니다. 발밑의 주황 원이 보이면 바로 자리를 옮기세요.',
       hp: 900,
       color: '#c0392b',
       speed: 3.2,
@@ -610,6 +614,8 @@ export const DUNGEONS: DungeonDef[] = [
     spawns: [],
     boss: {
       name: '서리 거인',
+      title: '얼음 봉우리의 옥좌 주인',
+      lore: '봉우리 꼭대기에 앉아 눈보라를 부르는 얼음 거인. 가슴의 얼음 핵이 빛나며, 넓은 내려찍기로 땅을 얼리고 작은 슬라임을 불러냅니다. 느리지만 한 방이 무겁습니다.',
       hp: 1100,
       color: '#8fd3ff',
       speed: 2.4,

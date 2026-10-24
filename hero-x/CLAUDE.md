@@ -74,6 +74,8 @@ hero-x/
 │  ├─ ui/IntroOverlay.ts   인트로 덮개(검은 띠·제목·자막·건너뛰기)
 │  ├─ game/mathQuiz.ts     ★ 초등 3학년 수학 문제 생성(덧셈·뺄셈·곱셈구구·나눗셈·두 자리×한 자리, 보기 4개) (순수 함수, 테스트 대상)
 │  ├─ ui/QuizUI.ts         보물 상자 수학 문제 창(오답이면 새 문제, 정답이면 상자 열림)
+│  ├─ ui/BossIntroUI.ts    보스 등장 팝업(초상화 렌더·별명·설명·패턴 표·싸운다 버튼, 열려 있는 동안 paused)
+│  ├─ game/bossIntro.ts    ★ 보스 설정 → 패턴 설명 문장(describeBossPatterns, 순수 함수, 테스트 대상)
 │  ├─ assets/ModelRegistry.ts  ★ public/models/manifest.json 의 .glb 를 읽어 플레이어·적·보스 모델로 교체 (없으면 임시 모델). rotationX/Y·scale·offsetY 보정
 │  ├─ assets/meshMerge.ts    복셀 .glb 의 상자 메시를 관절·재질별로 합쳐 그리기 호출을 줄인다 (리그 뒤에 호출, userData.parts 로 부품 이름 보존, meshHasPart) (테스트 대상)
 │  ├─ assets/PartRig.ts      클립 없는 .glb 의 부품 이름으로 관절을 만들어 동작 (플레이어: left_leg/right_arm/head/sword… 걷기·공격 / 적: wheel_/claw_/rotor_/wing_/barrel_/shield/piston_/antenna_/glow_/eye_) (classifyPart·classifyEnemyPart 테스트 대상)
@@ -215,6 +217,7 @@ hero-x/
 - 클리어 뒤 흐름: `showResult(title, sub, next)` 에 다음 던전을 넘기면 `ResultUI` 가 '다음 던전' 버튼과 카운트다운(`dungeon.autoAdvanceSeconds`, 0 이면 버튼만)을 보여주고 끝나면 `enterDungeon(next)`. 다른 버튼을 누르면 취소.
 - 공격 입력: `CombatSystem` 은 `onPress` 로 예약 플래그를 세워 쿨다운 중이나 프레임 사이의 짧은 탭도 쿨다운이 끝나는 즉시 한 번 나가게 한다. 반응 속도는 `combat.melee.cooldown`(0.34)과 `PartRig` 의 뒤로 당김 비율(12%)로 조정.
 - "보스를 약하게/세게" → `boss.hp`, `boss.slam.damage`, `boss.contactDamage`, `boss.windup`(예고가 길수록 쉬움). 던전별 보스는 `DungeonDefs.ts` 의 `boss` 덮어쓰기. 패턴 구성은 `boss.closePatterns`(순환 순서)와 `boss.useCharge`, 외형은 `boss.model`('guardian' | 'golem' | 'commander' | 'frost'). 새 보스 패턴은 `BossPattern` 타입 + `boss.windup` 항목 + `Boss.update` 의 실행 분기 + `Game.onBossAttack` 의 효과 처리에 추가한다(시간이 걸리는 효과는 `Game.updateMortars` 처럼 루프에서 진행). 새 외형은 `tools/make_bosses_glb.py` 에 복셀 모델을 추가해 `manifest.json` `bosses.<외형>` 에 등록(코드 모델은 `createBossModel` 의 `kind` 분기). .glb 보스는 `decorateGltfBoss` 가 패턴 색 바닥 원과 2단계 붉은 눈(`eye_*` 재질)을 덧입힌다. 보스가 가까우면(`camera.bossZoom.range`) 카메라가 `bossZoom.scale` 배 멀어진다. 테스트: `__heroX.debugSetBossHpRatio(0.2)` 로 2단계, `__heroX.debugSpawnDrop('xp', 5000)` 로 레벨 업, `debugSpawnDrop('equip', 1, 'legendary')` 로 희귀 드롭을 만든다.
+- 보스 등장 팝업: `spawnBoss` 끝에서 설정 `bossIntro` 가 켜져 있고 `mode === 'play'` 면 `paused = true` 후 `bossIntroUI.show(cfg, maxHp, onClose)`; 닫히면 `paused = false` 와 `lastTime` 재설정. 보스 설명 문구는 `BossConfig.title/lore`(던전별 `boss` 덮어쓰기), 패턴 표는 `describeBossPatterns` 가 설정에서 만든다(새 패턴을 추가하면 여기에도 분기). Escape 는 팝업이 열려 있으면 팝업만 닫는다. 자동 테스트에서 팝업을 피하려면 설정 `bossIntro: false`.
 - 승리 흐름은 `Game.checkVictory`: 열린 경기장은 일반 적 전멸 → `spawnBoss`, 여정 던전은 보스 구역 진입(`ZoneSystem.onBossZone`) → `spawnBoss` → 보스 사망 → `onBossDefeated`(보상) → 결과 화면(다음 던전 카운트다운). HUD 목표는 `hud.setObjective`, 다음 목표 구역엔 빛 기둥 `beacon`. 테스트에서는 `__heroX.debugDefeatRegularEnemies()` 로 바로 보스전으로 간다.
 - 사용자 설정은 `Settings.ts` 의 `UserSettings`/`SETTING_DEFS` 에만 추가한다(화면은 자동 생성). 게임 코드는 `GameConfig.hud/debug/graphics` 대신 `this.settings` 를 읽는다. 플레이어 체력·공격력은 `effectiveMaxHp()`/`effectiveDamageMultiplier()` 를 거친다. 난이도는 `setDifficulty` 한 곳에서 설정·저장·메뉴를 함께 갱신한다.
 - 저장: 성장·장비·난이도·기록만 저장하고 던전 안 상태는 저장하지 않는다. 저장 형식을 바꾸면 `SAVE_VERSION` 을 올리고 `migrateSaveData` 에 변환을 추가한 뒤 `tests/save.test.ts` 에 옛 형식 → 새 형식 테스트를 더한다. 장비는 원형 id·등급만 저장하고 `createItem` 으로 다시 만든다. 저장 시점은 `Game.markDirty()`(자동 저장 간격 뒤) 또는 `Game.saveNow()`(메뉴·결과·탭 닫기)로만 다룬다. 저장 데이터 초기화는 사용자가 '새 게임'을 확인했을 때만 한다.
@@ -235,6 +238,6 @@ hero-x/
 5. 설정 화면과 저장 ✅ (v0.5.0: 자동 저장·이어하기·버전·손상 처리, 설정 화면·기본값 복원)
 6. 콘텐츠 확장 ✅ (v0.6.0-a.1 던전 3개·던전 선택·새 적·새 장비 / v0.6.1 모바일 / v0.6.2 보스별 패턴·외형)
 7. 품질 개선 ✅ (v0.7.0-a.1 효과음·음악 / v0.7.0-b.1 얼굴 사진·glb 교체 구조 / v1.0.0 자동 화질·오류 처리·문서)
-8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장(동굴·요새 여정형, 로봇 공장 테마) ✅ v1.11.0 / 적 10종 ✅ v1.12.0 / 메시 합치기 ✅ v1.13.0 / 네 번째 던전 얼음 봉우리 ✅ v1.14.0 / 소품 합치기·구역 음악 분위기 ✅ v1.15.0
+8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장(동굴·요새 여정형, 로봇 공장 테마) ✅ v1.11.0 / 적 10종 ✅ v1.12.0 / 메시 합치기 ✅ v1.13.0 / 네 번째 던전 얼음 봉우리 ✅ v1.14.0 / 소품 합치기·구역 음악 분위기 ✅ v1.15.0 / 벽·장애물 그래픽 ✅ v1.16.0 / 보스 등장 팝업 ✅ v1.17.0
 
 각 단계는 완료 기준을 만족하고 기존 기능이 정상일 때만 다음 단계로 넘어간다.

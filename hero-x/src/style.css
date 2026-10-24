@@ -1272,3 +1272,79 @@ body {
     padding: 6px 10px;
   }
 }
+
+/* 보스 등장 팝업 */
+.boss-intro .guide-panel {
+  width: min(94vw, 640px);
+}
+.boss-intro-head {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.boss-intro-portrait {
+  flex: 0 0 auto;
+  width: 150px;
+  height: 150px;
+  border-radius: 16px;
+  background: radial-gradient(circle at 50% 40%, rgba(92, 242, 216, 0.18), rgba(10, 14, 28, 0.9) 70%);
+  border: 1px solid rgba(238, 242, 255, 0.14);
+}
+.boss-intro-text {
+  min-width: 0;
+}
+.boss-intro-text .guide-title {
+  margin: 2px 0 4px;
+  color: #ffd23f;
+}
+.boss-intro-hp {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #ff9b9b;
+}
+.boss-intro-lore {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #dfe6ff;
+  word-break: keep-all;
+}
+.boss-intro-table {
+  width: 100%;
+  margin: 14px 0 6px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.boss-intro-table th,
+.boss-intro-table td {
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid rgba(238, 242, 255, 0.1);
+  word-break: keep-all;
+}
+.boss-intro-table th {
+  color: #9fb3ff;
+  font-weight: 700;
+  border-top: none;
+}
+.boss-intro-table td:first-child {
+  white-space: nowrap;
+  font-weight: 800;
+  color: #ffd23f;
+}
+.boss-intro-table td:last-child {
+  color: #9fe3b1;
+}
+@media (max-height: 520px) and (orientation: landscape), (max-width: 480px) {
+  .boss-intro-portrait {
+    width: 96px;
+    height: 96px;
+  }
+  .boss-intro-lore {
+    font-size: 13px;
+  }
+  .boss-intro-table {
+    font-size: 12px;
+  }
+}

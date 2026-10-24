@@ -303,6 +303,10 @@ export interface GameConfigType {
   /** 보스 (일반 적을 모두 처치하면 등장) */
   boss: {
     name: string;
+    /** 별명(팝업 윗줄) */
+    title: string;
+    /** 등장 팝업 설명 (한두 문장) */
+    lore: string;
     hp: number;
     speed: number;
     radius: number;
@@ -410,7 +414,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.16.0', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.17.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -732,6 +736,8 @@ export const GameConfig: GameConfigType = {
 
   boss: {
     name: '숲의 수호 로봇',
+    title: '잊혀진 숲의 파수꾼',
+    lore: '오래전 숲을 지키려고 만들어진 고대 석상 로봇. 이끼와 덩굴에 덮인 채 잠들어 있다가, 침입자가 보스 문을 열면 깨어나 거대한 돌 망치를 휘두릅니다.',
     hp: 420,
     speed: 2.8,
     radius: 1.6,
