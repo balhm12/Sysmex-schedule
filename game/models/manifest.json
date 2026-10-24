@@ -33,6 +33,24 @@
     },
     "robot-artillery": {
       "file": "enemy-artillery.glb"
+    },
+    "archer": {
+      "file": "monster-archer.glb"
+    },
+    "slime": {
+      "file": "monster-slime.glb"
+    },
+    "bomber": {
+      "file": "monster-bomber.glb"
+    },
+    "charger": {
+      "file": "monster-charger.glb"
+    },
+    "slimelet": {
+      "file": "monster-slime.glb"
+    },
+    "robot-bomber": {
+      "file": "enemy-bomber.glb"
     }
   },
   "bosses": {
