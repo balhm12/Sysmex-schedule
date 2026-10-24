@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { segmentBlocked, steerAround } from '../src/player/movement';
 import {
   clampToArena,
   computeMoveDirection,
@@ -145,5 +146,54 @@ describe('장애물 위에 올라서기 (높이가 있는 상자)', () => {
     const fall = integrateJump({ y: 2, vy: 0 }, 0.1, 24, 0); // 상자에서 걸어 내려오면 떨어진다
     expect(fall.y).toBeLessThan(2);
     expect(fall.vy).toBeLessThan(0);
+  });
+});
+
+describe('적 우회 이동 (segmentBlocked / steerAround)', () => {
+  const wall = [{ x: 0, z: -4, w: 10, d: 1 }]; // 앞을 가로막는 긴 울타리
+  it('선분이 상자를 지나면 막힘, 비껴가면 통과', () => {
+    expect(segmentBlocked({ x: 0, z: 0 }, { x: 0, z: -8 }, 0.5, wall)).toBe(true);
+    expect(segmentBlocked({ x: 0, z: 0 }, { x: 8, z: 0 }, 0.5, wall)).toBe(false);
+    expect(segmentBlocked({ x: 0, z: 0 }, { x: 0, z: -3 }, 0.5, wall)).toBe(false); // 벽 바로 앞까지는 괜찮음
+  });
+  it('앞이 비어 있으면 방향을 그대로 돌려준다', () => {
+    const dir = { x: 0, z: -1 };
+    expect(steerAround({ x: 0, z: 0 }, dir, 0.5, [], 3.5)).toBe(dir);
+    expect(steerAround({ x: 0, z: 0 }, dir, 0.5, wall, 3.0)).toBe(dir); // 3.0 앞까지는 벽에 안 닿음
+  });
+  it('앞이 막히면 좌우로 꺾은, 뚫린 방향을 돌려준다 (길이 유지, NaN 없음)', () => {
+    const dir = { x: 0, z: -1 };
+    const out = steerAround({ x: 0, z: 0 }, dir, 0.5, wall, 3.5);
+    expect(out).not.toBe(dir);
+    expect(Math.hypot(out.x, out.z)).toBeCloseTo(1, 5);
+    expect(Math.abs(out.x)).toBeGreaterThan(0.3); // 옆으로 꺾임
+    expect(segmentBlocked({ x: 0, z: 0 }, { x: out.x * 3.5, z: out.z * 3.5 }, 0.5, wall)).toBe(false);
+    // preferSign 이 꺾는 쪽을 정한다
+    const left = steerAround({ x: 0, z: 0 }, dir, 0.5, wall, 3.5, 1);
+    const right = steerAround({ x: 0, z: 0 }, dir, 0.5, wall, 3.5, -1);
+    expect(Math.sign(left.x)).not.toBe(Math.sign(right.x));
+  });
+  it('목표를 주면 울타리 모서리에서 목표와 반대쪽으로 꺾지 않고, 틈을 지나 목표가 보이는 쪽으로 꺾는다', () => {
+    // 잊혀진 숲 보물 터 → 둘째 공터 틈(x −28~−20, z −12~−10)을 본뜬 벽: 틈 오른쪽 울타리와 동쪽 벽
+    const walls = [
+      { x: -17, z: -11, w: 6, d: 2 }, // 틈 오른쪽 울타리 (x −20~−14)
+      { x: -31, z: -11, w: 6, d: 2 }, // 틈 왼쪽 울타리
+      { x: -15, z: -18, w: 2, d: 12 }, // 동쪽 벽
+    ];
+    const pos = { x: -20.7, z: -12.9 };
+    const target = { x: -13, z: -7 };
+    const dir = { x: target.x - pos.x, z: target.z - pos.z };
+    const n = Math.hypot(dir.x, dir.z);
+    const unit = { x: dir.x / n, z: dir.z / n };
+    const noTarget = steerAround(pos, unit, 0.5, walls, 3.5, -1);
+    const withTarget = steerAround(pos, unit, 0.5, walls, 3.5, -1, target);
+    expect(noTarget.x).toBeGreaterThan(0.5); // 목표 없이 오른쪽을 선호하면 틈에서 멀어지는 쪽(동쪽)으로 꺾인다
+    expect(withTarget.x).toBeLessThan(0); // 목표를 알면 왼쪽 위(틈 쪽)로 꺾인다
+    expect(withTarget.z).toBeGreaterThan(0.5);
+  });
+  it('사방이 막히면 원래 방향을 돌려준다 (벽을 따라 미끄러지게)', () => {
+    const box = [{ x: 0, z: 0, w: 20, d: 20 }]; // 상자 안에 갇힘
+    const dir = { x: 1, z: 0 };
+    expect(steerAround({ x: 0, z: 0 }, dir, 0.5, box, 3)).toBe(dir);
   });
 });

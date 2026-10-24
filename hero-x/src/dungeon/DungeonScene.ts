@@ -200,13 +200,23 @@ export class DungeonScene implements CollisionWorld {
     const mat = pbr({ color, roughness: 0.95, metalness: 0 });
     const mesh = new THREE.InstancedMesh(geo, mat, walls.length);
     const m = new THREE.Matrix4();
+    const tint = new THREE.Color();
+    const base = new THREE.Color(color);
+    const hsl = { h: 0, s: 0, l: 0 };
+    base.getHSL(hsl);
     walls.forEach((w, i) => {
       m.makeScale(w.w, w.h, w.d);
       m.setPosition(w.x, w.h / 2, w.z);
       mesh.setMatrixAt(i, m);
+      // 벽마다 색을 조금씩 달리해 단조로움을 깬다 (결정적: 자리 기준)
+      const n = Math.sin(w.x * 12.9898 + w.z * 78.233) * 43758.5453;
+      const jitter = (n - Math.floor(n)) - 0.5;
+      tint.setHSL(hsl.h + jitter * 0.03, Math.min(1, Math.max(0, hsl.s + jitter * 0.1)), Math.min(1, Math.max(0, hsl.l + jitter * 0.12)));
+      mesh.setColorAt(i, tint);
       this.boxes.push({ x: w.x, z: w.z, w: w.w, d: w.d }); // 높이 없음 = 못 오름
     });
     mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.name = 'JourneyWalls';

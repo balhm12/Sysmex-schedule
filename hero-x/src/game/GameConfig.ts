@@ -200,6 +200,8 @@ export interface GameConfigType {
     separation: number;
     /** 처치된 적이 사라질 때까지 시간(초) */
     deathDuration: number;
+    /** 우회 이동: 앞 lookAhead 유닛이 막히면 좌우로 꺾는다. interval(초)마다 다시 판단 (성능·떨림 방지) */
+    detour: { lookAhead: number; interval: number };
   };
   /** 카메라 (3인칭, 위에서 비스듬히 따라오는 던전 탐험 시점) */
   camera: {
@@ -212,6 +214,8 @@ export interface GameConfigType {
     smoothing: number;
     near: number;
     far: number;
+    /** 보스전 거리: 보스가 range 안에 살아 있으면 카메라 거리를 scale 배로 (큰 보스가 화면에 들어오게) */
+    bossZoom: { scale: number; range: number };
   };
   /** 전투 공간(던전) */
   world: {
@@ -363,6 +367,12 @@ export interface GameConfigType {
     hitStop: { duration: number; timeScale: number };
     /** 보스 처치 멈춤(초) */
     bossHitStop: number;
+    /** 검 궤적 색 (근접 공격 때 공중을 휩쓰는 빛) */
+    slashColor: string;
+    /** 레벨 업 연출: 빛 기둥 반지름·높이·시간(초) */
+    levelUp: { radius: number; height: number; duration: number; color: string };
+    /** 보스 등장 연출: 충격파 반지름, 빛 기둥 높이·시간, 짧은 느려짐(초) */
+    bossEntrance: { shockRadius: number; pillarHeight: number; duration: number; slowMo: number };
   };
   /** 성능 */
   performance: {
@@ -386,7 +396,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.9.0', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.10.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -535,6 +545,7 @@ export const GameConfig: GameConfigType = {
       { type: 'tank', x: 10, z: -22 },
     ],
     separation: 2.5,
+    detour: { lookAhead: 3.5, interval: 0.3 },
     deathDuration: 0.6,
   },
 
@@ -545,6 +556,7 @@ export const GameConfig: GameConfigType = {
     smoothing: 6,
     near: 0.1,
     far: 300,
+    bossZoom: { scale: 1.3, range: 22 },
   },
 
   world: {
@@ -682,6 +694,9 @@ export const GameConfig: GameConfigType = {
     slamShake: { amp: 0.5, duration: 0.4 },
     hitStop: { duration: 0.06, timeScale: 0.1 },
     bossHitStop: 0.35,
+    slashColor: '#bffcf2',
+    levelUp: { radius: 0.9, height: 7, duration: 1.4, color: '#ffd23f' },
+    bossEntrance: { shockRadius: 9, pillarHeight: 14, duration: 1.6, slowMo: 0.3 },
   },
   performance: {
     autoQualityInterval: 6,

@@ -152,10 +152,80 @@ export type BossModelKind = 'guardian' | 'golem' | 'commander';
  * - commander(요새 사령관): 각진 몸통에 어깨 포탑, 포신 팔
  * 예고 때 패턴별로 다른 색·동작.
  */
+/** 패턴별 예고 색 (바닥 원) */
+const PATTERN_COLOR: Record<BossPattern, number> = { charge: 0xff7a45, slam: 0xff4f79, barrage: 0xb06bff, summon: 0x8fe8ff, mortar: 0xffb14f };
+
+/**
+ * .glb 보스 모델 꾸미기: 리그(걷기·무기 팔 치켜들기·휘두르기)는 ModelRegistry 가 만들고,
+ * 여기서는 보스 전용 신호만 더한다 — 패턴 색 바닥 원(예고 진행에 따라 진해짐·내려찍기는 커짐),
+ * 2단계에서 eye_* 부품이 붉게 빛남, 돌진 중 몸 앞기울임.
+ */
+function decorateGltfBoss(inner: EnemyModel, r: number): EnemyModel {
+  const root = inner.root;
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(r * 0.9, r * 1.1, 32), glowMat);
+  ring.name = 'bossRing';
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.06;
+  root.add(ring);
+  // 눈 부품(eye_*)의 재질 — ModelRegistry 가 이미 인스턴스별로 복제해 둔 것
+  const eyeMats: THREE.MeshStandardMaterial[] = [];
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh || !/^eye/i.test(mesh.name)) return;
+    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const mt of list) if ((mt as THREE.MeshStandardMaterial).emissive && !eyeMats.includes(mt as THREE.MeshStandardMaterial)) eyeMats.push(mt as THREE.MeshStandardMaterial);
+  });
+  const eyeBase = eyeMats.map((m) => ({ color: m.emissive.clone(), intensity: m.emissiveIntensity }));
+  const phase2Eye = new THREE.Color(0xff3b3b);
+  let wasPhase2 = false;
+  let t = 0;
+  return {
+    root,
+    update(dt, s0) {
+      const s = s0 as BossModelState;
+      t += dt;
+      inner.update(dt, s0);
+      if (s.state === 'dead') {
+        glowMat.opacity = 0;
+        return;
+      }
+      const w = s.windup;
+      const pat = s.pattern ?? null;
+      glowMat.opacity = pat && s.state === 'windup' ? 0.25 + w * 0.55 : pat === 'charge' ? 0.5 : 0;
+      if (pat) glowMat.color.set(PATTERN_COLOR[pat]);
+      ring.scale.setScalar(pat === 'slam' ? 1 + w * 1.6 : 1);
+      ring.rotation.z += dt * 1.5;
+      const phase2 = !!s.phase2;
+      if (phase2) {
+        const pulse = 1.4 + Math.sin(t * 8) * 0.6;
+        for (let i = 0; i < eyeMats.length; i++) {
+          eyeMats[i].emissive.copy(phase2Eye);
+          eyeMats[i].emissiveIntensity = eyeBase[i].intensity * pulse;
+        }
+      } else if (wasPhase2) {
+        for (let i = 0; i < eyeMats.length; i++) {
+          eyeMats[i].emissive.copy(eyeBase[i].color);
+          eyeMats[i].emissiveIntensity = eyeBase[i].intensity;
+        }
+      }
+      wasPhase2 = phase2;
+    },
+    flash() {
+      inner.flash();
+    },
+    dispose() {
+      ring.geometry.dispose();
+      glowMat.dispose();
+      inner.dispose();
+    },
+  };
+}
+
 function createBossModel(def: EnemyTypeConfig, kind: BossModelKind = 'guardian'): EnemyModel {
-  // 정식 .glb 보스 모델이 등록돼 있으면 그것을 쓴다
+  // 정식 .glb 보스 모델이 등록돼 있으면 그것을 쓰고, 패턴 예고(바닥 원)·2단계(붉은 눈)만 덧입힌다
   const gltf = modelRegistry.createEnemyModel(`boss:${kind}`, def.radius * 3.0);
-  if (gltf) return gltf;
+  if (gltf) return decorateGltfBoss(gltf, def.radius);
   const root = new THREE.Group();
   root.name = `Boss-${def.name}`;
   const r = def.radius;
@@ -242,7 +312,6 @@ function createBossModel(def: EnemyTypeConfig, kind: BossModelKind = 'guardian')
 
   let flashTimer = 0;
   let t = 0;
-  const patternColor: Record<BossPattern, number> = { charge: 0xff7a45, slam: 0xff4f79, barrage: 0xb06bff, summon: 0x8fe8ff, mortar: 0xffb14f };
 
   return {
     root,
@@ -266,7 +335,7 @@ function createBossModel(def: EnemyTypeConfig, kind: BossModelKind = 'guardian')
       const pat = s.pattern ?? null;
       // 예고: 패턴 색으로 바닥 원이 커지고, 팔 동작이 달라진다
       glowMat.opacity = pat && s.state === 'windup' ? 0.25 + w * 0.55 : pat === 'charge' ? 0.5 : 0;
-      if (pat) glowMat.color.set(patternColor[pat]);
+      if (pat) glowMat.color.set(PATTERN_COLOR[pat]);
       ring.scale.setScalar(pat === 'slam' ? 1 + w * 1.6 : 1);
       // 소환: 팔을 위로 벌리고, 포격: 팔을 앞으로 든다
       const armTarget = pat === 'slam' ? -2.6 * w : pat === 'charge' ? -1.2 : pat === 'barrage' ? -1.6 * w : pat === 'summon' ? -3.0 * w : pat === 'mortar' ? -1.4 : 0;

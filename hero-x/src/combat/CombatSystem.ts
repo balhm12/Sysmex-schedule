@@ -124,6 +124,7 @@ export class CombatSystem {
     const pos = this.player.position;
     this.player.triggerAttack(cfg.swingTime);
     this.effects.swing(pos, this.player.facing, cfg.range, cfg.arcDegrees, cfg.swingTime);
+    this.effects.slash(pos, this.player.facing, cfg.range, cfg.arcDegrees, cfg.swingTime * 1.3, new THREE.Color(GameConfig.juice.slashColor).getHex());
 
     const origin: Vec2 = { x: pos.x, z: pos.z };
     for (const enemy of this.getEnemies()) {

@@ -44,7 +44,7 @@ hero-x/
 │  ├─ save/
 │  │  ├─ SaveData.ts       ★ 저장 형식(SAVE_VERSION)·검증·보정·버전 변환·적용 (순수 함수, 테스트 대상)
 │  │  └─ SaveStorage.ts    localStorage 어댑터: 읽기/쓰기/삭제, 손상 데이터는 *.corrupt 키로 격리
-│  │  └─ CameraController.ts  3인칭 추적 카메라
+│  │  └─ CameraController.ts  3인칭 추적 카메라 (흔들림, 보스가 가까우면 camera.bossZoom 배율로 줌아웃)
 │  ├─ input/
 │  │  ├─ InputManager.ts   키보드·마우스 입력 (키 설정은 GameConfig.controls, 마우스는 'Mouse0' 등) + 가상 입력(setVirtualAxis/pressVirtual)
 │  │  └─ TouchControls.ts  터치 조작: 가상 조이스틱·버튼 (GameConfig.controls 키 코드를 가상으로 누름)
@@ -52,7 +52,7 @@ hero-x/
 │  │  ├─ Player.ts         플레이어 상태(위치·방향·체력·공격 동작), 모델 교체 setModel()
 │  │  ├─ PlayerController.ts  입력 → 이동 → 충돌 → 위치 반영, 피격 밀림, 점프
 │  │  ├─ PlayerStats.ts     레벨·경험치·골드 (최대 체력·공격력 배율 계산, 테스트 대상)
-│  │  ├─ movement.ts       이동·충돌 순수 함수 (테스트 대상)
+│  │  ├─ movement.ts       이동·충돌·우회 조종(segmentBlocked/steerAround) 순수 함수 (테스트 대상)
 │  │  ├─ FaceTexture.ts    얼굴 사진 자르기·저장(localStorage)·텍스처 (cropRect 는 테스트 대상)
 │  │  └─ models/PlaceholderModel.ts  관절형 영웅 모델(걷기·공격·점프·회피·피격·망토) + PlayerModel 인터페이스 (setFace 로 얼굴 사진)
 ├─ public/models/           정식 .glb 모델과 manifest.json, 넣는 방법 README (player.glb = 아들 복셀 캐릭터)
@@ -60,6 +60,7 @@ hero-x/
 ├─ tools/make_player_glb.py 아들 복셀 캐릭터 .glb 생성기 → public/models/player.glb
 ├─ tools/make_enemies_glb.py 적 5종 로봇 복셀 .glb 생성기 → public/models/enemy-*.glb (선택 외형)
 ├─ tools/make_monsters_glb.py 적 5종 몬스터 복셀 .glb 생성기 → public/models/monster-*.glb (현재 manifest 가 쓰는 외형. 사람형은 플레이어와 같은 부품 이름 + weapon_*, 떠다님은 float_*, 부품 이름 규칙은 public/models/README)
+├─ tools/make_bosses_glb.py  보스 3종 복셀 .glb 생성기 → public/models/boss-{guardian,golem,commander}.glb (사람형 부품 이름 + weapon_* + eye_* + glow_*; Boss.ts 가 패턴 바닥 원·2단계 붉은 눈을 덧입힌다)
 │  ├─ render/
 │  │  ├─ materials.ts      PBR 재질 도우미 (pbr/metal/glow). 새 물체는 Lambert 대신 이걸 쓴다
 │  │  ├─ Quality.ts        화질 프리셋(낮음/중간/높음: 블룸·MSAA·그림자 해상도·바닥 선명도)
@@ -84,17 +85,17 @@ hero-x/
 │  │  ├─ melee.ts          근접 공격 부채꼴 판정 순수 함수 (테스트 대상)
 │  │  ├─ CombatSystem.ts   플레이어 근접·원거리 공격 (입력 → 조준 → 판정/발사 → 피해·효과)
 │  │  ├─ Projectile.ts     투사체 시스템 (플레이어·적 공용, 장애물 충돌, 명중 콜백)
-│  │  └─ Effects.ts        휘두르기 부채꼴·파편 효과 (풀 재사용)
+│  │  └─ Effects.ts        휘두르기 부채꼴·검 궤적(slash)·충격파·예고 원·빛 기둥(pillar)·파편 효과 (풀 재사용)
 │  ├─ enemies/
 │  │  ├─ EnemyAI.ts        적 상태 기계 (idle/chase/windup/hurt/dead, 근접형·원거리형, 테스트 대상)
 │  │  ├─ EnemyModels.ts    종류별 임시 모델 + EnemyModel 인터페이스
-│  │  ├─ Enemy.ts          적 한 마리 (능력치·체력·AI·모델 연결, 이동·충돌). 상속 가능(protected 필드, 모델 주입)
+│  │  ├─ Enemy.ts          적 한 마리 (능력치·체력·AI·모델 연결, 이동·충돌, 추적 중 우회 이동 steerAround). 상속 가능(protected 필드, 모델 주입)
 │  │  ├─ BossAI.ts         보스 패턴 상태 기계 (chase/windup/charge/recover, 2단계 시간 배율, 테스트 대상)
-│  │  ├─ Boss.ts           보스 엔티티(Enemy 상속)·패턴 실행 콜백·보스 모델
+│  │  ├─ Boss.ts           보스 엔티티(Enemy 상속)·패턴 실행 콜백·보스 모델(.glb 가 있으면 decorateGltfBoss 로 패턴 원·2단계 눈 추가, 없으면 코드 모델)
 │  │  └─ EnemySpawner.ts   설정 기반 배치·갱신·정리
 │  ├─ items/
 │  │  ├─ loot.ts           드롭 확률 계산 순수 함수 (테스트 대상)
-│  │  ├─ LootSystem.ts     바닥 아이템 생성·끌림·획득 (효과 적용은 Game.onCollect)
+│  │  ├─ LootSystem.ts     바닥 아이템 생성·끌림·획득, 희귀 이상 장비엔 등급 색 빛 기둥·고리 (효과 적용은 Game.onCollect)
 │  │  ├─ ItemDatabase.ts   장비 템플릿 12종, 등급 적용 생성, 무작위 생성 (테스트 대상)
 │  │  └─ EquipmentSystem.ts 가방·슬롯 장착/해제, 능력치 합산, 방어력 계산 (테스트 대상)
 │  ├─ dungeon/
@@ -102,8 +103,8 @@ hero-x/
 │  │  ├─ ZoneSystem.ts     여정 진행기: 구역 진입 → 적 등장(enter 파도), 절반 이하 → 증원(half 파도), 전멸 → 클리어·문 열림, 보스 구역 → 보스 등장, 목표·진행도·빛 기둥 위치 (테스트 대상)
 │  │  ├─ DungeonScene.ts   던전 정의로 바닥·조명·벽·장애물 생성 (CollisionWorld 구현, 직사각형 범위, 여정 울타리 InstancedMesh·문 openGate, 외부 충돌 상자 추가/제거)
 │  │  ├─ Chest.ts          보물 상자 배치·근접 판정·열기 연출 (보상은 loot.rollChestLoot)
-│  │  ├─ decorLayout.ts    장식 배치 계산 (결정적 난수, 금지 영역 회피, 테스트 대상)
-│  │  └─ Decor.ts          장식 소품·인스턴싱 풀(바람 셰이더)·입자·경고등 (화질별 개수)
+│  │  ├─ decorLayout.ts    장식 배치 계산 (결정적 난수, 금지 영역 회피) + 여정 구역 테마 소품 배치 planZoneProps/ZONE_PROPS (테스트 대상)
+│  │  └─ Decor.ts          장식 소품·구역 테마 소품(횃불·모닥불 불꽃 일렁임 등)·인스턴싱 풀(바람 셰이더)·입자·경고등 (화질별 개수)
 │  ├─ ui/
 │  │  ├─ MainMenu.ts       메인 메뉴 (새 게임/이어하기/장비/조작 안내/설정/난이도, 새 게임 확인창)
 │  │  ├─ SettingsUI.ts     설정 화면 (SETTING_DEFS 로 자동 생성: 슬라이더·스위치·선택)
@@ -183,7 +184,10 @@ hero-x/
 - "적을 두 배로" → `GameConfig.enemies.spawns` 에 항목 추가. "적 체력 30% 올려" → `enemies.types.rusher.hp` 조정.
 - "공격을 더 세게/넓게" → `GameConfig.combat.melee` 의 `damage`, `range`, `arcDegrees`. 원거리는 `combat.ranged`.
 - "점프를 더 높게" → `player.jumpSpeed` 올리기 (또는 `player.gravity` 내리기). 장애물 위에 올라서기: 높이(`h`)가 있는 상자는 발이 윗면에 닿으면 가로막지 않고(`isAboveBox`) 발밑 높이(`groundHeightAt`)가 그 상자가 된다. 점프 정점이 윗면보다 `player.climbAssist` 만큼 낮아도 올려 준다(기본 1.0 → 높이 2 상자까지). 상자 위에서는 적 근접 공격이 닿지 않는다(`jumpY < 1.0` 검사). 보물 상자 등 `h` 없는 충돌 상자는 못 오른다. "회피를 더 멀리/자주" → `player.dash.speed/duration/cooldown`. 회피 키는 `controls.dodge`, 터치 버튼은 `TouchControls` 의 `#touch-dodge`.
-- 장식 추가: 종류·개수는 `decorLayout.DECOR_KINDS`, 외형은 `Decor.makeProp` 의 분기. 장식은 충돌이 없으므로 통행에 방해되는 큰 것은 `outside` 에만 둔다. 타격감 수치는 `GameConfig.juice`.
+- 장식 추가: 종류·개수는 `decorLayout.DECOR_KINDS`, 외형은 `Decor.makeProp` 의 분기. 장식은 충돌이 없으므로 통행에 방해되는 큰 것은 `outside` 에만 둔다. 타격감 수치는 `GameConfig.juice`(검 궤적 색 `slashColor`, 레벨 업 빛 기둥 `levelUp`, 보스 등장 `bossEntrance`).
+- 여정 구역 테마 소품: 구역 종류별 `[소품, 개수, 자리(edge/corner/center)]` 는 `decorLayout.ZONE_PROPS`, 배치는 `planZoneProps`(걷는 칸 위, 적 등장·상자·장애물·문·시작·보스 자리 회피, 가운데는 비움). 새 소품 외형은 `Decor.makeProp` 에 분기 추가, 불꽃은 `addFlame`. `tests/decor.test.ts` 가 모든 구역에 소품이 있고 걷는 칸 안인지 검사한다.
+- 전투 효과: `Effects.slash`(공중 검 궤적, 근접 공격마다), `Effects.pillar`(빛 기둥: 레벨 업·보스 등장), `Effects.shockwave/marker/burst`. 보스 등장은 `spawnBoss` 에서 기둥+충격파+`hitStopTime`(짧은 느려짐). 희귀 이상 장비 드롭의 빛 기둥은 `LootSystem.RARE_GLOW`.
+- 적 우회 이동: `Enemy.update` 가 추적 중 `GameConfig.enemies.detour.interval` 마다 `steerAround(pos, dir, radius, boxes, lookAhead, 먼저 볼 쪽, 플레이어 위치)` 를 불러 앞이 막히면 좌우로 꺾은 방향 중 '그 끝에서 플레이어가 곧장 보이는' 것을 고른다(A* 아님, 울타리 모서리 탈출용). 테스트에서 비교하려면 `import('/src/game/GameConfig.ts')` 로 `detour.lookAhead` 를 0 으로 두면 꺼진다. `__heroX.debugSpawnEnemy(type, x, z)` 로 적을 원하는 자리에 둔다.
 - 그래픽: 재질은 반드시 `render/materials.ts` 의 `pbr()/glow()` 로 만든다(블룸은 emissiveIntensity ≥ 1.5 에 걸림). 던전 분위기(하늘·노출·바닥)는 `DungeonDefs.theme` 수치만 바꾼다. 후처리 켜고 끄기는 `RenderPipeline.setQuality`, 그림자 해상도는 `DungeonScene.applyQuality`.
 - 게임 루프: `Game.frame()` 이 흐른 시간을 `performance.maxStep`(0.05초) 단위의 `simulate(dt)` 로 나눠 돌리고 한 번 그린다. 시간에 따라 움직이는 로직은 `simulate` 안에, 화면 갱신·FPS 측정은 `frame` 에 둔다.
 - 성능: 자동 화질은 `Game.updateAutoQuality` 가 `GameConfig.performance` 간격으로 `decideQuality` 를 호출해 설정을 낮춘다(올리지 않음). WebGL 끊김은 `contextLost` 플래그로 프레임을 건너뛴다. 프레임 예외는 `loop` 의 try/catch 가 루프를 멈추고 저장한 뒤 다시 던진다(ErrorOverlay 표시).
@@ -203,7 +207,7 @@ hero-x/
 - 상호작용(E)이 필요한 새 물체는 `Game.tryInteract` 에 분기를 추가하고 HUD 안내 문구(`currentPrompt`)를 함께 처리한다. 보물 상자는 설정 `chestQuiz`(기본 켬)가 켜져 있으면 `QuizUI` 로 수학 문제를 먼저 풀고(`paused`), 맞히면 `openChestNow`. 문제 범위를 바꾸려면 `mathQuiz.ts` 의 종류별 숫자 범위만 고친다.
 - 클리어 뒤 흐름: `showResult(title, sub, next)` 에 다음 던전을 넘기면 `ResultUI` 가 '다음 던전' 버튼과 카운트다운(`dungeon.autoAdvanceSeconds`, 0 이면 버튼만)을 보여주고 끝나면 `enterDungeon(next)`. 다른 버튼을 누르면 취소.
 - 공격 입력: `CombatSystem` 은 `onPress` 로 예약 플래그를 세워 쿨다운 중이나 프레임 사이의 짧은 탭도 쿨다운이 끝나는 즉시 한 번 나가게 한다. 반응 속도는 `combat.melee.cooldown`(0.34)과 `PartRig` 의 뒤로 당김 비율(12%)로 조정.
-- "보스를 약하게/세게" → `boss.hp`, `boss.slam.damage`, `boss.contactDamage`, `boss.windup`(예고가 길수록 쉬움). 던전별 보스는 `DungeonDefs.ts` 의 `boss` 덮어쓰기. 패턴 구성은 `boss.closePatterns`(순환 순서)와 `boss.useCharge`, 외형은 `boss.model`('guardian' | 'golem' | 'commander'). 새 보스 패턴은 `BossPattern` 타입 + `boss.windup` 항목 + `Boss.update` 의 실행 분기 + `Game.onBossAttack` 의 효과 처리에 추가한다(시간이 걸리는 효과는 `Game.updateMortars` 처럼 루프에서 진행). 새 외형은 `createBossModel` 의 `kind` 분기.
+- "보스를 약하게/세게" → `boss.hp`, `boss.slam.damage`, `boss.contactDamage`, `boss.windup`(예고가 길수록 쉬움). 던전별 보스는 `DungeonDefs.ts` 의 `boss` 덮어쓰기. 패턴 구성은 `boss.closePatterns`(순환 순서)와 `boss.useCharge`, 외형은 `boss.model`('guardian' | 'golem' | 'commander'). 새 보스 패턴은 `BossPattern` 타입 + `boss.windup` 항목 + `Boss.update` 의 실행 분기 + `Game.onBossAttack` 의 효과 처리에 추가한다(시간이 걸리는 효과는 `Game.updateMortars` 처럼 루프에서 진행). 새 외형은 `tools/make_bosses_glb.py` 에 복셀 모델을 추가해 `manifest.json` `bosses.<외형>` 에 등록(코드 모델은 `createBossModel` 의 `kind` 분기). .glb 보스는 `decorateGltfBoss` 가 패턴 색 바닥 원과 2단계 붉은 눈(`eye_*` 재질)을 덧입힌다. 보스가 가까우면(`camera.bossZoom.range`) 카메라가 `bossZoom.scale` 배 멀어진다. 테스트: `__heroX.debugSetBossHpRatio(0.2)` 로 2단계, `__heroX.debugSpawnDrop('xp', 5000)` 로 레벨 업, `debugSpawnDrop('equip', 1, 'legendary')` 로 희귀 드롭을 만든다.
 - 승리 흐름은 `Game.checkVictory`: 열린 경기장은 일반 적 전멸 → `spawnBoss`, 여정 던전은 보스 구역 진입(`ZoneSystem.onBossZone`) → `spawnBoss` → 보스 사망 → `onBossDefeated`(보상) → 결과 화면(다음 던전 카운트다운). HUD 목표는 `hud.setObjective`, 다음 목표 구역엔 빛 기둥 `beacon`. 테스트에서는 `__heroX.debugDefeatRegularEnemies()` 로 바로 보스전으로 간다.
 - 사용자 설정은 `Settings.ts` 의 `UserSettings`/`SETTING_DEFS` 에만 추가한다(화면은 자동 생성). 게임 코드는 `GameConfig.hud/debug/graphics` 대신 `this.settings` 를 읽는다. 플레이어 체력·공격력은 `effectiveMaxHp()`/`effectiveDamageMultiplier()` 를 거친다. 난이도는 `setDifficulty` 한 곳에서 설정·저장·메뉴를 함께 갱신한다.
 - 저장: 성장·장비·난이도·기록만 저장하고 던전 안 상태는 저장하지 않는다. 저장 형식을 바꾸면 `SAVE_VERSION` 을 올리고 `migrateSaveData` 에 변환을 추가한 뒤 `tests/save.test.ts` 에 옛 형식 → 새 형식 테스트를 더한다. 장비는 원형 id·등급만 저장하고 `createItem` 으로 다시 만든다. 저장 시점은 `Game.markDirty()`(자동 저장 간격 뒤) 또는 `Game.saveNow()`(메뉴·결과·탭 닫기)로만 다룬다. 저장 데이터 초기화는 사용자가 '새 게임'을 확인했을 때만 한다.
@@ -224,5 +228,6 @@ hero-x/
 5. 설정 화면과 저장 ✅ (v0.5.0: 자동 저장·이어하기·버전·손상 처리, 설정 화면·기본값 복원)
 6. 콘텐츠 확장 ✅ (v0.6.0-a.1 던전 3개·던전 선택·새 적·새 장비 / v0.6.1 모바일 / v0.6.2 보스별 패턴·외형)
 7. 품질 개선 ✅ (v0.7.0-a.1 효과음·음악 / v0.7.0-b.1 얼굴 사진·glb 교체 구조 / v1.0.0 자동 화질·오류 처리·문서)
+8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장 (진행 예정)
 
 각 단계는 완료 기준을 만족하고 기존 기능이 정상일 때만 다음 단계로 넘어간다.

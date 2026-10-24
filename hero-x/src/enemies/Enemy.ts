@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Health } from '../combat/Health';
 import { GameConfig, type EnemyTypeConfig } from '../game/GameConfig';
-import { clampToArena, directionToFacing, lerpAngle, resolveCircleVsBoxes, type CollisionWorld, type Vec2 } from '../player/movement';
+import { clampToArena, directionToFacing, lerpAngle, resolveCircleVsBoxes, steerAround, type CollisionWorld, type Vec2 } from '../player/movement';
 import { EnemyAI } from './EnemyAI';
 import { createEnemyModel, type EnemyModel } from './EnemyModels';
 
@@ -22,6 +22,10 @@ export interface EnemyContext {
  */
 export class Enemy {
   readonly object3d = new THREE.Group();
+  /** 우회 이동 상태: 다음 판단까지 남은 시간, 현재 꺾은 방향, 먼저 볼 쪽(+1 왼쪽/−1 오른쪽) */
+  private detourTimer = 0;
+  private detourDir: Vec2 | null = null;
+  private detourSign = 1;
   readonly health: Health;
   readonly ai = new EnemyAI();
   readonly def: EnemyTypeConfig;
@@ -96,9 +100,25 @@ export class Enemy {
     const decision = this.ai.update(dt, self, ctx.playerPos, this.def);
 
     // 이동 + 밀림
+    // 우회 이동: 추적 중 앞이 울타리·장애물로 막히면 interval 마다 좌우로 꺾은 방향을 고른다 (A* 는 아님)
+    let move = decision.move;
+    if (decision.state === 'chase' && (move.x !== 0 || move.z !== 0)) {
+      this.detourTimer -= dt;
+      if (this.detourTimer <= 0) {
+        const dcfg = GameConfig.enemies.detour;
+        this.detourTimer = dcfg.interval;
+        const steered = steerAround(p, move, this.radius, ctx.world.getObstacleBoxes(), dcfg.lookAhead, this.detourSign, ctx.playerPos);
+        // 처음 꺾는 순간의 쪽을 기억해, 우회가 이어지는 동안 같은 쪽을 먼저 본다 (좌우 떨림 방지)
+        if (steered !== move && !this.detourDir) this.detourSign = move.x * steered.z - move.z * steered.x >= 0 ? 1 : -1;
+        this.detourDir = steered === move ? null : steered;
+      }
+      if (this.detourDir) move = this.detourDir;
+    } else {
+      this.detourDir = null;
+    }
     let next: Vec2 = {
-      x: p.x + decision.move.x * this.def.speed * this.mul.speed * dt + this.knock.x * dt,
-      z: p.z + decision.move.z * this.def.speed * this.mul.speed * dt + this.knock.z * dt,
+      x: p.x + move.x * this.def.speed * this.mul.speed * dt + this.knock.x * dt,
+      z: p.z + move.z * this.def.speed * this.mul.speed * dt + this.knock.z * dt,
     };
     const decay = Math.exp(-8 * dt);
     this.knock.x *= decay;
@@ -133,7 +153,7 @@ export class Enemy {
 
     if (decision.attackNow) ctx.onAttackPlayer(this, this.def.damage);
 
-    const moving = decision.move.x !== 0 || decision.move.z !== 0;
+    const moving = move.x !== 0 || move.z !== 0;
     this.model.update(dt, { state: decision.state, moving, windup: this.ai.windupProgress, death: 0 });
   }
 

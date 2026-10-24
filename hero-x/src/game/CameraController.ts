@@ -12,6 +12,9 @@ export class CameraController {
   private first = true;
   /** 카메라 거리 배율 (사용자 설정). 1 이 GameConfig.camera.offset 그대로 */
   distanceScale = 1;
+  /** 보스전 거리 배율: 목표(1 또는 bossZoom.scale)로 부드럽게 다가간다 */
+  private bossZoomTarget = 1;
+  private bossZoom = 1;
   private shakeAmp = 0;
   private shakeTime = 0;
   private shakeTotal = 0;
@@ -25,6 +28,16 @@ export class CameraController {
 
   constructor(readonly camera: THREE.PerspectiveCamera) {}
 
+  /** 보스전 줌아웃 켜기/끄기 (Game 이 매 프레임 보스 거리로 정한다) */
+  setBossZoom(active: boolean): void {
+    this.bossZoomTarget = active ? GameConfig.camera.bossZoom.scale : 1;
+  }
+
+  /** 현재 적용 중인 전체 거리 배율 (설정 × 보스전) */
+  get effectiveDistanceScale(): number {
+    return this.distanceScale * this.bossZoom;
+  }
+
   /** 다음 갱신 때 카메라를 바로 제자리로 (인트로처럼 카메라를 따로 움직인 뒤 복귀) */
   resetFollow(): void {
     this.first = true;
@@ -33,7 +46,8 @@ export class CameraController {
   /** 매 프레임: target(플레이어 위치)을 따라간다 */
   update(dt: number, target: THREE.Vector3): void {
     const c = GameConfig.camera;
-    const k0 = this.distanceScale;
+    this.bossZoom += (this.bossZoomTarget - this.bossZoom) * (1 - Math.exp(-2.5 * dt));
+    const k0 = this.distanceScale * this.bossZoom;
     this.desired.set(target.x + c.offset.x * k0, target.y + c.offset.y * k0, target.z + c.offset.z * k0);
     if (this.first) {
       // 첫 프레임에는 바로 제자리로 (시작할 때 카메라가 날아오는 느낌 방지)

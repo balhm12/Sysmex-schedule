@@ -74,6 +74,8 @@ export interface GameDebugState {
   face: boolean;
   faceVisible: boolean;
   models: { loaded: string[]; playerGltf: boolean };
+  /** 마지막 프레임의 그리기 호출·삼각형 수 (성능 측정용) */
+  renderInfo: { calls: number; triangles: number };
   pixelRatio: number;
   interactButtonVisible: boolean;
   shadowsEnabled: boolean;
@@ -1113,12 +1115,34 @@ export class Game {
     this.player.position.set(x, 0, z);
   }
 
-  /** 일반 적을 모두 즉시 처치한다 (테스트·디버그용: 보스전으로 바로 가기) */
   /** 보스를 즉시 처치한다 (테스트·디버그용: 클리어 흐름 확인) */
   debugKillBoss(): void {
     if (this.boss && this.boss.alive) this.combat.damageEnemy(this.boss, 1e9, { x: 0, z: 1 }, 0);
   }
 
+  /** 플레이어 옆에 아이템을 떨어뜨린다 (테스트·디버그용: 'xp' 큰 값 → 레벨 업 연출, 'equip' + 등급 → 희귀 장비 빛 기둥) */
+  debugSpawnDrop(kind: 'xp' | 'gold' | 'heal' | 'equip', amount = 1, rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' = 'rare', dx = 2, dz = 0): void {
+    const p = this.player.position;
+    const at = { x: p.x + dx, z: p.z + dz };
+    if (kind === 'equip') this.loot.spawn({ kind: 'equip', amount: 1, item: generateItemAtLeast(rarity) }, at);
+    else this.loot.spawn({ kind, amount }, at);
+  }
+
+  /** 적 한 마리를 지정 위치에 등장시킨다 (테스트·디버그용: 우회 이동·전투 확인). 만든 적의 index 를 돌려준다 */
+  debugSpawnEnemy(type: string, x: number, z: number): number {
+    const e = this.spawner.spawn(type, x, z);
+    return e ? this.spawner.getEnemies().indexOf(e) : -1;
+  }
+
+  /** 보스 체력을 지정 비율까지 깎는다 (테스트·디버그용: 2단계 연출 확인) */
+  debugSetBossHpRatio(ratio: number): void {
+    if (!this.boss || !this.boss.alive) return;
+    const target = Math.max(1, Math.floor(this.boss.health.maxHp * ratio));
+    const dmg = this.boss.health.hp - target;
+    if (dmg > 0) this.combat.damageEnemy(this.boss, dmg, { x: 0, z: 1 }, 0);
+  }
+
+  /** 일반 적을 모두 즉시 처치한다 (테스트·디버그용: 보스전으로 바로 가기) */
   debugDefeatRegularEnemies(): void {
     for (const e of this.spawner.getEnemies()) {
       if (e.alive && e !== this.boss) this.combat.damageEnemy(e, 99999, { x: 0, z: 1 }, 0);
@@ -1151,13 +1175,14 @@ export class Game {
       face: this.face !== null,
       faceVisible: this.player.faceVisible,
       models: { loaded: modelRegistry.loadedKeys, playerGltf: this.playerUsesGltf },
+      renderInfo: { calls: this.renderer.info.render.calls, triangles: this.renderer.info.render.triangles },
       pixelRatio: this.renderer.getPixelRatio(),
       interactButtonVisible: this.touch.visible && !(document.getElementById('touch-interact') as HTMLButtonElement | null)?.hidden,
       shadowsEnabled: this.renderer.shadowMap.enabled,
       quality: this.pipeline.currentQuality,
       bloomEnabled: this.pipeline.bloomEnabled,
       exposure: this.renderer.toneMappingExposure,
-      cameraDistanceScale: this.cameraCtrl.distanceScale,
+      cameraDistanceScale: this.cameraCtrl.effectiveDistanceScale,
       save: { status: this.saveStatus, lastSavedAt: this.lastSavedAt, hasSavedProgress: this.hasSavedProgress, blocked: this.saveBlocked, dirty: this.saveDirty, records: { ...this.records } },
       player: { x: p.x, z: p.z, facing: this.player.facing, moving: this.player.moving, hp: this.player.health.hp, maxHp: this.player.health.maxHp },
       camera: { x: cam.x, y: cam.y, z: cam.z },
@@ -1310,7 +1335,12 @@ export class Game {
         this.applyStats();
         h.heal(Math.round(h.maxHp * GameConfig.progression.levelUpHealRatio));
         const p = this.player.position;
-        this.effects.burst(new THREE.Vector3(p.x, 1, p.z), 0xffd23f, 24, 7);
+        const lv = GameConfig.juice.levelUp;
+        const lvColor = new THREE.Color(lv.color);
+        this.effects.burst(new THREE.Vector3(p.x, 1, p.z), lvColor.getHex(), 24, 7);
+        this.effects.pillar(new THREE.Vector3(p.x, 0, p.z), lv.radius, lv.height, lv.duration, lvColor);
+        this.effects.shockwave(new THREE.Vector3(p.x, 0, p.z), lv.radius * 3, 0.7, lvColor.getHex());
+        this.hud.showBanner(`레벨 업! 레벨 ${this.stats.level}`, 1600);
         this.damageNumbers.show(new THREE.Vector3(p.x, 2.4, p.z), this.stats.level, 'levelup');
         Logger.info(`레벨 업! 레벨 ${this.stats.level} (최대 체력 ${h.maxHp}, 공격력 ×${this.stats.damageMultiplier.toFixed(2)})`);
       }
@@ -1327,7 +1357,13 @@ export class Game {
     this.audio.play('bossAppear');
     this.audio.playMusic('boss');
     this.cameraCtrl.shake(GameConfig.juice.slamShake.amp * 0.8, 0.8);
+    const be = GameConfig.juice.bossEntrance;
+    const bossColor = new THREE.Color(b.color);
     this.effects.burst(new THREE.Vector3(b.spawn.x, 1.5, b.spawn.z), b.color, 30, 9);
+    // 등장 연출: 보스 색 빛 기둥 + 큰 충격파 + 아주 짧은 느려짐
+    this.effects.pillar(new THREE.Vector3(b.spawn.x, 0, b.spawn.z), b.radius * 1.4, be.pillarHeight, be.duration, bossColor);
+    this.effects.shockwave(new THREE.Vector3(b.spawn.x, 0, b.spawn.z), be.shockRadius, 0.9, bossColor.getHex());
+    this.hitStopTime = Math.max(this.hitStopTime, be.slowMo);
     Logger.info(`보스 등장: ${b.name} (체력 ${this.boss.health.maxHp})`);
   }
 
@@ -1588,6 +1624,9 @@ export class Game {
     this.damageNumbers.update(dt);
     // 카메라는 점프 높이를 따라가지 않도록 바닥 위치를 본다
     this.camTarget.set(p.x, 0, p.z);
+    // 보스가 가까이 살아 있으면 카메라를 조금 뒤로 (큰 보스 모델이 화면에 들어오게)
+    const bz = GameConfig.camera.bossZoom;
+    this.cameraCtrl.setBossZoom(!!this.boss && this.boss.alive && Math.hypot(this.boss.position.x - this.player.position.x, this.boss.position.z - this.player.position.z) < bz.range);
     this.cameraCtrl.update(dt, this.camTarget);
     this.dungeon.updateLight(p);
     this.dungeon.update(dt);

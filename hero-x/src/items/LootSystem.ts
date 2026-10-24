@@ -10,7 +10,12 @@ interface Pickup {
   drop: Drop;
   t: number;
   life: number;
+  /** 희귀 이상 장비의 빛 기둥·고리 */
+  aura?: THREE.Group;
 }
+
+/** 이 등급부터 떨어진 장비에 빛 기둥을 세운다 */
+const RARE_GLOW = new Set(['rare', 'epic', 'legendary']);
 
 /**
  * 바닥에 떨어진 아이템 관리
@@ -21,6 +26,12 @@ interface Pickup {
 export class LootSystem {
   private readonly root = new THREE.Group();
   private readonly pickups: Pickup[] = [];
+  private readonly auraRingGeo = new THREE.RingGeometry(0.5, 0.75, 24);
+  private readonly auraBeamGeo = (() => {
+    const g = new THREE.CylinderGeometry(0.22, 0.34, 3.2, 12, 1, true);
+    g.translate(0, 1.6, 0);
+    return g;
+  })();
   private readonly geos: Record<ItemKind, THREE.BufferGeometry> = {
     heal: new THREE.BoxGeometry(0.42, 0.42, 0.42),
     xp: new THREE.OctahedronGeometry(0.3, 0),
@@ -77,7 +88,20 @@ export class LootSystem {
     if (drop.kind === 'gold') mesh.rotation.x = Math.PI / 2;
     mesh.castShadow = true;
     this.root.add(mesh);
-    this.pickups.push({ mesh, drop, t: Math.random() * 6, life: GameConfig.loot.lifetime });
+    // 희귀 이상 장비: 등급 색 빛 기둥 + 바닥 고리가 멀리서도 보이게 (update 에서 맥동)
+    let aura: THREE.Group | undefined;
+    if (drop.kind === 'equip' && drop.item && RARE_GLOW.has(drop.item.rarity)) {
+      const color = new THREE.Color(GameConfig.equipment.rarities[drop.item.rarity].color);
+      aura = new THREE.Group();
+      const ring = new THREE.Mesh(this.auraRingGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.06;
+      const beam = new THREE.Mesh(this.auraBeamGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+      aura.add(ring, beam);
+      aura.position.set(at.x, 0, at.z);
+      this.root.add(aura);
+    }
+    this.pickups.push({ mesh, drop, t: Math.random() * 6, life: GameConfig.loot.lifetime, aura });
   }
 
   get count(): number {
@@ -95,6 +119,14 @@ export class LootSystem {
       p.life -= dt;
       p.mesh.rotation.y += dt * 2.5;
       p.mesh.position.y = 0.6 + Math.sin(p.t * 3) * 0.12;
+      if (p.aura) {
+        const k = 1 + Math.sin(p.t * 4) * 0.15;
+        p.aura.children[0].scale.setScalar(k);
+        p.aura.rotation.y += dt * 0.8;
+        p.aura.position.x = p.mesh.position.x;
+        p.aura.position.z = p.mesh.position.z;
+        p.aura.visible = p.mesh.visible;
+      }
       // 사라지기 3초 전부터 깜빡임
       p.mesh.visible = p.life > 3 || Math.floor(p.t * 8) % 2 === 0;
 
@@ -123,6 +155,8 @@ export class LootSystem {
     this.clear();
     Object.values(this.geos).forEach((g) => g.dispose());
     Object.values(this.mats).forEach((m) => m.dispose());
+    this.auraRingGeo.dispose();
+    this.auraBeamGeo.dispose();
     this.root.removeFromParent();
   }
 
@@ -130,6 +164,10 @@ export class LootSystem {
     const p = this.pickups[i];
     this.root.remove(p.mesh);
     if (p.drop.kind === 'equip') (p.mesh.material as THREE.Material).dispose();
+    if (p.aura) {
+      this.root.remove(p.aura);
+      for (const c of p.aura.children) ((c as THREE.Mesh).material as THREE.Material).dispose();
+    }
     this.pickups.splice(i, 1);
   }
 }

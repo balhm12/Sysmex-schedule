@@ -82,3 +82,42 @@ describe('적 부품 이름 리그 (classifyEnemyPart / enemyPartGroup)', () => 
     expect(enemyPartGroup('shield')).toBe('shield');
   });
 });
+
+// ---------------------------------------------------------------- 보스 .glb (tools/make_bosses_glb.py 산출물)
+// @ts-expect-error 테스트 전용 Node 모듈 (프로젝트에 @types/node 를 두지 않음 — vitest 는 그대로 실행한다)
+import { existsSync, readFileSync } from 'node:fs';
+// @ts-expect-error 위와 같음
+import { resolve } from 'node:path';
+
+/** .glb 의 JSON 청크에서 노드(부품) 이름을 뽑는다 */
+function glbNodeNames(file: string): string[] {
+  const buf: Uint8Array = readFileSync(file);
+  const jsonLen = new DataView(buf.buffer, buf.byteOffset).getUint32(12, true);
+  const json = JSON.parse(new TextDecoder().decode(buf.subarray(20, 20 + jsonLen))) as { nodes?: Array<{ name?: string }> };
+  return (json.nodes ?? []).map((n) => n.name ?? '');
+}
+
+describe('보스 복셀 모델 (public/models/boss-*.glb)', () => {
+  const dir: string = resolve(new URL('.', import.meta.url).pathname, '../public/models');
+  const manifest = JSON.parse(readFileSync(resolve(dir, 'manifest.json'), 'utf8') as string) as { bosses: Record<string, { file: string } | null> };
+  for (const kind of ['guardian', 'golem', 'commander']) {
+    it(`${kind}: manifest 에 등록돼 있고 파일이 있으며, 사람형 리그 부품(팔·다리·머리·눈)이 들어 있다`, () => {
+      const entry = manifest.bosses[kind];
+      expect(entry?.file).toBe(`boss-${kind}.glb`);
+      const file: string = resolve(dir, entry!.file);
+      expect(existsSync(file)).toBe(true);
+      const names = glbNodeNames(file);
+      const kinds = new Set(names.map((n) => classifyPart(n)));
+      expect(kinds.has('leftLeg') && kinds.has('rightLeg') && kinds.has('leftArm') && kinds.has('rightArm') && kinds.has('head')).toBe(true);
+      expect(names.some((n) => /^eye_/.test(n))).toBe(true);
+      // 발광 부품은 적 리그 'glow' 관절이 된다 (예고 때 밝아짐)
+      expect(names.some((n) => classifyEnemyPart(n) === 'glow')).toBe(true);
+    });
+  }
+  it('수호 로봇·사령관은 무기(weapon_*)가 있어 리그가 무기 팔을 치켜들고, 골렘은 맨주먹', () => {
+    const has = (k: string) => glbNodeNames(resolve(dir, `boss-${k}.glb`)).some((n) => classifyPart(n) === 'weapon');
+    expect(has('guardian')).toBe(true);
+    expect(has('commander')).toBe(true);
+    expect(has('golem')).toBe(false);
+  });
+});

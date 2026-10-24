@@ -1,5 +1,6 @@
 import type { DungeonDef } from '../game/DungeonDefs';
 import type { Vec2 } from '../player/movement';
+import { inRect, isWalkable, zoneSpawns, type JourneyDef, type ZoneKind } from './journey';
 
 /**
  * 던전 장식 배치 (순수 함수, 테스트 대상)
@@ -87,4 +88,81 @@ export function planDecor(def: DungeonDef, bossSpawn: Vec2, seed = 1, outsideDep
     }
   }
   return { inside, outside };
+}
+
+// ---------------------------------------------------------------- 여정 구역 테마 소품
+/**
+ * 구역 종류별 소품 (여정 던전 전용). 종류 → [소품, 개수, 어디에]
+ * - edge: 구역 사각형의 가장자리 띠(안쪽 1.2~2.6 유닛)에 둔다 → 한가운데 전투 공간을 비워 둔다
+ * - corner: 네 모서리 근처
+ * - center: 구역 중심 (쉼터의 모닥불처럼 한 개짜리)
+ */
+export type PropPlace = 'edge' | 'corner' | 'center';
+export const ZONE_PROPS: Record<ZoneKind, Array<[string, number, PropPlace]>> = {
+  start: [['signpost', 1, 'center'], ['torch', 2, 'corner'], ['fence', 4, 'edge']],
+  fight: [['stump', 3, 'edge'], ['log', 2, 'edge'], ['fence', 3, 'edge']],
+  path: [['torch', 4, 'edge'], ['rock', 3, 'edge']],
+  treasure: [['ruinPillar', 4, 'corner'], ['ruinWall', 2, 'edge'], ['mushroomGlow', 4, 'edge']],
+  branch: [['signpost', 1, 'center'], ['torch', 2, 'corner'], ['ruinPillar', 2, 'edge']],
+  secret: [['ruinPillar', 4, 'corner'], ['bones', 3, 'edge'], ['mushroomGlow', 5, 'edge']],
+  ambush: [['log', 4, 'edge'], ['bones', 2, 'edge'], ['stump', 2, 'edge']],
+  rest: [['campfire', 1, 'center'], ['logSeat', 3, 'center'], ['torch', 2, 'corner'], ['tent', 1, 'edge']],
+  arena: [['ruinPillar', 6, 'edge'], ['torch', 4, 'corner'], ['ruinWall', 2, 'edge']],
+  boss: [['bossPillar', 4, 'corner'], ['torch', 6, 'edge'], ['bones', 3, 'edge']],
+};
+
+/** 구역 안 소품 자리가 비어 있는지: 걷는 칸 위, 적 등장 자리·상자·장애물·문과 안 겹침 */
+function isZoneFree(p: Vec2, j: JourneyDef, def: DungeonDef, bossSpawn: Vec2, taken: DecorItem[], gap: number): boolean {
+  if (!isWalkable(j, p)) return false;
+  if (Math.hypot(p.x - j.start.x, p.z - j.start.z) < 2.5) return false;
+  for (const z of j.zones) for (const sp of zoneSpawns(z)) if (Math.hypot(p.x - sp.x, p.z - sp.z) < 2.0) return false;
+  for (const c of def.chests) if (Math.hypot(p.x - c.x, p.z - c.z) < 2.4) return false;
+  for (const o of def.obstacles) if (Math.abs(p.x - o.x) < o.w / 2 + 1.0 && Math.abs(p.z - o.z) < o.d / 2 + 1.0) return false;
+  for (const g of j.gates) if (inRect(p, g.rect, 2.5)) return false;
+  if (Math.hypot(p.x - bossSpawn.x, p.z - bossSpawn.z) < 5) return false;
+  return !taken.some((d) => Math.hypot(d.x - p.x, d.z - p.z) < gap);
+}
+
+/**
+ * 여정 던전의 구역 테마 소품 배치 (순수 함수, 결정적). 여정이 없으면 빈 배열.
+ * 소품은 보이기만 하고 충돌은 없다 — 그래서 한가운데를 피해 가장자리·모서리에 둔다.
+ */
+export function planZoneProps(def: DungeonDef, bossSpawn: Vec2, seed = 1): DecorItem[] {
+  const j = def.journey;
+  if (!j) return [];
+  const rnd = seededRandom(seed * 7 + 101);
+  const out: DecorItem[] = [];
+  for (const z of j.zones) {
+    const r = z.rect;
+    // 가운데 소품의 기준점: 구역 중심. 모닥불을 놓으면 그 자리가 기준이 된다 (통나무 의자가 모닥불을 향함)
+    let anchor: Vec2 = { x: r.x, z: r.z };
+    for (const [kind, count, place] of ZONE_PROPS[z.kind] ?? []) {
+      let placed = 0;
+      for (let tries = 0; tries < count * 40 && placed < count; tries++) {
+        let p: Vec2;
+        if (place === 'center') {
+          const a = rnd() * Math.PI * 2;
+          // 첫 시도는 정확히 가운데, 막혀 있으면(상자 등) 가까운 둘레에서 찾는다. 의자는 기준점 둘레
+          const d = kind === 'logSeat' ? 1.7 + rnd() * 0.7 : tries === 0 ? 0 : 1.2 + rnd() * 1.6;
+          p = { x: anchor.x + Math.cos(a) * d, z: anchor.z + Math.sin(a) * d };
+        } else if (place === 'corner') {
+          const sx = rnd() < 0.5 ? -1 : 1;
+          const sz = rnd() < 0.5 ? -1 : 1;
+          p = { x: r.x + sx * (r.w / 2 - 1.6 - rnd() * 1.2), z: r.z + sz * (r.d / 2 - 1.6 - rnd() * 1.2) };
+        } else {
+          // 가장자리 띠: 네 변 중 하나
+          const side = Math.floor(rnd() * 4);
+          const inset = 1.2 + rnd() * 1.4;
+          const along = rnd() * 2 - 1;
+          p = side === 0 ? { x: r.x + along * (r.w / 2 - 1.5), z: r.z - r.d / 2 + inset } : side === 1 ? { x: r.x + along * (r.w / 2 - 1.5), z: r.z + r.d / 2 - inset } : side === 2 ? { x: r.x - r.w / 2 + inset, z: r.z + along * (r.d / 2 - 1.5) } : { x: r.x + r.w / 2 - inset, z: r.z + along * (r.d / 2 - 1.5) };
+        }
+        if (!inRect(p, r)) continue;
+        if (!isZoneFree(p, j, def, bossSpawn, out, place === 'center' ? 1.0 : 1.8)) continue;
+        out.push({ kind, x: p.x, z: p.z, scale: 0.9 + rnd() * 0.3, rot: kind === 'logSeat' ? Math.atan2(anchor.x - p.x, anchor.z - p.z) : rnd() * Math.PI * 2 });
+        if (kind === 'campfire') anchor = p;
+        placed++;
+      }
+    }
+  }
+  return out;
 }

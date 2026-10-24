@@ -182,3 +182,82 @@ export function tickDash(state: DashState, dt: number): void {
   if (state.timer > 0) state.timer = Math.max(0, state.timer - dt);
   if (state.cooldown > 0) state.cooldown = Math.max(0, state.cooldown - dt);
 }
+
+/** 선분 a→b 를 따라 반지름 radius 의 원이 지나갈 때 상자에 걸리는지 (step 간격으로 표본 검사) */
+export function segmentBlocked(a: Vec2, b: Vec2, radius: number, boxes: Box[]): boolean {
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  const len = Math.hypot(dx, dz);
+  const steps = Math.max(1, Math.ceil(len / Math.max(0.25, radius * 0.8)));
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    const px = a.x + dx * t;
+    const pz = a.z + dz * t;
+    for (const bx of boxes) {
+      const cx = clamp(px, bx.x - bx.w / 2, bx.x + bx.w / 2);
+      const cz = clamp(pz, bx.z - bx.d / 2, bx.z + bx.d / 2);
+      if ((px - cx) ** 2 + (pz - cz) ** 2 < radius * radius) return true;
+    }
+  }
+  return false;
+}
+
+/** 우회 후보 각도 (라디안): 작은 각부터, 좌우 번갈아 */
+const STEER_ANGLES = [0.6, 1.2, 1.8, 2.4];
+
+/**
+ * 단순 우회 조종 (A* 는 아님). 가고 싶은 방향(dir)으로 lookAhead 만큼 나아가는 길이 상자에 막히면
+ * 좌우로 조금씩 꺾은 방향 후보를 본다.
+ * 1) target 이 있으면: 꺾은 끝점까지 뚫려 있고, 그 끝점에서 target 까지도 곧장 뚫린 후보를 작은 각부터 고른다
+ *    (울타리 모서리에서 '목표와 반대쪽으로 꺾어 갇히는' 경우를 막는다).
+ * 2) 없으면: 끝점까지만 뚫린 첫 후보 (preferSign 쪽을 먼저 본다 — 좌우 떨림 방지).
+ * 3) 다 막히면 원래 방향 (벽을 따라 미끄러진다).
+ * 순수 함수. 돌려주는 방향의 길이는 dir 과 같다.
+ */
+export function steerAround(pos: Vec2, dir: Vec2, radius: number, boxes: Box[], lookAhead: number, preferSign = 1, target?: Vec2): Vec2 {
+  const len = Math.hypot(dir.x, dir.z);
+  if (len < 1e-6) return dir;
+  const ux = dir.x / len;
+  const uz = dir.z / len;
+  // 가까운 상자만 본다 (성능)
+  const reach = lookAhead + radius;
+  const near = boxes.filter((b) => Math.abs(b.x - pos.x) <= b.w / 2 + reach && Math.abs(b.z - pos.z) <= b.d / 2 + reach);
+  const endOf = (ax: number, az: number): Vec2 => ({ x: pos.x + ax * lookAhead, z: pos.z + az * lookAhead });
+  const free = (ax: number, az: number) => !segmentBlocked(pos, endOf(ax, az), radius, near);
+  if (near.length === 0 || free(ux, uz)) return dir;
+  const candidates: Array<{ x: number; z: number }> = [];
+  for (const a of STEER_ANGLES) {
+    for (const sgn of [preferSign, -preferSign]) {
+      const c = Math.cos(a * sgn);
+      const s = Math.sin(a * sgn);
+      const rx = ux * c - uz * s;
+      const rz = ux * s + uz * c;
+      if (free(rx, rz)) candidates.push({ x: rx, z: rz });
+    }
+  }
+  if (candidates.length === 0) return dir;
+  if (target) {
+    // 둘째 구간: 후보 방향으로 '보이는 데까지'(최대 lookAhead 의 2배) 나아간 지점에서 목표가 곧장 보이는지.
+    // 그 구간은 범위가 넓으니 덮는 상자만 거른다
+    const farReach = lookAhead * 2 + radius;
+    const far = boxes.filter((b) => Math.abs(b.x - pos.x) <= b.w / 2 + farReach && Math.abs(b.z - pos.z) <= b.d / 2 + farReach);
+    for (const cnd of candidates) {
+      let e = endOf(cnd.x, cnd.z);
+      for (const k of [2.0, 1.5]) {
+        const e2 = { x: pos.x + cnd.x * lookAhead * k, z: pos.z + cnd.z * lookAhead * k };
+        if (!segmentBlocked(pos, e2, radius, far)) {
+          e = e2;
+          break;
+        }
+      }
+      const minX = Math.min(e.x, target.x) - radius;
+      const maxX = Math.max(e.x, target.x) + radius;
+      const minZ = Math.min(e.z, target.z) - radius;
+      const maxZ = Math.max(e.z, target.z) + radius;
+      const along = boxes.filter((b) => b.x + b.w / 2 >= minX && b.x - b.w / 2 <= maxX && b.z + b.d / 2 >= minZ && b.z - b.d / 2 <= maxZ);
+      // 둘째 구간은 '보이는지'만 보는 어림이므로 반지름을 절반으로 (모서리를 스치는 길도 통과로 친다)
+      if (!segmentBlocked(e, target, radius * 0.5, along)) return { x: cnd.x * len, z: cnd.z * len };
+    }
+  }
+  return { x: candidates[0].x * len, z: candidates[0].z * len };
+}
