@@ -20,7 +20,7 @@ describe('HeroModel (매끈한 카툰 아들 캐릭터)', () => {
     expect(sword).not.toBeNull();
     const box = new THREE.Box3().setFromObject(m.root);
     expect(box.max.y - box.min.y).toBeGreaterThan(1.7);
-    expect(box.max.y - box.min.y).toBeLessThan(2.4);
+    expect(box.max.y - box.min.y).toBeLessThan(2.6); // 머리카락 삐침·외곽선 껍데기 포함
     expect(box.min.y).toBeGreaterThan(-0.05); // 발이 땅(0)에 닿음
     m.dispose();
   });

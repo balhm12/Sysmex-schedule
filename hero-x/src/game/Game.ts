@@ -24,6 +24,8 @@ import { Player } from '../player/Player';
 import { PlayerController } from '../player/PlayerController';
 import { createHeroModel } from '../player/models/HeroModel';
 import { verticalFovFor } from './cameraFov';
+import { applyOutlineMode } from '../render/outline';
+import { QUALITY_PRESETS } from '../render/Quality';
 import { OrientationGuard } from '../ui/OrientationGuard';
 import { faceFromFile, faceTexture, loadFace, saveFace } from '../player/FaceTexture';
 import { modelRegistry } from '../assets/ModelRegistry';
@@ -219,6 +221,7 @@ export class Game {
   private chests: ChestSystem;
   private readonly inventoryUI: InventoryUI;
   private readonly orientationGuard: OrientationGuard;
+  private modelFailureShown = false;
   readonly stats = new PlayerStats();
   readonly equipment = new EquipmentSystem();
   /** 장비 화면이 열려 게임이 멈춘 상태 */
@@ -501,6 +504,16 @@ export class Game {
     // 얼굴 사진·정식 모델은 비동기로 붙인다 (실패해도 임시 모델로 계속)
     void this.applyFace();
     modelRegistry.onPlayerReady = () => this.swapPlayerModel();
+    // 모델 로딩 표시: 받는 동안 HUD 에 진행을 보여주고, 실패한 파일이 있으면 한 번 알린다 (게임은 기본 외형으로 계속)
+    modelRegistry.onProgress = () => {
+      const p = modelRegistry.progress;
+      this.hud.setLoading(p.done < p.total ? `모델 불러오는 중 ${p.done}/${p.total}` : '');
+      if (p.done === p.total && p.failed.length > 0 && !this.modelFailureShown) {
+        this.modelFailureShown = true;
+        this.hud.showBanner(`모델 ${p.failed.length}개를 불러오지 못해 기본 외형을 씁니다`, 2600);
+        Logger.warn(`불러오지 못한 모델: ${p.failed.join(', ')}`);
+      }
+    };
     void modelRegistry.load(import.meta.env.BASE_URL);
     void soundRegistry.load(import.meta.env.BASE_URL);
 
@@ -601,6 +614,7 @@ export class Game {
     }
     this.dungeon.setShadows(s.shadows);
     this.pipeline.setQuality(s.quality);
+    applyOutlineMode(this.scene, QUALITY_PRESETS[s.quality].outline);
     this.dungeon.applyQuality(s.quality);
     if (!s.showFps) this.guide.setHudText('');
     this.applyPixelRatio();

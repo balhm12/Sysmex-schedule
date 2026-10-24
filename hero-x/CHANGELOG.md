@@ -2,6 +2,24 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.29.0 · 지시서 8~9단계(모바일·로딩 표시) + 툰 외곽선·림 라이트
+
+### 변경 내용
+- **툰 외곽선** `src/render/outline.ts`(새): 뒤집힌 껍데기 방식(같은 기하를 조금 키운 검은 BackSide 메시를 자식으로) — 주인공·적·보스 코드 모델에 붙인다. 발광·반투명·작은 부품은 건너뛰고 기하는 공유. 두께는 월드 단위(주인공 0.022, 적 반지름×0.035). 화질 프리셋 `outline`: 낮음 none / 중간 hero(주인공만) / 높음 all. 화질을 바꾸면 `applyOutlineMode(scene)` 로 즉시 반영되고, 새로 나오는 적도 현재 모드를 따른다.
+- **림 라이트** `DungeonScene`: 태양 반대쪽 위에서 비추는 하늘색 역광(세기 0.55, 그림자 없음)이 플레이어를 따라간다 → 둥근 캐릭터 윤곽이 배경에서 또렷해진다.
+- **모델 로딩 표시** `ModelRegistry.progress/onProgress`: manifest 에 적힌 .glb 를 받는 동안 HUD 위에 '모델 불러오는 중 n/m' 표시(`HUD.setLoading`), 실패한 파일이 있으면 배너 '모델 k개를 불러오지 못해 기본 외형을 씁니다'(게임은 계속). 같은 파일을 여러 키가 쓰면 한 번만 받는다(`fileCache`).
+- 모바일: 가로 터치 조작(고정 조이스틱 이동·근접 버튼)을 Pixel 5 에뮬레이션으로 재검증(8단계). 충돌은 6단계의 벽 떨림 검사·단위 테스트로 확인.
+
+### 수정 파일
+`src/render/{outline.ts(새),Quality.ts}`, `src/player/models/HeroModel.ts`, `src/enemies/{SmoothEnemyModels.ts,SmoothBossModels.ts}`, `src/dungeon/DungeonScene.ts`, `src/assets/ModelRegistry.ts`, `src/ui/HUD.ts`, `src/game/Game.ts`, `src/style.css`, `tests/outline.test.ts`(새), `package.json`, `CHANGELOG.md`, `CLAUDE.md`, `GAME_GUIDE.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 246개·빌드). 새 테스트: 보통 메시에만 껍데기(발광·반투명·작은 메시 제외, 기하 공유, 중복 방지), 모드별 보이기/숨기기, 모드 none 에서 새 적은 숨김.
+- Playwright `smoke43`(Pixel 5 가로): 조이스틱 위로 끌면 전진, 근접 버튼 탭 공격, 높음 화질 외곽선 전부 보임 → 중간은 주인공만 → 낮음은 없음, 낮음에서 새 적도 숨김, 림 라이트가 태양 반대편, 로딩 표시 보이기/숨기기. `shots39/40` 로 외곽선 화면 확인.
+
+### 알려진 문제
+- 외곽선은 메시마다 그리기 호출이 하나 더 든다(주인공 +약 150, 적 1마리 +20~30). 낮음 화질은 끄고, 자동 화질이 낮추면 함께 꺼진다.
+
 ## 2026-10-24 · v1.28.0 · 지시서 6~7단계: 이동 가속·감속 + 회전·카메라 앞보기
 
 ### 변경 내용

@@ -86,6 +86,12 @@ class ModelRegistry {
   private loader: GLTFLoader | null = null;
   /** 플레이어 모델이 준비되면 알림 (Game 이 교체) */
   onPlayerReady: (() => void) | null = null;
+  /** 로딩 진행 (로딩 표시용): 전체·끝난 수·실패한 파일 */
+  readonly progress = { total: 0, done: 0, failed: [] as string[] };
+  /** 진행이 바뀔 때 알림 */
+  onProgress: (() => void) | null = null;
+  /** 같은 파일을 여러 키가 쓰면 한 번만 받는다 */
+  private readonly fileCache = new Map<string, Promise<GLTF>>();
 
   get loadedKeys(): string[] {
     return [...this.models.keys()];
@@ -110,6 +116,11 @@ class ModelRegistry {
       return;
     }
     const jobs: Array<Promise<void>> = [];
+    const count = (this.manifest.player ? 1 : 0) + Object.values(this.manifest.enemies).filter(Boolean).length + Object.values(this.manifest.bosses).filter(Boolean).length;
+    this.progress.total = count;
+    this.progress.done = 0;
+    this.progress.failed.length = 0;
+    this.onProgress?.();
     if (this.manifest.player) jobs.push(this.loadOne('player', this.manifest.player, root));
     for (const [k, e] of Object.entries(this.manifest.enemies)) if (e) jobs.push(this.loadOne(`enemy:${k}`, e, root));
     for (const [k, e] of Object.entries(this.manifest.bosses)) if (e) jobs.push(this.loadOne(`boss:${k}`, e, root));
@@ -119,12 +130,22 @@ class ModelRegistry {
   private async loadOne(key: string, e: ModelEntry, root: string): Promise<void> {
     this.loader ??= new GLTFLoader();
     try {
-      const gltf = await this.loader.loadAsync(`${root}models/${e.file}`);
+      const url = `${root}models/${e.file}`;
+      let job = this.fileCache.get(url);
+      if (!job) {
+        job = this.loader.loadAsync(url);
+        this.fileCache.set(url, job);
+      }
+      const gltf = await job;
       this.models.set(key, { gltf, entry: e });
       Logger.info(`모델 로드: ${key} ← ${e.file} (애니메이션 ${gltf.animations.length}개)`);
       if (key === 'player') this.onPlayerReady?.();
     } catch (err) {
+      this.progress.failed.push(e.file);
       Logger.warn(`모델 '${e.file}' 을(를) 읽지 못해 '${key}' 는 임시 모델을 씁니다.`, err);
+    } finally {
+      this.progress.done++;
+      this.onProgress?.();
     }
   }
 

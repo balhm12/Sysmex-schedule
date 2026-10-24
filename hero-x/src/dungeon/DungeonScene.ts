@@ -24,6 +24,7 @@ export class DungeonScene implements CollisionWorld {
 
   private readonly boxes: Box[] = [];
   private sun!: THREE.DirectionalLight;
+  private rim: THREE.DirectionalLight | null = null;
   private readonly disposables: Array<{ dispose(): void }> = [];
   private sky: Sky | null = null;
   private floorMat: THREE.MeshStandardMaterial | null = null;
@@ -99,6 +100,13 @@ export class DungeonScene implements CollisionWorld {
     const t = this.def.theme;
     const hemi = new THREE.HemisphereLight(new THREE.Color(t.skyColor), new THREE.Color(t.groundColor), 0.9);
     this.root.add(hemi);
+
+    // 림 라이트: 태양 반대쪽 위에서 비추는 하늘색 역광 → 둥근 캐릭터 윤곽이 배경에서 또렷해진다 (그림자 없음)
+    const rim = new THREE.DirectionalLight(new THREE.Color(t.skyColor).lerp(new THREE.Color(0xffffff), 0.3), 0.55);
+    rim.name = 'rimLight';
+    this.rim = rim;
+    this.root.add(rim);
+    this.root.add(rim.target);
 
     this.sun = new THREE.DirectionalLight(new THREE.Color(t.sunColor), t.sunIntensity);
     // 하늘이 있으면 태양 방향을 하늘의 태양과 맞춘다 (updateLight 에서 위치를 따라가며 유지)
@@ -475,6 +483,11 @@ export class DungeonScene implements CollisionWorld {
   updateLight(target: THREE.Vector3): void {
     this.sun.position.set(target.x + this.sunDir.x * 30, Math.max(10, this.sunDir.y * 30), target.z + this.sunDir.z * 30);
     this.sun.target.position.copy(target);
+    if (this.rim) {
+      // 림 라이트는 태양 반대쪽(뒤)에서 낮게
+      this.rim.position.set(target.x - this.sunDir.x * 30, 14, target.z - this.sunDir.z * 30);
+      this.rim.target.position.copy(target);
+    }
   }
 
   getObstacleBoxes(): Box[] {

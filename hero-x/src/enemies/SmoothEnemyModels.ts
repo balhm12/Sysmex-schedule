@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { EnemyTypeConfig } from '../game/GameConfig';
 import { glow, pbr } from '../render/materials';
+import { addOutlines } from '../render/outline';
 import { add, blob, capsule, cone, disposeTree, rbox, ring, sphere, strand } from '../render/shapes';
 import type { EnemyModel, EnemyModelState } from './EnemyModels';
 
@@ -40,6 +41,8 @@ function palette(def: EnemyTypeConfig, opts: { metal?: boolean } = {}): Palette 
 
 /** 공통 마무리: 사망·피격·갱신 틀 */
 function finish(root: THREE.Group, r: number, flashMats: THREE.MeshStandardMaterial[], animate: Animate): EnemyModel {
+  root.updateMatrixWorld(true);
+  addOutlines(root, Math.max(0.015, r * 0.035), 'enemy', r * 0.08);
   let flashTimer = 0;
   let t = Math.random() * 10;
   return {

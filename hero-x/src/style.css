@@ -1449,3 +1449,21 @@ body {
   0%, 20% { transform: rotate(0deg); }
   60%, 100% { transform: rotate(90deg); }
 }
+
+/* ---- 모델 로딩 표시 (v1.29.0) ---- */
+.hud-loading {
+  position: absolute;
+  left: 50%;
+  top: 64px;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #dfe7ff;
+  background: rgba(10, 14, 28, 0.7);
+  border: 1px solid rgba(92, 242, 216, 0.35);
+  pointer-events: none;
+}
+.hud-loading[hidden] {
+  display: none;
+}

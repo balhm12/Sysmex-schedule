@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { EquipmentLooks } from '../EquipmentVisuals';
 import { fabricTexture } from '../../render/fabricTexture';
 import { glow, pbr } from '../../render/materials';
+import { addOutlines } from '../../render/outline';
 import { add, blob, capsule, rbox, ring, sphere, strand } from '../../render/shapes';
 import { createHeroAnimator, createHeroEquipment, disposeModelTree, type HeroRig } from './heroAnimator';
 import type { PlaceholderColors, PlayerModel } from './PlaceholderModel';
@@ -248,6 +249,9 @@ export function createHeroModel(colors: PlaceholderColors): PlayerModel {
   head.add(facePlane);
   root.add(head);
 
+  // 툰 외곽선 (화질에 따라 보이기/숨기기)
+  root.updateMatrixWorld(true);
+  addOutlines(root, 0.022, 'hero');
   const rig: HeroRig = { root, torso, head, legL, legR, armL, armR, hurtMats: [M.skin, M.coat, M.coatLight, M.coatDark] };
   const animate = createHeroAnimator(rig);
   const equip = createHeroEquipment(rig, sword, new THREE.Vector3(0, -0.29, 0.02), 0.5, new THREE.Box3(new THREE.Vector3(-0.32, 0.6, -0.22), new THREE.Vector3(0.32, 1.12, 0.22)));

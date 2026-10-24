@@ -80,6 +80,7 @@ hero-x/
 │  │  ├─ groundTexture.ts  노이즈 바닥 색 지도·노멀맵 생성 (파일 없음)
 │  │  ├─ fabricTexture.ts  캐릭터용 천·가죽 질감 캔버스 텍스처(캐시, 캔버스 없으면 null)
 │  │  ├─ shapes.ts         매끈한 카툰 모델 공용 도형(add/rbox/sphere/capsule/ring/cone/blob/strand/disposeTree)
+│  │  ├─ outline.ts        툰 외곽선(뒤집힌 껍데기): addOutlines / applyOutlineMode / setOutlineMode (화질 프리셋 outline, 테스트 대상)
 │  │  └─ surfaceTexture.ts 벽·장애물 표면 6종(hedge/rock/steel/ice/wood/brick) 색 지도·노멀맵 + 월드 좌표 UV 셰이더 패치 (surfaceSample 테스트 대상)
 │  ├─ cinematic/
 │  │  ├─ introTimeline.ts  ★ 인트로 연출 시간표: 시각 → 카메라 위치·줌(fov)·시간 배율·주인공 행동·자막 (순수 함수, 테스트 대상)
@@ -215,6 +216,7 @@ hero-x/
 - 전투 효과: `Effects.slash`(공중 검 궤적, 근접 공격마다), `Effects.pillar`(빛 기둥: 레벨 업·보스 등장), `Effects.shockwave/marker/burst`. 보스 등장은 `spawnBoss` 에서 기둥+충격파+`hitStopTime`(짧은 느려짐). 희귀 이상 장비 드롭의 빛 기둥은 `LootSystem.RARE_GLOW`.
 - 적 우회 이동: `Enemy.update` 가 추적 중 `GameConfig.enemies.detour.interval` 마다 `steerAround(pos, dir, radius, boxes, lookAhead, 먼저 볼 쪽, 플레이어 위치)` 를 불러 앞이 막히면 좌우로 꺾은 방향 중 '그 끝에서 플레이어가 곧장 보이는' 것을 고른다(A* 아님, 울타리 모서리 탈출용). 테스트에서 비교하려면 `import('/src/game/GameConfig.ts')` 로 `detour.lookAhead` 를 0 으로 두면 꺼진다. `__heroX.debugSpawnEnemy(type, x, z)` 로 적을 원하는 자리에 둔다.
 - 벽·장애물 외형: 던전별 벽 표면은 `DungeonScene.wallSurface()`(숲 hedge / 동굴 rock / 요새 steel / 얼음 ice), 텍스처는 `surfaceTexture.createSurfaceTextures`(종류·색별 캐시 `surface()`), 인스턴스 벽은 `useWorldSpaceUv` 로 무늬 크기 고정. 벽 위 장식은 `buildWallTops`(덤불·고드름/눈·수정·난간/경고등, InstancedMesh). 장애물은 `makeObstacle` 의 `kind` 분기(crate/pillar/ruin/hedge). 새 던전 테마를 넣으면 `wallSurface` 와 `buildWallTops` 분기를 추가한다.
+- 툰 외곽선: 코드 모델을 다 만든 뒤 `root.updateMatrixWorld(true); addOutlines(root, 두께, 'hero'|'enemy')`. 화질 프리셋 `outline` 으로 모드가 정해지고 `Game.applySettings` 가 `applyOutlineMode(scene)` 를 부른다. 림 라이트는 `DungeonScene.buildLights` 의 `rim`(태양 반대편, `updateLight` 에서 따라감). 모델 로딩 표시는 `modelRegistry.onProgress` → `hud.setLoading`, 실패는 배너.
 - 그래픽: 재질은 반드시 `render/materials.ts` 의 `pbr()/glow()` 로 만든다(블룸은 emissiveIntensity ≥ 1.5 에 걸림). 던전 분위기(하늘·노출·바닥)는 `DungeonDefs.theme` 수치만 바꾼다. 후처리 켜고 끄기는 `RenderPipeline.setQuality`, 그림자 해상도는 `DungeonScene.applyQuality`.
 - 게임 루프: `Game.frame()` 이 흐른 시간을 `performance.maxStep`(0.05초) 단위의 `simulate(dt)` 로 나눠 돌리고 한 번 그린다. 시간에 따라 움직이는 로직은 `simulate` 안에, 화면 갱신·FPS 측정은 `frame` 에 둔다.
 - 성능(그리기 호출): 복셀 모델은 `mergeStaticMeshes(root)` 가 리그 뒤에 같은 관절·같은 재질 값(`materialKey`, 색 제외 → 색은 정점 색으로 굽는다)의 메시를 합친다(플레이어 209 → 32). 합친 뒤 발광 재질은 `collectEmissiveMaterials` 로 다시 모은다. 던전 소품은 `Decor` 가 `mergeStaticProps` 로 전체를 재질 값별로 합친다 — 매 프레임 바뀌는 메시(불꽃·등불)는 `userData.animated = true` 로 표시해야 제외된다. 메시 이름으로 부품을 찾는 코드는 `meshHasPart(mesh, /^eye/)` 처럼 써야 합친 뒤에도 동작한다. 측정은 `getDebugState().renderInfo`(스크래치 `perf-quality.cjs`).
@@ -271,6 +273,6 @@ hero-x/
 6. 콘텐츠 확장 ✅ (v0.6.0-a.1 던전 3개·던전 선택·새 적·새 장비 / v0.6.1 모바일 / v0.6.2 보스별 패턴·외형)
 7. 품질 개선 ✅ (v0.7.0-a.1 효과음·음악 / v0.7.0-b.1 얼굴 사진·glb 교체 구조 / v1.0.0 자동 화질·오류 처리·문서)
 8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장(동굴·요새 여정형, 로봇 공장 테마) ✅ v1.11.0 / 적 10종 ✅ v1.12.0 / 메시 합치기 ✅ v1.13.0 / 네 번째 던전 얼음 봉우리 ✅ v1.14.0 / 소품 합치기·구역 음악 분위기 ✅ v1.15.0 / 벽·장애물 그래픽 ✅ v1.16.0 / 보스 등장 팝업 ✅ v1.17.0 / 앱처럼 설치(PWA) ✅ v1.18.0 / 근접 3단 콤보·원거리 연출 ✅ v1.19.0 / 장비 자동 장착·무기별 공격 방식·장비 외형 ✅ v1.20.0
-9. 캐릭터 리뉴얼·애니메이션 개선(지시서 2차): 1~3 분석·모델 확보(KayKit CC0)·교체 호환 ✅ v1.21.0 / 둥근 복셀 아들 캐릭터로 교체 ✅ v1.22.0 / 매끈한 카툰 치비(코드 모델) ✅ v1.23.0 / 코드 모델 고급화(머리카락 결·네모 안경·후드 코트·질감) ✅ v1.24.0 / 적·보스 전체 매끈한 스타일 ✅ v1.25.0 / 넓은 화면 시야 좁히기·가로 전용 ✅ v1.26.0 / 4~5 애니메이션 상태·공격 동기화 ✅ v1.27.0 / 6~7 이동 가속·감속·회전·카메라 앞보기 ✅ v1.28.0 / 8~9 충돌·모바일·로딩 표시 / ② 툰 외곽선·림 라이트
+9. 캐릭터 리뉴얼·애니메이션 개선(지시서 2차): 1~3 분석·모델 확보(KayKit CC0)·교체 호환 ✅ v1.21.0 / 둥근 복셀 아들 캐릭터로 교체 ✅ v1.22.0 / 매끈한 카툰 치비(코드 모델) ✅ v1.23.0 / 코드 모델 고급화(머리카락 결·네모 안경·후드 코트·질감) ✅ v1.24.0 / 적·보스 전체 매끈한 스타일 ✅ v1.25.0 / 넓은 화면 시야 좁히기·가로 전용 ✅ v1.26.0 / 4~5 애니메이션 상태·공격 동기화 ✅ v1.27.0 / 6~7 이동 가속·감속·회전·카메라 앞보기 ✅ v1.28.0 / 8~9 모바일·로딩 표시 + ② 툰 외곽선·림 라이트 ✅ v1.29.0
 
 각 단계는 완료 기준을 만족하고 기존 기능이 정상일 때만 다음 단계로 넘어간다.

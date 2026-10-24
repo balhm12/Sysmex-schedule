@@ -114,6 +114,20 @@ export class HUD {
     this.prompt.hidden = text === '';
   }
 
+  private loadingEl: HTMLDivElement | null = null;
+
+  /** 모델 로딩 진행 표시 (빈 문자열이면 숨김) */
+  setLoading(text: string): void {
+    if (!this.loadingEl) {
+      this.loadingEl = document.createElement('div');
+      this.loadingEl.className = 'hud-loading';
+      this.loadingEl.hidden = true;
+      this.root.parentElement?.appendChild(this.loadingEl);
+    }
+    if (this.loadingEl.textContent !== text) this.loadingEl.textContent = text;
+    this.loadingEl.hidden = text === '';
+  }
+
   update(data: { hp: number; maxHp: number; enemies: number; kills: number; score: number; level: number; xp: number; xpToNext: number; gold: number }): void {
     if (data.level !== this.last.level) {
       this.levelText.textContent = String(data.level);

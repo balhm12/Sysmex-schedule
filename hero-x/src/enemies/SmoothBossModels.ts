@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { EnemyTypeConfig } from '../game/GameConfig';
 import type { BossPattern } from './BossAI';
 import { glow, pbr } from '../render/materials';
+import { addOutlines } from '../render/outline';
 import { add, blob, capsule, disposeTree, rbox, ring, sphere, strand } from '../render/shapes';
 import type { EnemyModel, EnemyModelState } from './EnemyModels';
 
@@ -128,6 +129,8 @@ export function createSmoothBossModel(def: EnemyTypeConfig, kind: SmoothBossKind
   ringMesh.rotation.x = -Math.PI / 2;
   ringMesh.castShadow = false;
 
+  root.updateMatrixWorld(true);
+  addOutlines(root, Math.max(0.02, r * 0.03), 'enemy', r * 0.1);
   let flashTimer = 0;
   let t = 0;
   return {
