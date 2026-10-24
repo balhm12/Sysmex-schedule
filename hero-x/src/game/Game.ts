@@ -23,6 +23,8 @@ import { PlayerStats } from '../player/PlayerStats';
 import { Player } from '../player/Player';
 import { PlayerController } from '../player/PlayerController';
 import { createHeroModel } from '../player/models/HeroModel';
+import { verticalFovFor } from './cameraFov';
+import { OrientationGuard } from '../ui/OrientationGuard';
 import { faceFromFile, faceTexture, loadFace, saveFace } from '../player/FaceTexture';
 import { modelRegistry } from '../assets/ModelRegistry';
 import { IntroDirector } from '../cinematic/IntroDirector';
@@ -216,6 +218,7 @@ export class Game {
   private readonly loot: LootSystem;
   private chests: ChestSystem;
   private readonly inventoryUI: InventoryUI;
+  private readonly orientationGuard: OrientationGuard;
   readonly stats = new PlayerStats();
   readonly equipment = new EquipmentSystem();
   /** 장비 화면이 열려 게임이 멈춘 상태 */
@@ -441,6 +444,7 @@ export class Game {
         },
       },
     });
+    this.orientationGuard = new OrientationGuard(uiRoot);
     this.inventoryUI = new InventoryUI(uiRoot, this.equipment, {
       onChange: () => {
         this.applyStats();
@@ -604,6 +608,8 @@ export class Game {
     if (this.touch.isFloating !== s.floatingJoystick) this.touch.setFloating(s.floatingJoystick);
     this.touch.setLeftHanded(s.leftHanded);
     this.touch.setButtonScale(s.touchButtonScale);
+    this.orientationGuard.enabled = s.landscapeOnly;
+    this.orientationGuard.update();
     this.updateTouchVisibility();
     this.applyDifficultyToSpawner();
     this.applyStats();
@@ -637,6 +643,7 @@ export class Game {
 
   /** 새 게임: 레벨·골드·장비·기록을 모두 초기화하고 던전에 들어간다. 저장 데이터도 새로 쓴다 */
   newGame(): void {
+    this.orientationGuard.tryLock();
     if (!this.introSeen()) {
       this.startIntro('newGame');
       return;
@@ -802,8 +809,7 @@ export class Game {
     this.introOverlay.hide();
     this.input.setVirtualAxis(0, 0);
     this.input.releaseVirtual(GameConfig.controls.attackMelee[0]);
-    this.camera.fov = GameConfig.camera.fov;
-    this.camera.updateProjectionMatrix();
+    this.applyFov();
     this.cameraCtrl.resetFollow();
     this.skipGuardUntil = performance.now() + 400;
     if (this.introSet) {
@@ -1678,6 +1684,13 @@ export class Game {
     this.lastTime = now;
 
     if (this.contextLost) return;
+    // 세로/가로는 매 프레임 확인한다 (resize 이벤트가 늦거나 안 오는 기기가 있다)
+    if (this.orientationGuard.update()) {
+      // 세로 화면 안내 중: 시뮬레이션을 멈추고 그리기만 (돌리면 바로 이어진다)
+      this.lastTime = now;
+      this.pipeline.render(this.scene, this.camera);
+      return;
+    }
     if (this.mode === 'intro' && this.intro) {
       // 인트로: 연출 시간 배율(슬로 모션)을 곱해 시뮬레이션하고, 연출기가 카메라·자막을 적용한 뒤 그린다
       let rem = elapsed * this.intro.timeScale;
@@ -1858,8 +1871,15 @@ export class Game {
     const h = this.canvas.clientHeight || window.innerHeight;
     this.pipeline.setSize(w, h);
     this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
+    this.applyFov();
+    this.orientationGuard.update();
   };
+
+  /** 화면 비율에 맞는 세로 fov (넓은 화면에서는 가로 시야 상한으로 좁힌다). 인트로 중에는 연출기가 fov 를 다루므로 건드리지 않는다 */
+  private applyFov(): void {
+    if (this.mode !== 'intro') this.camera.fov = verticalFovFor(this.camera.aspect, GameConfig.camera.fov, GameConfig.camera.maxHorizontalFov);
+    this.camera.updateProjectionMatrix();
+  }
 }
 
 /** 저장 시각을 '2026-10-23 14:05' 처럼 보여준다 */

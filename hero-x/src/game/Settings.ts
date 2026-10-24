@@ -25,6 +25,8 @@ export interface UserSettings {
   cameraDistance: number;
   /** 터치 조작 표시 (가상 조이스틱·버튼) + 가까운 적 자동 조준. 기본값은 터치 기기 여부로 정한다 */
   touchControls: boolean;
+  /** 가로 전용: 터치 기기에서 세로로 들면 '가로로 돌려 주세요' 안내 (앱 설치 시 가로 고정) */
+  landscapeOnly: boolean;
   /** 조이스틱이 누르는 자리에 나타남 (false: 왼쪽 아래 고정) */
   floatingJoystick: boolean;
   /** 왼손 모드: 버튼을 왼쪽에 */
@@ -72,6 +74,7 @@ export const SETTING_GROUPS = ['게임', '소리', '전투 수치', '화면'] as
 export const SETTING_DEFS: SettingDef[] = [
   { key: 'difficulty', kind: 'choice', group: '게임', label: '난이도', description: '적의 체력·공격력·속도 배율. 바꾸면 던전을 처음부터 다시 시작합니다.', options: difficultyLevels().map((lv) => ({ value: lv, label: getDifficultyPreset(lv).label })) },
   { key: 'cameraDistance', kind: 'range', group: '게임', label: '카메라 거리', description: '1.0 이 기본. 멀리 두면 넓게 보이고 가까우면 캐릭터가 크게 보입니다.', min: 0.6, max: 1.6, step: 0.1, unit: '×' },
+  { key: 'landscapeOnly', kind: 'toggle', group: '게임', label: '가로 전용', description: '휴대폰을 세로로 들면 가로로 돌리라는 안내를 띄우고 게임을 멈춥니다. 앱으로 설치하면 처음부터 가로로 고정됩니다.' },
   { key: 'touchControls', kind: 'toggle', group: '게임', label: '터치 조작', description: '화면에 조이스틱·버튼을 띄우고 가까운 적을 자동으로 조준합니다. 휴대폰·태블릿은 기본 켜짐.' },
   { key: 'floatingJoystick', kind: 'toggle', group: '게임', label: '조이스틱: 누르는 자리에', description: '켜면 버튼이 아닌 아무 곳이나 눌러 그 자리에서 끌면 움직입니다. 끄면 왼쪽 아래 고정 조이스틱.' },
   { key: 'leftHanded', kind: 'toggle', group: '게임', label: '왼손 모드', description: '공격·점프·회피 버튼을 왼쪽에, 고정 조이스틱을 오른쪽에 둡니다.' },
@@ -105,6 +108,7 @@ export function defaultSettings(): UserSettings {
     enemyHpMul: 1,
     cameraDistance: 1,
     touchControls: touch,
+    landscapeOnly: touch,
     floatingJoystick: true,
     leftHanded: false,
     touchButtonScale: 1,

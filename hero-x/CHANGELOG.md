@@ -2,6 +2,22 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.26.0 · 넓은 가로 화면 시야 좁히기 + 가로 전용 안내
+
+### 변경 내용
+- **가로 시야각 상한** `camera.maxHorizontalFov`(80°) + `src/game/cameraFov.ts`(새, 순수 함수 `verticalFovFor`): three.js 의 fov 는 세로 각도라 20:9 휴대폰 가로에서는 가로 시야가 90° 넘게 벌어져 캐릭터가 작게 보였다. 화면 비율이 넓으면 세로 fov 를 줄여 가로 시야가 상한을 넘지 않게 한다(20:9 에서 세로 50° → 약 41°, 16:9 이하는 그대로). `Game.resize`/인트로 종료 때 `applyFov()`.
+- **가로 전용** `src/ui/OrientationGuard.ts`(새): 터치 기기에서 세로로 들면 "휴대폰을 가로로 돌려 주세요" 덮개(회전하는 휴대폰 그림)를 띄우고 시뮬레이션을 멈춘다(돌리면 바로 재개). 설정 **가로 전용**(`landscapeOnly`, 터치 기기 기본 켬). 새 게임 시작 때 `screen.orientation.lock('landscape')` 을 시도(브라우저는 전체 화면이 아니면 거부하므로 조용히 넘어감). `manifest.webmanifest` 의 `orientation` 을 `landscape` 로 → **앱으로 설치하면 처음부터 가로 고정**.
+
+### 수정 파일
+`src/game/{cameraFov.ts(새),Game.ts,GameConfig.ts,Settings.ts}`, `src/ui/OrientationGuard.ts`(새), `public/manifest.webmanifest`, `src/style.css`, `tests/cameraFov.test.ts`(새), `package.json`, `CHANGELOG.md`, `CLAUDE.md`, `GAME_GUIDE.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 233개·빌드). 새 테스트: 4:3·16:10 은 기본 fov, 20:9 는 가로 시야가 상한과 같아짐, 비율이 커질수록 단조 감소, 잘못된 입력은 기본값.
+- Playwright `smoke41`(Pixel 5 터치 에뮬레이션): 20:9 가로에서 세로 fov 50 → 약 41, 가로 시야 = 80 → 세로로 돌리면 덮개 표시·프레임 정지·이동 입력 무시 → 가로 복귀 시 덮개 숨김·재개 → 설정을 끄면 세로여도 안 막음 → PC 16:9 는 기본 fov.
+
+### 알려진 문제
+- 브라우저(설치 안 한 상태)에서는 가로 '잠금'이 불가능해 안내만 한다. 설치한 앱은 가로로 고정된다. iOS Safari 는 설치해도 orientation 고정이 되지 않아 안내 덮개로 대응한다.
+
 ## 2026-10-24 · v1.25.0 · 적 전체를 매끈한 카툰 스타일로 (적 10종·로봇 외형 6종·보스 4종)
 
 ### 변경 내용

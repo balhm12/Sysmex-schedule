@@ -292,6 +292,8 @@ export interface GameConfigType {
   /** 카메라 (3인칭, 위에서 비스듬히 따라오는 던전 탐험 시점) */
   camera: {
     fov: number;
+    /** 가로 시야각 상한(도): 화면이 옆으로 길면(휴대폰 가로) 세로 fov 를 줄여 이 값을 넘지 않게 한다 → 넓은 화면 자동 줌인 */
+    maxHorizontalFov: number;
     /** 플레이어 기준 카메라 위치 (y: 높이, z: 뒤쪽 거리) */
     offset: { x: number; y: number; z: number };
     /** 카메라가 바라보는 지점의 높이 */
@@ -492,7 +494,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.25.0', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.26.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -825,6 +827,7 @@ export const GameConfig: GameConfigType = {
 
   camera: {
     fov: 50,
+    maxHorizontalFov: 80,
     offset: { x: 0, y: 13, z: 11 },
     lookAtHeight: 1.0,
     smoothing: 6,
@@ -1093,6 +1096,7 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'progression.levelUpHealRatio': { min: 0, max: 1 },
   'enemies.deathDuration': { min: 0, max: 5 },
   'camera.fov': { min: 30, max: 90 },
+  'camera.maxHorizontalFov': { min: 40, max: 150 },
   'camera.offset.y': { min: 3, max: 40 },
   'camera.offset.z': { min: 0, max: 40 },
   'camera.smoothing': { min: 0.5, max: 30 },
