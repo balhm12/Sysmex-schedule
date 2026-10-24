@@ -65,7 +65,8 @@ hero-x/
 │  │  ├─ materials.ts      PBR 재질 도우미 (pbr/metal/glow). 새 물체는 Lambert 대신 이걸 쓴다
 │  │  ├─ Quality.ts        화질 프리셋(낮음/중간/높음: 블룸·MSAA·그림자 해상도·바닥 선명도)
 │  │  ├─ RenderPipeline.ts 렌더러·톤매핑·환경광·후처리(블룸) 한 곳 관리. Game 은 pipeline.render() 만 호출
-│  │  └─ groundTexture.ts  노이즈 바닥 색 지도·노멀맵 생성 (파일 없음)
+│  │  ├─ groundTexture.ts  노이즈 바닥 색 지도·노멀맵 생성 (파일 없음)
+│  │  └─ surfaceTexture.ts 벽·장애물 표면 6종(hedge/rock/steel/ice/wood/brick) 색 지도·노멀맵 + 월드 좌표 UV 셰이더 패치 (surfaceSample 테스트 대상)
 │  ├─ cinematic/
 │  │  ├─ introTimeline.ts  ★ 인트로 연출 시간표: 시각 → 카메라 위치·줌(fov)·시간 배율·주인공 행동·자막 (순수 함수, 테스트 대상)
 │  │  └─ IntroDirector.ts  인트로 진행기: 몬스터 등장, 가상 입력으로 주인공 조종, 카메라·자막 적용, 처치 줌 펀치
@@ -102,7 +103,7 @@ hero-x/
 │  ├─ dungeon/
 │  │  ├─ journey.ts        ★ 여정형 던전 정의(구역·통로·문)와 계산: 격자 래스터화 → 울타리 벽 상자, BFS 연결 검증, 구역 판정 (순수 함수, 테스트 대상)
 │  │  ├─ ZoneSystem.ts     여정 진행기: 구역 진입 → 적 등장(enter 파도), 절반 이하 → 증원(half 파도), 전멸 → 클리어·문 열림, 보스 구역 → 보스 등장, 목표·진행도·빛 기둥 위치 (테스트 대상)
-│  │  ├─ DungeonScene.ts   던전 정의로 바닥·조명·벽·장애물 생성 (CollisionWorld 구현, 직사각형 범위, 여정 울타리 InstancedMesh·문 openGate, 외부 충돌 상자 추가/제거)
+│  │  ├─ DungeonScene.ts   던전 정의로 바닥·조명·벽·장애물 생성 (CollisionWorld 구현, 직사각형 범위, 여정 울타리 InstancedMesh + 테마 표면 재질 wallMaterial·벽 위 장식 buildWallTops, 종류별 장애물 모델 makeObstacle, 문 openGate, 외부 충돌 상자 추가/제거)
 │  │  ├─ Chest.ts          보물 상자 배치·근접 판정·열기 연출 (보상은 loot.rollChestLoot)
 │  │  ├─ decorLayout.ts    장식 배치 계산 (결정적 난수, 금지 영역 회피) + 여정 구역 테마 소품 배치 planZoneProps/ZONE_PROPS (테스트 대상)
 │  │  └─ Decor.ts          장식 소품·구역 테마 소품(횃불·모닥불 불꽃 일렁임 등)·인스턴싱 풀(바람 셰이더)·입자·경고등 (화질별 개수)
@@ -189,6 +190,7 @@ hero-x/
 - 여정 구역 테마 소품: 구역 종류별 `[소품, 개수, 자리(edge/corner/center)]` 는 `decorLayout.ZONE_PROPS`, 배치는 `planZoneProps`(걷는 칸 위, 적 등장·상자·장애물·문·시작·보스 자리 회피, 가운데는 비움). 새 소품 외형은 `Decor.makeProp` 에 분기 추가, 불꽃은 `addFlame`. `tests/decor.test.ts` 가 모든 구역에 소품이 있고 걷는 칸 안인지 검사한다.
 - 전투 효과: `Effects.slash`(공중 검 궤적, 근접 공격마다), `Effects.pillar`(빛 기둥: 레벨 업·보스 등장), `Effects.shockwave/marker/burst`. 보스 등장은 `spawnBoss` 에서 기둥+충격파+`hitStopTime`(짧은 느려짐). 희귀 이상 장비 드롭의 빛 기둥은 `LootSystem.RARE_GLOW`.
 - 적 우회 이동: `Enemy.update` 가 추적 중 `GameConfig.enemies.detour.interval` 마다 `steerAround(pos, dir, radius, boxes, lookAhead, 먼저 볼 쪽, 플레이어 위치)` 를 불러 앞이 막히면 좌우로 꺾은 방향 중 '그 끝에서 플레이어가 곧장 보이는' 것을 고른다(A* 아님, 울타리 모서리 탈출용). 테스트에서 비교하려면 `import('/src/game/GameConfig.ts')` 로 `detour.lookAhead` 를 0 으로 두면 꺼진다. `__heroX.debugSpawnEnemy(type, x, z)` 로 적을 원하는 자리에 둔다.
+- 벽·장애물 외형: 던전별 벽 표면은 `DungeonScene.wallSurface()`(숲 hedge / 동굴 rock / 요새 steel / 얼음 ice), 텍스처는 `surfaceTexture.createSurfaceTextures`(종류·색별 캐시 `surface()`), 인스턴스 벽은 `useWorldSpaceUv` 로 무늬 크기 고정. 벽 위 장식은 `buildWallTops`(덤불·고드름/눈·수정·난간/경고등, InstancedMesh). 장애물은 `makeObstacle` 의 `kind` 분기(crate/pillar/ruin/hedge). 새 던전 테마를 넣으면 `wallSurface` 와 `buildWallTops` 분기를 추가한다.
 - 그래픽: 재질은 반드시 `render/materials.ts` 의 `pbr()/glow()` 로 만든다(블룸은 emissiveIntensity ≥ 1.5 에 걸림). 던전 분위기(하늘·노출·바닥)는 `DungeonDefs.theme` 수치만 바꾼다. 후처리 켜고 끄기는 `RenderPipeline.setQuality`, 그림자 해상도는 `DungeonScene.applyQuality`.
 - 게임 루프: `Game.frame()` 이 흐른 시간을 `performance.maxStep`(0.05초) 단위의 `simulate(dt)` 로 나눠 돌리고 한 번 그린다. 시간에 따라 움직이는 로직은 `simulate` 안에, 화면 갱신·FPS 측정은 `frame` 에 둔다.
 - 성능(그리기 호출): 복셀 모델은 `mergeStaticMeshes(root)` 가 리그 뒤에 같은 관절·같은 재질 값(`materialKey`, 색 제외 → 색은 정점 색으로 굽는다)의 메시를 합친다(플레이어 209 → 32). 합친 뒤 발광 재질은 `collectEmissiveMaterials` 로 다시 모은다. 던전 소품은 `Decor` 가 `mergeStaticProps` 로 전체를 재질 값별로 합친다 — 매 프레임 바뀌는 메시(불꽃·등불)는 `userData.animated = true` 로 표시해야 제외된다. 메시 이름으로 부품을 찾는 코드는 `meshHasPart(mesh, /^eye/)` 처럼 써야 합친 뒤에도 동작한다. 측정은 `getDebugState().renderInfo`(스크래치 `perf-quality.cjs`).
