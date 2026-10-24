@@ -1,0 +1,1410 @@
+/* HERO X 기본 화면 스타일 (외부 폰트·외부 파일 없이 동작) */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #0e1424;
+  color: #eef2ff;
+  font-family: 'Noto Sans KR', 'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', system-ui, sans-serif;
+  overflow: hidden;
+}
+
+#app {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* 브라우저 막대를 뺀 실제 보이는 높이 (main.ts 가 visualViewport 로 갱신). 지원 전에는 100dvh */
+  height: var(--app-height, 100dvh);
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+/* UI 레이어: 기본적으로 클릭을 통과시키고, 실제 패널만 클릭을 받는다 */
+#ui-root {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* 조작 안내 화면 */
+.guide {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 14, 30, 0.45);
+  pointer-events: auto;
+}
+.guide[hidden] {
+  display: none;
+}
+.guide-panel {
+  width: min(92vw, 440px);
+  /* 작은 화면(휴대폰 가로)에서는 창 안에서 스크롤되게 */
+  max-height: calc(100% - 20px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  background: rgba(17, 23, 42, 0.94);
+  border: 1px solid rgba(238, 242, 255, 0.14);
+  border-radius: 18px;
+  padding: 24px 26px 22px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+.guide-eyebrow {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: #9fabc9;
+}
+.guide-title {
+  margin: 4px 0 2px;
+  font-size: 40px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+.guide-title em {
+  font-style: normal;
+  color: #ffc531;
+}
+.guide-sub {
+  margin: 0 0 18px;
+  color: #9fabc9;
+  font-size: 14px;
+}
+.guide-keys {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+.guide-keys li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+}
+.key {
+  display: inline-block;
+  min-width: 28px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #273055;
+  border: 1px solid rgba(238, 242, 255, 0.2);
+  border-bottom-width: 3px;
+  font-weight: 700;
+  text-align: center;
+  font-size: 13px;
+}
+.guide-note {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: #9fabc9;
+  line-height: 1.5;
+}
+.btn {
+  width: 100%;
+  padding: 14px;
+  border: 0;
+  border-radius: 12px;
+  background: #ff4f79;
+  color: #fff;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.btn:hover {
+  filter: brightness(1.08);
+}
+.btn:focus-visible {
+  outline: 3px solid #5cf2d8;
+  outline-offset: 2px;
+}
+
+/* 화면 아래 작은 상태 표시 */
+.hud {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(17, 23, 42, 0.8);
+  font-size: 12px;
+  color: #cdd6f4;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 오류 표시 상자 */
+.error-box {
+  position: absolute;
+  left: 50%;
+  top: 16px;
+  transform: translateX(-50%);
+  width: min(92vw, 640px);
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #3a1020;
+  border: 1px solid #ff4f79;
+  color: #ffd9e2;
+  font-size: 13px;
+  line-height: 1.5;
+  pointer-events: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.error-box b {
+  color: #fff;
+}
+
+/* ---- 전투 HUD (2단계) ---- */
+.hud-top {
+  position: absolute;
+  left: max(14px, env(safe-area-inset-left));
+  top: max(12px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.hud-top[hidden] {
+  display: none;
+}
+.hud-panel {
+  background: rgba(17, 23, 42, 0.82);
+  border: 1px solid rgba(238, 242, 255, 0.12);
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+.hud-hp {
+  min-width: 220px;
+}
+.hud-label {
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: #9fabc9;
+  margin-right: 8px;
+}
+.hud-value {
+  font-size: 14px;
+  color: #cdd6f4;
+  margin-top: 4px;
+}
+.hp-bar {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(238, 242, 255, 0.12);
+  overflow: hidden;
+  margin-top: 6px;
+}
+.hp-bar i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: #35c46a;
+  transition: width 0.15s;
+}
+.hp-bar i.low {
+  background: #ff4f79;
+}
+.hud-stats {
+  display: flex;
+  gap: 18px;
+  font-size: 14px;
+}
+.hud-stats > div {
+  word-break: keep-all; /* '얼음 봉우리' 같은 던전 이름이 글자 중간에서 끊기지 않게 */
+}
+.hud-stats b {
+  font-size: 18px;
+}
+/* 피격 순간 화면 테두리 번쩍임 */
+.hud-top.hit::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(255, 60, 90, 0) 45%, rgba(255, 60, 90, 0.5));
+  animation: hit-flash 0.35s ease-out forwards;
+}
+@keyframes hit-flash {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.result-panel {
+  text-align: center;
+}
+.result-panel .guide-title {
+  font-size: 34px;
+}
+
+/* ---- 피해 숫자 / 난이도 (2단계-c) ---- */
+.dmg-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.dmg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 900;
+  font-size: 20px;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+.dmg.player {
+  color: #ff6b90;
+  font-size: 24px;
+}
+.dmg.kill {
+  color: #ffd23f;
+  font-size: 18px;
+}
+.diff-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.diff-btn {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(238, 242, 255, 0.2);
+  background: #273055;
+  color: #eef2ff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.diff-btn[aria-pressed='true'] {
+  background: #ffc531;
+  color: #1a1f33;
+  border-color: transparent;
+}
+.diff-btn:focus-visible {
+  outline: 3px solid #5cf2d8;
+  outline-offset: 2px;
+}
+
+/* ---- 성장 표시 (3단계) ---- */
+.hud-xp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.xp-bar {
+  flex: 1;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(238, 242, 255, 0.12);
+  overflow: hidden;
+}
+.xp-bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: #5cf2d8;
+  transition: width 0.15s;
+}
+.dmg.heal {
+  color: #7dffb0;
+}
+.dmg.levelup {
+  color: #ffd23f;
+  font-size: 28px;
+}
+
+/* ---- 장비 화면 (3단계-b) ---- */
+.inv-panel {
+  width: min(94vw, 720px);
+  max-height: 88vh;
+  overflow: auto;
+}
+.inv-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.inv-head .guide-title {
+  font-size: 30px;
+  margin: 0;
+}
+.btn.small {
+  width: auto;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+.btn.ghost {
+  background: transparent;
+  border: 1px solid rgba(238, 242, 255, 0.25);
+  color: #cdd6f4;
+}
+.inv-h {
+  margin: 14px 0 6px;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: #9fabc9;
+}
+.inv-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.inv-row {
+  display: grid;
+  grid-template-columns: 88px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(238, 242, 255, 0.06);
+  font-size: 13px;
+}
+.inv-row .inv-stats {
+  grid-column: 2;
+  grid-row: 2;
+  color: #9fabc9;
+  font-size: 12px;
+}
+.inv-row .inv-name {
+  font-weight: 700;
+  grid-column: 2;
+  grid-row: 1;
+}
+.inv-row .inv-name small {
+  font-weight: 400;
+  color: #9fabc9;
+  margin-left: 4px;
+}
+.inv-row button {
+  grid-row: 1 / span 2;
+}
+.inv-slot {
+  color: #9fabc9;
+  font-size: 12px;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+.inv-row .inv-empty {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  padding: 0;
+}
+.inv-empty {
+  color: #9fabc9;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+.inv-stats .up {
+  color: #7dffb0;
+}
+.inv-stats .down {
+  color: #ff6b90;
+}
+.dmg.text {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* ---- 던전 (4단계) ---- */
+.hud-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 18%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(17, 23, 42, 0.85);
+  border: 1px solid #ffd23f;
+  color: #ffd23f;
+  font-weight: 700;
+  font-size: 15px;
+  pointer-events: none;
+}
+.hud-prompt[hidden] {
+  display: none;
+}
+
+/* ---- 보스 (4단계-b) ---- */
+.boss-bar {
+  position: absolute;
+  left: 50%;
+  top: 96px;
+  transform: translateX(-50%);
+  width: min(560px, 70vw);
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: rgba(17, 23, 42, 0.85);
+  border: 1px solid rgba(255, 79, 121, 0.5);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.boss-bar[hidden] {
+  display: none;
+}
+.boss-name {
+  font-weight: 900;
+  color: #ffd23f;
+}
+.boss-track {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(238, 242, 255, 0.12);
+  overflow: hidden;
+}
+.boss-track i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: #ff4f79;
+  transition: width 0.12s;
+}
+.boss-bar.phase2 .boss-track i {
+  background: #ff2d2d;
+}
+.banner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 28%;
+  text-align: center;
+  font-size: clamp(32px, 6vw, 56px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), 0 0 24px rgba(255, 210, 63, 0.5);
+  pointer-events: none;
+}
+.banner[hidden] {
+  display: none;
+}
+.banner.pop {
+  animation: banner-pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@keyframes banner-pop {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ---- 메인 메뉴 (4단계-c) ---- */
+.menu-panel {
+  width: min(92vw, 420px);
+}
+.menu-list {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 14px;
+}
+.btn.secondary {
+  background: #273055;
+  color: #eef2ff;
+  box-shadow: none;
+  font-size: 16px;
+  padding: 11px;
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.menu-confirm {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 79, 121, 0.12);
+  border: 1px solid rgba(255, 79, 121, 0.4);
+  font-size: 13px;
+}
+.menu-confirm p {
+  margin: 0 0 8px;
+}
+.btns .btn {
+  width: auto;
+  min-width: 140px;
+}
+.result-panel .btns {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* 메인 메뉴: 진행 요약·저장 상태 */
+.menu-progress {
+  margin: 4px 0 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(92, 242, 216, 0.12);
+  color: #bffbf0;
+  font-size: 13px;
+}
+.menu-save {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* 설정 화면 */
+.settings-panel {
+  width: min(720px, 94vw);
+  max-height: 88vh;
+  overflow: auto;
+}
+.set-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 6px;
+}
+.set-group-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #5cf2d8;
+}
+.set-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.set-label {
+  font-weight: 700;
+  font-size: 15px;
+}
+.set-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
+}
+.set-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 220px;
+}
+.set-control input[type='range'] {
+  width: 160px;
+  accent-color: #5cf2d8;
+}
+.set-control output {
+  min-width: 44px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #bffbf0;
+}
+.toggle {
+  width: 46px;
+  height: 26px;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  position: relative;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s;
+}
+.toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.15s;
+}
+.toggle[aria-checked='true'] {
+  background: #19b39a;
+  border-color: #5cf2d8;
+}
+.toggle[aria-checked='true'] .toggle-knob {
+  left: 22px;
+}
+.toggle:focus-visible {
+  outline: 2px solid #5cf2d8;
+  outline-offset: 2px;
+}
+.set-foot {
+  margin-top: 14px;
+}
+
+/* 던전 선택 */
+.dungeons-panel {
+  width: min(720px, 94vw);
+  max-height: 88vh;
+  overflow: auto;
+}
+.dungeon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.dungeon-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.dungeon-card.locked {
+  opacity: 0.6;
+}
+.dungeon-index {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(92, 242, 216, 0.18);
+  color: #5cf2d8;
+  font-weight: 800;
+}
+.dungeon-name {
+  font-size: 17px;
+  font-weight: 800;
+}
+.dungeon-sub {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 2px;
+}
+.dungeon-meta {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 4px;
+}
+.dungeon-warn {
+  color: #ffb14f;
+}
+
+/* 창 층위: 메인 메뉴(10) < 결과(15) < 메뉴 위에 여는 창(장비·조작 안내·설정·던전 선택, 20) < 오류 상자 */
+.guide {
+  z-index: 20;
+}
+.guide.menu {
+  z-index: 10;
+}
+.guide.result {
+  z-index: 15;
+}
+
+/* ===== 터치 조작 (휴대폰·태블릿) ===== */
+#game-canvas {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.touch {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  z-index: 5;
+}
+.touch[hidden] {
+  display: none;
+}
+.touch-stick {
+  position: absolute;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  width: 136px;
+  height: 136px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  pointer-events: auto;
+  touch-action: none;
+  display: grid;
+  place-items: center;
+}
+.touch-knob {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(92, 242, 216, 0.85);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+.touch-buttons {
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  width: 190px;
+  height: 190px;
+  pointer-events: none;
+}
+.touch-btn {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(20, 28, 54, 0.7);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.touch-btn.down {
+  background: rgba(92, 242, 216, 0.75);
+  color: #0e1424;
+}
+.touch-melee {
+  right: 0;
+  bottom: 60px;
+  width: 84px;
+  height: 84px;
+  background: rgba(255, 79, 121, 0.55);
+}
+.touch-ranged {
+  right: 96px;
+  bottom: 10px;
+  background: rgba(91, 141, 255, 0.55);
+}
+.touch-jump {
+  right: 80px;
+  bottom: 110px;
+}
+.touch-interact {
+  right: 0;
+  bottom: 150px;
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 210, 63, 0.7);
+  color: #0e1424;
+}
+.touch-interact[hidden] {
+  display: none;
+}
+.touch-top {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right));
+  top: calc(max(12px, env(safe-area-inset-top)) + 56px);
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+.touch-small {
+  min-height: 44px;
+  min-width: 64px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(20, 28, 54, 0.7);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ===== 작은 화면 맞춤 ===== */
+@media (max-width: 900px), (max-height: 520px) {
+  .guide-panel {
+    width: min(94vw, 560px);
+    max-height: 92vh;
+    overflow: auto;
+    padding: 14px 16px;
+  }
+  .guide-title {
+    font-size: 24px;
+  }
+  .menu-list .btn {
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+  .hud-top {
+    left: max(10px, env(safe-area-inset-left));
+    top: max(8px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+    gap: 8px;
+  }
+  .hud-panel {
+    padding: 6px 10px;
+    border-radius: 12px;
+  }
+  .hud-stats {
+    gap: 12px;
+    font-size: 13px;
+  }
+  .hud-stats b {
+    font-size: 16px;
+  }
+  .boss-bar {
+    top: 72px;
+  }
+  .set-row {
+    grid-template-columns: 1fr;
+  }
+  .set-control {
+    justify-content: flex-start;
+    min-width: 0;
+  }
+  .dungeon-card {
+    grid-template-columns: auto 1fr;
+  }
+  .dungeon-card .btn {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+/* 세로로 들고 있을 때 안내 (터치 기기) */
+.rotate-hint {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 6;
+}
+@media (orientation: portrait) and (pointer: coarse) {
+  .rotate-hint {
+    display: block;
+  }
+}
+body.touch-mode .hud {
+  display: none;
+}
+
+/* 떠다니는 조이스틱: 버튼이 아닌 곳은 모두 이동 영역 */
+.touch-zone {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  touch-action: none;
+}
+.touch.floating .touch-zone {
+  pointer-events: auto;
+}
+.touch-stick,
+.touch-buttons,
+.touch-top {
+  z-index: 1;
+}
+/* 떠다니는 방식일 때 기본 자리의 조이스틱은 흐리게 보이는 안내일 뿐이고, 누르면 그 자리로 옮겨져 진해진다 */
+.touch.floating .touch-stick {
+  opacity: 0.35;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+.touch.floating .touch-stick.active {
+  opacity: 1;
+}
+
+/* 터치 버튼 크기 배율·회피 버튼·왼손 모드 */
+.touch {
+  --touch-scale: 1;
+}
+.touch-buttons {
+  transform: scale(var(--touch-scale));
+  transform-origin: bottom right;
+}
+.touch-dodge {
+  right: 150px;
+  bottom: 100px;
+  width: 64px;
+  height: 64px;
+  background: rgba(92, 242, 216, 0.35);
+}
+.touch-dodge.cooling {
+  border-style: dashed;
+}
+.touch.lefty .touch-buttons {
+  right: auto;
+  left: max(18px, env(safe-area-inset-left));
+  transform: scale(calc(var(--touch-scale) * -1), var(--touch-scale));
+  transform-origin: bottom left;
+}
+.touch.lefty .touch-btn {
+  transform: scaleX(-1); /* 글자가 거울상이 되지 않게 되돌림 */
+}
+.touch.lefty .touch-stick {
+  left: auto;
+  right: max(18px, env(safe-area-inset-right));
+}
+.touch.lefty .touch-top {
+  right: auto;
+  left: max(14px, env(safe-area-inset-left));
+}
+
+/* 브라우저 확대 방지(더블탭) + 당겨서 새로고침·바운스 방지 */
+html,
+body {
+  touch-action: manipulation;
+  overscroll-behavior: none;
+}
+
+/* 세로 화면(휴대폰 세로): 위쪽 정보 패널을 두 줄로 쌓고 글자를 줄인다 */
+@media (max-width: 600px) {
+  .hud-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    left: 10px;
+    right: 10px;
+    max-width: calc(100% - 20px);
+  }
+  .hud-panel {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 6px 10px;
+  }
+  .hud-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 13px;
+  }
+  .hud-stats > div {
+    white-space: nowrap;
+  }
+  .hud-stats b {
+    font-size: 14px;
+  }
+  .hud-hp .hud-xp-row {
+    flex-wrap: nowrap;
+  }
+  /* 터치 메뉴·장비 버튼은 패널 아래로 */
+  .touch-top {
+    top: auto;
+    bottom: max(230px, calc(env(safe-area-inset-bottom) + 230px));
+  }
+  .boss-bar {
+    top: 150px;
+    width: 92vw;
+  }
+}
+
+/* 얼굴 사진 설정 */
+.face-control {
+  gap: 10px;
+}
+#face-preview {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #5cf2d8;
+}
+#face-preview[hidden] {
+  display: none;
+}
+
+/* ---- 인트로 연출 ---- */
+.intro {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  pointer-events: none;
+  overflow: hidden;
+}
+.intro[hidden] {
+  display: none;
+}
+.intro-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  background: #05070f;
+  transition: height 0.9s ease;
+}
+.intro-bar.top {
+  top: 0;
+}
+.intro-bar.bottom {
+  bottom: 0;
+}
+.intro.on .intro-bar {
+  height: 9vh;
+}
+.intro-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 26%;
+  margin: 0;
+  text-align: center;
+  font-size: clamp(48px, 11vw, 120px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-shadow: 0 6px 0 rgba(0, 0, 0, 0.35), 0 0 40px rgba(92, 242, 216, 0.55);
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.intro-title em {
+  font-style: normal;
+  color: #5cf2d8;
+}
+.intro-title.on {
+  opacity: 1;
+  transform: scale(1);
+}
+.intro-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 14%;
+  margin: 0;
+  text-align: center;
+  font-size: clamp(16px, 2.6vw, 26px);
+  font-weight: 700;
+  color: #eef2ff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.intro-caption.on {
+  opacity: 1;
+}
+.intro-skip {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  pointer-events: auto;
+  z-index: 1;
+}
+
+/* ---- 보물 상자 수학 문제 ---- */
+.quiz-question {
+  margin: 10px 0 14px;
+  text-align: center;
+  font-size: clamp(28px, 6vw, 40px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #ffd23f;
+}
+.quiz-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.quiz-choice {
+  font-size: 22px;
+  font-weight: 800;
+  min-height: 52px;
+}
+.quiz-feedback {
+  min-height: 1.4em;
+  margin: 12px 0 4px;
+  text-align: center;
+  font-size: 15px;
+  color: #9fe3b1;
+}
+.quiz-feedback.wrong {
+  color: #ff9b9b;
+}
+.quiz.shake .guide-panel {
+  animation: quiz-shake 0.35s ease;
+}
+@keyframes quiz-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+/* 결과 화면: 다음 던전 카운트다운 */
+.result-next {
+  margin: 6px 0 10px;
+  text-align: center;
+  font-size: 15px;
+  color: #ffd23f;
+}
+
+/* 한국어 제목은 단어 중간에서 줄이 끊기지 않게, 결과 화면 버튼은 줄바꿈 허용 */
+.guide-title,
+.quiz-question {
+  word-break: keep-all;
+}
+.result-panel .btns {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* 휴대폰 가로 모드(높이 520px 이하): 체력 패널을 두 열로 납작하게, 상단 패널과 버튼 사이 간격 확보 */
+@media (max-height: 520px) and (orientation: landscape) {
+  .hud-hp {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 150px auto;
+    grid-template-areas:
+      'lab lvl'
+      'bar lvl'
+      'txt gold';
+    column-gap: 14px;
+    row-gap: 2px;
+    align-items: center;
+  }
+  .hud-hp > :nth-child(1) { grid-area: lab; }
+  .hud-hp > :nth-child(2) { grid-area: bar; margin-top: 0; }
+  .hud-hp > :nth-child(3) { grid-area: txt; margin-top: 0; }
+  .hud-hp > :nth-child(4) { grid-area: lvl; margin-top: 0; }
+  .hud-hp > :nth-child(5) { grid-area: gold; margin-top: 0; }
+  .hud-hp .xp-bar {
+    width: 70px;
+  }
+  /* 가로 휴대폰에서는 점수를 숨겨 한 줄로 (점수는 결과 화면에서 확인) */
+  .hud-stats {
+    white-space: nowrap;
+    gap: 10px;
+  }
+  .hud-stats > div:nth-child(5) {
+    display: none;
+  }
+  .touch-top {
+    top: calc(max(8px, env(safe-area-inset-top)) + 54px);
+  }
+  .touch-stick {
+    width: 120px;
+    height: 120px;
+  }
+  .touch-buttons {
+    bottom: max(10px, env(safe-area-inset-bottom));
+    right: max(10px, env(safe-area-inset-right));
+  }
+}
+/* 세로 모드: 회전 안내는 조작 버튼 위쪽에 (버튼과 겹치지 않게) */
+@media (orientation: portrait) and (pointer: coarse) {
+  .rotate-hint {
+    bottom: max(292px, calc(env(safe-area-inset-bottom) + 292px));
+    font-size: 13px;
+  }
+}
+
+/* ---- 여정 목표 표시 ---- */
+/* PC: 위쪽 패널 줄의 가운데 (체력 | 목표 | 던전 정보) */
+.hud-top .hud-hp {
+  order: 1;
+}
+.hud-objective {
+  order: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  padding: 6px 14px;
+  font-size: 14px;
+  align-self: flex-start;
+}
+.hud-top .hud-stats {
+  order: 3;
+}
+.hud-objective b {
+  color: #ffd23f;
+  font-size: 15px;
+}
+.hud-progress {
+  color: #9fabc9;
+  font-size: 13px;
+}
+.hud-objective[hidden] {
+  display: none;
+}
+/* 휴대폰 가로: 아래 가운데(조이스틱과 버튼 사이) */
+@media (max-height: 520px) and (orientation: landscape) {
+  .hud-objective {
+    /* .hud-top(위쪽 띠) 기준이 아니라 화면 기준으로 아래 가운데에 */
+    position: fixed;
+    left: 50%;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    max-width: 44vw;
+    white-space: normal;
+    text-align: center;
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+  .hud-objective b {
+    font-size: 14px;
+  }
+}
+/* 세로: 패널 아래 세 번째 줄 */
+@media (max-width: 600px) and (orientation: portrait) {
+  .hud-objective {
+    white-space: normal;
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+}
+
+/* 보스 등장 팝업 */
+.boss-intro .guide-panel {
+  width: min(94vw, 640px);
+}
+.boss-intro-head {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.boss-intro-portrait {
+  flex: 0 0 auto;
+  width: 150px;
+  height: 150px;
+  border-radius: 16px;
+  background: radial-gradient(circle at 50% 40%, rgba(92, 242, 216, 0.18), rgba(10, 14, 28, 0.9) 70%);
+  border: 1px solid rgba(238, 242, 255, 0.14);
+}
+.boss-intro-text {
+  min-width: 0;
+}
+.boss-intro-text .guide-title {
+  margin: 2px 0 4px;
+  color: #ffd23f;
+}
+.boss-intro-hp {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #ff9b9b;
+}
+.boss-intro-lore {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #dfe6ff;
+  word-break: keep-all;
+}
+.boss-intro-table {
+  width: 100%;
+  margin: 14px 0 6px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.boss-intro-table th,
+.boss-intro-table td {
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid rgba(238, 242, 255, 0.1);
+  word-break: keep-all;
+}
+.boss-intro-table th {
+  color: #9fb3ff;
+  font-weight: 700;
+  border-top: none;
+}
+.boss-intro-table td:first-child {
+  white-space: nowrap;
+  font-weight: 800;
+  color: #ffd23f;
+}
+.boss-intro-table td:last-child {
+  color: #9fe3b1;
+}
+@media (max-height: 520px) and (orientation: landscape), (max-width: 480px) {
+  .boss-intro-portrait {
+    width: 96px;
+    height: 96px;
+  }
+  .boss-intro-lore {
+    font-size: 13px;
+  }
+  .boss-intro-table {
+    font-size: 12px;
+  }
+}
+
+/* 앱 설치 안내 (iOS) */
+.menu-install-hint {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(92, 242, 216, 0.08);
+  border: 1px solid rgba(92, 242, 216, 0.25);
+  font-size: 13px;
+  line-height: 1.5;
+  color: #dfe6ff;
+  word-break: keep-all;
+}
+.menu-install-hint p {
+  margin: 0 0 8px;
+}
+
+/* ---- 근접 콤보 단계 표시 (v1.19.0) ---- */
+.combo {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translateX(-50%);
+  font-size: clamp(22px, 3.6vw, 34px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #bffcf2;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4), 0 0 18px rgba(92, 242, 216, 0.6);
+  pointer-events: none;
+}
+.combo[hidden] {
+  display: none;
+}
+.combo.finish {
+  color: #ffd23f;
+  font-size: clamp(30px, 5vw, 46px);
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), 0 0 26px rgba(255, 210, 63, 0.7);
+}
+.combo.pop {
+  animation: combo-pop 0.7s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+@keyframes combo-pop {
+  0% { transform: translateX(-50%) scale(0.5) translateY(10px); opacity: 0; }
+  25% { transform: translateX(-50%) scale(1.1); opacity: 1; }
+  70% { transform: translateX(-50%) scale(1); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1) translateY(-14px); opacity: 0; }
+}
+
+/* 장비 화면: 무기 공격 방식 꼬리표 (v1.20.0) */
+.inv-style {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: #bffcf2;
+  background: rgba(92, 242, 216, 0.14);
+  border: 1px solid rgba(92, 242, 216, 0.35);
+  vertical-align: middle;
+}
