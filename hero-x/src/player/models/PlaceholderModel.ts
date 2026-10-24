@@ -12,6 +12,8 @@ export interface PlayerModelState {
   attackKind?: 'melee' | 'ranged';
   /** 근접 콤보 단계(0부터): 0 가로 베기, 1 되돌려 베기, 2 이상 회전 베기 */
   attackStep?: number;
+  /** 이번 공격 동작의 전체 시간(초). 클립 속도를 맞출 때 쓴다 */
+  attackDuration?: number;
   /** 점프 중 */
   airborne: boolean;
   /** 쓰러진 상태 */

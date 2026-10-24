@@ -129,6 +129,7 @@ export class Player {
       attack: this.attackTimer > 0 ? 1 - this.attackTimer / this.attackDuration : null,
       attackKind: this.attackKind,
       attackStep: this.attackStep,
+      attackDuration: this.attackDuration,
       airborne: this.airborne,
       dead: this.health.isDead,
       dashing: this.dashing,

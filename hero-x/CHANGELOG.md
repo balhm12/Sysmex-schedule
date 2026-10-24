@@ -2,6 +2,25 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.21.0 · 플레이어 캐릭터 교체 1~3단계 (KayKit 기사 모델, 뼈대 애니메이션 재생기)
+
+### 변경 내용
+- **새 플레이어 모델** `public/models/player-knight.glb`: KayKit Adventurers Character Pack 1.0 의 Knight (CC0, Kay Lousberg). 원본 3,574 KB·76 클립 → `tools/prune_glb.mjs`(새, 외부 라이브러리 없는 .glb 정리 도구)로 게임용 18 클립만 남겨 1,133 KB. 삼각형 약 6,950, 텍스처 14 KB. 출처·라이선스는 `public/models/README.md`. 예전 복셀 캐릭터(`player.glb`)는 파일을 남겨 manifest 로 되돌릴 수 있다.
+- **뼈대 모델 재생기** `src/assets/SkinnedPlayerModel.ts`(새) + `src/assets/skinnedClips.ts`(새, 순수 함수): 클립 이름 → 역할(idle/walk/run/공격 3단계/원거리/회피/점프/피격/사망)을 정확한 이름 우선·키워드 차선으로 매핑. 상태 우선순위 사망 > 한 번 재생 동작(공격·회피·피격) > 공중 > 이동 > 정지, 전환은 crossfade(0.15초, 동작 시작은 0.08초). 걷기/달리기는 속도 기준(이동 속도의 55%)으로 고르고 클립 속도를 실제 속도에 맞춘다(발 미끄러짐 감소). 공격 클립은 휘두르기 시간×1.7 에 맞춰 빨리 감아 타격 판정과 동작이 맞고, 콤보 단계마다 다른 클립(가로 베기·사선 베기·회전). 회피는 Dodge_Forward 를 대시 시간에 맞춤, 피격은 Hit_A, 사망은 Death_A 를 멈춰 둠.
+- **장비 외형을 뼈에 부착**: 손 슬롯 뼈(`handslot.r`/`.l`, GLTFLoader 가 이름의 '.' 을 지우므로 정규화해 찾음)와 가슴 뼈(`chest`)에 바인드 자세 기준 행렬로 붙여 움직이는 중에 장착해도 제자리. 무기 방향은 모델에 들어 있는 기준 검 메시의 긴 축으로 맞춘다. 기본 검·방패는 `manifest.defaultParts`(`1H_Sword`, `Round_Shield`)만 보이고 장비를 들면 그 손의 것은 숨는다.
+- `ModelEntry.defaultParts`, `PlayerModelState.attackDuration`(Player 가 넘김). 복셀 리그 경로(`PartRig`)는 그대로.
+
+### 수정 파일
+`public/models/{player-knight.glb(새),manifest.json,README.md}`, `tools/prune_glb.mjs`(새), `src/assets/{SkinnedPlayerModel.ts(새),skinnedClips.ts(새),ModelRegistry.ts}`, `src/player/Player.ts`, `src/player/models/PlaceholderModel.ts`, `tests/skinnedClips.test.ts`(새), `package.json`, `CHANGELOG.md`, `CLAUDE.md`, `GAME_GUIDE.md`, `README.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 223개·빌드). 새 테스트: KayKit 이름 정확 매핑(2H_Melee_Idle 에 속지 않음), 키워드 이름 매핑·대체, 빈 목록.
+- Playwright `smoke37`: 모델 로드(뼈대 메시 6, 손 슬롯 변형 중 1H_Sword·Round_Shield 만 표시, 키 1.87) → W 이동 5.5 유닛·놓으면 멈춤 → 근접·원거리·회피·점프 동작 → 도끼/갑옷/활 획득 시 handslot.r / chest / handslot.l 에 부착, 기본 검·방패 숨김 → 피격·사망 처리. 오류 없음. 화면: 정지·달리기(망토)·공격·회피·장비·사망 확인. `smoke36`(장비)·`smoke35`(콤보) 회귀 통과.
+
+### 알려진 문제 (다음 단계에서)
+- 이동 가속·감속, 회전 보간, 카메라 추적 개선(4~7단계)은 아직 전과 같다. 피격 동작이 넉백과 겹치면 캐릭터가 화면 밖으로 밀릴 수 있다(카메라 단계에서 처리).
+- 장비 외형(코드 상자 모델)은 기사 손 크기에 맞춰 팔 길이×1.15 로 두었고 갑옷 판은 몸통 상자 전체를 덮어 조금 두껍다. 로딩 표시·실패 안내(9단계)는 아직 없다(실패 시 복셀/임시 모델로 동작).
+
 ## 2026-10-24 · v1.20.0 · 장비 자동 장착 + 무기별 공격 방식 + 장착 장비 외형
 
 ### 변경 내용

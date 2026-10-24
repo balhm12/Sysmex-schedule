@@ -28,8 +28,8 @@ describe('모델 manifest 검증 (normalizeManifest)', () => {
   });
   it('항목이 있으면 기본값(scale 1, offsetY 0, rotationY 0)을 채운다', () => {
     const m = normalizeManifest({ player: { file: 'player.glb' }, enemies: { rusher: { file: 'r.glb', scale: 0.5, rotationY: 180 }, tank: null }, bosses: { golem: { file: 'g.glb', offsetY: -0.1 } } });
-    expect(m.player).toEqual({ file: 'player.glb', scale: 1, offsetY: 0, rotationY: 0, rotationX: 0 });
-    expect(m.enemies.rusher).toEqual({ file: 'r.glb', scale: 0.5, offsetY: 0, rotationY: 180, rotationX: 0 });
+    expect(m.player).toEqual({ file: 'player.glb', scale: 1, offsetY: 0, rotationY: 0, rotationX: 0, defaultParts: [] });
+    expect(m.enemies.rusher).toEqual({ file: 'r.glb', scale: 0.5, offsetY: 0, rotationY: 180, rotationX: 0, defaultParts: [] });
     expect('tank' in m.enemies).toBe(false);
     expect(m.bosses.golem?.offsetY).toBe(-0.1);
     expect(normalizeManifest({ player: { file: 'p.glb', scale: -1 } }).player?.scale).toBe(1);

@@ -117,3 +117,11 @@ Claude Code 에 "캐릭터를 더 빠르게 해줘", "카메라를 더 가까이
 | 화면이 검고 "게임을 시작할 수 없습니다" | 최신 Chrome/Edge 사용, 브라우저 설정에서 하드웨어 가속 켜기 |
 
 자세한 내용은 `TROUBLESHOOTING.md` 를 보세요.
+
+## 8. 사용한 외부 에셋
+
+| 에셋 | 출처 | 라이선스 | 용량 | 비고 |
+| --- | --- | --- | --- | --- |
+| 플레이어 캐릭터 (기사) | [KayKit Adventurers Character Pack 1.0](https://kaylousberg.itch.io/kaykit-adventurers), Kay Lousberg | CC0 1.0 | 원본 3.5 MB → 1.1 MB (`tools/prune_glb.mjs` 로 클립 18개만) | `public/models/player-knight.glb`, 자세한 내용은 `public/models/README.md` |
+
+그 밖의 모델·텍스처·소리는 모두 이 저장소의 코드(`tools/*.py`, `src/render`, `src/audio`)로 만든 자체 제작물입니다.

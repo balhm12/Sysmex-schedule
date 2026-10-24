@@ -83,7 +83,10 @@ hero-x/
 │  ├─ ui/QuizUI.ts         보물 상자 수학 문제 창(오답이면 새 문제, 정답이면 상자 열림)
 │  ├─ ui/BossIntroUI.ts    보스 등장 팝업(초상화 렌더·별명·설명·패턴 표·싸운다 버튼, 열려 있는 동안 paused)
 │  ├─ game/bossIntro.ts    ★ 보스 설정 → 패턴 설명 문장(describeBossPatterns, 순수 함수, 테스트 대상)
-│  ├─ assets/ModelRegistry.ts  ★ public/models/manifest.json 의 .glb 를 읽어 플레이어·적·보스 모델로 교체 (없으면 임시 모델). rotationX/Y·scale·offsetY 보정
+│  ├─ assets/ModelRegistry.ts  ★ public/models/manifest.json 의 .glb 를 읽어 플레이어·적·보스 모델로 교체 (없으면 임시 모델). rotationX/Y·scale·offsetY·defaultParts 보정
+│  ├─ assets/SkinnedPlayerModel.ts 뼈대·클립 플레이어 모델(KayKit 기사): 상태 기계(사망>공격·회피·피격>공중>이동>정지)·crossfade·속도 동기화, 장비를 손 슬롯·가슴 뼈에 부착
+│  ├─ assets/skinnedClips.ts  클립 이름 → 역할 매핑(정확한 이름 우선, 키워드 차선) (순수 함수, 테스트 대상)
+├─ tools/prune_glb.mjs       .glb 에서 필요한 애니메이션만 남기고 버퍼를 정리해 용량을 줄인다 (KayKit 3.5 MB → 1.1 MB)
 │  ├─ assets/meshMerge.ts    복셀 .glb 의 상자 메시를 관절·재질별로 합쳐 그리기 호출을 줄인다 (리그 뒤에 호출, userData.parts 로 부품 이름 보존, meshHasPart) (테스트 대상)
 │  ├─ assets/PartRig.ts      클립 없는 .glb 의 부품 이름으로 관절을 만들어 동작 (플레이어: left_leg/right_arm/head/sword… 걷기·공격 / 적: wheel_/claw_/rotor_/wing_/barrel_/shield/piston_/antenna_/glow_/eye_) (classifyPart·classifyEnemyPart 테스트 대상)
 │  ├─ audio/
@@ -206,6 +209,7 @@ hero-x/
 - 게임 루프: `Game.frame()` 이 흐른 시간을 `performance.maxStep`(0.05초) 단위의 `simulate(dt)` 로 나눠 돌리고 한 번 그린다. 시간에 따라 움직이는 로직은 `simulate` 안에, 화면 갱신·FPS 측정은 `frame` 에 둔다.
 - 성능(그리기 호출): 복셀 모델은 `mergeStaticMeshes(root)` 가 리그 뒤에 같은 관절·같은 재질 값(`materialKey`, 색 제외 → 색은 정점 색으로 굽는다)의 메시를 합친다(플레이어 209 → 32). 합친 뒤 발광 재질은 `collectEmissiveMaterials` 로 다시 모은다. 던전 소품은 `Decor` 가 `mergeStaticProps` 로 전체를 재질 값별로 합친다 — 매 프레임 바뀌는 메시(불꽃·등불)는 `userData.animated = true` 로 표시해야 제외된다. 메시 이름으로 부품을 찾는 코드는 `meshHasPart(mesh, /^eye/)` 처럼 써야 합친 뒤에도 동작한다. 측정은 `getDebugState().renderInfo`(스크래치 `perf-quality.cjs`).
 - 성능: 자동 화질은 `Game.updateAutoQuality` 가 `GameConfig.performance` 간격으로 `decideQuality` 를 호출해 설정을 낮춘다(올리지 않음). WebGL 끊김은 `contextLost` 플래그로 프레임을 건너뛴다. 프레임 예외는 `loop` 의 try/catch 가 루프를 멈추고 저장한 뒤 다시 던진다(ErrorOverlay 표시).
+- 플레이어 모델(현재 KayKit 기사, CC0): 클립이 있는 .glb 는 `createSkinnedPlayerModel` 이 맡는다. 새 클립 역할을 넣으려면 `skinnedClips.ts` 의 CANDIDATES/ATTACK_STEPS 에 후보를 적고 `SkinnedPlayerModel.update` 의 우선순위에 끼운다. 한 번 재생 동작은 `playOnce(action, seconds)`(클립을 seconds 에 맞춰 빨리 감음) → `oneShotEnd` 가 지나면 이동/정지로 돌아간다. 장비 부착 자리는 `buildAttach`(바인드 자세 행렬 역행렬 저장, `attachToBone`). 뼈 이름은 GLTFLoader 가 '.' 을 지우므로 `norm()` 으로 비교. 같은 팩의 다른 캐릭터로 바꾸려면 `tools/prune_glb.mjs` 로 클립을 추린 뒤 manifest `player.file` 만 바꾼다. 외부 에셋은 CC0 만, 출처·라이선스·용량을 `public/models/README.md` 에 기록한다.
 - 모델 교체: `.glb` 는 `public/models/` + `manifest.json`. 생성 함수(`createEnemyModel`, `createBossModel`, `Game.swapPlayerModel`)가 `modelRegistry` 에서 먼저 찾고 없으면 임시 모델을 만든다. 적·보스는 다음 생성부터 적용. 얼굴 사진은 `PlayerModel.setFace`(임시 모델만 구현). 현재 `player.glb`(아들 복셀 캐릭터, `tools/make_player_glb.py` 로 생성, Y-up·정면 +Z)가 들어 있고, 클립이 없어 `PartRig` 가 부품 이름으로 관절을 만든다. 캐릭터 외형을 바꾸는 요청은 스크립트의 박스를 고치고 다시 생성한다(브라우저에서 모델만 보는 뷰어는 Playwright importmap 방식으로 three 를 vite 에서 불러 쓴다). 부품 이름 규칙을 바꾸면 `classifyPart` 와 `tests/models.test.ts` 를 함께 고친다. 'glb 없음' 경로의 브라우저 검증은 Playwright `page.route` 로 manifest 를 비워서 한다(저장소 manifest 파일을 고쳐 쓰지 않는다).
 - 음악 분위기: `soundDefs.MUSIC_MOODS`(normal/calm/tense/battle: 템포·드럼·멜로디·패드 배율)와 `moodForZone(kind, cleared)` 가 구역 종류를 분위기로 바꾼다. `Game` 이 현재 구역이 바뀌거나 정리될 때 `audio.setMood()` 를 부르고, 보스 등장·던전 시작은 normal 로 되돌린다. 새 구역 종류를 넣으면 `moodForZone` 에도 넣는다.
 - 소리: 새 효과음은 `soundDefs.SFX` 에 레시피(`parts` + `reverb/pitchJitter/gainJitter`)를 추가하고 `Game` 에서 `this.audio.play('이름')`. 음악은 `MUSIC` 에 트랙(베이스 16칸 = 멜로디·드럼 32칸, 코드는 베이스와 같은 길이, 첫 칸은 코드 필수)을 추가하고 `Game.dungeonMusic()` 매핑. 저장소에는 음원 파일을 두지 않고 합성으로 동작하되, 사용자가 `public/sounds/manifest.json` 에 적은 파일(CC0 등 라이선스 확인)은 같은 이름의 효과음·음악을 대신한다(`SoundRegistry` 가 받고 `AudioSystem` 이 디코딩, 없거나 실패하면 합성음). 소리는 첫 사용자 조작 뒤에만 난다(브라우저 제한) — 테스트에서는 키 입력 뒤 `audio.ready/voices` 를 보고, 파일 경로는 Playwright `page.route` 로 manifest 와 wav 를 가로채 검증한다(저장소 파일은 건드리지 않음).
@@ -255,5 +259,6 @@ hero-x/
 6. 콘텐츠 확장 ✅ (v0.6.0-a.1 던전 3개·던전 선택·새 적·새 장비 / v0.6.1 모바일 / v0.6.2 보스별 패턴·외형)
 7. 품질 개선 ✅ (v0.7.0-a.1 효과음·음악 / v0.7.0-b.1 얼굴 사진·glb 교체 구조 / v1.0.0 자동 화질·오류 처리·문서)
 8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장(동굴·요새 여정형, 로봇 공장 테마) ✅ v1.11.0 / 적 10종 ✅ v1.12.0 / 메시 합치기 ✅ v1.13.0 / 네 번째 던전 얼음 봉우리 ✅ v1.14.0 / 소품 합치기·구역 음악 분위기 ✅ v1.15.0 / 벽·장애물 그래픽 ✅ v1.16.0 / 보스 등장 팝업 ✅ v1.17.0 / 앱처럼 설치(PWA) ✅ v1.18.0 / 근접 3단 콤보·원거리 연출 ✅ v1.19.0 / 장비 자동 장착·무기별 공격 방식·장비 외형 ✅ v1.20.0
+9. 캐릭터 리뉴얼·애니메이션 개선(지시서 2차): 1~3 분석·모델 확보(KayKit CC0)·교체 호환 ✅ v1.21.0 / 4~5 애니메이션 상태·공격 동기화 / 6 이동 가속·감속 / 7 회전·카메라 / 8~9 충돌·모바일·로딩 표시
 
 각 단계는 완료 기준을 만족하고 기존 기능이 정상일 때만 다음 단계로 넘어간다.

@@ -4,6 +4,7 @@ import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { EnemyModel, EnemyModelState } from '../enemies/EnemyModels';
 import type { PlayerModel, PlayerModelState } from '../player/models/PlaceholderModel';
 import { buildEnemyPartRig, buildPartRig } from './PartRig';
+import { createSkinnedPlayerModel } from './SkinnedPlayerModel';
 import { buildArmorModel, buildWeaponModel, disposeVisual, type EquipmentLooks } from '../player/EquipmentVisuals';
 import { Logger } from '../utils/Logger';
 import { mergeStaticMeshes } from './meshMerge';
@@ -27,6 +28,8 @@ export interface ModelEntry {
   rotationY?: number;
   /** 위 방향 보정 (도). Z 가 위인 파일은 -90 */
   rotationX?: number;
+  /** 손 슬롯 뼈 아래 기본으로 보일 무기·방패 메시 이름 (KayKit 처럼 변형이 전부 들어 있는 모델용). 비우면 첫 번째 것만 */
+  defaultParts?: string[];
 }
 
 export interface ModelManifest {
@@ -49,6 +52,7 @@ function entry(v: unknown): ModelEntry | null {
     offsetY: typeof v.offsetY === 'number' ? v.offsetY : 0,
     rotationY: typeof v.rotationY === 'number' ? v.rotationY : 0,
     rotationX: typeof v.rotationX === 'number' ? v.rotationX : 0,
+    defaultParts: Array.isArray(v.defaultParts) ? v.defaultParts.filter((x): x is string => typeof x === 'string') : [],
   };
 }
 
@@ -230,39 +234,26 @@ function disposeTree(root: THREE.Object3D): void {
   });
 }
 
-/** glb 플레이어 모델: 상태에 맞는 애니메이션 재생 (idle / walk·run / attack / jump / die) */
+/**
+ * glb 플레이어 모델
+ * - 애니메이션 클립이 있으면(뼈대 모델) SkinnedPlayerModel 이 상태 기계·crossfade·장비 뼈 부착을 맡는다.
+ * - 클립이 없으면 부품 이름 리그(PartRig, 복셀 캐릭터)로 동작을 만든다.
+ */
 function createGltfPlayerModel(m: Loaded): PlayerModel {
   const { root, mixer, clips } = instantiate(m, 1.9);
   root.name = 'GltfHero';
-  const actions = {
-    idle: findClip(clips, 'idle', 'stand'),
-    walk: findClip(clips, 'run', 'walk'),
-    attack: findClip(clips, 'attack', 'slash', 'punch'),
-    jump: findClip(clips, 'jump'),
-    die: findClip(clips, 'die', 'death', 'dead'),
-  };
-  let current: THREE.AnimationAction | null = null;
-  const play = (clip: THREE.AnimationClip | null, loop = true) => {
-    if (!mixer || !clip) return;
-    const a = mixer.clipAction(clip);
-    if (current === a) return;
-    a.reset();
-    a.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
-    a.clampWhenFinished = !loop;
-    a.fadeIn(0.12).play();
-    current?.fadeOut(0.12);
-    current = a;
-  };
-  // 클립이 없으면 부품 이름으로 관절 리그를 시도한다 (복셀 캐릭터)
-  const rig = mixer ? null : buildPartRig(root);
-  if (rig) Logger.info('플레이어 모델: 부품 이름 리그로 걷기·공격 동작을 만듭니다.');
-  let mats = cloneMaterials(root);
-  // 복셀 상자들을 관절·재질별로 합쳐 그리기 호출을 줄인다 (리그가 관절을 나눈 뒤). 합친 뒤 재질 목록을 다시 모은다(피격 붉은 기 적용용)
-  if (!mixer) {
-    const st = mergeStaticMeshes(root);
-    mats = collectEmissiveMaterials(root);
-    Logger.info(`플레이어 모델 메시 합치기: ${st.before} → ${st.after}`);
+  if (mixer) {
+    const skinnedMats = cloneMaterials(root);
+    return createSkinnedPlayerModel(root, mixer, clips, skinnedMats, m.entry.defaultParts ?? []);
   }
+  // 클립이 없으면 부품 이름으로 관절 리그를 시도한다 (복셀 캐릭터)
+  const rig = buildPartRig(root);
+  if (rig) Logger.info('플레이어 모델: 부품 이름 리그로 걷기·공격 동작을 만듭니다.');
+  cloneMaterials(root);
+  // 복셀 상자들을 관절·재질별로 합쳐 그리기 호출을 줄인다 (리그가 관절을 나눈 뒤). 합친 뒤 재질 목록을 다시 모은다(피격 붉은 기 적용용)
+  const st = mergeStaticMeshes(root);
+  const mats = collectEmissiveMaterials(root);
+  Logger.info(`플레이어 모델 메시 합치기: ${st.before} → ${st.after}`);
   let t = 0;
   const gear: { melee: THREE.Group | null; ranged: THREE.Group | null; armor: THREE.Group | null } = { melee: null, ranged: null, armor: null };
   return {
@@ -297,13 +288,6 @@ function createGltfPlayerModel(m: Loaded): PlayerModel {
       for (const mt of mats) mt.emissive.setRGB(hurt * 0.6, 0, 0);
       if (rig) {
         rig.update(dt, s);
-      } else if (mixer) {
-        if (s.dead) play(actions.die ?? actions.idle, false);
-        else if (s.attack !== null && actions.attack) play(actions.attack, false);
-        else if (s.airborne && actions.jump) play(actions.jump, false);
-        else if (s.moving) play(actions.walk ?? actions.idle);
-        else play(actions.idle);
-        mixer.update(dt);
       } else {
         // 애니메이션이 없는 모델: 걷기 흔들림·공격 기울임만
         root.rotation.z = s.moving ? Math.sin(t * 10) * 0.05 : 0;
@@ -312,7 +296,6 @@ function createGltfPlayerModel(m: Loaded): PlayerModel {
       }
     },
     dispose() {
-      mixer?.stopAllAction();
       disposeTree(root);
     },
   };
