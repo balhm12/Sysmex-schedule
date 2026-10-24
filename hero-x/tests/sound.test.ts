@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeSoundManifest } from '../src/assets/SoundRegistry';
-import { MUSIC, MUSIC_NAMES, SFX, SFX_NAMES, chordAt, semitoneToFreq } from '../src/audio/soundDefs';
+import { MUSIC, MUSIC_MOODS, MUSIC_NAMES, SFX, SFX_NAMES, chordAt, moodForZone, semitoneToFreq } from '../src/audio/soundDefs';
 import { DUNGEONS } from '../src/game/DungeonDefs';
 
 describe('소리 정의 (soundDefs)', () => {
@@ -76,5 +76,24 @@ describe('음원 manifest 검증 (normalizeSoundManifest)', () => {
     expect(m.sfx.melee).toEqual({ files: ['a.ogg', 'b.ogg'], gain: 1 });
     expect(m.sfx.kill).toEqual({ files: ['k.ogg'], gain: 0.5 });
     expect(m.music.menu).toEqual({ files: ['m.ogg'], gain: 4 });
+  });
+});
+
+describe('음악 분위기 (MUSIC_MOODS / moodForZone)', () => {
+  it('분위기 값은 합리적인 범위이고, 구역 종류에 따라 다르게 고른다', () => {
+    for (const m of Object.values(MUSIC_MOODS)) {
+      expect(m.tempo).toBeGreaterThanOrEqual(0.7);
+      expect(m.tempo).toBeLessThanOrEqual(1.4);
+      expect(m.melody).toBeGreaterThan(0);
+      expect(m.pad).toBeGreaterThan(0);
+    }
+    expect(moodForZone('rest', false)).toBe('calm');
+    expect(MUSIC_MOODS[moodForZone('rest', false)].drums).toBe(false);
+    expect(moodForZone('ambush', false)).toBe('battle');
+    expect(moodForZone('arena', false)).toBe('battle');
+    expect(moodForZone('arena', true)).toBe('normal'); // 정리하면 평소로
+    expect(moodForZone('path', false)).toBe('tense');
+    expect(moodForZone('fight', false)).toBe('normal');
+    expect(MUSIC_MOODS.battle.tempo).toBeGreaterThan(MUSIC_MOODS.calm.tempo);
   });
 });

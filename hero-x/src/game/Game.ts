@@ -42,6 +42,7 @@ import { EMPTY_RECORDS, applySaveData, cloneRecords, hasProgress, serializeSave,
 import { browserStorage, clearSave, loadSave, writeSave } from '../save/SaveStorage';
 import { vibrate } from '../utils/haptics';
 import { AudioSystem } from '../audio/AudioSystem';
+import { moodForZone } from '../audio/soundDefs';
 import { decideQuality } from './AutoQuality';
 import { RenderPipeline } from '../render/RenderPipeline';
 import type { MusicName } from '../audio/soundDefs';
@@ -69,7 +70,7 @@ export interface GameDebugState {
   floatingJoystick: boolean;
   dash: { active: boolean; cooldown: number; invulnerable: number };
   aimRingVisible: boolean;
-  audio: { ready: boolean; track: string | null; voices: number; fileMusic: boolean; files: string[]; fetched: string[] };
+  audio: { ready: boolean; track: string | null; voices: number; fileMusic: boolean; files: string[]; fetched: string[] ; mood: string };
   contextLost: boolean;
   face: boolean;
   faceVisible: boolean;
@@ -145,6 +146,8 @@ export class Game {
   private restoreGraceUntil = 0;
   /** 히트 스톱: 남은 시간 동안 시뮬레이션 시간이 느리게 흐른다 */
   private hitStopTime = 0;
+  /** 음악 분위기를 마지막으로 정한 구역 (구역이 바뀔 때만 다시 정한다) */
+  private moodZone: string | null = null;
   /** 얼굴 사진 (data URL). null 이면 기본 얼굴 */
   private face: string | null = loadFace();
   /** 플레이어가 정식 glb 모델을 쓰는 중인지 */
@@ -924,6 +927,8 @@ export class Game {
     this.result.hide();
     this.hud.show();
     this.updateTouchVisibility();
+    this.moodZone = null;
+    this.audio.setMood('normal');
     this.audio.playMusic(this.boss && this.boss.alive ? 'boss' : this.dungeonMusic());
     this.lastTime = performance.now();
     this.canvas.focus();
@@ -1029,6 +1034,7 @@ export class Game {
         }
       },
       onCleared: (z: ZoneDef) => {
+        if (this.moodZone === z.id && !(this.boss && this.boss.alive)) this.audio.setMood(moodForZone(z.kind, true));
         if (this.mode !== 'play' || (z.waves?.length ?? 0) === 0) return;
         this.hud.showBanner(`${z.name} 정리 완료!`, 1400);
         this.audio.play('levelup');
@@ -1172,7 +1178,7 @@ export class Game {
       floatingJoystick: this.touch.isFloating,
       dash: { active: this.controller.dashing, cooldown: this.controller.dashCooldownRatio, invulnerable: this.player.health.invulnerable },
       aimRingVisible: this.aimRing.visible,
-      audio: { ready: this.audio.ready, track: this.audio.currentTrack, voices: this.audio.voices, fileMusic: this.audio.usingFileMusic, files: this.audio.fileKeys, fetched: soundRegistry.loadedKeys },
+      audio: { ready: this.audio.ready, track: this.audio.currentTrack, voices: this.audio.voices, fileMusic: this.audio.usingFileMusic, files: this.audio.fileKeys, fetched: soundRegistry.loadedKeys , mood: this.audio.currentMood },
       contextLost: this.contextLost,
       face: this.face !== null,
       faceVisible: this.player.faceVisible,
@@ -1390,6 +1396,7 @@ export class Game {
     this.spawner.addEnemy(this.boss);
     this.hud.showBanner(`${b.name} 등장!`);
     this.audio.play('bossAppear');
+    this.audio.setMood('normal');
     this.audio.playMusic('boss');
     this.cameraCtrl.shake(GameConfig.juice.slamShake.amp * 0.8, 0.8);
     const be = GameConfig.juice.bossEntrance;
@@ -1621,6 +1628,13 @@ export class Game {
     });
     if (this.zones && !this.ended && this.mode === 'play') {
       this.zones.update({ x: p.x, z: p.z });
+      // 구역이 바뀌면 음악 분위기도 바뀐다 (쉼터 차분 / 매복·큰 전투 격렬 / 길 긴장). 보스전 곡은 그대로
+      const cur = this.zones.snapshot().current;
+      if (cur !== this.moodZone) {
+        this.moodZone = cur;
+        const z = cur ? this.dungeonDef.journey?.zones.find((x) => x.id === cur) : undefined;
+        if (z && !(this.boss && this.boss.alive)) this.audio.setMood(moodForZone(z.kind, this.zones.isCleared(z.id)));
+      }
       const o = this.zones.objective;
       this.hud.setObjective(o.text, o.done, o.total);
       const b = this.zones.beacon;

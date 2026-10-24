@@ -1,8 +1,10 @@
 import * as THREE from 'three';
+import { Logger } from '../utils/Logger';
 import type { DungeonDef } from '../game/DungeonDefs';
 import type { Vec2 } from '../player/movement';
 import { glow, pbr } from '../render/materials';
 import { QUALITY_PRESETS, type QualityLevel } from '../render/Quality';
+import { mergeStaticProps } from '../assets/meshMerge';
 import { planDecor, planZoneProps, seededRandom, type DecorItem } from './decorLayout';
 
 /**
@@ -21,6 +23,9 @@ export class Decor {
   private particles: THREE.Points | null = null;
   private particleVel: Float32Array | null = null;
   private readonly lamps: THREE.MeshStandardMaterial[] = [];
+  /** 소품 묶음(합친 메시 포함) */
+  private props: THREE.Group | null = null;
+  private mergedProps: THREE.Mesh[] = [];
   /** 횃불·모닥불 불꽃 (일렁임) */
   private readonly flames: Array<{ mat: THREE.MeshStandardMaterial; mesh: THREE.Mesh; phase: number }> = [];
   private t = 0;
@@ -34,6 +39,14 @@ export class Decor {
     for (const it of plan.outside) this.root.add(this.makeProp(it));
     // 여정 던전: 구역 종류별 테마 소품 (출발 표지판·숲길 횃불·보물 터 폐허·쉼터 모닥불·보스 터 돌기둥 …)
     for (const it of planZoneProps(def, bossSpawn, 1)) this.root.add(this.makeProp(it));
+    // 움직이지 않는 소품은 재질별로 하나의 메시로 합친다 (불꽃·등불은 userData.animated 로 제외) → 그리기 호출 절감
+    this.props = new THREE.Group();
+    this.props.name = 'Props';
+    for (const ch of [...this.root.children]) this.props.add(ch);
+    this.root.add(this.props);
+    const st = mergeStaticProps(this.props);
+    this.mergedProps = st.merged;
+    Logger.info(`던전 장식 메시 합치기: ${st.before} → ${st.after}`);
     this.buildGrass(quality);
     this.buildParticles(quality);
   }
@@ -307,6 +320,12 @@ export class Decor {
       default:
         add(new THREE.SphereGeometry(0.3, 6, 5), pbr({ color: '#999999' }), 0.3);
     }
+    // 깜빡이는 등불(재질을 lamps 에 넣은 것)은 합치지 않는다
+    const lampSet = new Set<THREE.Material>(this.lamps);
+    g.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh && !Array.isArray(mesh.material) && lampSet.has(mesh.material)) mesh.userData.animated = true;
+    });
     return g;
   }
 
@@ -316,9 +335,11 @@ export class Decor {
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 8, 6), mat);
     mesh.position.y = y;
     mesh.scale.set(0.8, 1.3, 0.8);
+    mesh.userData.animated = true;
     parent.add(mesh);
     const core = new THREE.Mesh(new THREE.SphereGeometry(size * 0.5, 6, 5), glow('#ffe08a', 2.6));
     core.position.y = y + size * 0.2;
+    core.userData.animated = true;
     mesh.add(core);
     this.disposables.push(mesh.geometry, mat, core.geometry, core.material as THREE.Material);
     this.flames.push({ mat, mesh, phase: this.rnd() * Math.PI * 2 });
@@ -463,5 +484,10 @@ export class Decor {
     this.root.removeFromParent();
     for (const d of this.disposables) d.dispose();
     this.disposables.length = 0;
+    for (const m of this.mergedProps) {
+      m.geometry.dispose();
+      (m.material as THREE.Material).dispose();
+    }
+    this.mergedProps = [];
   }
 }

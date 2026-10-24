@@ -1,6 +1,6 @@
 import { soundRegistry } from '../assets/SoundRegistry';
 import { Logger } from '../utils/Logger';
-import { MUSIC, SFX, chordAt, semitoneToFreq, type MusicName, type MusicTrack, type SfxName, type SfxPart } from './soundDefs';
+import { MUSIC, SFX, chordAt, semitoneToFreq, type MusicName, type MusicTrack, type SfxName, type SfxPart, MUSIC_MOODS, type MusicMood } from './soundDefs';
 
 /**
  * 소리 시스템 (Web Audio)
@@ -41,6 +41,9 @@ export class AudioSystem {
   private trackGain: GainNode | null = null;
   private musicSource: AudioBufferSourceNode | null = null;
   private musicIsFile = false;
+  /** 현재 분위기(구역에 따라 바뀜). 다음 음부터 적용되어 자연스럽게 넘어간다 */
+  private mood: MusicMood = MUSIC_MOODS.normal;
+  private moodName: keyof typeof MUSIC_MOODS = 'normal';
 
   constructor() {
     // 음원 파일이 새로 도착하면 (컨텍스트가 있을 때) 바로 디코딩
@@ -385,10 +388,27 @@ export class AudioSystem {
   }
 
   /** 악절을 조금 앞서 예약한다 (브라우저 타이머 지연에 흔들리지 않게) */
+  /** 음악 분위기 바꾸기 (같은 곡을 템포·드럼·음량만 달리 연주). 파일 음악에는 음량만 영향 */
+  setMood(name: keyof typeof MUSIC_MOODS): void {
+    if (name === this.moodName) return;
+    this.moodName = name;
+    this.mood = MUSIC_MOODS[name];
+    if (this.trackGain && this.ctx && this.musicIsFile) {
+      const now = this.ctx.currentTime;
+      this.trackGain.gain.cancelScheduledValues(now);
+      this.trackGain.gain.setValueAtTime(this.trackGain.gain.value, now);
+      this.trackGain.gain.linearRampToValueAtTime(this.mood.pad, now + 1.0);
+    }
+  }
+
+  get currentMood(): keyof typeof MUSIC_MOODS {
+    return this.moodName;
+  }
+
   private schedule(): void {
     if (!this.ctx || !this.track || !this.trackGain) return;
     const t = MUSIC[this.track];
-    const beat = 60 / t.bpm;
+    const beat = 60 / (t.bpm * this.mood.tempo);
     const half = beat / 2;
     const lookahead = 0.25;
     while (this.nextNoteTime < this.ctx.currentTime + lookahead) {
@@ -401,13 +421,13 @@ export class AudioSystem {
         if (b !== null) this.note(t.bassWave, semitoneToFreq(t.root, b), time, beat * 0.9, 0.2, undefined, true);
         if (t.chords && t.chords[bi % t.chords.length] !== null) {
           const c = chordAt(t.chords, bi);
-          if (c) this.pad(t, c.notes, time, c.hold * beat);
+          if (c) this.pad(t, c.notes, time, c.hold * beat, this.mood.pad);
         }
       }
       // 반 박자마다: 멜로디, 드럼
       const m = t.melody[i % t.melody.length];
-      if (m !== null) this.note(t.melodyWave, semitoneToFreq(t.root, m), time, half * 0.8, 0.14 * t.melodyGain, t.melodyFilter);
-      const d = t.drums?.[i % t.drums.length];
+      if (m !== null) this.note(t.melodyWave, semitoneToFreq(t.root, m), time, half * 0.8, 0.14 * t.melodyGain * this.mood.melody, t.melodyFilter);
+      const d = this.mood.drums ? t.drums?.[i % t.drums.length] : undefined;
       if (d) this.drum(d, time);
       this.nextNoteTime += half;
       this.step++;
@@ -457,10 +477,10 @@ export class AudioSystem {
   }
 
   /** 패드 코드: 음마다 두 오실레이터를 어긋나게 겹쳐 저역 통과, 천천히 올라와 코드가 바뀔 때 사라진다 */
-  private pad(t: MusicTrack, notes: number[], start: number, duration: number): void {
+  private pad(t: MusicTrack, notes: number[], start: number, duration: number, mul = 1): void {
     const ctx = this.ctx;
     if (!ctx || !this.trackGain) return;
-    const gain = 0.045 * (t.padGain ?? 1);
+    const gain = 0.045 * (t.padGain ?? 1) * mul;
     const g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, start);
     g.gain.linearRampToValueAtTime(gain, start + 0.12);

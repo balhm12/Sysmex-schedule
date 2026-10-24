@@ -282,6 +282,30 @@ export interface MusicTrack {
   reverb?: number;
 }
 
+/**
+ * 음악 분위기(구역에 따라 같은 곡을 다르게 연주): 템포 배율, 드럼 켜기, 멜로디·패드 음량 배율.
+ * 쉼터는 드럼 없이 느리고 조용하게, 매복·큰 전투는 빠르고 세게, 보스 문 앞(길)은 멜로디를 줄여 긴장감.
+ */
+export interface MusicMood {
+  tempo: number;
+  drums: boolean;
+  melody: number;
+  pad: number;
+}
+export const MUSIC_MOODS: Record<'normal' | 'calm' | 'tense' | 'battle', MusicMood> = {
+  normal: { tempo: 1, drums: true, melody: 1, pad: 1 },
+  calm: { tempo: 0.85, drums: false, melody: 0.7, pad: 1.15 },
+  tense: { tempo: 1.0, drums: true, melody: 0.5, pad: 1.1 },
+  battle: { tempo: 1.15, drums: true, melody: 1.15, pad: 0.9 },
+};
+/** 여정 구역 종류 → 분위기 (순수 함수, 테스트 대상) */
+export function moodForZone(kind: string, cleared: boolean): keyof typeof MUSIC_MOODS {
+  if (kind === 'rest' || kind === 'start' || kind === 'treasure') return 'calm';
+  if (kind === 'ambush' || kind === 'arena' || kind === 'secret') return cleared ? 'normal' : 'battle';
+  if (kind === 'path') return 'tense';
+  return 'normal';
+}
+
 export type MusicName = 'menu' | 'forest' | 'cave' | 'fortress' | 'ice' | 'boss';
 export const MUSIC_NAMES: MusicName[] = ['menu', 'forest', 'cave', 'fortress', 'ice', 'boss'];
 

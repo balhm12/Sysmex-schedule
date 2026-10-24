@@ -159,6 +159,23 @@ function cloneMaterials(root: THREE.Object3D): THREE.MeshStandardMaterial[] {
   return out;
 }
 
+/** 트리 안의 emissive 가 있는 재질을 중복 없이 모은다 (합치기 뒤 번쩍임·붉은 기 적용 대상) */
+function collectEmissiveMaterials(root: THREE.Object3D): THREE.MeshStandardMaterial[] {
+  const out: THREE.MeshStandardMaterial[] = [];
+  const seen = new Set<THREE.Material>();
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    for (const mt of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+      if (!seen.has(mt) && (mt as THREE.MeshStandardMaterial).emissive) {
+        seen.add(mt);
+        out.push(mt as THREE.MeshStandardMaterial);
+      }
+    }
+  });
+  return out;
+}
+
 /** 씬 복제(뼈대 있는 모델도 안전) + 크기·위치 보정 */
 function instantiate(m: Loaded, targetHeight: number | null): { root: THREE.Group; mixer: THREE.AnimationMixer | null; clips: THREE.AnimationClip[] } {
   const scene = SkeletonUtils.clone(m.gltf.scene) as THREE.Group;
@@ -238,10 +255,11 @@ function createGltfPlayerModel(m: Loaded): PlayerModel {
   // 클립이 없으면 부품 이름으로 관절 리그를 시도한다 (복셀 캐릭터)
   const rig = mixer ? null : buildPartRig(root);
   if (rig) Logger.info('플레이어 모델: 부품 이름 리그로 걷기·공격 동작을 만듭니다.');
-  const mats = cloneMaterials(root);
-  // 복셀 상자들을 관절·재질별로 합쳐 그리기 호출을 줄인다 (리그가 관절을 나눈 뒤)
+  let mats = cloneMaterials(root);
+  // 복셀 상자들을 관절·재질별로 합쳐 그리기 호출을 줄인다 (리그가 관절을 나눈 뒤). 합친 뒤 재질 목록을 다시 모은다(피격 붉은 기 적용용)
   if (!mixer) {
     const st = mergeStaticMeshes(root);
+    mats = collectEmissiveMaterials(root);
     Logger.info(`플레이어 모델 메시 합치기: ${st.before} → ${st.after}`);
   }
   let t = 0;
@@ -292,8 +310,11 @@ function createGltfEnemyModel(m: Loaded, targetHeight: number): EnemyModel {
     current?.fadeOut(0.1);
     current = a;
   };
-  const mats = cloneMaterials(root);
-  if (!mixer) mergeStaticMeshes(root); // 상자 메시를 관절·재질별로 합친다 (적 1마리 ≈ 80회 → 10회 안팎)
+  let mats = cloneMaterials(root);
+  if (!mixer) {
+    mergeStaticMeshes(root); // 상자 메시를 관절·재질별로 합친다 (적 1마리 ≈ 80회 → 10회 안팎)
+    mats = collectEmissiveMaterials(root); // 합친 재질로 다시 모은다 (피격 번쩍임용)
+  }
   const baseEmissive = mats.map((mt) => mt.emissive.clone());
   let flashTimer = 0;
   let t = 0;
