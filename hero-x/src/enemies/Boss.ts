@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { glow, pbr } from '../render/materials';
 import { modelRegistry } from '../assets/ModelRegistry';
+import { meshHasPart } from '../assets/meshMerge';
 import type { BossConfig } from '../game/DungeonDefs';
 import { GameConfig, type EnemyTypeConfig } from '../game/GameConfig';
 import { clampToArena, directionToFacing, lerpAngle, resolveCircleVsBoxes, type Vec2 } from '../player/movement';
@@ -172,7 +173,7 @@ function decorateGltfBoss(inner: EnemyModel, r: number): EnemyModel {
   const eyeMats: THREE.MeshStandardMaterial[] = [];
   root.traverse((o) => {
     const mesh = o as THREE.Mesh;
-    if (!mesh.isMesh || !/^eye/i.test(mesh.name)) return;
+    if (!mesh.isMesh || !meshHasPart(mesh, /^eye/i)) return;
     const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     for (const mt of list) if ((mt as THREE.MeshStandardMaterial).emissive && !eyeMats.includes(mt as THREE.MeshStandardMaterial)) eyeMats.push(mt as THREE.MeshStandardMaterial);
   });

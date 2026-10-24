@@ -5,6 +5,7 @@ import type { EnemyModel, EnemyModelState } from '../enemies/EnemyModels';
 import type { PlayerModel, PlayerModelState } from '../player/models/PlaceholderModel';
 import { buildEnemyPartRig, buildPartRig } from './PartRig';
 import { Logger } from '../utils/Logger';
+import { mergeStaticMeshes } from './meshMerge';
 
 /**
  * 정식 3D 모델(.glb) 교체 구조
@@ -238,6 +239,11 @@ function createGltfPlayerModel(m: Loaded): PlayerModel {
   const rig = mixer ? null : buildPartRig(root);
   if (rig) Logger.info('플레이어 모델: 부품 이름 리그로 걷기·공격 동작을 만듭니다.');
   const mats = cloneMaterials(root);
+  // 복셀 상자들을 관절·재질별로 합쳐 그리기 호출을 줄인다 (리그가 관절을 나눈 뒤)
+  if (!mixer) {
+    const st = mergeStaticMeshes(root);
+    Logger.info(`플레이어 모델 메시 합치기: ${st.before} → ${st.after}`);
+  }
   let t = 0;
   return {
     root,
@@ -287,6 +293,7 @@ function createGltfEnemyModel(m: Loaded, targetHeight: number): EnemyModel {
     current = a;
   };
   const mats = cloneMaterials(root);
+  if (!mixer) mergeStaticMeshes(root); // 상자 메시를 관절·재질별로 합친다 (적 1마리 ≈ 80회 → 10회 안팎)
   const baseEmissive = mats.map((mt) => mt.emissive.clone());
   let flashTimer = 0;
   let t = 0;
