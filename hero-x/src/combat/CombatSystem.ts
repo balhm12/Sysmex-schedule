@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import type { Enemy } from '../enemies/Enemy';
-import { GameConfig } from '../game/GameConfig';
+import { GameConfig, type WeaponStyleConfig } from '../game/GameConfig';
 import type { InputManager } from '../input/InputManager';
+import { meleeComboFor } from '../items/weaponStyle';
 import type { Player } from '../player/Player';
 import { directionToFacing, type Vec2 } from '../player/movement';
 import { isFinisher, nextComboStep, sweepSign } from './combo';
@@ -46,6 +47,8 @@ export class CombatSystem {
     private readonly getDamageMultiplier: () => number = () => 1,
     /** 무기 공격력 (장비). 없으면 0 */
     private readonly getWeaponAttack: (kind: 'melee' | 'ranged') => number = () => 0,
+    /** 장착한 무기의 공격 방식 (콤보 구성·탄 성질). 없으면 기본 방식 */
+    private readonly getWeaponStyle: (kind: 'melee' | 'ranged') => WeaponStyleConfig = (kind) => GameConfig.combat.weaponStyles[kind === 'melee' ? 'sword' : 'blaster'],
   ) {}
 
   /** 재시작 시 기록 초기화 */
@@ -127,17 +130,18 @@ export class CombatSystem {
     return { x: Math.sin(this.player.facing), z: Math.cos(this.player.facing) };
   }
 
-  /** 근접 공격 한 번: 콤보 단계에 따라 다른 베기가 나간다 */
+  /** 근접 공격 한 번: 장착한 무기의 방식(콤보 구성)에 따라 다른 베기가 나간다 */
   private meleeAttack(): void {
     const cfg = GameConfig.combat.melee;
-    const steps = cfg.combo.steps;
+    const combo = meleeComboFor(this.getWeaponStyle('melee'));
+    const steps = combo.steps;
     const index = steps.length > 0 ? nextComboStep(this.comboStep, this.comboStep >= 0 && this.comboTimer > 0, steps.length) : 0;
     const step = steps[index] ?? { damageMul: 1, rangeMul: 1, arcDegrees: cfg.arcDegrees, swingTime: cfg.swingTime, cooldownMul: 1, knockbackMul: 1, sweep: 'right' as const, color: GameConfig.juice.slashColor };
     const finisher = isFinisher(index, steps.length);
     this.comboStep = index;
-    this.meleeCooldown = cfg.cooldown * step.cooldownMul;
+    this.meleeCooldown = cfg.cooldown * combo.cooldownMul * step.cooldownMul;
     // 마무리 뒤에는 이어갈 수 없다 (1단계부터 다시)
-    this.comboTimer = finisher ? 0 : cfg.combo.window;
+    this.comboTimer = finisher ? 0 : combo.window;
     this.attacks++;
     this.onAttack?.('melee', index, finisher);
     this.faceAim();
@@ -165,29 +169,38 @@ export class CombatSystem {
     }
   }
 
-  /** 원거리 공격 한 발: 총구 섬광과 함께 에너지 탄을 쏜다 (명중 연출은 Game 이 ProjectileSystem 콜백으로) */
+  /** 원거리 공격: 장착한 무기의 방식대로(탄 수·퍼짐·속도·크기·관통) 총구 섬광과 함께 쏜다. 명중 연출은 Game 이 ProjectileSystem 콜백으로 */
   private rangedAttack(): void {
     const cfg = GameConfig.combat.ranged;
-    this.rangedCooldown = cfg.cooldown;
+    const style = this.getWeaponStyle('ranged').ranged ?? GameConfig.combat.weaponStyles.blaster.ranged!;
+    this.rangedCooldown = cfg.cooldown * style.cooldownMul;
     this.attacks++;
     this.onAttack?.('ranged', 0, false);
     const dir = this.faceAim();
     const pos = this.player.position;
-    this.player.triggerAttack(Math.min(cfg.cooldown, 0.28), 'ranged', 0);
-    const color = new THREE.Color(cfg.color).getHex();
+    this.player.triggerAttack(Math.min(cfg.cooldown * style.cooldownMul, 0.28), 'ranged', 0);
+    const color = new THREE.Color(style.color || cfg.color).getHex();
     const origin: Vec2 = { x: pos.x + dir.x * 0.7, z: pos.z + dir.z * 0.7 };
-    // 총구 섬광: 발사 지점에서 밝게 터지고 짧은 파편이 앞으로 튄다
+    // 총구 섬광: 발사 지점에서 밝게 터지고 짧은 파편이 앞으로 튄다 (큰 탄일수록 크게)
     this.tmp.set(origin.x, 0.9, origin.z);
-    this.effects.flash(this.tmp, GameConfig.juice.ranged.muzzleRadius, GameConfig.juice.ranged.muzzleTime, color);
+    this.effects.flash(this.tmp, GameConfig.juice.ranged.muzzleRadius * Math.sqrt(style.radiusMul), GameConfig.juice.ranged.muzzleTime, color);
     this.effects.burst(this.tmp, color, 4, 3);
-    this.projectiles.spawn(origin, dir, {
-      damage: Math.round((cfg.damage + this.getWeaponAttack('ranged')) * this.getDamageMultiplier()),
-      speed: cfg.speed,
-      lifetime: cfg.lifetime,
-      radius: cfg.radius,
-      knockback: cfg.knockback,
-      color,
-      friendly: true,
-    });
+    const damage = Math.round((cfg.damage + this.getWeaponAttack('ranged')) * this.getDamageMultiplier());
+    const n = Math.max(1, Math.round(style.count));
+    const spread = (style.spreadDegrees * Math.PI) / 180;
+    const base = Math.atan2(dir.x, dir.z);
+    for (let i = 0; i < n; i++) {
+      const a = n > 1 ? base - spread / 2 + (spread * i) / (n - 1) : base;
+      this.projectiles.spawn(origin, { x: Math.sin(a), z: Math.cos(a) }, {
+        damage,
+        speed: cfg.speed * style.speedMul,
+        lifetime: cfg.lifetime * style.lifetimeMul,
+        radius: cfg.radius * style.radiusMul,
+        knockback: cfg.knockback * style.knockbackMul,
+        color,
+        friendly: true,
+        pierce: style.pierce,
+      });
+    }
   }
 }

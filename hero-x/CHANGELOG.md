@@ -2,6 +2,27 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.20.0 · 장비 자동 장착 + 무기별 공격 방식 + 장착 장비 외형
+
+### 변경 내용
+- **주우면 바로 장착** `EquipmentSystem.pickup(item, autoEquip)`: 슬롯이 비었거나 점수(`GameConfig.equipment.autoEquipWeights` 가중치 합)가 더 높으면 바로 장착하고 쓰던 것은 가방으로, 아니면 가방으로. 장신구는 빈 칸 → 약한 칸 순. 가방이 가득 차 쓰던 것을 넣을 수 없으면 실패(바닥에 다시 둠). 설정 **장비 자동 장착**(`autoEquip`, 기본 켬). `Game.collectItem` 이 효과·소리·`장착: ○○ · 방식` 글자·HUD 배너·능력치 갱신·외형 갱신을 한 번에 처리.
+- **무기별 공격 방식** `GameConfig.combat.weaponStyles` + `src/items/weaponStyle.ts`(`weaponStyleFor/meleeComboFor/styleLabelFor`, 순수 함수): 장비 템플릿의 `style` 키가 방식을 가리킨다. 근접: 검 3단 베기(기본) / 도끼 2단 강타 / 망치 충격 회전 / 창 4단 찌르기 — 콤보 단계 전체(배율·각도·방향·색)·이어가기 시간·대기 배율. 원거리: 블래스터 속사(기본) / 활 세 갈래 화살(3발 22°) / 캐논 포격(2.4배 크기·0.65배 속도·2.5배 밀침) / 라이플 관통탄(2배 속도·적 3마리 관통). `CombatSystem` 이 `getWeaponStyle(kind)` 로 받아 콤보 구성과 탄 수·퍼짐·속도·크기·관통을 정한다. HUD 콤보 표시 단계 수도 방식을 따른다.
+- **투사체 관통·스윕** `Projectile.ts`: `ProjectileSpec.pierce`(맞힌 적을 기억해 다시 안 맞음, 관통마다 명중 연출), 이동을 `SWEEP_STEP`(0.35) 이하로 나눠 충돌 검사 — 빠른 탄(라이플 44/s)이 적을 건너뛰던 문제(터널링) 수정.
+- **장착 장비 외형** `src/player/EquipmentVisuals.ts`(새): 코드로 만든 상자 모델 — 무기 8종(`WeaponLook`: sword/axe/hammer/spear/blaster/bow/cannon/rifle, 팔 길이 비례), 방어구 4종(`ArmorLook`: vest/plate/suit/cloak, 몸통 박스에 맞춤), 등급 색은 빛나는 보석·줄무늬. `PlayerModel.setEquipment(looks)`: .glb 모델은 `PartRig.attach`(검 든 팔·반대 팔·몸 그룹·원래 무기 묶음 `weaponHold`·팔 길이·몸통 박스)에 붙이고 원래 검은 숨긴다(무기 메시를 합치기 전에 `weaponHold` 로 분리). 임시 모델도 지원. `Player.setEquipment` 가 마지막 외형을 기억해 모델 교체 뒤 다시 입힌다. `Game.refreshEquipment` 는 획득·장비 화면 변경·저장 불러오기·새 게임 때 호출.
+- 장비 화면: 무기 이름 옆에 방식 꼬리표(`.inv-style`, 마우스를 올리면 설명). 템플릿에 `style/look/color` 추가(16종 모두), 활·캐논·라이플·창 설명 갱신.
+- 디버그: `__heroX.debugGiveItem(templateId, rarity)`(주웠을 때와 같은 처리), `getDebugState().equipment.styles/gear`.
+
+### 수정 파일
+`src/items/{weaponStyle.ts(새),ItemDatabase.ts,EquipmentSystem.ts}`, `src/player/{EquipmentVisuals.ts(새),Player.ts}`, `src/player/models/PlaceholderModel.ts`, `src/assets/{PartRig.ts,ModelRegistry.ts}`, `src/combat/{CombatSystem.ts,Projectile.ts}`, `src/game/{Game.ts,GameConfig.ts,Settings.ts}`, `src/ui/InventoryUI.ts`, `src/style.css`, `tests/{weaponStyle.test.ts(새),equipment.test.ts}`, `package.json`, `GAME_GUIDE.md`, `CLAUDE.md`, `CHANGELOG.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 220개·빌드). 새 테스트: 방식 해석(없으면 기본, 표에 없거나 종류가 안 맞으면 기본, 도끼 2단·창 4단·라이플 관통 3·활 3발), 템플릿의 style/look 이 표와 맞는지, 근접 방식은 2단계 이상·마지막이 가장 셈, 원거리 배율 양수; `pickup` 7개(빈 슬롯 장착, 더 좋으면 교체·이전은 가방, 약하면 가방, 자동 장착 끄면 가방, 장신구 두 칸, 가방 가득 차면 실패, 점수).
+- Playwright `smoke36`: 희귀 도끼 획득 → 바로 장착·'2단 강타'·손에 Weapon-axe·배너 → 일반 검은 가방 → 강철 갑옷 장착·Armor-plate·최대 체력 300→351 → 도끼 콤보 0→1→0, 피해 31+48+31 → 활 장착 → 한 번에 탄 3 → 라이플(점수 높음) 교체 → 한 발에 트롤 3마리 25씩 → 자동 장착 끄면 전설 망치가 가방으로 → 외형 조합(망치·망토·캐논 / 창·슈트·블래스터) → 장비 화면 꼬리표. 오류 없음. `shots36` 로 정면 근접 화면 확인(무기 8종·방어구 4종).
+
+### 알려진 문제
+- 외형은 코드 상자 모델이라 단순하다. 정식 .glb 무기를 넣는 구조는 다음 작업(`WeaponLook` 별 파일 매핑).
+- 망토는 흔들리지 않는 판이다. 임시 모델(.glb 없음)의 외형 배치는 브라우저로 확인하지 않았다(타입 검사만).
+
 ## 2026-10-24 · v1.19.0 · 근접 3단 콤보 + 원거리 발사·명중 연출
 
 ### 변경 내용

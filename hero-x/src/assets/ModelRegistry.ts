@@ -4,6 +4,7 @@ import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { EnemyModel, EnemyModelState } from '../enemies/EnemyModels';
 import type { PlayerModel, PlayerModelState } from '../player/models/PlaceholderModel';
 import { buildEnemyPartRig, buildPartRig } from './PartRig';
+import { buildArmorModel, buildWeaponModel, disposeVisual, type EquipmentLooks } from '../player/EquipmentVisuals';
 import { Logger } from '../utils/Logger';
 import { mergeStaticMeshes } from './meshMerge';
 
@@ -263,8 +264,33 @@ function createGltfPlayerModel(m: Loaded): PlayerModel {
     Logger.info(`플레이어 모델 메시 합치기: ${st.before} → ${st.after}`);
   }
   let t = 0;
+  const gear: { melee: THREE.Group | null; ranged: THREE.Group | null; armor: THREE.Group | null } = { melee: null, ranged: null, armor: null };
   return {
     root,
+    /** 장비 외형: 리그(부품 이름 관절)가 있는 모델만 지원. 무기는 손 끝(관절 기준 (0,-팔길이,0))에, 방어구는 몸통 박스에 맞춰 */
+    setEquipment(looks: EquipmentLooks) {
+      const a = rig?.attach;
+      if (!a) return;
+      disposeVisual(gear.melee);
+      disposeVisual(gear.ranged);
+      disposeVisual(gear.armor);
+      gear.melee = gear.ranged = gear.armor = null;
+      if (a.weaponHold) a.weaponHold.visible = looks.melee === null;
+      if (looks.melee) {
+        gear.melee = buildWeaponModel(looks.melee, a.armLength);
+        gear.melee.position.set(0, -a.armLength * 0.95, 0);
+        a.swordArm.add(gear.melee);
+      }
+      if (looks.ranged) {
+        gear.ranged = buildWeaponModel(looks.ranged, a.armLength);
+        gear.ranged.position.set(0, -a.armLength * 0.95, 0);
+        a.otherArm.add(gear.ranged);
+      }
+      if (looks.armor) {
+        gear.armor = buildArmorModel(looks.armor, a.torsoBox);
+        a.body.add(gear.armor);
+      }
+    },
     update(dt: number, s: PlayerModelState) {
       t += dt;
       const hurt = s.hurt ?? 0;

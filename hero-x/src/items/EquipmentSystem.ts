@@ -36,6 +36,35 @@ export class EquipmentSystem {
     return this.inventory.length >= GameConfig.equipment.inventorySize;
   }
 
+  /**
+   * 장비 점수 (자동 장착 판단용): 능력치에 가중치(GameConfig.equipment.autoEquipWeights)를 곱해 더한다.
+   */
+  static score(item: ItemInstance | null | undefined): number {
+    if (!item) return -Infinity;
+    const w = GameConfig.equipment.autoEquipWeights;
+    const s = item.stats;
+    return s.attack * w.attack + s.defense * w.defense + s.maxHp * w.maxHp + s.moveSpeed * w.moveSpeed;
+  }
+
+  /**
+   * 주웠을 때: 자동 장착이 켜져 있고 (슬롯이 비었거나 점수가 더 높으면) 바로 장착하고, 아니면 가방에 넣는다.
+   * - 장착되면 그 슬롯에 있던 장비는 가방으로 간다(가방이 가득 차면 장착하지 않고 실패).
+   * - 돌려주는 값: 장착한 슬롯(없으면 null), 가방으로 밀려난 이전 장비, 성공 여부
+   */
+  pickup(item: ItemInstance, autoEquip = true): { ok: boolean; slot: EquipSlot | null; replaced: ItemInstance | null } {
+    if (autoEquip) {
+      const slot = this.targetSlot(item);
+      const prev = this.equipped[slot];
+      if (!prev || EquipmentSystem.score(item) > EquipmentSystem.score(prev)) {
+        if (prev && this.isFull) return { ok: false, slot: null, replaced: null };
+        this.equipped[slot] = item;
+        if (prev) this.inventory.push(prev);
+        return { ok: true, slot, replaced: prev };
+      }
+    }
+    return { ok: this.add(item), slot: null, replaced: null };
+  }
+
   /** 가방에서 버린다 */
   discard(uid: number): boolean {
     const i = this.inventory.findIndex((it) => it.uid === uid);

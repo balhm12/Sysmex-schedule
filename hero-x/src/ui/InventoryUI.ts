@@ -1,8 +1,17 @@
 import { GameConfig } from '../game/GameConfig';
+import { styleLabelFor } from '../items/weaponStyle';
 import { EQUIP_SLOTS, SLOT_LABELS, type EquipmentSystem } from '../items/EquipmentSystem';
 import type { EquipSlot, ItemInstance, ItemStats } from '../items/ItemDatabase';
 
 /** 능력치 한 줄 표시 (0인 항목은 생략) */
+/** 무기의 공격 방식 꼬리표 (예: '3단 베기'), 아니면 빈 문자열 */
+function styleTag(it: ItemInstance): string {
+  const label = styleLabelFor(it);
+  if (!label) return '';
+  const [name, desc] = label.split(': ');
+  return ` <small class="inv-style" title="${desc ?? ''}">${name}</small>`;
+}
+
 function statText(s: ItemStats, delta?: ItemStats): string {
   const parts: string[] = [];
   const fmt = (label: string, v: number, d: number | undefined, pct = false) => {
@@ -80,7 +89,7 @@ export class InventoryUI {
       const it = eq.equipped[slot];
       return `<li class="inv-row">
         <span class="inv-slot">${SLOT_LABELS[slot]}</span>
-        ${it ? `<span class="inv-name" style="color:${rarities[it.rarity].color}">${it.name}</span><span class="inv-stats">${statText(it.stats)}</span>
+        ${it ? `<span class="inv-name" style="color:${rarities[it.rarity].color}">${it.name}${styleTag(it)}</span><span class="inv-stats">${statText(it.stats)}</span>
           <button class="btn small ghost" type="button" data-action="unequip" data-slot="${slot}">해제</button>` : `<span class="inv-empty">비어 있음</span>`}
       </li>`;
     }).join('');
@@ -88,7 +97,7 @@ export class InventoryUI {
     const bagRows = eq.inventory.length
       ? eq.inventory.map((it: ItemInstance) => `<li class="inv-row">
           <span class="inv-slot">${SLOT_LABELS[eq.targetSlot(it)]}</span>
-          <span class="inv-name" style="color:${rarities[it.rarity].color}">${it.name} <small>${rarities[it.rarity].label}</small></span>
+          <span class="inv-name" style="color:${rarities[it.rarity].color}">${it.name} <small>${rarities[it.rarity].label}</small>${styleTag(it)}</span>
           <span class="inv-stats">${statText(it.stats, eq.compare(it))}</span>
           <button class="btn small" type="button" data-action="equip" data-uid="${it.uid}">장착</button>
           <button class="btn small ghost" type="button" data-action="discard" data-uid="${it.uid}" title="${it.description}">버리기</button>

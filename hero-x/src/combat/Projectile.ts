@@ -14,6 +14,8 @@ export interface ProjectileSpec {
   color: THREE.ColorRepresentation;
   /** true: 플레이어가 쏜 탄(적에게 맞음), false: 적이 쏜 탄(플레이어에게 맞음) */
   friendly: boolean;
+  /** 적을 몇 마리까지 뚫고 지나가는지 (없거나 0 이면 첫 적에서 사라짐). 같은 적은 한 번만 맞는다 */
+  pierce?: number;
 }
 
 /** 투사체 갱신에 필요한 바깥 정보 */
@@ -38,12 +40,18 @@ interface Shot {
   life: number;
   travelled: number;
   spec: ProjectileSpec;
+  /** 관통 탄이 이미 맞힌 적 (두 번 맞지 않게) */
+  hit: Set<Enemy> | null;
+  /** 남은 관통 수 */
+  pierceLeft: number;
 }
 
 /** 탄이 날아가는 높이 */
 const FLIGHT_Y = 0.9;
 /** 이 높이 이상 떠 있으면 적의 탄이 플레이어 아래로 지나간다 */
 const DODGE_HEIGHT = 1.0;
+/** 한 번의 충돌 검사로 움직이는 최대 거리 (작은 적 반지름보다 작게 → 빠른 탄이 건너뛰지 않는다) */
+const SWEEP_STEP = 0.35;
 
 /**
  * 투사체 관리 (플레이어와 적 공용)
@@ -83,7 +91,7 @@ export class ProjectileSystem {
     trail.quaternion.copy(mesh.quaternion);
     trail.scale.set(spec.radius, spec.radius, 0.001);
     this.root.add(trail);
-    this.shots.push({ mesh, trail, dir: { x: dir.x, z: dir.z }, life: spec.lifetime, travelled: 0, spec });
+    this.shots.push({ mesh, trail, dir: { x: dir.x, z: dir.z }, life: spec.lifetime, travelled: 0, spec, hit: spec.pierce ? new Set() : null, pierceLeft: spec.pierce ?? 0 });
   }
 
   get count(): number {
@@ -96,36 +104,53 @@ export class ProjectileSystem {
     for (let i = this.shots.length - 1; i >= 0; i--) {
       const s = this.shots[i];
       s.life -= dt;
+      // 빠른 탄(라이플 44/s)은 한 번에 2 유닛 넘게 움직여 적을 건너뛸 수 있으므로, 이동을 SWEEP_STEP 이하 구간으로 나눠 매 구간 충돌을 본다
       const stepLen = s.spec.speed * dt;
-      s.mesh.position.x += s.dir.x * stepLen;
-      s.mesh.position.z += s.dir.z * stepLen;
-      s.travelled += stepLen;
+      const parts = Math.max(1, Math.ceil(stepLen / SWEEP_STEP));
+      const sub = stepLen / parts;
+      let reason: 'enemy' | 'player' | 'wall' | 'expire' | null = s.life <= 0 ? 'expire' : null;
+      const pos: Vec2 = { x: s.mesh.position.x, z: s.mesh.position.z };
+      for (let k = 0; k < parts && !reason; k++) {
+        s.mesh.position.x += s.dir.x * sub;
+        s.mesh.position.z += s.dir.z * sub;
+        s.travelled += sub;
+        pos.x = s.mesh.position.x;
+        pos.z = s.mesh.position.z;
+        if (hitsObstacle(pos, s.spec.radius, boxes, half)) {
+          reason = 'wall';
+          break;
+        }
+        if (s.spec.friendly) {
+          for (const e of ctx.enemies) {
+            if (!e.alive || s.hit?.has(e)) continue;
+            const rr = e.radius + s.spec.radius;
+            if ((e.position.x - pos.x) ** 2 + (e.position.z - pos.z) ** 2 < rr * rr) {
+              ctx.onHitEnemy(e, s.spec, s.dir);
+              // 관통: 남은 수가 있으면 이 적을 기억하고 계속 날아간다 (맞은 자리에 명중 연출만)
+              if (s.hit && s.pierceLeft > 0) {
+                s.hit.add(e);
+                s.pierceLeft--;
+                ctx.onImpact?.(pos, s.spec, 'enemy');
+                continue;
+              }
+              reason = 'enemy';
+              break;
+            }
+          }
+        } else if (ctx.playerY < DODGE_HEIGHT) {
+          const rr = ctx.playerRadius + s.spec.radius;
+          if ((ctx.playerPos.x - pos.x) ** 2 + (ctx.playerPos.z - pos.z) ** 2 < rr * rr) {
+            ctx.onHitPlayer(s.spec, s.dir, pos);
+            reason = 'player';
+          }
+        }
+      }
       // 탄은 돌면서 살짝 두근거리고, 꼬리는 지나온 길이(최대 trailLength)만큼 뒤로 늘어진다
       s.mesh.rotation.z += dt * 14;
       const pulse = 1 + 0.15 * Math.sin(s.travelled * 6);
       s.mesh.scale.set(s.spec.radius * pulse, s.spec.radius * pulse, s.spec.radius * 2.2);
       s.trail.position.copy(s.mesh.position);
       s.trail.scale.z = Math.max(0.001, Math.min(GameConfig.juice.ranged.trailLength, s.travelled));
-      const pos: Vec2 = { x: s.mesh.position.x, z: s.mesh.position.z };
-      let reason: 'enemy' | 'player' | 'wall' | 'expire' | null = s.life <= 0 ? 'expire' : hitsObstacle(pos, s.spec.radius, boxes, half) ? 'wall' : null;
-
-      if (!reason && s.spec.friendly) {
-        for (const e of ctx.enemies) {
-          if (!e.alive) continue;
-          const rr = e.radius + s.spec.radius;
-          if ((e.position.x - pos.x) ** 2 + (e.position.z - pos.z) ** 2 < rr * rr) {
-            ctx.onHitEnemy(e, s.spec, s.dir);
-            reason = 'enemy';
-            break;
-          }
-        }
-      } else if (!reason && ctx.playerY < DODGE_HEIGHT) {
-        const rr = ctx.playerRadius + s.spec.radius;
-        if ((ctx.playerPos.x - pos.x) ** 2 + (ctx.playerPos.z - pos.z) ** 2 < rr * rr) {
-          ctx.onHitPlayer(s.spec, s.dir, pos);
-          reason = 'player';
-        }
-      }
 
       if (reason) {
         ctx.onImpact?.(pos, s.spec, reason);

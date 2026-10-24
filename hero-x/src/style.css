@@ -1395,3 +1395,16 @@ body {
   70% { transform: translateX(-50%) scale(1); opacity: 1; }
   100% { transform: translateX(-50%) scale(1) translateY(-14px); opacity: 0; }
 }
+
+/* 장비 화면: 무기 공격 방식 꼬리표 (v1.20.0) */
+.inv-style {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: #bffcf2;
+  background: rgba(92, 242, 216, 0.14);
+  border: 1px solid rgba(92, 242, 216, 0.35);
+  vertical-align: middle;
+}

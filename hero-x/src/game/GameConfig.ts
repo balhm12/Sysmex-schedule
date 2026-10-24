@@ -110,6 +110,44 @@ export interface EnemySpawnConfig {
   skin?: string;
 }
 
+/** 무기 외형 종류 (EquipmentVisuals 가 코드로 만든다) */
+export type WeaponLook = 'sword' | 'axe' | 'hammer' | 'spear' | 'blaster' | 'bow' | 'cannon' | 'rifle';
+/** 방어구 외형 종류 */
+export type ArmorLook = 'vest' | 'plate' | 'suit' | 'cloak';
+
+/**
+ * 무기 공격 방식. 장비 템플릿(ItemDatabase)의 style 이 이 표의 키를 가리킨다.
+ * - melee: 콤보 단계 전체를 바꾼다(steps). window·cooldownMul 은 기본 melee 값에 덮어쓰기/곱하기
+ * - ranged: 탄 수·퍼짐·속도·크기·대기 배율, 관통 수, 탄 색
+ */
+export interface WeaponStyleConfig {
+  /** 장비 화면·HUD 에 보여줄 이름 (예: '3단 베기') */
+  label: string;
+  /** 한 줄 설명 */
+  description: string;
+  /** 캐릭터 손에 보일 외형 */
+  look: WeaponLook;
+  melee?: {
+    steps: ComboStepConfig[];
+    window: number;
+    cooldownMul: number;
+  };
+  ranged?: {
+    /** 한 번에 나가는 탄 수 */
+    count: number;
+    /** 여러 발일 때 퍼지는 전체 각도(도) */
+    spreadDegrees: number;
+    speedMul: number;
+    radiusMul: number;
+    cooldownMul: number;
+    lifetimeMul: number;
+    knockbackMul: number;
+    /** 적을 몇 마리까지 뚫고 지나가는지 (0 이면 첫 적에서 사라짐) */
+    pierce: number;
+    color: string;
+  };
+}
+
 /** 근접 콤보 한 단계. 배율은 GameConfig.combat.melee 의 기본값에 곱한다 */
 export interface ComboStepConfig {
   /** 피해 배율 */
@@ -233,6 +271,8 @@ export interface GameConfigType {
       /** 탄 색 */
       color: string;
     };
+    /** 무기 공격 방식 표 (장비 템플릿 style → 여기 키). 'sword'·'blaster' 는 무기가 없을 때의 기본 */
+    weaponStyles: Record<string, WeaponStyleConfig>;
   };
   /** 적 */
   enemies: {
@@ -386,6 +426,8 @@ export interface GameConfigType {
     /** 방어력 계산 기준: 방어력이 이 값과 같으면 피해 절반 */
     defenseScale: number;
     rarities: Record<Rarity, RarityConfig>;
+    /** 자동 장착 판단용 능력치 점수 가중치: 점수 = 공격×attack + 방어×defense + 체력×maxHp + 속도(비율)×moveSpeed */
+    autoEquipWeights: { attack: number; defense: number; maxHp: number; moveSpeed: number };
   };
   /** 성장 */
   progression: {
@@ -450,7 +492,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.19.0', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.20.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -512,6 +554,89 @@ export const GameConfig: GameConfigType = {
       radius: 0.18,
       knockback: 3,
       color: '#5cf2d8',
+    },
+    weaponStyles: {
+      // ---- 근접 ----
+      sword: {
+        label: '3단 베기',
+        description: '가로 베기 → 되돌려 베기 → 회전 베기. 균형 잡힌 기본 검술.',
+        look: 'sword',
+        melee: {
+          window: 0.55,
+          cooldownMul: 1,
+          steps: [
+            { damageMul: 1, rangeMul: 1, arcDegrees: 110, swingTime: 0.22, cooldownMul: 1, knockbackMul: 1, sweep: 'right', color: '#bffcf2' },
+            { damageMul: 1.15, rangeMul: 1.05, arcDegrees: 130, swingTime: 0.2, cooldownMul: 0.9, knockbackMul: 1.1, sweep: 'left', color: '#7df2ff' },
+            { damageMul: 1.6, rangeMul: 1.2, arcDegrees: 360, swingTime: 0.34, cooldownMul: 1.7, knockbackMul: 1.8, sweep: 'spin', color: '#ffd23f' },
+          ],
+        },
+      },
+      axe: {
+        label: '2단 강타',
+        description: '느리지만 넓게 쓸고, 두 번째는 크게 내려찍는다. 한 방이 세다.',
+        look: 'axe',
+        melee: {
+          window: 0.7,
+          cooldownMul: 1.25,
+          steps: [
+            { damageMul: 1.3, rangeMul: 1.05, arcDegrees: 150, swingTime: 0.3, cooldownMul: 1, knockbackMul: 1.4, sweep: 'right', color: '#ffb47a' },
+            { damageMul: 2, rangeMul: 1.15, arcDegrees: 100, swingTime: 0.36, cooldownMul: 1.7, knockbackMul: 2, sweep: 'left', color: '#ff7a45' },
+          ],
+        },
+      },
+      hammer: {
+        label: '충격 회전',
+        description: '묵직한 가로 휘두르기 뒤 사방을 치는 회전 강타. 적을 멀리 날린다.',
+        look: 'hammer',
+        melee: {
+          window: 0.75,
+          cooldownMul: 1.4,
+          steps: [
+            { damageMul: 1.4, rangeMul: 1.1, arcDegrees: 160, swingTime: 0.34, cooldownMul: 1, knockbackMul: 1.8, sweep: 'right', color: '#d7b8ff' },
+            { damageMul: 2.3, rangeMul: 1.35, arcDegrees: 360, swingTime: 0.44, cooldownMul: 1.9, knockbackMul: 2.6, sweep: 'spin', color: '#c77dff' },
+          ],
+        },
+      },
+      spear: {
+        label: '4단 찌르기',
+        description: '빠르고 긴 찌르기 세 번 뒤 넓게 휘두른다. 사거리가 길다.',
+        look: 'spear',
+        melee: {
+          window: 0.5,
+          cooldownMul: 0.75,
+          steps: [
+            { damageMul: 0.85, rangeMul: 1.5, arcDegrees: 60, swingTime: 0.16, cooldownMul: 1, knockbackMul: 0.7, sweep: 'right', color: '#bffcf2' },
+            { damageMul: 0.9, rangeMul: 1.5, arcDegrees: 60, swingTime: 0.16, cooldownMul: 1, knockbackMul: 0.7, sweep: 'left', color: '#bffcf2' },
+            { damageMul: 1, rangeMul: 1.6, arcDegrees: 60, swingTime: 0.16, cooldownMul: 1, knockbackMul: 0.8, sweep: 'right', color: '#7df2ff' },
+            { damageMul: 1.5, rangeMul: 1.5, arcDegrees: 220, swingTime: 0.3, cooldownMul: 1.6, knockbackMul: 1.6, sweep: 'left', color: '#ffd23f' },
+          ],
+        },
+      },
+      // ---- 원거리 ----
+      blaster: {
+        label: '속사',
+        description: '빠르게 쏠 수 있는 기본 에너지 탄.',
+        look: 'blaster',
+        ranged: { count: 1, spreadDegrees: 0, speedMul: 1, radiusMul: 1, cooldownMul: 1, lifetimeMul: 1, knockbackMul: 1, pierce: 0, color: '#5cf2d8' },
+      },
+      bow: {
+        label: '세 갈래 화살',
+        description: '빛의 화살 세 발이 부채꼴로 퍼진다. 가까울수록 모두 맞는다.',
+        look: 'bow',
+        ranged: { count: 3, spreadDegrees: 22, speedMul: 1.3, radiusMul: 0.8, cooldownMul: 1.15, lifetimeMul: 1, knockbackMul: 0.8, pierce: 0, color: '#ffd23f' },
+      },
+      cannon: {
+        label: '포격',
+        description: '크고 느린 에너지 포탄. 맞으면 크게 터지고 멀리 밀어낸다.',
+        look: 'cannon',
+        ranged: { count: 1, spreadDegrees: 0, speedMul: 0.65, radiusMul: 2.4, cooldownMul: 1.7, lifetimeMul: 1.1, knockbackMul: 2.5, pierce: 0, color: '#ff9f43' },
+      },
+      rifle: {
+        label: '관통탄',
+        description: '아주 빠른 탄이 적 세 마리까지 꿰뚫고 지나간다.',
+        look: 'rifle',
+        ranged: { count: 1, spreadDegrees: 0, speedMul: 2, radiusMul: 0.75, cooldownMul: 1.3, lifetimeMul: 1.2, knockbackMul: 1.2, pierce: 3, color: '#c77dff' },
+      },
     },
   },
 
@@ -825,6 +950,7 @@ export const GameConfig: GameConfigType = {
       epic: { label: '영웅', prefix: '영웅의', statMul: 2.2, weight: 5, color: '#c77dff' },
       legendary: { label: '전설', prefix: '전설의', statMul: 3, weight: 2, color: '#ffc531' },
     },
+    autoEquipWeights: { attack: 3, defense: 2, maxHp: 0.5, moveSpeed: 60 },
   },
 
   progression: {
@@ -900,6 +1026,10 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'combat.melee.knockback': { min: 0, max: 50 },
   'combat.melee.swingTime': { min: 0.05, max: 2 },
   'combat.melee.combo.window': { min: 0.05, max: 3 },
+  'equipment.autoEquipWeights.attack': { min: 0, max: 100 },
+  'equipment.autoEquipWeights.defense': { min: 0, max: 100 },
+  'equipment.autoEquipWeights.maxHp': { min: 0, max: 100 },
+  'equipment.autoEquipWeights.moveSpeed': { min: 0, max: 1000 },
   'juice.ranged.muzzleRadius': { min: 0, max: 5 },
   'juice.ranged.muzzleTime': { min: 0.02, max: 3 },
   'juice.ranged.trailLength': { min: 0, max: 20 },

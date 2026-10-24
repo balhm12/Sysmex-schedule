@@ -12,7 +12,9 @@ import { EnemySpawner } from '../enemies/EnemySpawner';
 import { InputManager } from '../input/InputManager';
 import { TouchControls } from '../input/TouchControls';
 import { EquipmentSystem, applyDefense } from '../items/EquipmentSystem';
-import { generateItemAtLeast } from '../items/ItemDatabase';
+import { ITEM_TEMPLATES, createItem, generateItemAtLeast, type ItemInstance } from '../items/ItemDatabase';
+import { meleeComboFor, weaponStyleFor } from '../items/weaponStyle';
+import type { EquipmentLooks } from '../player/EquipmentVisuals';
 import { LootSystem } from '../items/LootSystem';
 import { InventoryUI } from '../ui/InventoryUI';
 import type { Drop } from '../items/loot';
@@ -103,7 +105,15 @@ export interface GameDebugState {
   difficulty: string;
   pickups: number;
   stats: { level: number; xp: number; xpToNext: number; gold: number; maxHp: number };
-  equipment: { inventory: number; equipped: Record<string, string | null>; totals: { attack: number; defense: number; maxHp: number; moveSpeed: number } };
+  equipment: {
+    inventory: number;
+    equipped: Record<string, string | null>;
+    totals: { attack: number; defense: number; maxHp: number; moveSpeed: number };
+    /** 장착 무기의 공격 방식 이름 */
+    styles: { melee: string; ranged: string };
+    /** 플레이어 모델에 붙어 있는 장비 외형 그룹 이름 (Weapon-… / Armor-…) */
+    gear: string[];
+  };
   paused: boolean;
   chestsOpened: number;
   zones: { current: string | null; objective: string; done: number; total: number; cleared: string[]; entered: string[] } | null;
@@ -333,6 +343,7 @@ export class Game {
       },
       () => this.effectiveDamageMultiplier(),
       (kind) => this.equipment.weaponAttack(kind),
+      (kind) => weaponStyleFor(kind, this.equipment.equipped[kind]),
     );
     this.combat.onAttack = (kind, step, finisher) => {
       // 콤보 단계가 오를수록 음이 높아지고, 마무리는 묵직한 소리와 짧은 멈춤
@@ -342,7 +353,7 @@ export class Game {
         this.hitStopTime = Math.max(this.hitStopTime, GameConfig.juice.comboFinish.hitStop);
         this.cameraCtrl.shake(GameConfig.juice.hitShake.amp * 0.6, 0.2);
       }
-      if (kind === 'melee') this.hud.showCombo(step, GameConfig.combat.melee.combo.steps.length);
+      if (kind === 'melee') this.hud.showCombo(step, meleeComboFor(weaponStyleFor('melee', this.equipment.equipped.melee)).steps.length);
     };
     this.loot = new LootSystem(this.scene);
 
@@ -432,6 +443,7 @@ export class Game {
     this.inventoryUI = new InventoryUI(uiRoot, this.equipment, {
       onChange: () => {
         this.applyStats();
+        this.refreshEquipment();
         this.markDirty();
       },
       onClose: () => this.toggleInventory(false),
@@ -630,6 +642,7 @@ export class Game {
     }
     this.stats.reset();
     this.equipment.reset();
+    this.refreshEquipment();
     this.records = cloneRecords(EMPTY_RECORDS);
     this.saveBlocked = false;
     clearSave(this.storage);
@@ -871,6 +884,7 @@ export class Game {
     switch (r.kind) {
       case 'loaded':
         applySaveData(r.data, { stats: this.stats, equipment: this.equipment });
+        this.refreshEquipment();
         this.records = cloneRecords(r.data.records);
         this.difficulty = r.data.difficulty;
         saveDifficulty(this.difficulty);
@@ -1187,6 +1201,61 @@ export class Game {
     }
   }
 
+  /**
+   * 장비 획득 처리: 설정 '장비 자동 장착'이 켜져 있고 지금 것보다 좋으면 바로 장착(쓰던 것은 가방), 아니면 가방에.
+   * 장착되면 외형·능력치를 바로 갱신한다. 가방이 가득 차 넣지 못하면 false
+   */
+  private collectItem(item: ItemInstance, pos: THREE.Vector3): boolean {
+    const r = this.equipment.pickup(item, this.settings.autoEquip);
+    if (!r.ok) return false;
+    this.audio.play('equip');
+    this.markDirty();
+    const color = GameConfig.equipment.rarities[item.rarity].color;
+    this.effects.burst(pos, color, r.slot ? 16 : 10, r.slot ? 5 : 4);
+    if (r.slot) {
+      this.applyStats();
+      this.refreshEquipment();
+      const style = item.category === 'melee' || item.category === 'ranged' ? ` · ${weaponStyleFor(item.category, item).label}` : '';
+      this.damageNumbers.showText(pos, `장착: ${item.name}${style}`, color);
+      this.hud.showBanner(`${item.name} 장착`, 1300);
+      if (this.settings.haptics) vibrate(25);
+    } else {
+      this.damageNumbers.showText(pos, `획득: ${item.name}`, color);
+    }
+    return true;
+  }
+
+  /** 장착한 장비 외형을 플레이어 모델에 입힌다 (무기는 손, 방어구는 몸). 장착이 바뀔 때마다 호출 */
+  private refreshEquipment(): void {
+    const eq = this.equipment.equipped;
+    const rarity = (it: ItemInstance) => GameConfig.equipment.rarities[it.rarity].color;
+    const weapon = (kind: 'melee' | 'ranged'): EquipmentLooks['melee'] => {
+      const it = eq[kind];
+      if (!it) return null;
+      const st = weaponStyleFor(kind, it);
+      return { look: st.look, color: it.color ?? (kind === 'melee' ? GameConfig.juice.slashColor : GameConfig.combat.ranged.color), rarityColor: rarity(it) };
+    };
+    const armor = eq.armor ? { look: eq.armor.look ?? ('vest' as const), color: eq.armor.color ?? '#8a9bb0', rarityColor: rarity(eq.armor) } : null;
+    this.player.setEquipment({ melee: weapon('melee'), ranged: weapon('ranged'), armor });
+  }
+
+  /** 장비 하나를 바로 준다 (테스트·디버그용). 주웠을 때와 같은 처리(자동 장착·외형). 템플릿 id 가 없으면 false */
+  debugGiveItem(templateId: string, rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' = 'rare'): boolean {
+    const t = ITEM_TEMPLATES.find((x) => x.id === templateId);
+    if (!t) return false;
+    const p = this.player.position;
+    return this.collectItem(createItem(t, rarity), new THREE.Vector3(p.x, 1.4, p.z));
+  }
+
+  /** 플레이어 모델에 붙은 장비 외형 그룹 이름 (디버그용) */
+  private gearNames(): string[] {
+    const out: string[] = [];
+    this.player.object3d.traverse((o) => {
+      if (/^(Weapon|Armor)-/.test(o.name)) out.push(o.name);
+    });
+    return out;
+  }
+
   /** 테스트·디버그용 상태 */
   getDebugState(): GameDebugState {
     const p = this.player.position;
@@ -1243,6 +1312,8 @@ export class Game {
         inventory: this.equipment.inventory.length,
         equipped: Object.fromEntries(Object.entries(this.equipment.equipped).map(([k, v]) => [k, v ? v.name : null])),
         totals: this.equipment.totals(),
+        styles: { melee: weaponStyleFor('melee', this.equipment.equipped.melee).label, ranged: weaponStyleFor('ranged', this.equipment.equipped.ranged).label },
+        gear: this.gearNames(),
       },
       paused: this.paused,
       chestsOpened: this.chests.openedCount,
@@ -1386,13 +1457,7 @@ export class Game {
       this.effects.burst(pos, 0xffd23f, 4, 2);
     } else if (drop.kind === 'equip') {
       if (!drop.item) return;
-      if (this.equipment.add(drop.item)) {
-        this.audio.play('equip');
-        this.markDirty();
-        const color = GameConfig.equipment.rarities[drop.item.rarity].color;
-        this.effects.burst(pos, color, 10, 4);
-        this.damageNumbers.showText(pos, `획득: ${drop.item.name}`, color);
-      } else {
+      if (!this.collectItem(drop.item, pos)) {
         // 가방이 가득 차면 다시 바닥에 둔다
         this.loot.spawn(drop, at);
         this.damageNumbers.showText(pos, '가방이 가득 찼어요', '#ff6b90');

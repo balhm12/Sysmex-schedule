@@ -101,3 +101,73 @@ describe('rollLoot 장비 드롭', () => {
     expect(rollLoot(10, table, () => 0.9, () => sword()).map((d) => d.kind)).toEqual(['xp']);
   });
 });
+
+describe('EquipmentSystem.pickup (주웠을 때 자동 장착)', () => {
+  const axe = (r: 'common' | 'rare' = 'common') => createItem(ITEM_TEMPLATES.find((t) => t.id === 'axe_heavy')!, r);
+
+  it('빈 슬롯이면 바로 장착한다', () => {
+    const eq = new EquipmentSystem();
+    const s = sword();
+    const r = eq.pickup(s);
+    expect(r).toEqual({ ok: true, slot: 'melee', replaced: null });
+    expect(eq.equipped.melee?.uid).toBe(s.uid);
+    expect(eq.inventory.length).toBe(0);
+  });
+
+  it('점수가 더 높은 장비를 주우면 바꿔 끼고 쓰던 것은 가방으로 간다', () => {
+    const eq = new EquipmentSystem();
+    const s = sword();
+    eq.pickup(s);
+    const a = axe(); // 공격 7 > 4
+    const r = eq.pickup(a);
+    expect(r.slot).toBe('melee');
+    expect(r.replaced?.uid).toBe(s.uid);
+    expect(eq.equipped.melee?.uid).toBe(a.uid);
+    expect(eq.inventory.map((i) => i.uid)).toEqual([s.uid]);
+  });
+
+  it('점수가 낮거나 같은 장비는 가방으로만 간다', () => {
+    const eq = new EquipmentSystem();
+    eq.pickup(axe('rare'));
+    const weak = sword();
+    expect(eq.pickup(weak)).toEqual({ ok: true, slot: null, replaced: null });
+    expect(eq.inventory.map((i) => i.uid)).toEqual([weak.uid]);
+  });
+
+  it('자동 장착을 끄면 빈 슬롯이어도 가방에 넣는다', () => {
+    const eq = new EquipmentSystem();
+    const s = sword();
+    expect(eq.pickup(s, false).slot).toBeNull();
+    expect(eq.equipped.melee).toBeNull();
+    expect(eq.inventory.length).toBe(1);
+  });
+
+  it('장신구는 빈 두 번째 칸을 먼저 채우고, 둘 다 차면 약한 쪽을 바꾼다', () => {
+    const eq = new EquipmentSystem();
+    const r1 = ring();
+    const r2 = ring();
+    expect(eq.pickup(r1).slot).toBe('trinket1');
+    expect(eq.pickup(r2).slot).toBe('trinket2');
+    const better = createItem(ITEM_TEMPLATES.find((t) => t.id === 'ring_vitality')!, 'legendary');
+    expect(eq.pickup(better).slot).toBe('trinket1');
+    expect(eq.inventory.map((i) => i.uid)).toEqual([r1.uid]);
+  });
+
+  it('가방이 가득 차면 바꿔 낄 수 없어 실패하고 아무것도 바뀌지 않는다', () => {
+    const eq = new EquipmentSystem();
+    const s = sword();
+    eq.pickup(s);
+    for (let i = 0; i < GameConfig.equipment.inventorySize; i++) eq.add(ring());
+    const r = eq.pickup(axe());
+    expect(r.ok).toBe(false);
+    expect(eq.equipped.melee?.uid).toBe(s.uid);
+    expect(eq.inventory.length).toBe(GameConfig.equipment.inventorySize);
+  });
+
+  it('점수는 가중치 합이다', () => {
+    const w = GameConfig.equipment.autoEquipWeights;
+    const a = axe();
+    expect(EquipmentSystem.score(a)).toBeCloseTo(a.stats.attack * w.attack + a.stats.moveSpeed * w.moveSpeed);
+    expect(EquipmentSystem.score(null)).toBe(-Infinity);
+  });
+});

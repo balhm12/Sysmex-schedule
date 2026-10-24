@@ -33,6 +33,8 @@ export interface UserSettings {
   touchButtonScale: number;
   /** 진동 피드백 (지원 기기만) */
   haptics: boolean;
+  /** 주운 장비가 더 좋으면 바로 장착 */
+  autoEquip: boolean;
   /** 소리: 전체·효과음·음악 음량 0~1 */
   soundMaster: number;
   soundSfx: number;
@@ -76,6 +78,7 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: 'touchButtonScale', kind: 'range', group: '게임', label: '터치 버튼 크기', description: '버튼이 작거나 크면 조절하세요.', min: 0.8, max: 1.4, step: 0.1, unit: '×' },
   { key: 'chestQuiz', kind: 'toggle', group: '게임', label: '상자 수학 문제', description: '보물 상자를 열 때 초등 3학년 수학 문제(덧셈·뺄셈·곱셈·나눗셈)를 하나 풀어야 열립니다.' },
   { key: 'bossIntro', kind: 'toggle', group: '게임', label: '보스 등장 설명', description: '보스가 나타나면 게임을 잠시 멈추고 보스의 생김새·패턴·피하는 법을 보여줍니다.' },
+  { key: 'autoEquip', kind: 'toggle', group: '게임', label: '장비 자동 장착', description: '주운 무기·방어구·장신구가 지금 것보다 좋으면(공격·방어·체력·속도 점수) 바로 장착하고, 쓰던 것은 가방에 넣습니다. 끄면 모두 가방으로.' },
   { key: 'haptics', kind: 'toggle', group: '게임', label: '진동', description: '맞거나 처치할 때 짧게 진동합니다 (지원하는 휴대폰만, iPhone 은 안 됨).' },
   { key: 'soundMaster', kind: 'range', group: '소리', label: '전체 음량', description: '0 이면 무음. 소리는 첫 조작(터치·키) 뒤부터 납니다.', min: 0, max: 1, step: 0.1 },
   { key: 'soundSfx', kind: 'range', group: '소리', label: '효과음', description: '공격·피격·획득·보스 소리.', min: 0, max: 1, step: 0.1 },
@@ -106,6 +109,7 @@ export function defaultSettings(): UserSettings {
     leftHanded: false,
     touchButtonScale: 1,
     haptics: touch,
+    autoEquip: true,
     soundMaster: 0.8,
     soundSfx: 1,
     soundMusic: 0.6,

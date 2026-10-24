@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { buildArmorModel, buildWeaponModel, disposeVisual, type EquipmentLooks } from '../EquipmentVisuals';
 import { glow, pbr } from '../../render/materials';
 
 /** 모델이 매 프레임 받는 상태 */
@@ -34,6 +35,8 @@ export interface PlayerModel {
   dispose(): void;
   /** 얼굴 사진 텍스처 붙이기 (지원하는 모델만). null 이면 원래 얼굴 */
   setFace?(texture: THREE.Texture | null): void;
+  /** 장착한 장비 외형 보이기 (지원하는 모델만). 무기는 손에, 방어구는 몸통에 */
+  setEquipment?(looks: EquipmentLooks): void;
 }
 
 export interface PlaceholderColors {
@@ -131,6 +134,8 @@ export function createPlaceholderModel(colors: PlaceholderColors): PlayerModel {
   addMesh(sword, new THREE.BoxGeometry(0.2, 0.06, 0.06), accentMat, 0, 0, 0.08);
   addMesh(sword, new THREE.CylinderGeometry(0.035, 0.035, 0.2, 8), darkMat, 0, 0, -0.08).rotation.x = Math.PI / 2;
   armR.elbow.add(sword);
+  // 장착 장비 외형 (setEquipment 로 교체)
+  const gear: { melee: THREE.Group | null; ranged: THREE.Group | null; armor: THREE.Group | null } = { melee: null, ranged: null, armor: null };
 
   // 머리: 둥근 머리 + 얼굴(눈·눈썹·입) + 머리카락 뭉치 + 바이저(머리띠)
   const head = new THREE.Group();
@@ -285,6 +290,28 @@ export function createPlaceholderModel(colors: PlaceholderColors): PlayerModel {
       }
       // 피격 시 머리도 뒤로
       toward(head, 'x', hurt * -0.3, k);
+    },
+    setEquipment(looks: EquipmentLooks) {
+      disposeVisual(gear.melee);
+      disposeVisual(gear.ranged);
+      disposeVisual(gear.armor);
+      gear.melee = gear.ranged = gear.armor = null;
+      // 교체 무기를 들면 기본 에너지 검은 숨긴다
+      sword.visible = looks.melee === null;
+      if (looks.melee) {
+        gear.melee = buildWeaponModel(looks.melee, 0.46);
+        gear.melee.position.set(0, -0.24, 0);
+        armR.elbow.add(gear.melee);
+      }
+      if (looks.ranged) {
+        gear.ranged = buildWeaponModel(looks.ranged, 0.46);
+        gear.ranged.position.set(0, -0.24, 0);
+        armL.elbow.add(gear.ranged);
+      }
+      if (looks.armor) {
+        gear.armor = buildArmorModel(looks.armor, new THREE.Box3(new THREE.Vector3(-0.29, 0.52, -0.18), new THREE.Vector3(0.29, 1.04, 0.18)));
+        torso.add(gear.armor);
+      }
     },
     dispose() {
       root.traverse((obj) => {

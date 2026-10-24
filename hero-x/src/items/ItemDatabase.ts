@@ -1,4 +1,4 @@
-import { GameConfig, type Rarity } from '../game/GameConfig';
+import { GameConfig, type ArmorLook, type Rarity } from '../game/GameConfig';
 
 /** 장비 분류: 어느 슬롯에 들어가는지 */
 export type ItemCategory = 'melee' | 'ranged' | 'armor' | 'trinket';
@@ -25,6 +25,12 @@ export interface ItemTemplate {
   category: ItemCategory;
   base: Partial<ItemStats>;
   description: string;
+  /** 무기: 공격 방식 (GameConfig.combat.weaponStyles 의 키). 없으면 기본(sword/blaster) */
+  style?: string;
+  /** 방어구: 캐릭터에 보일 외형 */
+  look?: ArmorLook;
+  /** 외형 색 (무기 날·방어구 판). 없으면 외형 기본색 */
+  color?: string;
 }
 
 /** 실제로 떨어진 장비 한 개 */
@@ -36,6 +42,11 @@ export interface ItemInstance {
   rarity: Rarity;
   stats: ItemStats;
   description: string;
+  /** 무기 공격 방식 키 (템플릿에서 복사) */
+  style?: string;
+  /** 방어구 외형 (템플릿에서 복사) */
+  look?: ArmorLook;
+  color?: string;
 }
 
 /**
@@ -44,25 +55,25 @@ export interface ItemInstance {
  */
 export const ITEM_TEMPLATES: ItemTemplate[] = [
   // 근접 무기
-  { id: 'sword_basic', name: '에너지 검', category: 'melee', base: { attack: 4 }, description: '기본형 에너지 검. 가볍고 다루기 쉽다.' },
-  { id: 'axe_heavy', name: '플라즈마 도끼', category: 'melee', base: { attack: 7, moveSpeed: -0.05 }, description: '무겁지만 한 방이 세다. 이동이 조금 느려진다.' },
-  { id: 'hammer_pulse', name: '펄스 망치', category: 'melee', base: { attack: 9, moveSpeed: -0.1 }, description: '충격파를 내는 망치. 느리지만 강력하다.' },
+  { id: 'sword_basic', name: '에너지 검', category: 'melee', base: { attack: 4 }, description: '기본형 에너지 검. 가볍고 다루기 쉽다.', style: 'sword', color: '#bffcf2' },
+  { id: 'axe_heavy', name: '플라즈마 도끼', category: 'melee', base: { attack: 7, moveSpeed: -0.05 }, description: '무겁지만 한 방이 세다. 이동이 조금 느려진다.', style: 'axe', color: '#ff7a45' },
+  { id: 'hammer_pulse', name: '펄스 망치', category: 'melee', base: { attack: 9, moveSpeed: -0.1 }, description: '충격파를 내는 망치. 느리지만 강력하다.', style: 'hammer', color: '#c77dff' },
   // 원거리 무기
-  { id: 'blaster_basic', name: '소형 블래스터', category: 'ranged', base: { attack: 3 }, description: '빠르게 쏠 수 있는 기본 블래스터.' },
-  { id: 'bow_photon', name: '광자 활', category: 'ranged', base: { attack: 5 }, description: '빛의 화살을 쏘는 활.' },
-  { id: 'cannon_arc', name: '아크 캐논', category: 'ranged', base: { attack: 8, moveSpeed: -0.05 }, description: '전기를 뿜는 대형 캐논.' },
+  { id: 'blaster_basic', name: '소형 블래스터', category: 'ranged', base: { attack: 3 }, description: '빠르게 쏠 수 있는 기본 블래스터.', style: 'blaster', color: '#5cf2d8' },
+  { id: 'bow_photon', name: '광자 활', category: 'ranged', base: { attack: 5 }, description: '빛의 화살 세 발을 부채꼴로 쏘는 활.', style: 'bow', color: '#ffd23f' },
+  { id: 'cannon_arc', name: '아크 캐논', category: 'ranged', base: { attack: 8, moveSpeed: -0.05 }, description: '크고 느린 포탄을 쏘는 대형 캐논. 맞으면 크게 터진다.', style: 'cannon', color: '#ff9f43' },
   // 방어구
-  { id: 'vest_light', name: '경량 조끼', category: 'armor', base: { defense: 6 }, description: '움직임을 방해하지 않는 가벼운 방어구.' },
-  { id: 'plate_steel', name: '강철 갑옷', category: 'armor', base: { defense: 12, maxHp: 10, moveSpeed: -0.05 }, description: '튼튼한 강철판 갑옷.' },
-  { id: 'suit_nano', name: '나노 슈트', category: 'armor', base: { defense: 9, moveSpeed: 0.05 }, description: '몸에 딱 맞는 첨단 슈트. 조금 더 빨라진다.' },
+  { id: 'vest_light', name: '경량 조끼', category: 'armor', base: { defense: 6 }, description: '움직임을 방해하지 않는 가벼운 방어구.', look: 'vest', color: '#6b8f3a' },
+  { id: 'plate_steel', name: '강철 갑옷', category: 'armor', base: { defense: 12, maxHp: 10, moveSpeed: -0.05 }, description: '튼튼한 강철판 갑옷.', look: 'plate', color: '#b8c4d6' },
+  { id: 'suit_nano', name: '나노 슈트', category: 'armor', base: { defense: 9, moveSpeed: 0.05 }, description: '몸에 딱 맞는 첨단 슈트. 조금 더 빨라진다.', look: 'suit', color: '#2b3a67' },
   // 장신구
   { id: 'ring_vitality', name: '생명의 반지', category: 'trinket', base: { maxHp: 20 }, description: '최대 체력을 늘려 준다.' },
   { id: 'boots_wind', name: '바람 신발', category: 'trinket', base: { moveSpeed: 0.12 }, description: '이동 속도가 빨라진다.' },
   { id: 'amulet_power', name: '힘의 목걸이', category: 'trinket', base: { attack: 2, defense: 2 }, description: '공격과 방어를 조금씩 올려 준다.' },
   // 6단계 추가 장비
-  { id: 'spear_crystal', name: '수정 창', category: 'melee', base: { attack: 6, moveSpeed: 0.04 }, description: '수정 동굴에서 캔 가볍고 날카로운 창.' },
-  { id: 'rifle_rail', name: '레일 라이플', category: 'ranged', base: { attack: 10, moveSpeed: -0.08 }, description: '돌 골렘의 심장석을 박아 만든 강력한 총. 무겁다.' },
-  { id: 'cloak_shadow', name: '그림자 망토', category: 'armor', base: { defense: 7, moveSpeed: 0.1 }, description: '얇지만 몸놀림이 빨라지는 망토.' },
+  { id: 'spear_crystal', name: '수정 창', category: 'melee', base: { attack: 6, moveSpeed: 0.04 }, description: '수정 동굴에서 캔 가볍고 날카로운 창. 빠르고 멀리 찌른다.', style: 'spear', color: '#7df2ff' },
+  { id: 'rifle_rail', name: '레일 라이플', category: 'ranged', base: { attack: 10, moveSpeed: -0.08 }, description: '돌 골렘의 심장석을 박아 만든 강력한 총. 탄이 적을 꿰뚫는다. 무겁다.', style: 'rifle', color: '#c77dff' },
+  { id: 'cloak_shadow', name: '그림자 망토', category: 'armor', base: { defense: 7, moveSpeed: 0.1 }, description: '얇지만 몸놀림이 빨라지는 망토.', look: 'cloak', color: '#3a2d5c' },
   { id: 'core_fortress', name: '요새 코어', category: 'trinket', base: { defense: 6, maxHp: 15 }, description: '요새의 동력 코어. 단단해진다.' },
 ];
 
@@ -87,6 +98,9 @@ export function createItem(template: ItemTemplate, rarity: Rarity): ItemInstance
     rarity,
     stats,
     description: template.description,
+    style: template.style,
+    look: template.look,
+    color: template.color,
   };
 }
 

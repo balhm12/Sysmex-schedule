@@ -38,6 +38,24 @@ export function classifyPart(name: string): PartKind {
 
 export interface PartRig {
   update(dt: number, s: PlayerModelState): void;
+  /** 장비를 붙일 자리 (플레이어 리그만). 손 위치는 관절 그룹 기준 (0, -armLength, 0) */
+  attach?: RigAttachments;
+}
+
+/** 장비 외형을 붙이기 위한 관절·치수 정보 */
+export interface RigAttachments {
+  /** 검 든 팔 관절 그룹 (어깨가 원점, 손은 -Y 쪽) */
+  swordArm: THREE.Group;
+  /** 반대쪽 팔 관절 그룹 */
+  otherArm: THREE.Group;
+  /** 몸 전체 그룹 (몸통 메시가 들어 있음, 기울임·회전이 적용됨) */
+  body: THREE.Group;
+  /** .glb 에 들어 있던 원래 무기 메시 묶음 (교체 무기를 들면 숨긴다). 없으면 null */
+  weaponHold: THREE.Group | null;
+  /** 팔 길이(어깨→손) */
+  armLength: number;
+  /** 몸통(팔·다리·머리·무기 제외) 바운딩 박스, root 좌표 */
+  torsoBox: THREE.Box3;
 }
 
 interface Joint {
@@ -99,6 +117,13 @@ export function buildPartRig(root: THREE.Object3D): PartRig | null {
     for (const m of meshes) group.attach(m);
     return { group, length: box.max.y - box.min.y };
   };
+  // 몸통(분류되지 않은 메시) 범위는 관절을 만들기 전에 잰다 (장비 외형 배치용)
+  const torsoMeshes: THREE.Mesh[] = [];
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (mesh.isMesh && classifyPart(mesh.name) === null) torsoMeshes.push(mesh);
+  });
+  const torsoBox = torsoMeshes.length ? boxOf(torsoMeshes) : new THREE.Box3(new THREE.Vector3(-0.3, 0.6, -0.2), new THREE.Vector3(0.3, 1.3, 0.2));
   const lLeg = hasLegs ? makeJoint('leftLeg', true) : null;
   const rLeg = hasLegs ? makeJoint('rightLeg', true) : null;
   const lArm = hasArms ? makeJoint('leftArm', true) : null;
@@ -106,6 +131,15 @@ export function buildPartRig(root: THREE.Object3D): PartRig | null {
   const head = makeJoint('head', false);
   const swordArm = weaponSide === 'leftArm' ? lArm : weaponSide === 'rightArm' ? rArm : rArm;
   const otherArm = swordArm === lArm ? rArm : lArm;
+  // 원래 무기 메시는 팔 관절 아래 따로 묶는다 (메시 합치기 때 팔과 섞이지 않아 교체 무기를 들 때 숨길 수 있다)
+  let weaponHold: THREE.Group | null = null;
+  if (weapons.length > 0 && swordArm) {
+    weaponHold = new THREE.Group();
+    weaponHold.name = 'weaponHold';
+    swordArm.group.add(weaponHold);
+    swordArm.group.updateMatrixWorld(true);
+    for (const w of weapons) weaponHold.attach(w);
+  }
 
   // 몸 전체(관절 포함)를 한 번 더 감싸 기울임·회전을 root 와 분리한다
   const body = new THREE.Group();
@@ -117,7 +151,9 @@ export function buildPartRig(root: THREE.Object3D): PartRig | null {
   let t = 0;
   const lerp = (a: number, b: number, k: number) => a + (b - a) * Math.max(0, Math.min(1, k));
   const ease = (k: number) => k * k * (3 - 2 * k);
+  const attach: RigAttachments | undefined = swordArm && otherArm ? { swordArm: swordArm.group, otherArm: otherArm.group, body, weaponHold, armLength: swordArm.length, torsoBox } : undefined;
   return {
+    attach,
     update(dt: number, s: PlayerModelState) {
       t += dt;
       const hurt = s.hurt ?? 0;

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Health } from '../combat/Health';
 import { GameConfig } from '../game/GameConfig';
+import type { EquipmentLooks } from './EquipmentVisuals';
 import type { PlayerModel } from './models/PlaceholderModel';
 
 /**
@@ -72,12 +73,22 @@ export class Player {
     return visible;
   }
 
-  /** 외형 모델 교체 (기존 모델은 정리한다) */
+  /** 마지막으로 적용한 장비 외형 (모델을 바꿔도 다시 입힌다) */
+  private looks: EquipmentLooks | null = null;
+
+  /** 외형 모델 교체 (기존 모델은 정리한다). 장비 외형은 새 모델에 다시 입힌다 */
   setModel(model: PlayerModel): void {
     this.object3d.remove(this.model.root);
     this.model.dispose();
     this.model = model;
     this.object3d.add(model.root);
+    if (this.looks) model.setEquipment?.(this.looks);
+  }
+
+  /** 장착한 장비 외형 적용 (무기는 손에, 방어구는 몸에). 모델이 지원하지 않으면 무시 */
+  setEquipment(looks: EquipmentLooks): void {
+    this.looks = looks;
+    this.model.setEquipment?.(looks);
   }
 
   /** 현재 공격 동작 종류와 콤보 단계 (모델 애니메이션용) */

@@ -49,7 +49,8 @@ hero-x/
 │  │  ├─ InputManager.ts   키보드·마우스 입력 (키 설정은 GameConfig.controls, 마우스는 'Mouse0' 등) + 가상 입력(setVirtualAxis/pressVirtual)
 │  │  └─ TouchControls.ts  터치 조작: 가상 조이스틱·버튼 (GameConfig.controls 키 코드를 가상으로 누름)
 │  ├─ player/
-│  │  ├─ Player.ts         플레이어 상태(위치·방향·체력·공격 동작), 모델 교체 setModel()
+│  │  ├─ Player.ts         플레이어 상태(위치·방향·체력·공격 동작), 모델 교체 setModel(), 장비 외형 setEquipment()
+│  │  ├─ EquipmentVisuals.ts 장착 장비 외형(코드 상자 모델): 무기 8종 buildWeaponModel, 방어구 4종 buildArmorModel, 등급 색 빛
 │  │  ├─ PlayerController.ts  입력 → 이동 → 충돌 → 위치 반영, 피격 밀림, 점프
 │  │  ├─ PlayerStats.ts     레벨·경험치·골드 (최대 체력·공격력 배율 계산, 테스트 대상)
 │  │  ├─ movement.ts       이동·충돌·우회 조종(segmentBlocked/steerAround) 순수 함수 (테스트 대상)
@@ -107,8 +108,9 @@ hero-x/
 │  ├─ items/
 │  │  ├─ loot.ts           드롭 확률 계산 순수 함수 (테스트 대상)
 │  │  ├─ LootSystem.ts     바닥 아이템 생성·끌림·획득, 희귀 이상 장비엔 등급 색 빛 기둥·고리 (효과 적용은 Game.onCollect)
-│  │  ├─ ItemDatabase.ts   장비 템플릿 12종, 등급 적용 생성, 무작위 생성 (테스트 대상)
-│  │  └─ EquipmentSystem.ts 가방·슬롯 장착/해제, 능력치 합산, 방어력 계산 (테스트 대상)
+│  │  ├─ ItemDatabase.ts   장비 템플릿 16종(style/look/color 포함), 등급 적용 생성, 무작위 생성 (테스트 대상)
+│  │  ├─ weaponStyle.ts    장착 무기 → 공격 방식(GameConfig.combat.weaponStyles) 해석, 콤보 구성·꼬리표 (순수 함수, 테스트 대상)
+│  │  └─ EquipmentSystem.ts 가방·슬롯 장착/해제, 주웠을 때 자동 장착(pickup·score), 능력치 합산, 방어력 계산 (테스트 대상)
 │  ├─ dungeon/
 │  │  ├─ journey.ts        ★ 여정형 던전 정의(구역·통로·문)와 계산: 격자 래스터화 → 울타리 벽 상자, BFS 연결 검증, 구역 판정 (순수 함수, 테스트 대상)
 │  │  ├─ ZoneSystem.ts     여정 진행기: 구역 진입 → 적 등장(enter 파도), 절반 이하 → 증원(half 파도), 전멸 → 클리어·문 열림, 보스 구역 → 보스 등장, 목표·진행도·빛 기둥 위치 (테스트 대상)
@@ -211,7 +213,11 @@ hero-x/
 - "아이템이 더 자주/레벨이 빨리" → `loot.healChance/goldChance`, `progression.xpBase/xpGrowth`.
 - 플레이어 공격력: `CombatSystem` 이 레벨 배율(`() => stats.damageMultiplier`)과 무기 공격력(`(kind) => equipment.weaponAttack(kind)`)을 함수로 받는다. 피해 = (기본 + 무기) × 배율.
 - 방어력은 `Game.damagePlayer` 에서 `applyDefense` 로, 체력 보너스는 `Game.applyStats`, 속도 보너스는 `PlayerController` 의 배율 함수로 적용된다. 새 능력치를 추가하면 이 세 곳을 확인한다.
-- 새 장비 → `ItemDatabase.ts` 의 `ITEM_TEMPLATES` 에 항목 추가 (분류 melee/ranged/armor/trinket, 일반 등급 기준 수치).
+- 새 장비 → `ItemDatabase.ts` 의 `ITEM_TEMPLATES` 에 항목 추가 (분류 melee/ranged/armor/trinket, 일반 등급 기준 수치). 무기는 `style`(`GameConfig.combat.weaponStyles` 키, 근접은 melee·원거리는 ranged 설정이 있는 것), 방어구는 `look`(vest/plate/suit/cloak), 외형 색 `color` 를 적는다. `tests/weaponStyle.test.ts` 가 확인.
+- 무기 공격 방식: `combat.weaponStyles.<키>` 에 `look`(손에 보일 외형) + `melee{steps, window, cooldownMul}`(콤보 단계 전체) 또는 `ranged{count, spreadDegrees, speedMul, radiusMul, cooldownMul, lifetimeMul, knockbackMul, pierce, color}`. `CombatSystem` 은 `getWeaponStyle(kind)`(Game 이 `weaponStyleFor(kind, equipped[kind])` 로 넘김)만 보고 `meleeComboFor` 로 콤보를 고른다. 'sword'·'blaster' 는 무기가 없을 때의 기본이며 `sword.melee.steps` 는 `combat.melee.combo.steps` 와 같은 값이어야 한다(테스트). 새 외형(`WeaponLook`)을 추가하면 `EquipmentVisuals.buildWeaponModel` 에 분기를 더한다.
+- 장비 자동 장착: `Game.collectItem(item, pos)` 한 곳이 `equipment.pickup(item, settings.autoEquip)` → 효과·배너·`applyStats`·`refreshEquipment`. 점수는 `EquipmentSystem.score`(가중치 `equipment.autoEquipWeights`). 장비가 바뀌는 모든 경로(획득, 장비 화면 `onChange`, 저장 불러오기, 새 게임)는 `refreshEquipment()` 를 불러 외형을 맞춘다. 테스트는 `__heroX.debugGiveItem('axe_heavy','rare')` + `getDebugState().equipment.styles/gear`(스크래치 `smoke36.cjs`).
+- 장비 외형 붙이는 자리: `.glb` 플레이어는 `buildPartRig` 가 돌려주는 `attach`(`swordArm/otherArm/body/weaponHold/armLength/torsoBox`). 원래 무기 메시는 리그가 `weaponHold` 그룹으로 분리해 두므로(메시 합치기 때 팔과 안 섞임) 교체 무기를 들면 숨길 수 있다. 무기 그룹은 손(관절 기준 (0, -팔길이×0.95, 0))이 원점이고 +Z 로 뻗는다. 임시 모델은 `armR.elbow`/`armL.elbow`/`torso`. 모델을 바꿔도 `Player.setModel` 이 마지막 외형을 다시 입힌다.
+- 투사체는 `SWEEP_STEP`(0.35) 이하로 나눠 움직이며 충돌을 본다(빠른 탄 터널링 방지). 관통은 `ProjectileSpec.pierce`.
 - 던전 추가·수정 → `DungeonDefs.ts` 의 `DUNGEONS` 에 항목 추가/수정 (해금은 `requiresClear`, 보스는 `boss` 에 바꿀 값만). **여정형 던전**은 `journey`(구역 `zones`·통로 `corridors`·문 `gates`, `halfX/halfZ` 직사각형 범위, `start`)를 적는다: 적은 `spawns: []` 로 두고 구역 `waves`(`enter`/`half`)로 등장, 정예는 `elite`(체력 배율, 1.5 이상이면 몸집·이름 배너), 보스는 `boss.spawn` 을 보스 구역 안에, 상자·장애물은 걷는 사각형 안에. 벽은 적지 않는다(`buildWallBoxes` 가 격자로 만든다). 메인 경로는 `mainIndex` 순서, 선택 경로는 `mainIndex` 없이. `tests/journey.test.ts` 가 연결성(BFS)·구역 안 배치·문 위치·벽 구멍을 검사한다. 지도를 눈으로 보려면 Playwright 로 `/src/game/DungeonDefs.ts` 를 import 해 캔버스에 그린다(스크래치 `map-journey.cjs`). `GameConfig.world.obstacles/dungeon.chests/enemies.spawns` 는 여정이 없는 열린 경기장 던전의 기본값(현재 숲은 안 씀). `tests/dungeons.test.ts` 가 모든 던전의 배치 겹침·영역을 검사한다. 던전 교체는 `Game.loadDungeon` 한 곳(공간·상자 새로 생성, 충돌 세계는 껍데기 객체로 공유).
 - 적 공격 방식 `attackKind`: 'melee'(기본) / 'ranged'(`projectileSpeed`, 여러 발이면 `projectileCount`+`spreadDegrees`) / 'charge'(`EnemyAI` 의 charge 상태: 예고 끝 방향으로 `chargeSpeed`·`chargeDuration` 돌진, `AIDecision.speedMul`, 닿으면 attackNow, 피격으로 안 멈춤) / 'explode'(`Game.onEnemyAttack` 이 `explodeRadius` 범위 피해 + 효과 + 그 적을 처치 처리). 죽을 때 갈라지는 적은 `splitInto`(`Game.splitOnDeath` → `ZoneSystem.attach` 로 그 구역에 붙여 클리어 판정에 포함). 몸집 무작위는 `enemies.sizeJitter`(보기용). 적 종류 10종: rusher·shooter·tank·stalker·artillery·archer·slime·slimelet·bomber·charger.
 - 새 적이 기존 외형을 써도 되면 `enemies.types.<종류>.model` 에 'rusher' | 'shooter' | 'tank' 를 적는다. 던전 분위기에 맞춰 **같은 종류를 다른 외형**으로 내보내려면 적 배치에 `skin: '<manifest enemies 키>'` 를 적는다(요새는 `robot-<종류>` → `enemy-*.glb` 로봇; `DungeonDefs` 의 `R()` 도우미). `EnemySpawner.spawn(..., skin)` → `createEnemyModel(type, def, skin)` 이 `enemy:<skin>` 을 먼저 찾는다.
@@ -248,6 +254,6 @@ hero-x/
 5. 설정 화면과 저장 ✅ (v0.5.0: 자동 저장·이어하기·버전·손상 처리, 설정 화면·기본값 복원)
 6. 콘텐츠 확장 ✅ (v0.6.0-a.1 던전 3개·던전 선택·새 적·새 장비 / v0.6.1 모바일 / v0.6.2 보스별 패턴·외형)
 7. 품질 개선 ✅ (v0.7.0-a.1 효과음·음악 / v0.7.0-b.1 얼굴 사진·glb 교체 구조 / v1.0.0 자동 화질·오류 처리·문서)
-8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장(동굴·요새 여정형, 로봇 공장 테마) ✅ v1.11.0 / 적 10종 ✅ v1.12.0 / 메시 합치기 ✅ v1.13.0 / 네 번째 던전 얼음 봉우리 ✅ v1.14.0 / 소품 합치기·구역 음악 분위기 ✅ v1.15.0 / 벽·장애물 그래픽 ✅ v1.16.0 / 보스 등장 팝업 ✅ v1.17.0 / 앱처럼 설치(PWA) ✅ v1.18.0 / 근접 3단 콤보·원거리 연출 ✅ v1.19.0
+8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장(동굴·요새 여정형, 로봇 공장 테마) ✅ v1.11.0 / 적 10종 ✅ v1.12.0 / 메시 합치기 ✅ v1.13.0 / 네 번째 던전 얼음 봉우리 ✅ v1.14.0 / 소품 합치기·구역 음악 분위기 ✅ v1.15.0 / 벽·장애물 그래픽 ✅ v1.16.0 / 보스 등장 팝업 ✅ v1.17.0 / 앱처럼 설치(PWA) ✅ v1.18.0 / 근접 3단 콤보·원거리 연출 ✅ v1.19.0 / 장비 자동 장착·무기별 공격 방식·장비 외형 ✅ v1.20.0
 
 각 단계는 완료 기준을 만족하고 기존 기능이 정상일 때만 다음 단계로 넘어간다.
