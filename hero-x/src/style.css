@@ -222,6 +222,9 @@ body {
   gap: 18px;
   font-size: 14px;
 }
+.hud-stats > div {
+  word-break: keep-all; /* '얼음 봉우리' 같은 던전 이름이 글자 중간에서 끊기지 않게 */
+}
 .hud-stats b {
   font-size: 18px;
 }

@@ -319,6 +319,85 @@ export const FORTRESS_JOURNEY: JourneyDef = {
   ],
 };
 
+
+/**
+ * 얼음 봉우리 여정 (목표 10분+, 눈과 얼음): 산기슭 → 얼어붙은 숲길(멧돼지·궁수) → 빙판 호수(슬라임 많음) → [동쪽 얼음 동굴: 보물]
+ * → 눈보라 고개(증원) → 갈림길(봉쇄 문) → [서쪽 서리 신전: 정예 서리 트롤 + 상자] → 고드름 골짜기(매복·폭탄 벌레)
+ * → 모닥불 쉼터 → 봉우리 광장(증원) → 봉쇄 문 → 서리 거인.
+ * 좌우로 크게 꺾이는 지그재그 모양이라 앞의 세 던전과 다르게 느껴진다.
+ */
+export const ICE_JOURNEY: JourneyDef = {
+  halfX: 40,
+  halfZ: 108,
+  cell: 2,
+  wallHeight: 3.4,
+  start: { x: -20, z: 92 },
+  bossZone: 'boss',
+  zones: [
+    { id: 'start', name: '산기슭', kind: 'start', rect: { x: -20, z: 90, w: 16, d: 14 }, mainIndex: 0, objective: '얼음 봉우리로 — 빛 기둥을 따라가세요' },
+    {
+      id: 'path1', name: '얼어붙은 숲길', kind: 'path', rect: { x: 2, z: 84, w: 28, d: 8 }, mainIndex: 1, objective: '얼어붙은 숲길을 지나라 — 멧돼지가 돌진한다!',
+      waves: [{ when: 'enter', spawns: [{ type: 'charger', x: 10, z: 84 }, { type: 'archer', x: 14, z: 86 }] }],
+    },
+    {
+      id: 'fight1', name: '빙판 호수', kind: 'fight', rect: { x: 22, z: 60, w: 28, d: 24 }, mainIndex: 2, objective: '호수의 슬라임을 모두 물리쳐라',
+      waves: [{ when: 'enter', spawns: [{ type: 'slime', x: 14, z: 64 }, { type: 'slime', x: 30, z: 64 }, { type: 'slime', x: 22, z: 52 }, { type: 'rusher', x: 18, z: 56 }, { type: 'rusher', x: 26, z: 56 }, { type: 'archer', x: 22, z: 68 }] }],
+    },
+    {
+      id: 'treasure', name: '얼음 동굴', kind: 'treasure', rect: { x: 32, z: 34, w: 12, d: 12 }, objective: '얼음 동굴의 보물 상자를 열어라',
+      waves: [{ when: 'enter', spawns: [{ type: 'stalker', x: 28, z: 30 }, { type: 'stalker', x: 36, z: 38 }, { type: 'shooter', x: 32, z: 30 }] }],
+    },
+    {
+      id: 'fight2', name: '눈보라 고개', kind: 'fight', rect: { x: -4, z: 36, w: 28, d: 16 }, mainIndex: 3, objective: '눈보라 속 적을 물리쳐라',
+      waves: [
+        { when: 'enter', spawns: [{ type: 'rusher', x: -12, z: 40 }, { type: 'rusher', x: 4, z: 40 }, { type: 'archer', x: -8, z: 30 }, { type: 'archer', x: 0, z: 30 }, { type: 'charger', x: -4, z: 42 }, { type: 'shooter', x: 6, z: 32 }] },
+        { when: 'half', spawns: [{ type: 'stalker', x: -14, z: 32 }, { type: 'stalker', x: 6, z: 42 }, { type: 'slime', x: 2, z: 36 }] },
+      ],
+    },
+    {
+      id: 'junction', name: '갈림길', kind: 'branch', rect: { x: -26, z: 24, w: 12, d: 12 }, mainIndex: 4, objective: '갈림길의 적을 물리치면 북쪽 문이 열린다 (서쪽에도 길이…)',
+      waves: [{ when: 'enter', spawns: [{ type: 'rusher', x: -29, z: 27 }, { type: 'archer', x: -23, z: 21 }, { type: 'bomber', x: -26, z: 28 }] }],
+    },
+    {
+      id: 'secret', name: '서리 신전', kind: 'secret', rect: { x: -30, z: 4, w: 14, d: 14 }, objective: '서리 트롤을 물리쳐라 (희귀 상자)',
+      waves: [{ when: 'enter', spawns: [{ type: 'tank', x: -30, z: 0, elite: 2.4, name: '서리 트롤' }, { type: 'archer', x: -35, z: 8 }, { type: 'archer', x: -25, z: 8 }] }],
+    },
+    {
+      id: 'ambush', name: '고드름 골짜기', kind: 'ambush', rect: { x: -8, z: 2, w: 24, d: 16 }, mainIndex: 5, objective: '고드름이 떨어진다! 모두 물리쳐라',
+      waves: [
+        { when: 'enter', spawns: [{ type: 'bomber', x: -16, z: 6 }, { type: 'bomber', x: 0, z: 6 }, { type: 'stalker', x: -14, z: -2 }, { type: 'stalker', x: 0, z: -2 }, { type: 'rusher', x: -8, z: 8 }, { type: 'slime', x: -8, z: -4 }] },
+        { when: 'half', spawns: [{ type: 'bomber', x: -17, z: 2 }, { type: 'bomber', x: 1, z: 2 }, { type: 'charger', x: -4, z: 7 }] },
+      ],
+    },
+    { id: 'rest', name: '모닥불 쉼터', kind: 'rest', rect: { x: 20, z: -16, w: 14, d: 12 }, mainIndex: 6, objective: '모닥불에서 몸을 녹이자 — 상자와 회복 아이템' },
+    {
+      id: 'arena', name: '봉우리 광장', kind: 'arena', rect: { x: 0, z: -48, w: 36, d: 26 }, mainIndex: 7, objective: '큰 전투! 모두 물리치면 서리 거인의 문이 열린다',
+      waves: [
+        { when: 'enter', spawns: [{ type: 'tank', x: -10, z: -52 }, { type: 'tank', x: 10, z: -52 }, { type: 'slime', x: -14, z: -42 }, { type: 'slime', x: 14, z: -42 }, { type: 'archer', x: -6, z: -58 }, { type: 'archer', x: 6, z: -58 }, { type: 'charger', x: 0, z: -56 }, { type: 'rusher', x: -4, z: -40 }, { type: 'rusher', x: 4, z: -40 }, { type: 'shooter', x: -16, z: -54 }, { type: 'shooter', x: 16, z: -54 }] },
+        { when: 'half', spawns: [{ type: 'bomber', x: -12, z: -46 }, { type: 'bomber', x: 12, z: -46 }, { type: 'charger', x: 0, z: -58 }, { type: 'slime', x: 6, z: -45 }] },
+      ],
+    },
+    { id: 'boss', name: '서리 거인의 옥좌', kind: 'boss', rect: { x: 0, z: -84, w: 32, d: 18 }, mainIndex: 8, objective: '서리 거인을 쓰러뜨려라!' },
+  ],
+  corridors: [
+    { x: -10, z: 84, w: 8, d: 6 },
+    { x: 18, z: 76, w: 6, d: 10 },
+    { x: 32, z: 44, w: 6, d: 10 },
+    { x: 8, z: 47, w: 6, d: 8 },
+    { x: -20, z: 30, w: 8, d: 6 },
+    { x: -30, z: 14, w: 6, d: 10 },
+    { x: -21, z: 14, w: 6, d: 10 },
+    { x: 2, z: -9, w: 6, d: 8 },
+    { x: 9, z: -14, w: 14, d: 6 },
+    { x: 18, z: -29, w: 6, d: 14 },
+    { x: 0, z: -68, w: 8, d: 16 },
+  ],
+  gates: [
+    { id: 'gate-north', rect: { x: -21, z: 13, w: 6, d: 1.2 }, opensWhenCleared: 'junction' },
+    { id: 'gate-boss', rect: { x: 0, z: -72, w: 8, d: 1.2 }, opensWhenCleared: 'arena' },
+  ],
+};
+
 export const DUNGEONS: DungeonDef[] = [
   {
     id: 'forest',
@@ -484,6 +563,73 @@ export const DUNGEONS: DungeonDef[] = [
       reward: { goldMin: 250, goldMax: 400, xp: 400, equipMinRarity: 'epic' },
     },
     rewardMul: { gold: 1.6, xp: 1.6 },
+  },
+  {
+    id: 'ice',
+    name: '얼음 봉우리',
+    subtitle: '눈보라 치는 산길. 빙판의 슬라임과 서리 거인이 기다린다.',
+    recommendedLevel: 12,
+    requiresClear: 'fortress',
+    arenaHalfSize: 30,
+    journey: ICE_JOURNEY,
+    start: ICE_JOURNEY.start,
+    theme: {
+      backgroundColor: '#dfe9f5',
+      fogNear: 22,
+      fogFar: 70,
+      floorColor: '#e8f1fa',
+      floorAltColor: '#d4e3f0',
+      floorFlecks: ['#ffffff', '#9fd0f0'],
+      wallColor: '#a9cfe8',
+      wallHeight: 3.4,
+      skyColor: '#eaf3fb',
+      groundColor: '#8fb3cc',
+      sunColor: '#f2f7ff',
+      sunIntensity: 2.6,
+      sky: { elevation: 12, azimuth: 160, turbidity: 4, rayleigh: 2.5 },
+      exposure: 1.0,
+      groundBump: 1.2,
+      groundScale: 7,
+      groundRoughness: 0.5,
+    },
+    obstacles: [
+      // 빙판 호수의 얼음 바위(오를 수 있음), 눈보라 고개 얼음 기둥, 광장 얼음 기둥, 골짜기 눈더미
+      { x: 22, z: 60, w: 2.2, d: 2.2, h: 1.6, color: '#bfe3f7', kind: 'crate' },
+      { x: 24.4, z: 60, w: 2.2, d: 2.2, h: 2.2, color: '#bfe3f7', kind: 'crate' },
+      { x: -4, z: 36, w: 1.4, d: 1.4, h: 5, color: '#cfeeff', kind: 'pillar' },
+      { x: -12, z: -48, w: 1.4, d: 1.4, h: 5, color: '#cfeeff', kind: 'pillar' },
+      { x: 12, z: -48, w: 1.4, d: 1.4, h: 5, color: '#cfeeff', kind: 'pillar' },
+      { x: -8, z: 2, w: 3, d: 0.8, h: 1.4, color: '#eef6fb', kind: 'ruin' },
+    ],
+    chests: [
+      { x: 32, z: 34 },
+      { x: -30, z: 4 },
+      { x: 23, z: -18 },
+      { x: 0, z: -40 },
+    ],
+    spawns: [],
+    boss: {
+      name: '서리 거인',
+      hp: 1100,
+      color: '#8fd3ff',
+      speed: 2.4,
+      radius: 1.9,
+      score: 1000,
+      spawn: { x: 0, z: -86 },
+      contactDamage: 26,
+      model: 'frost',
+      // 느리지만 넓은 내려찍기, 눈 슬라임 소환, 탄막. 돌진은 없다
+      useCharge: false,
+      closePatterns: ['slam', 'summon', 'barrage', 'slam'],
+      engageRange: 10,
+      windup: { slam: 0.85, barrage: 0.65, summon: 1.0 },
+      slam: { radius: 6, damage: 36 },
+      barrage: { count: 12, phase2Count: 16, damage: 13, speed: 10 },
+      summon: { type: 'slimelet', count: 3, phase2Count: 4, maxAlive: 6 },
+      phase2SpeedMul: 1.35,
+      reward: { goldMin: 350, goldMax: 520, xp: 600, equipMinRarity: 'epic' },
+    },
+    rewardMul: { gold: 1.9, xp: 1.9 },
   },
 ];
 

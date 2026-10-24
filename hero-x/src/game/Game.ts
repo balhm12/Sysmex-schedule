@@ -790,7 +790,7 @@ export class Game {
   /** 현재 던전의 음악 트랙 (정의가 없으면 숲) */
   private dungeonMusic(): MusicName {
     const id = this.dungeonDef.id;
-    return id === 'cave' || id === 'fortress' || id === 'forest' ? id : 'forest';
+    return id === 'cave' || id === 'fortress' || id === 'forest' || id === 'ice' ? id : 'forest';
   }
 
   /** 얼굴 사진을 현재 플레이어 모델에 붙인다 (지원하는 모델만) */

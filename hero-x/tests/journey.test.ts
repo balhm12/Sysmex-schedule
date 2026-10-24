@@ -82,8 +82,8 @@ describe.each(JOURNEY_DUNGEONS.map((d) => [d.name, d] as const))('%s 여정 (jou
 });
 
 describe('여정 던전 전체', () => {
-  it('세 던전 모두 여정형이고, 적 외형(skin)은 manifest 에 있는 키만 쓴다', () => {
-    expect(JOURNEY_DUNGEONS.map((d) => d.id)).toEqual(['forest', 'cave', 'fortress']);
+  it('네 던전 모두 여정형이고, 적 외형(skin)은 manifest 에 있는 키만 쓴다', () => {
+    expect(JOURNEY_DUNGEONS.map((d) => d.id)).toEqual(['forest', 'cave', 'fortress', 'ice']);
     const skins = new Set<string>();
     for (const d of JOURNEY_DUNGEONS) for (const z of d.journey!.zones) for (const sp of zoneSpawns(z)) if (sp.skin) skins.add(sp.skin);
     expect([...skins].sort()).toEqual(['robot-artillery', 'robot-bomber', 'robot-rusher', 'robot-shooter', 'robot-stalker', 'robot-tank']);

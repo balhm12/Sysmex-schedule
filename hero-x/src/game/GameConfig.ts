@@ -322,8 +322,8 @@ export interface GameConfigType {
     closePatterns: Array<'slam' | 'barrage' | 'summon' | 'mortar'>;
     /** 돌진 사용 여부 */
     useCharge: boolean;
-    /** 외형: 'guardian'(숲 수호 로봇) | 'golem'(수정 골렘) | 'commander'(요새 사령관) */
-    model: 'guardian' | 'golem' | 'commander';
+    /** 외형: 'guardian'(숲 수호 로봇) | 'golem'(수정 골렘) | 'commander'(요새 사령관) | 'frost'(서리 거인) */
+    model: 'guardian' | 'golem' | 'commander' | 'frost';
     chargeDuration: number;
     recover: number;
     cooldown: number;
@@ -410,7 +410,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.13.0', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.14.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],

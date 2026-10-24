@@ -144,7 +144,7 @@ interface BossModelState extends EnemyModelState {
 }
 
 /** 보스 외형 종류 */
-export type BossModelKind = 'guardian' | 'golem' | 'commander';
+export type BossModelKind = 'guardian' | 'golem' | 'commander' | 'frost';
 
 /**
  * 보스 임시 모델. 공통: 큰 몸통·팔·예고용 바닥 원. 종류별 차이:
@@ -223,10 +223,12 @@ function decorateGltfBoss(inner: EnemyModel, r: number): EnemyModel {
   };
 }
 
-function createBossModel(def: EnemyTypeConfig, kind: BossModelKind = 'guardian'): EnemyModel {
+function createBossModel(def: EnemyTypeConfig, kindIn: BossModelKind = 'guardian'): EnemyModel {
   // 정식 .glb 보스 모델이 등록돼 있으면 그것을 쓰고, 패턴 예고(바닥 원)·2단계(붉은 눈)만 덧입힌다
-  const gltf = modelRegistry.createEnemyModel(`boss:${kind}`, def.radius * 3.0);
+  const gltf = modelRegistry.createEnemyModel(`boss:${kindIn}`, def.radius * 3.0);
   if (gltf) return decorateGltfBoss(gltf, def.radius);
+  // 코드 모델: 서리 거인은 골렘 모양을 빌려 쓴다 (.glb 가 없을 때만)
+  const kind: Exclude<BossModelKind, 'frost'> = kindIn === 'frost' ? 'golem' : kindIn;
   const root = new THREE.Group();
   root.name = `Boss-${def.name}`;
   const r = def.radius;

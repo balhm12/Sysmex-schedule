@@ -256,6 +256,48 @@ export class Decor {
         this.lamps.push(lm);
         break;
       }
+      case 'iceSpike': {
+        // 고드름 바위: 눈 덮인 받침 + 반투명 얼음 뿔 2~3개
+        add(new THREE.DodecahedronGeometry(0.45, 0), pbr({ color: '#dfe9f2', roughness: 0.9 }), 0.25);
+        const ice = new THREE.MeshStandardMaterial({ color: new THREE.Color('#bfe9ff'), roughness: 0.15, metalness: 0.05, transparent: true, opacity: 0.85 });
+        const n = 2 + Math.floor(r() * 2);
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * Math.PI * 2 + r();
+          const h = 1.2 + r() * 1.6;
+          const sp = add(new THREE.ConeGeometry(0.22 + r() * 0.12, h, 5), ice, 0.3 + h / 2, Math.cos(a) * 0.25, Math.sin(a) * 0.25);
+          sp.rotation.set(Math.sin(a) * 0.25, 0, -Math.cos(a) * 0.25);
+        }
+        break;
+      }
+      case 'snowPile': {
+        // 눈더미: 납작한 흰 덩어리 둘
+        const snow = pbr({ color: '#f4fbff', roughness: 0.98 });
+        add(new THREE.SphereGeometry(0.7, 8, 6), snow, 0.1).scale.set(1.3, 0.45, 1);
+        add(new THREE.SphereGeometry(0.45, 8, 6), snow, 0.15, 0.6, 0.3).scale.set(1, 0.5, 1);
+        break;
+      }
+      case 'frozenTree': {
+        // 얼어붙은 나무: 검은 줄기 + 가지 + 눈 덮인 수관
+        const bark = pbr({ color: '#3a3f4a', roughness: 0.95 });
+        add(new THREE.CylinderGeometry(0.18, 0.28, 2.6, 6), bark, 1.3);
+        for (let i = 0; i < 3; i++) {
+          const a = (i / 3) * Math.PI * 2 + r();
+          add(new THREE.CylinderGeometry(0.06, 0.1, 1.2, 5), bark, 2.2 + i * 0.25, Math.cos(a) * 0.4, Math.sin(a) * 0.4).rotation.set(Math.sin(a) * 0.9, 0, -Math.cos(a) * 0.9);
+        }
+        add(new THREE.ConeGeometry(1.1, 1.8, 6), pbr({ color: '#dfe9f2', roughness: 0.95 }), 3.2);
+        add(new THREE.ConeGeometry(0.8, 1.4, 6), pbr({ color: '#f4fbff', roughness: 0.98 }), 4.0);
+        break;
+      }
+      case 'iceLantern': {
+        // 얼음 등불: 돌 기둥 + 얼음 상자 속 푸른 불
+        add(new THREE.BoxGeometry(0.3, 1.6, 0.3), pbr({ color: '#5a6b7a', roughness: 0.9 }), 0.8, 0, 0, false);
+        const ice = new THREE.MeshStandardMaterial({ color: new THREE.Color('#bfe9ff'), roughness: 0.15, transparent: true, opacity: 0.6 });
+        add(new THREE.BoxGeometry(0.5, 0.5, 0.5), ice, 1.85, 0, 0, false);
+        const lm = glow('#8ff6ff', 1.8);
+        add(new THREE.SphereGeometry(0.14, 8, 6), lm, 1.85, 0, 0, false);
+        this.lamps.push(lm);
+        break;
+      }
       case 'tent': {
         // 작은 천막: 삼각 지붕 + 기둥
         add(new THREE.ConeGeometry(1.3, 1.5, 4), pbr({ color: '#8a4a3a', roughness: 0.95 }), 0.95).rotation.y = Math.PI / 4;
@@ -341,7 +383,7 @@ export class Decor {
     this.disposables.push(geo, mat);
   }
 
-  /** 입자: 숲 반딧불, 동굴 먼지, 요새 불똥 */
+  /** 입자: 숲 반딧불, 동굴 먼지, 요새 불똥, 얼음 봉우리 눈송이 */
   private buildParticles(quality: QualityLevel): void {
     const count = QUALITY_PRESETS[quality].particleCount;
     if (count <= 0) return;
@@ -358,7 +400,7 @@ export class Decor {
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const style = this.def.id === 'forest' ? { color: 0xfff28a, size: 0.18 } : this.def.id === 'cave' ? { color: 0x9fd8ff, size: 0.12 } : { color: 0xffa040, size: 0.1 };
+    const style = this.def.id === 'forest' ? { color: 0xfff28a, size: 0.18 } : this.def.id === 'cave' ? { color: 0x9fd8ff, size: 0.12 } : this.def.id === 'ice' ? { color: 0xffffff, size: 0.16 } : { color: 0xffa040, size: 0.1 };
     const mat = new THREE.PointsMaterial({ color: style.color, size: style.size, transparent: true, opacity: 0.85, sizeAttenuation: true, depthWrite: false, blending: THREE.AdditiveBlending });
     this.particles = new THREE.Points(geo, mat);
     this.particles.frustumCulled = false;
@@ -404,7 +446,7 @@ export class Decor {
       for (let i = 0; i < n; i++) {
         const j = i * 3;
         arr[j] += this.particleVel[j] * dt + Math.sin(this.t + i) * 0.004;
-        arr[j + 1] += this.particleVel[j + 1] * dt + Math.cos(this.t * 0.7 + i) * 0.003;
+        arr[j + 1] += this.particleVel[j + 1] * dt + Math.cos(this.t * 0.7 + i) * 0.003 - (this.def.id === 'ice' ? 0.9 * dt : 0); // 눈은 천천히 내린다
         arr[j + 2] += this.particleVel[j + 2] * dt;
         if (arr[j] > half) arr[j] = -half;
         if (arr[j] < -half) arr[j] = half;

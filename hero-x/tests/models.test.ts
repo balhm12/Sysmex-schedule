@@ -100,7 +100,7 @@ function glbNodeNames(file: string): string[] {
 describe('보스 복셀 모델 (public/models/boss-*.glb)', () => {
   const dir: string = resolve(new URL('.', import.meta.url).pathname, '../public/models');
   const manifest = JSON.parse(readFileSync(resolve(dir, 'manifest.json'), 'utf8') as string) as { bosses: Record<string, { file: string } | null> };
-  for (const kind of ['guardian', 'golem', 'commander']) {
+  for (const kind of ['guardian', 'golem', 'commander', 'frost']) {
     it(`${kind}: manifest 에 등록돼 있고 파일이 있으며, 사람형 리그 부품(팔·다리·머리·눈)이 들어 있다`, () => {
       const entry = manifest.bosses[kind];
       expect(entry?.file).toBe(`boss-${kind}.glb`);
@@ -114,10 +114,11 @@ describe('보스 복셀 모델 (public/models/boss-*.glb)', () => {
       expect(names.some((n) => classifyEnemyPart(n) === 'glow')).toBe(true);
     });
   }
-  it('수호 로봇·사령관은 무기(weapon_*)가 있어 리그가 무기 팔을 치켜들고, 골렘은 맨주먹', () => {
+  it('수호 로봇·사령관은 무기(weapon_*)가 있어 리그가 무기 팔을 치켜들고, 골렘·서리 거인은 맨주먹', () => {
     const has = (k: string) => glbNodeNames(resolve(dir, `boss-${k}.glb`)).some((n) => classifyPart(n) === 'weapon');
     expect(has('guardian')).toBe(true);
     expect(has('commander')).toBe(true);
     expect(has('golem')).toBe(false);
+    expect(has('frost')).toBe(false);
   });
 });

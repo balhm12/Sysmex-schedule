@@ -282,8 +282,8 @@ export interface MusicTrack {
   reverb?: number;
 }
 
-export type MusicName = 'menu' | 'forest' | 'cave' | 'fortress' | 'boss';
-export const MUSIC_NAMES: MusicName[] = ['menu', 'forest', 'cave', 'fortress', 'boss'];
+export type MusicName = 'menu' | 'forest' | 'cave' | 'fortress' | 'ice' | 'boss';
+export const MUSIC_NAMES: MusicName[] = ['menu', 'forest', 'cave', 'fortress', 'ice', 'boss'];
 
 const _ = null;
 
@@ -333,6 +333,22 @@ export const MUSIC: Record<MusicName, MusicTrack> = {
     padWave: 'triangle',
     padGain: 0.7,
     reverb: 0.55,
+  },
+  // 얼음 봉우리: 느린 D 단조 (Dm-Bb-F-C), 맑은 사인파 멜로디·종소리 같은 높은 음, 드럼은 성글게
+  ice: {
+    bpm: 88,
+    root: 146.83,
+    chords: [[0, 3, 7], _, _, _, [-4, 0, 3], _, _, _, [3, 7, 10], _, _, _, [-2, 2, 5], _, _, _],
+    bass: [0, _, _, 0, -4, _, _, -4, 3, _, _, 3, -2, _, _, -2],
+    melody: [12, _, 15, _, 19, _, _, _, 17, _, 15, _, 12, _, _, _, 10, _, 12, _, 15, _, _, _, 14, _, 12, _, 10, _, _, _],
+    drums: ['k', _, _, _, 'h', _, _, _, 'k', _, _, _, 'h', _, _, _, 'k', _, _, _, 'h', _, _, _, 'k', _, 'h', _, 'h', _, _, _],
+    bassWave: 'sine',
+    melodyWave: 'sine',
+    melodyGain: 0.6,
+    melodyFilter: 2600,
+    padWave: 'triangle',
+    padGain: 0.8,
+    reverb: 0.7,
   },
   // 요새: 빠른 G 단조 (Gm-Eb-F-D), 몰아치는 드럼, 톱니파
   fortress: {

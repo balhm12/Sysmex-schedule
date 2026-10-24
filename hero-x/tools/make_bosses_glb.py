@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-보스 3종 복셀 모델 생성기 → public/models/boss-*.glb
+보스 4종 복셀 모델 생성기 → public/models/boss-*.glb
 실행: python3 tools/make_bosses_glb.py
 - guardian → 숲의 수호 로봇(이끼 낀 고대 석상 로봇, 큰 망치) / golem → 수정 골렘(보라 수정이 박힌 바위 거인, 주먹) /
-  commander → 요새 사령관(붉은 강철 전투 로봇, 어깨 포탑·팔 대포)
+  commander → 요새 사령관(붉은 강철 전투 로봇, 어깨 포탑·팔 대포) / frost → 서리 거인(얼음 몸·털 망토·고드름 왕관·얼음 주먹)
 - 몬스터와 같은 부품 이름 규칙(left_leg/right_leg/left_arm/right_arm/head + weapon_* + eye_* + glow_*)을 써서
   적 리그가 걷기·공격 예고(무기 팔 치켜들기)·휘두르기를 만든다. glow_* 는 예고 때 밝아지고, eye_* 는 2단계에서 붉게 바뀐다(Boss.ts).
 - 정면은 +Z. 높이 ~6 으로 그리고, 게임이 보스 반지름(×3)에 맞춰 다시 조정한다.
@@ -266,10 +266,78 @@ def build_commander():
     return m
 
 
+# ---------------- 서리 거인 (얼음 봉우리 보스)
+def build_frost():
+    m = VoxelModel('boss_frost', {**COMMON,
+        'ice': mat('#bfe9ff', 0.9, rough=0.15, metal=0.05, blend=True), 'ice_deep': mat('#6fb7e8', rough=0.2),
+        'ice_dark': mat('#3a6fa0', rough=0.3), 'snow': mat('#f4fbff', rough=0.95), 'fur': mat('#dfe9f2', rough=0.98),
+        'fur_dark': mat('#9fb3c4', rough=0.98), 'stone': mat('#5a6b7a', rough=0.95),
+        'eye_glow': mat('#8ff6ff', rough=0.3, emissive=[0.5, 0.95, 1.0], strength=1.7),
+        'core': mat('#d9f7ff', rough=0.2, emissive=[0.6, 0.9, 1.0], strength=1.4),
+        'rune': mat('#9fe8ff', rough=0.3, emissive=[0.5, 0.85, 1.0], strength=1.2)})
+    rng = random.Random(21)
+    # 다리: 얼음 덩어리 + 털 각반 + 눈 쌓인 발
+    for sgn, side in ((1, 'left'), (-1, 'right')):
+        x = sgn * 0.9
+        m.box(f'{side}_leg', x, 1.75, 0, 1.1, 1.5, 1.1, 'ice_deep')
+        m.box(f'{side}_leg_fur', x, 2.3, 0.1, 1.2, 0.5, 1.2, 'fur')
+        m.box(f'{side}_leg_shin', x, 1.2, 0.2, 0.8, 0.9, 0.8, 'ice_dark')
+        m.box(f'{side}_leg_crack', x + sgn * 0.42, 1.3, 0.3, 0.1, 0.8, 0.1, 'rune')
+        m.box(f'{side}_foot', x, 0.3, 0.2, 1.3, 0.6, 1.6, 'ice_dark')
+        m.box(f'{side}_foot_snow', x, 0.62, 0.3, 1.1, 0.12, 1.2, 'snow')
+        for i in range(3):
+            m.box(f'{side}_foot_toe{i}', x + (i - 1) * 0.4, 0.25, 1.05, 0.3, 0.44, 0.22, 'ice')
+    # 몸통: 큰 얼음 덩어리 + 털 망토(어깨) + 가슴 발광 핵 + 등의 고드름
+    m.box('body', 0, 3.9, 0, 3.1, 2.1, 1.9, 'ice_deep')
+    m.box('body_upper', 0, 4.7, -0.1, 3.4, 0.9, 1.9, 'ice')
+    m.box('body_waist', 0, 2.75, 0, 2.1, 0.5, 1.5, 'ice_dark')
+    m.box('body_belt', 0, 2.75, 0, 2.2, 0.3, 1.6, 'stone')
+    m.box('body_chest', 0, 4.0, 0.98, 1.3, 1.3, 0.2, 'ice_dark')
+    m.box('glow_core', 0, 4.0, 1.12, 0.7, 0.9, 0.1, 'core')
+    m.box('body_rune_a', 0.9, 4.4, 0.98, 0.12, 0.7, 0.06, 'rune')
+    m.box('body_rune_b', -0.9, 3.6, 0.98, 0.12, 0.6, 0.06, 'rune')
+    m.box('body_fur', 0, 5.2, 0, 3.6, 0.5, 2.1, 'fur')
+    m.box('body_fur_front', 0, 4.9, 1.0, 2.0, 0.6, 0.2, 'fur_dark')
+    for i in range(7):
+        a = -1.3 + i * 0.43
+        m.box(f'body_icicle{i}', a, 5.7 + (i % 2) * 0.3, -0.8, 0.3, 0.9 + (i % 3) * 0.3, 0.3, 'ice')
+        m.box(f'body_icicle{i}_tip', a, 6.3 + (i % 2) * 0.3 + (i % 3) * 0.15, -0.8, 0.16, 0.4, 0.16, 'snow')
+    for i in range(6):
+        m.box(f'body_snow{i}', rng.uniform(-1.4, 1.4), rng.uniform(3.2, 4.6), 0.96, 0.2, 0.12, 0.08, 'snow')
+    # 어깨: 털 + 큰 얼음 뿔
+    for sgn, side in ((1, 'l'), (-1, 'r')):
+        m.box(f'body_shoulder_{side}', sgn * 1.9, 5.0, 0, 1.3, 0.9, 1.5, 'fur')
+        m.box(f'body_horn_{side}', sgn * 2.1, 5.9, -0.1, 0.5, 1.0, 0.5, 'ice')
+        m.box(f'body_horn_{side}_tip', sgn * 2.3, 6.6, -0.1, 0.3, 0.6, 0.3, 'snow')
+    # 팔: 얼음 팔, 털 소매, 거대한 얼음 주먹 (무기 없음 → 오른팔 휘두르기)
+    for sgn, side in ((1, 'left'), (-1, 'right')):
+        x = sgn * 2.15
+        m.box(f'{side}_arm', x, 4.1, 0.1, 0.9, 1.3, 0.9, 'ice_deep')
+        m.box(f'{side}_arm_fur', x, 4.6, 0.1, 1.0, 0.4, 1.0, 'fur')
+        m.box(f'{side}_arm_fore', x, 2.7, 0.2, 0.86, 1.5, 0.86, 'ice_dark')
+        m.box(f'{side}_arm_crack', x + sgn * 0.44, 2.8, 0.3, 0.1, 0.9, 0.1, 'rune')
+        m.box(f'{side}_hand', x, 1.6, 0.35, 1.2, 1.0, 1.2, 'ice')
+        for i in range(3):
+            m.box(f'{side}_hand_spike{i}', x + (i - 1) * 0.36, 1.75, 0.98, 0.24, 0.34, 0.26, 'snow')
+    # 머리: 얼음 투구 머리 + 수염 털 + 발광 눈 + 고드름 왕관
+    m.box('head', 0, 5.75, 0.3, 1.3, 1.0, 1.2, 'ice_deep')
+    m.box('head_face', 0, 5.7, 0.88, 1.1, 0.7, 0.1, 'ice_dark')
+    glow_eyes(m, 5.8, 0.95, 0.3, 0.26, 0.2)
+    m.box('head_brow', 0, 6.05, 0.9, 1.2, 0.14, 0.14, 'snow')
+    m.box('mouth_beard', 0, 5.2, 0.7, 1.0, 0.5, 0.5, 'fur')
+    m.box('mouth_beard_tip', 0, 4.85, 0.75, 0.6, 0.3, 0.4, 'fur_dark')
+    m.box('head_crown', 0, 6.3, 0.2, 1.1, 0.16, 1.0, 'ice_dark')
+    for i, (cx, cz, h) in enumerate(((0, 0.2, 1.0), (0.45, 0.0, 0.7), (-0.45, 0.0, 0.7), (0.3, 0.55, 0.5), (-0.3, 0.55, 0.5))):
+        m.box(f'head_spike{i}', cx, 6.4 + h / 2, cz, 0.22, h, 0.22, 'ice')
+        m.box(f'head_spike{i}_tip', cx, 6.4 + h + 0.15, cz, 0.12, 0.3, 0.12, 'snow')
+    return m
+
+
 BOSSES = {
     'guardian': build_guardian,
     'golem': build_golem,
     'commander': build_commander,
+    'frost': build_frost,
 }
 
 if __name__ == '__main__':

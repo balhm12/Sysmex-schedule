@@ -42,6 +42,7 @@ export const DECOR_KINDS: Record<string, { inside: Array<[string, number]>; outs
   forest: { inside: [['rock', 10], ['bush', 14], ['flower', 24], ['stump', 4]], outside: [['tree', 46], ['rock', 10]] },
   cave: { inside: [['crystalSmall', 18], ['stalagmite', 10], ['mushroom', 14]], outside: [['crystalBig', 20], ['stalagmite', 26]] },
   fortress: { inside: [['barrel', 10], ['pipe', 6], ['lamp', 8], ['crate', 6]], outside: [['tower', 10], ['pipe', 14], ['crate', 12]] },
+  ice: { inside: [['snowPile', 16], ['iceSpike', 12], ['rock', 6]], outside: [['frozenTree', 40], ['iceSpike', 16], ['snowPile', 10]] },
 };
 
 /** 점이 어떤 금지 영역과도 겹치지 않는지 */
@@ -141,9 +142,23 @@ export const FORTRESS_ZONE_PROPS: ZonePropTable = {
   boss: [['bossPillar', 4, 'corner'], ['lamp', 6, 'edge'], ['machine', 2, 'edge']],
 };
 
+/** 얼음 봉우리: 눈더미·고드름·얼어붙은 나무·얼음 등불·모닥불 */
+export const ICE_ZONE_PROPS: ZonePropTable = {
+  start: [['signpost', 1, 'center'], ['iceLantern', 2, 'corner'], ['snowPile', 3, 'edge'], ['fence', 2, 'edge']],
+  fight: [['iceSpike', 4, 'edge'], ['snowPile', 3, 'edge'], ['frozenTree', 2, 'corner']],
+  path: [['iceLantern', 3, 'edge'], ['frozenTree', 3, 'edge']],
+  treasure: [['iceSpike', 4, 'corner'], ['snowPile', 3, 'edge'], ['mushroomGlow', 2, 'edge']],
+  branch: [['signpost', 1, 'center'], ['iceLantern', 2, 'corner'], ['iceSpike', 2, 'edge']],
+  secret: [['ruinPillar', 4, 'corner'], ['iceSpike', 3, 'edge'], ['bones', 3, 'edge']],
+  ambush: [['iceSpike', 5, 'edge'], ['snowPile', 3, 'edge'], ['bones', 2, 'edge']],
+  rest: [['campfire', 1, 'center'], ['logSeat', 3, 'center'], ['iceLantern', 2, 'corner'], ['tent', 1, 'edge']],
+  arena: [['iceSpike', 6, 'edge'], ['iceLantern', 4, 'corner'], ['frozenTree', 2, 'edge']],
+  boss: [['bossPillar', 4, 'corner'], ['iceSpike', 6, 'edge'], ['snowPile', 3, 'edge']],
+};
+
 /** 던전별 구역 소품 표 (없으면 숲 표) */
 export function zonePropsFor(dungeonId: string): ZonePropTable {
-  return dungeonId === 'cave' ? CAVE_ZONE_PROPS : dungeonId === 'fortress' ? FORTRESS_ZONE_PROPS : ZONE_PROPS;
+  return dungeonId === 'cave' ? CAVE_ZONE_PROPS : dungeonId === 'fortress' ? FORTRESS_ZONE_PROPS : dungeonId === 'ice' ? ICE_ZONE_PROPS : ZONE_PROPS;
 }
 
 /** 구역 안 소품 자리가 비어 있는지: 걷는 칸 위, 적 등장 자리·상자·장애물·문과 안 겹침 */

@@ -26,12 +26,12 @@ describe('던전 정의 (DungeonDefs)', () => {
       expect(nextDungeonAfter(DUNGEONS[i - 1].id)).toBe(DUNGEONS[i]);
     }
     expect(nextDungeonAfter(DUNGEONS[DUNGEONS.length - 1].id)).toBeNull();
+    // 클리어 기록을 하나씩 늘리면 던전이 차례대로 하나씩 열린다
     const clears: Record<string, number> = {};
-    expect(DUNGEONS.map((d) => isDungeonUnlocked(d, clears))).toEqual([true, false, false]);
-    clears.forest = 1;
-    expect(DUNGEONS.map((d) => isDungeonUnlocked(d, clears))).toEqual([true, true, false]);
-    clears.cave = 1;
-    expect(DUNGEONS.map((d) => isDungeonUnlocked(d, clears))).toEqual([true, true, true]);
+    for (let n = 0; n < DUNGEONS.length; n++) {
+      expect(DUNGEONS.map((d) => isDungeonUnlocked(d, clears))).toEqual(DUNGEONS.map((_, i) => i <= n));
+      clears[DUNGEONS[n].id] = 1;
+    }
     // 권장 레벨은 오름차순
     for (let i = 1; i < DUNGEONS.length; i++) expect(DUNGEONS[i].recommendedLevel).toBeGreaterThan(DUNGEONS[i - 1].recommendedLevel);
   });
