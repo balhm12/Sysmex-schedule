@@ -4,6 +4,7 @@ import { GameConfig } from '../game/GameConfig';
 import type { InputManager } from '../input/InputManager';
 import type { Player } from '../player/Player';
 import { directionToFacing, type Vec2 } from '../player/movement';
+import { isFinisher, nextComboStep, sweepSign } from './combo';
 import type { Effects } from './Effects';
 import { isInMeleeArc } from './melee';
 import type { ProjectileSystem } from './Projectile';
@@ -11,6 +12,7 @@ import type { ProjectileSystem } from './Projectile';
 /**
  * 플레이어의 공격 처리
  * - 근접: 공격 입력 → 마우스 방향으로 몸을 돌림 → 부채꼴 안의 적에게 피해와 밀침 → 효과 표시
+ *   연달아 누르면 콤보(GameConfig.combat.melee.combo): 1단 가로 베기 → 2단 되돌려 베기 → 3단 회전 마무리
  * - 원거리: 발사 입력 → 마우스 방향으로 에너지 탄 발사 (명중 처리는 ProjectileSystem 이 콜백으로 알려줌)
  * - 공격 수치는 GameConfig.combat 에서 읽는다.
  * - 적 목록과 조준 지점은 함수로 받아서 다른 시스템을 직접 알지 않는다.
@@ -23,8 +25,12 @@ export class CombatSystem {
 
   private meleeCooldown = 0;
   private rangedCooldown = 0;
-  /** 공격을 시작할 때 알림 (효과음용) */
-  onAttack: ((kind: 'melee' | 'ranged') => void) | null = null;
+  /** 마지막으로 나간 콤보 단계(0부터). 콤보가 끊기면 -1 */
+  comboStep = -1;
+  /** 콤보를 이어갈 수 있는 남은 시간(초). 쿨다운이 끝난 뒤부터 줄어든다 */
+  private comboTimer = 0;
+  /** 공격을 시작할 때 알림 (효과음용). step 은 근접 콤보 단계(0부터), finisher 는 마무리 단계인지 */
+  onAttack: ((kind: 'melee' | 'ranged', step: number, finisher: boolean) => void) | null = null;
   private readonly tmp = new THREE.Vector3();
 
   constructor(
@@ -48,6 +54,8 @@ export class CombatSystem {
     this.score = 0;
     this.meleeCooldown = 0;
     this.rangedCooldown = 0;
+    this.comboStep = -1;
+    this.comboTimer = 0;
   }
 
   /** 지금까지 휘두른/쏜 횟수 (디버그·검증용) */
@@ -68,6 +76,11 @@ export class CombatSystem {
       this.input.onPress(c.attackRanged, () => (this.rangedQueued = true));
     }
     if (this.meleeCooldown > 0) this.meleeCooldown -= dt;
+    else if (this.comboStep >= 0) {
+      // 쿨다운이 끝난 뒤부터 이어가기 시간이 흐른다. 다 흐르면(마무리 뒤에는 바로) 콤보가 끊긴다
+      this.comboTimer -= dt;
+      if (this.comboTimer <= 0) this.comboStep = -1;
+    }
     if (this.rangedCooldown > 0) this.rangedCooldown -= dt;
     if (this.player.health.isDead) {
       this.meleeQueued = this.rangedQueued = false;
@@ -114,41 +127,67 @@ export class CombatSystem {
     return { x: Math.sin(this.player.facing), z: Math.cos(this.player.facing) };
   }
 
-  /** 근접 공격 한 번 */
+  /** 근접 공격 한 번: 콤보 단계에 따라 다른 베기가 나간다 */
   private meleeAttack(): void {
     const cfg = GameConfig.combat.melee;
-    this.meleeCooldown = cfg.cooldown;
+    const steps = cfg.combo.steps;
+    const index = steps.length > 0 ? nextComboStep(this.comboStep, this.comboStep >= 0 && this.comboTimer > 0, steps.length) : 0;
+    const step = steps[index] ?? { damageMul: 1, rangeMul: 1, arcDegrees: cfg.arcDegrees, swingTime: cfg.swingTime, cooldownMul: 1, knockbackMul: 1, sweep: 'right' as const, color: GameConfig.juice.slashColor };
+    const finisher = isFinisher(index, steps.length);
+    this.comboStep = index;
+    this.meleeCooldown = cfg.cooldown * step.cooldownMul;
+    // 마무리 뒤에는 이어갈 수 없다 (1단계부터 다시)
+    this.comboTimer = finisher ? 0 : cfg.combo.window;
     this.attacks++;
-    this.onAttack?.('melee');
+    this.onAttack?.('melee', index, finisher);
     this.faceAim();
     const pos = this.player.position;
-    this.player.triggerAttack(cfg.swingTime);
-    this.effects.swing(pos, this.player.facing, cfg.range, cfg.arcDegrees, cfg.swingTime);
-    this.effects.slash(pos, this.player.facing, cfg.range, cfg.arcDegrees, cfg.swingTime * 1.3, new THREE.Color(GameConfig.juice.slashColor).getHex());
+    const range = cfg.range * step.rangeMul;
+    this.player.triggerAttack(step.swingTime, 'melee', index);
+    const color = new THREE.Color(step.color).getHex();
+    this.effects.swing(pos, this.player.facing, range, step.arcDegrees, step.swingTime, finisher ? color : 0x5cf2d8);
+    this.effects.slash(pos, this.player.facing, range, step.arcDegrees, step.swingTime * 1.3, color, sweepSign(step));
+    if (finisher) {
+      this.tmp.set(pos.x, 0.1, pos.z);
+      this.effects.shockwave(this.tmp, range * GameConfig.juice.comboFinish.shockMul, 0.4, color);
+      this.tmp.y = 0.9;
+      this.effects.burst(this.tmp, color, 10, 4);
+    }
 
     const origin: Vec2 = { x: pos.x, z: pos.z };
+    const damage = Math.round((cfg.damage + this.getWeaponAttack('melee')) * step.damageMul * this.getDamageMultiplier());
     for (const enemy of this.getEnemies()) {
       if (!enemy.alive) continue;
       const ep = enemy.position;
-      if (!isInMeleeArc(origin, this.player.facing, { x: ep.x, z: ep.z }, enemy.radius, cfg.range, cfg.arcDegrees)) continue;
+      if (!isInMeleeArc(origin, this.player.facing, { x: ep.x, z: ep.z }, enemy.radius, range, step.arcDegrees)) continue;
       const len = Math.hypot(ep.x - pos.x, ep.z - pos.z) || 1;
-      this.damageEnemy(enemy, Math.round((cfg.damage + this.getWeaponAttack('melee')) * this.getDamageMultiplier()), { x: (ep.x - pos.x) / len, z: (ep.z - pos.z) / len }, cfg.knockback);
+      this.damageEnemy(enemy, damage, { x: (ep.x - pos.x) / len, z: (ep.z - pos.z) / len }, cfg.knockback * step.knockbackMul);
     }
   }
 
-  /** 원거리 공격 한 발 */
+  /** 원거리 공격 한 발: 총구 섬광과 함께 에너지 탄을 쏜다 (명중 연출은 Game 이 ProjectileSystem 콜백으로) */
   private rangedAttack(): void {
     const cfg = GameConfig.combat.ranged;
     this.rangedCooldown = cfg.cooldown;
     this.attacks++;
-    this.onAttack?.('ranged');
+    this.onAttack?.('ranged', 0, false);
     const dir = this.faceAim();
     const pos = this.player.position;
-    this.player.triggerAttack(0.15);
-    this.projectiles.spawn(
-      { x: pos.x + dir.x * 0.7, z: pos.z + dir.z * 0.7 },
-      dir,
-      { damage: Math.round((cfg.damage + this.getWeaponAttack('ranged')) * this.getDamageMultiplier()), speed: cfg.speed, lifetime: cfg.lifetime, radius: cfg.radius, knockback: cfg.knockback, color: 0x5cf2d8, friendly: true },
-    );
+    this.player.triggerAttack(Math.min(cfg.cooldown, 0.28), 'ranged', 0);
+    const color = new THREE.Color(cfg.color).getHex();
+    const origin: Vec2 = { x: pos.x + dir.x * 0.7, z: pos.z + dir.z * 0.7 };
+    // 총구 섬광: 발사 지점에서 밝게 터지고 짧은 파편이 앞으로 튄다
+    this.tmp.set(origin.x, 0.9, origin.z);
+    this.effects.flash(this.tmp, GameConfig.juice.ranged.muzzleRadius, GameConfig.juice.ranged.muzzleTime, color);
+    this.effects.burst(this.tmp, color, 4, 3);
+    this.projectiles.spawn(origin, dir, {
+      damage: Math.round((cfg.damage + this.getWeaponAttack('ranged')) * this.getDamageMultiplier()),
+      speed: cfg.speed,
+      lifetime: cfg.lifetime,
+      radius: cfg.radius,
+      knockback: cfg.knockback,
+      color,
+      friendly: true,
+    });
   }
 }

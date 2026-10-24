@@ -109,6 +109,10 @@ export interface GameDebugState {
   zones: { current: string | null; objective: string; done: number; total: number; cleared: string[]; entered: string[] } | null;
   chestPositions: Array<{ x: number; z: number }>;
   attacks: number;
+  /** 마지막으로 나간 근접 콤보 단계(0부터). 콤보가 끊겼으면 -1 */
+  combo: number;
+  /** 화면에 살아 있는 전투 효과 수 */
+  effects: number;
   inventoryVisible: boolean;
   chests: { opened: number; total: number; nearby: boolean };
   prompt: string;
@@ -330,7 +334,16 @@ export class Game {
       () => this.effectiveDamageMultiplier(),
       (kind) => this.equipment.weaponAttack(kind),
     );
-    this.combat.onAttack = (kind) => this.audio.play(kind);
+    this.combat.onAttack = (kind, step, finisher) => {
+      // 콤보 단계가 오를수록 음이 높아지고, 마무리는 묵직한 소리와 짧은 멈춤
+      this.audio.play(kind, 0.03, kind === 'melee' ? 1 + step * 0.12 : 1);
+      if (finisher) {
+        this.audio.play('slam', 0.05, 1.6);
+        this.hitStopTime = Math.max(this.hitStopTime, GameConfig.juice.comboFinish.hitStop);
+        this.cameraCtrl.shake(GameConfig.juice.hitShake.amp * 0.6, 0.2);
+      }
+      if (kind === 'melee') this.hud.showCombo(step, GameConfig.combat.melee.combo.steps.length);
+    };
     this.loot = new LootSystem(this.scene);
 
     // UI
@@ -1236,6 +1249,8 @@ export class Game {
       zones: this.zones?.snapshot() ?? null,
       chestPositions: this.dungeonDef.chests.map((c) => ({ x: c.x, z: c.z })),
       attacks: this.combat.attacks,
+      combo: this.combat.comboStep,
+      effects: this.effects.activeCount,
       inventoryVisible: this.inventoryUI.visible,
       chests: { opened: this.chests.openedCount, total: this.chests.total, nearby: this.chests.nearest({ x: this.player.position.x, z: this.player.position.z }) !== null },
       prompt: this.currentPrompt,
@@ -1680,6 +1695,19 @@ export class Game {
         if (!this.ended) this.combat.damageEnemy(enemy, spec.damage, dir, spec.knockback);
       },
       onHitPlayer: (spec, _dir, from) => this.damagePlayer(spec.damage, from),
+      onImpact: (pos, spec, reason) => {
+        // 명중 연출: 섬광 + 파편, 적·플레이어에 맞으면 바닥 충격파까지
+        if (reason === 'expire') return;
+        const j = GameConfig.juice.ranged;
+        this.projTmp.set(pos.x, 0.9, pos.z);
+        const big = reason !== 'wall';
+        this.effects.flash(this.projTmp, j.impactRadius * (big ? 1 : 0.6), j.impactTime * (big ? 1 : 0.65), spec.color);
+        this.effects.burst(this.projTmp, spec.color, big ? 8 : 4, big ? 5 : 3);
+        if (big && j.impactRing > 0) {
+          this.projTmp.y = 0.1;
+          this.effects.shockwave(this.projTmp, j.impactRing, 0.3, spec.color);
+        }
+      },
     });
     this.loot.update(dt, { x: p.x, z: p.z }, (drop, at) => this.onCollect(drop, at));
     this.updateMortars(dt);

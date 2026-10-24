@@ -12,6 +12,9 @@ export class Effects {
   private readonly swings: Array<{ mesh: THREE.Mesh; life: number; max: number; grow?: boolean; warn?: boolean }> = [];
   /** 검 궤적: 좁고 밝은 부채꼴이 공격 각도를 가로질러 휩쓸고 지나간다 */
   private readonly slashes: Array<{ mesh: THREE.Mesh; life: number; max: number; from: number; to: number }> = [];
+  /** 섬광: 공중의 밝은 구가 순간 커지며 사라진다 (총구 섬광·탄 명중) */
+  private readonly flashes: Array<{ mesh: THREE.Mesh; life: number; max: number; radius: number }> = [];
+  private readonly flashGeo = new THREE.SphereGeometry(1, 12, 8);
   /** 빛 기둥: 위로 솟았다가 옅어진다 (레벨 업·보스 등장) */
   private readonly pillars: Array<{ mesh: THREE.Mesh; life: number; max: number; height: number }> = [];
   private readonly particles: Array<{ mesh: THREE.Mesh; v: THREE.Vector3; life: number; max: number }> = [];
@@ -48,19 +51,25 @@ export class Effects {
   /**
    * 검 궤적: facing 을 중심으로 한 공격 부채꼴(arcDegrees)을 좁은 빛 조각(부채꼴의 35%)이
    * duration 동안 한쪽 끝에서 반대쪽 끝까지 휩쓴다. 공중 1.0 높이에 살짝 기울여 그린다(가산 혼합).
+   * sweep: 1 이면 오른쪽→왼쪽(기본), -1 이면 왼쪽→오른쪽(되돌려 베기), 0 이면 facing 에서 시작해 한 바퀴(회전 베기)
    */
-  slash(origin: THREE.Vector3, facing: number, range: number, arcDegrees: number, duration: number, color = 0xbffcf2): void {
+  slash(origin: THREE.Vector3, facing: number, range: number, arcDegrees: number, duration: number, color = 0xbffcf2, sweep: 1 | -1 | 0 = 1): void {
     const arc = (arcDegrees * Math.PI) / 180;
-    const piece = Math.max(0.25, arc * 0.35);
+    const piece = Math.max(0.25, Math.min(arc, Math.PI * 0.7) * 0.35);
     const geo = new THREE.RingGeometry(Math.max(0.3, range * 0.45), range * 1.05, 16, 1, Math.PI / 2 - piece / 2, piece);
     const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(origin.x, 1.0, origin.z);
     mesh.rotation.order = 'YXZ';
-    // 바닥에 눕힌 뒤(+90°) 앞쪽이 살짝 들리게 기울인다 → 비스듬한 베기 느낌
-    mesh.rotation.x = Math.PI / 2 - 0.55;
-    const from = facing - arc / 2 + piece / 2;
-    const to = facing + arc / 2 - piece / 2;
+    // 바닥에 눕힌 뒤(+90°) 앞쪽이 살짝 들리게 기울인다 → 비스듬한 베기 느낌. 되돌려 베기는 반대로 기울인다
+    mesh.rotation.x = Math.PI / 2 - (sweep === -1 ? -0.35 : 0.55);
+    let from = facing - arc / 2 + piece / 2;
+    let to = facing + arc / 2 - piece / 2;
+    if (sweep === -1) [from, to] = [to, from];
+    if (sweep === 0) {
+      from = facing;
+      to = facing + Math.PI * 2;
+    }
     mesh.rotation.y = from;
     this.root.add(mesh);
     this.slashes.push({ mesh, life: duration, max: duration, from, to });
@@ -79,7 +88,7 @@ export class Effects {
   }
 
   /** 충격파 링: center 에서 radius 까지 퍼지며 사라진다 */
-  shockwave(center: THREE.Vector3, radius: number, duration = 0.45, color = 0xff4f79): void {
+  shockwave(center: THREE.Vector3, radius: number, duration = 0.45, color: THREE.ColorRepresentation = 0xff4f79): void {
     const geo = new THREE.RingGeometry(radius * 0.8, radius, 48);
     const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false });
     const mesh = new THREE.Mesh(geo, mat);
@@ -99,6 +108,24 @@ export class Effects {
     mesh.rotation.x = -Math.PI / 2;
     this.root.add(mesh);
     this.swings.push({ mesh, life: duration, max: duration, grow: false, warn: true });
+  }
+
+  /** 섬광: pos 에서 반지름 radius 의 밝은 구가 순간 커지면서 사라진다 (총구 섬광·탄 명중·마무리 타격) */
+  flash(pos: THREE.Vector3, radius: number, duration: number, color: THREE.ColorRepresentation): void {
+    if (radius <= 0) return;
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending });
+    const mesh = new THREE.Mesh(this.flashGeo, mat);
+    mesh.position.copy(pos);
+    mesh.scale.setScalar(radius * 0.3);
+    this.root.add(mesh);
+    this.flashes.push({ mesh, life: duration, max: duration, radius });
+  }
+
+  /** 지금 화면에 살아 있는 효과 수 (디버그·검증용) */
+  get activeCount(): number {
+    let particles = 0;
+    for (const p of this.particles) if (p.life > 0) particles++;
+    return this.swings.length + this.slashes.length + this.pillars.length + this.flashes.length + particles;
   }
 
   /** 파편 터뜨리기 (타격: 적게, 처치: 많이) */
@@ -155,6 +182,19 @@ export class Effects {
         this.slashes.splice(i, 1);
       }
     }
+    for (let i = this.flashes.length - 1; i >= 0; i--) {
+      const f = this.flashes[i];
+      f.life -= dt;
+      const k = 1 - Math.max(0, f.life / f.max);
+      // 빠르게 커지고(앞 40%) 그 뒤 옅어진다
+      f.mesh.scale.setScalar(f.radius * (0.3 + 0.7 * Math.min(1, k / 0.4)));
+      (f.mesh.material as THREE.MeshBasicMaterial).opacity = k < 0.4 ? 0.85 : 0.85 * (1 - (k - 0.4) / 0.6);
+      if (f.life <= 0) {
+        this.root.remove(f.mesh);
+        (f.mesh.material as THREE.Material).dispose();
+        this.flashes.splice(i, 1);
+      }
+    }
     for (let i = this.pillars.length - 1; i >= 0; i--) {
       const p = this.pillars[i];
       p.life -= dt;
@@ -192,6 +232,9 @@ export class Effects {
   dispose(): void {
     this.root.removeFromParent();
     this.particleGeo.dispose();
+    this.flashGeo.dispose();
+    for (const f of this.flashes) (f.mesh.material as THREE.Material).dispose();
+    this.flashes.length = 0;
     this.particles.forEach((p) => (p.mesh.material as THREE.Material).dispose());
     for (const list of [this.swings, this.slashes, this.pillars] as Array<Array<{ mesh: THREE.Mesh }>>) {
       for (const s of list) {

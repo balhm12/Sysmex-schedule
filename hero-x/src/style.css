@@ -1364,3 +1364,34 @@ body {
 .menu-install-hint p {
   margin: 0 0 8px;
 }
+
+/* ---- 근접 콤보 단계 표시 (v1.19.0) ---- */
+.combo {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translateX(-50%);
+  font-size: clamp(22px, 3.6vw, 34px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #bffcf2;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4), 0 0 18px rgba(92, 242, 216, 0.6);
+  pointer-events: none;
+}
+.combo[hidden] {
+  display: none;
+}
+.combo.finish {
+  color: #ffd23f;
+  font-size: clamp(30px, 5vw, 46px);
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), 0 0 26px rgba(255, 210, 63, 0.7);
+}
+.combo.pop {
+  animation: combo-pop 0.7s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+@keyframes combo-pop {
+  0% { transform: translateX(-50%) scale(0.5) translateY(10px); opacity: 0; }
+  25% { transform: translateX(-50%) scale(1.1); opacity: 1; }
+  70% { transform: translateX(-50%) scale(1); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1) translateY(-14px); opacity: 0; }
+}

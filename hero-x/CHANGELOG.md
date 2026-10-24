@@ -2,6 +2,26 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.19.0 · 근접 3단 콤보 + 원거리 발사·명중 연출
+
+### 변경 내용
+- **근접 콤보** `src/combat/combo.ts`(새, 순수 함수) + `CombatSystem.meleeAttack`: 근접을 연달아 누르면 `GameConfig.combat.melee.combo.steps` 순서대로 **1단 가로 베기(흰색) → 2단 되돌려 베기(하늘색, 피해 1.15배·130°) → 3단 회전 베기(금색, 360°·피해 1.6배·밀침 1.8배·대기 1.7배)**. 한 번 휘두른 뒤 쿨다운이 끝나고 `combo.window`(0.55초) 안에 다시 누르면 이어지고, 놓치거나 마무리 뒤에는 1단으로 돌아간다. 마무리는 바닥 충격파·파편·짧은 멈춤(`juice.comboFinish`)·카메라 흔들림. 단계마다 효과음 음높이가 오르고(`AudioSystem.play` 의 `pitchMul`), 마무리는 'slam' 소리를 더한다. HUD 에 `2연격`·`마무리!` 표시(`HUD.showCombo`, `.combo` CSS).
+- **단계별 애니메이션** `PartRig`/`PlaceholderModel`: `PlayerModelState.attackKind/attackStep` 추가(`Player.triggerAttack(duration, kind, step)`). 2단은 반대쪽으로 되돌려 베고, 3단은 검을 옆으로 뻗은 채 몸을 한 바퀴 돈다. 원거리는 팔을 앞으로 뻗어 쏘고 반동으로 튄다.
+- **검 궤적 방향** `Effects.slash(..., sweep)`: 1 오른→왼, -1 왼→오른(기울기 반대), 0 한 바퀴.
+- **원거리 발사 연출**: 쏘는 순간 총구 **섬광**(`Effects.flash`, 새) + 파편, 탄은 돌면서 두근거리고 **빛 꼬리**(`ProjectileSystem` 의 꼬리 메시, 지나온 거리만큼 최대 `juice.ranged.trailLength`)를 끈다. 사라질 때 `onImpact(pos, spec, reason)` 콜백 → `Game` 이 **명중 섬광·파편·바닥 충격파**(벽은 작게, 수명 만료는 없음). 적의 탄도 같은 꼬리·명중 연출. 탄 색은 `combat.ranged.color`.
+- 설정: `combat.melee.combo{window, steps[]}`, `combat.ranged.color`, `juice.ranged{muzzleRadius, muzzleTime, trailLength, impactRadius, impactTime, impactRing}`, `juice.comboFinish{shockMul, hitStop}` + CONFIG_LIMITS. `getDebugState().combo`(마지막 단계, 끊기면 -1)·`effects`(살아 있는 효과 수).
+
+### 수정 파일
+`src/combat/{combo.ts(새),CombatSystem.ts,Effects.ts,Projectile.ts}`, `src/player/Player.ts`, `src/player/models/PlaceholderModel.ts`, `src/assets/PartRig.ts`, `src/audio/AudioSystem.ts`, `src/ui/HUD.ts`, `src/game/{Game.ts,GameConfig.ts}`, `src/style.css`, `tests/combo.test.ts`(새), `package.json`, `GAME_GUIDE.md`, `CLAUDE.md`, `CHANGELOG.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 206개·빌드). 새 테스트: 콤보 단계 진행(처음 0, 시간 안 1→2, 놓치면 0, 마무리 뒤 0, 단계 1개면 0)·설정 건전성(첫 단계 배율 1, 피해 배율 증가, 마지막은 spin 360°·대기 길게, 색·방향 값).
+- Playwright `smoke35`: 정면 1.3 에 트롤, 등 뒤 1.3 에 트롤을 두고 연타 → 단계 0→1→2, 정면 피해 45(12+14+19), 등 뒤 19(회전 베기만) → 가만히 두면 콤보 끊김(-1) → 다시 누르면 0 → HUD '1연격' 텍스트 → 원거리: 탄+꼬리 메시 2개·총구 섬광 1 → 7 거리 트롤 명중(체력 -9: 레벨 2 배율), 명중 섬광 2, 탄 소멸. 오류 없음. `shots35` 로 1·2·3단 궤적·자세와 총구 섬광·꼬리를 화면으로 확인.
+
+### 알려진 문제
+- 이어가기 0.55초는 PC 기준. 휴대폰에서 연타가 어려우면 `combo.window` 를 늘리면 된다.
+- 회전 베기(3단)의 바닥 부채꼴은 금색 원 전체가 잠깐(0.34초) 보여 조금 강하게 느껴질 수 있다. 색은 `combo.steps[2].color`.
+
 ## 2026-10-24 · v1.18.0 · 휴대폰에서 앱처럼 (PWA: 홈 화면 설치·전체 화면·오프라인 실행)
 
 ### 변경 내용

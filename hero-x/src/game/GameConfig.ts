@@ -110,6 +110,26 @@ export interface EnemySpawnConfig {
   skin?: string;
 }
 
+/** 근접 콤보 한 단계. 배율은 GameConfig.combat.melee 의 기본값에 곱한다 */
+export interface ComboStepConfig {
+  /** 피해 배율 */
+  damageMul: number;
+  /** 사거리 배율 */
+  rangeMul: number;
+  /** 부채꼴 각도(도). 360 이면 제자리 회전 베기 */
+  arcDegrees: number;
+  /** 휘두르기 동작 시간(초) */
+  swingTime: number;
+  /** 다음 공격까지 대기 배율 (마무리는 길게 → 빈틈) */
+  cooldownMul: number;
+  /** 밀침 배율 */
+  knockbackMul: number;
+  /** 베는 방향: right(오른쪽→왼쪽), left(왼쪽→오른쪽), spin(한 바퀴) */
+  sweep: 'right' | 'left' | 'spin';
+  /** 궤적 색 */
+  color: string;
+}
+
 export interface GameConfigType {
   /** 게임 이름 정보 (제목 변경은 여기서) */
   meta: { title: string; subtitle: string; version: string; /** 인트로 교실 칠판에 적히는 학교 이름 */ school: string };
@@ -185,6 +205,16 @@ export interface GameConfigType {
       knockback: number;
       /** 휘두르기 동작 시간(초) */
       swingTime: number;
+      /**
+       * 연속 공격(콤보): 근접을 연달아 누르면 steps 순서대로 다른 베기가 나간다.
+       * - window: 한 번 휘두른 뒤(쿨다운이 끝난 시점부터) 이 시간(초) 안에 다시 누르면 다음 단계로 이어진다.
+       *   놓치면 1단계로 돌아간다. 마지막 단계(마무리) 뒤에는 항상 1단계로 돌아간다.
+       * - steps: 단계별 배율. 값은 기본 melee 수치에 곱한다(arcDegrees·swingTime 은 그대로 쓴다).
+       */
+      combo: {
+        window: number;
+        steps: ComboStepConfig[];
+      };
     };
 
     /** 원거리 공격 (에너지 탄) */
@@ -200,6 +230,8 @@ export interface GameConfigType {
       radius: number;
       /** 맞은 적이 밀려나는 세기 */
       knockback: number;
+      /** 탄 색 */
+      color: string;
     };
   };
   /** 적 */
@@ -391,6 +423,10 @@ export interface GameConfigType {
     levelUp: { radius: number; height: number; duration: number; color: string };
     /** 보스 등장 연출: 충격파 반지름, 빛 기둥 높이·시간, 짧은 느려짐(초) */
     bossEntrance: { shockRadius: number; pillarHeight: number; duration: number; slowMo: number };
+    /** 원거리 발사 연출: 총구 섬광 반지름·시간(초), 탄 꼬리 길이, 명중 폭발 반지름·시간(초)·충격파 반지름 */
+    ranged: { muzzleRadius: number; muzzleTime: number; trailLength: number; impactRadius: number; impactTime: number; impactRing: number };
+    /** 콤보 마무리 연출: 충격파 반지름 배율(사거리 기준)·짧은 멈춤(초) */
+    comboFinish: { shockMul: number; hitStop: number };
   };
   /** 성능 */
   performance: {
@@ -414,7 +450,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.18.0', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.19.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -456,6 +492,17 @@ export const GameConfig: GameConfigType = {
       cooldown: 0.34,
       knockback: 7,
       swingTime: 0.22,
+      combo: {
+        window: 0.55,
+        steps: [
+          // 1단계: 오른쪽에서 왼쪽으로 가로 베기 (기본)
+          { damageMul: 1, rangeMul: 1, arcDegrees: 110, swingTime: 0.22, cooldownMul: 1, knockbackMul: 1, sweep: 'right', color: '#bffcf2' },
+          // 2단계: 되돌려 베기 — 조금 빠르고 넓다
+          { damageMul: 1.15, rangeMul: 1.05, arcDegrees: 130, swingTime: 0.2, cooldownMul: 0.9, knockbackMul: 1.1, sweep: 'left', color: '#7df2ff' },
+          // 3단계(마무리): 제자리 회전 베기 — 사방을 치고 세게 밀어내며, 뒤에 빈틈이 있다
+          { damageMul: 1.6, rangeMul: 1.2, arcDegrees: 360, swingTime: 0.34, cooldownMul: 1.7, knockbackMul: 1.8, sweep: 'spin', color: '#ffd23f' },
+        ],
+      },
     },
     ranged: {
       damage: 8,
@@ -464,6 +511,7 @@ export const GameConfig: GameConfigType = {
       lifetime: 1.6,
       radius: 0.18,
       knockback: 3,
+      color: '#5cf2d8',
     },
   },
 
@@ -800,6 +848,8 @@ export const GameConfig: GameConfigType = {
     slashColor: '#bffcf2',
     levelUp: { radius: 0.9, height: 7, duration: 1.4, color: '#ffd23f' },
     bossEntrance: { shockRadius: 9, pillarHeight: 14, duration: 1.6, slowMo: 0.3 },
+    ranged: { muzzleRadius: 0.55, muzzleTime: 0.18, trailLength: 2.2, impactRadius: 0.7, impactTime: 0.25, impactRing: 1.1 },
+    comboFinish: { shockMul: 1.1, hitStop: 0.05 },
   },
   performance: {
     autoQualityInterval: 6,
@@ -849,6 +899,15 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'combat.melee.cooldown': { min: 0.05, max: 5 },
   'combat.melee.knockback': { min: 0, max: 50 },
   'combat.melee.swingTime': { min: 0.05, max: 2 },
+  'combat.melee.combo.window': { min: 0.05, max: 3 },
+  'juice.ranged.muzzleRadius': { min: 0, max: 5 },
+  'juice.ranged.muzzleTime': { min: 0.02, max: 3 },
+  'juice.ranged.trailLength': { min: 0, max: 20 },
+  'juice.ranged.impactTime': { min: 0.02, max: 3 },
+  'juice.ranged.impactRadius': { min: 0, max: 5 },
+  'juice.ranged.impactRing': { min: 0, max: 10 },
+  'juice.comboFinish.shockMul': { min: 0, max: 5 },
+  'juice.comboFinish.hitStop': { min: 0, max: 0.5 },
   'enemies.separation': { min: 0, max: 20 },
   'loot.healChance': { min: 0, max: 1 },
   'loot.healAmount': { min: 1, max: 9999 },

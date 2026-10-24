@@ -80,9 +80,15 @@ export class Player {
     this.object3d.add(model.root);
   }
 
-  /** 공격 동작 시작 (CombatSystem 이 호출) */
-  triggerAttack(duration: number): void {
+  /** 현재 공격 동작 종류와 콤보 단계 (모델 애니메이션용) */
+  private attackKind: 'melee' | 'ranged' = 'melee';
+  private attackStep = 0;
+
+  /** 공격 동작 시작 (CombatSystem 이 호출). step 은 근접 콤보 단계(0부터) */
+  triggerAttack(duration: number, kind: 'melee' | 'ranged' = 'melee', step = 0): void {
     this.attackTimer = this.attackDuration = Math.max(0.01, duration);
+    this.attackKind = kind;
+    this.attackStep = step;
   }
 
   /** 재시작: 체력·위치·동작 초기화 */
@@ -110,6 +116,8 @@ export class Player {
       moving: this.moving,
       speed: this.speed,
       attack: this.attackTimer > 0 ? 1 - this.attackTimer / this.attackDuration : null,
+      attackKind: this.attackKind,
+      attackStep: this.attackStep,
       airborne: this.airborne,
       dead: this.health.isDead,
       dashing: this.dashing,

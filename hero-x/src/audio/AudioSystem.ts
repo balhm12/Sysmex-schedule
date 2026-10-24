@@ -216,14 +216,15 @@ export class AudioSystem {
   // ---------- 효과음 ----------
 
   /** 효과음 재생. 같은 효과음은 minGap 초 안에 다시 울리지 않는다 */
-  play(name: SfxName, minGap = 0.03): void {
+  /** 효과음 재생. minGap: 같은 소리의 최소 간격(초), pitchMul: 음높이 배율(콤보 단계 등에 쓴다, 1 이 원래 높이) */
+  play(name: SfxName, minGap = 0.03, pitchMul = 1): void {
     if (!this.ctx || !this.unlocked || this.volumes.master <= 0 || this.volumes.sfx <= 0) return;
     const now = this.ctx.currentTime;
     const last = this.lastPlayed.get(name) ?? -1;
     if (now - last < minGap) return;
     this.lastPlayed.set(name, now);
     const def = SFX[name];
-    const pitch = def.pitchJitter ? Math.pow(2, ((Math.random() * 2 - 1) * def.pitchJitter) / 12) : 1;
+    const pitch = (def.pitchJitter ? Math.pow(2, ((Math.random() * 2 - 1) * def.pitchJitter) / 12) : 1) * pitchMul;
     const gainMul = def.gainJitter ? 1 + (Math.random() * 2 - 1) * def.gainJitter : 1;
     // 정식 음원 파일이 있으면 그걸로
     const file = this.fileBuffers(`sfx:${name}`);

@@ -162,23 +162,46 @@ export function buildPartRig(root: THREE.Object3D): PartRig | null {
         legR = -0.5;
       }
       // 공격: 검 든 팔을 뒤로 당겼다가 앞으로 크게 휘두르고 몸이 따라 돈다
+      // 콤보 2단은 반대쪽으로 되돌려 베기, 3단(마무리)은 검을 옆으로 뻗고 몸을 한 바퀴 돌린다. 원거리는 팔을 뻗어 쏘고 반동
       let sword = 0;
       let other = 0;
-      if (s.attack !== null) {
+      let spin = 0; // 몸 전체 회전(회전 베기)
+      if (s.attack !== null && s.attackKind === 'ranged') {
         const a = s.attack;
-        // 뒤로 당김은 아주 짧게(12%) — 누른 즉시 검이 나가는 느낌
-        if (a < 0.12) {
-          sword = lerp(0, -2.2, ease(a / 0.12));
-          armSwordSide = lerp(0, 0.5, a / 0.12);
-          bodyYaw = lerp(0, 0.35, a / 0.12);
+        const recoil = Math.sin(Math.min(1, a * 1.6) * Math.PI);
+        sword = -1.55 + recoil * 0.45; // 앞으로 뻗은 팔이 반동으로 튄다
+        armSwordSide = -0.1;
+        other = -0.5 * recoil;
+        bodyPitch -= recoil * 0.1;
+        bodyYaw = 0.15 * (1 - a);
+      } else if (s.attack !== null) {
+        const a = s.attack;
+        const step = s.attackStep ?? 0;
+        if (step >= 2) {
+          // 회전 베기: 검을 옆으로 뻗고 한 바퀴. 처음 15%는 웅크리며 준비
+          const k = ease(Math.max(0, (a - 0.15) / 0.85));
+          sword = lerp(-0.4, -1.5, Math.min(1, a / 0.15));
+          armSwordSide = lerp(0.2, 1.25, Math.min(1, a / 0.15));
+          spin = k * Math.PI * 2;
+          bodyPitch += 0.12;
+          other = -0.9;
+          bob -= 0.05 * Math.sin(a * Math.PI);
         } else {
-          const k = ease((a - 0.12) / 0.88);
-          sword = lerp(-2.2, 1.1, k);
-          armSwordSide = lerp(0.5, -0.2, k);
-          bodyYaw = lerp(0.35, -0.3, k);
-          bodyPitch += lerp(0, 0.18, k);
+          const dirSign = step === 1 ? -1 : 1;
+          // 뒤로 당김은 아주 짧게(12%) — 누른 즉시 검이 나가는 느낌
+          if (a < 0.12) {
+            sword = lerp(0, -2.2, ease(a / 0.12));
+            armSwordSide = lerp(0, 0.5 * dirSign, a / 0.12);
+            bodyYaw = lerp(0, 0.35 * dirSign, a / 0.12);
+          } else {
+            const k = ease((a - 0.12) / 0.88);
+            sword = lerp(-2.2, 1.1, k);
+            armSwordSide = lerp(0.5 * dirSign, -0.2 * dirSign, k);
+            bodyYaw = lerp(0.35 * dirSign, -0.3 * dirSign, k);
+            bodyPitch += lerp(0, 0.18, k);
+          }
+          other = -sword * 0.3;
         }
-        other = -sword * 0.3;
       }
       if (hurt > 0) {
         bodyPitch -= 0.35 * hurt;
@@ -196,7 +219,7 @@ export function buildPartRig(root: THREE.Object3D): PartRig | null {
         otherArm.group.rotation.z = 0;
       }
       if (head) head.group.rotation.x = headPitch + (s.moving ? Math.sin(t * 9) * 0.02 : 0);
-      body.rotation.set(bodyPitch, bodyYaw, 0);
+      body.rotation.set(bodyPitch, bodyYaw + spin, 0);
       body.position.y = bob;
     },
   };

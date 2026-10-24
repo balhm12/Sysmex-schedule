@@ -7,6 +7,10 @@ export interface PlayerModelState {
   speed: number;
   /** 공격 동작 진행도 0~1, 공격 중이 아니면 null */
   attack: number | null;
+  /** 공격 종류: 근접(베기) / 원거리(쏘기). 없으면 근접 */
+  attackKind?: 'melee' | 'ranged';
+  /** 근접 콤보 단계(0부터): 0 가로 베기, 1 되돌려 베기, 2 이상 회전 베기 */
+  attackStep?: number;
   /** 점프 중 */
   airborne: boolean;
   /** 쓰러진 상태 */
@@ -249,16 +253,29 @@ export function createPlaceholderModel(colors: PlaceholderColors): PlayerModel {
       torso.scale.set(1, 1 + breathe, 1);
       root.position.y = Math.abs(Math.sin(walkT)) * 0.06 * amount;
 
-      if (state.attack !== null) {
-        // 휘두르기: 오른팔을 뒤로 당겼다가 앞으로 크게 뿌리고, 몸통·머리가 따라 돈다
+      if (state.attack !== null && state.attackKind === 'ranged') {
+        // 쏘기: 팔을 앞으로 뻗고 반동으로 살짝 튄다
         const p = state.attack;
+        const recoil = Math.sin(Math.min(1, p * 1.6) * Math.PI);
+        armR.shoulder.rotation.x = -Math.PI / 2 + recoil * 0.35;
+        armR.shoulder.rotation.y = 0;
+        armR.elbow.rotation.x = -recoil * 0.4;
+        torso.rotation.y = 0;
+        torso.rotation.x = -recoil * 0.08;
+        head.rotation.y = 0;
+      } else if (state.attack !== null) {
+        // 휘두르기: 오른팔을 뒤로 당겼다가 앞으로 크게 뿌리고, 몸통·머리가 따라 돈다
+        // 콤보 2단은 반대 방향으로 되돌려 베고, 3단은 몸을 한 바퀴 돌린다
+        const p = state.attack;
+        const step = state.attackStep ?? 0;
+        const dirSign = step === 1 ? -1 : 1;
         const windup = Math.min(1, p * 2.5);
         const swingK = Math.sin(p * Math.PI);
         armR.shoulder.rotation.x = -Math.PI / 2 * windup - swingK * 0.4;
-        armR.shoulder.rotation.y = (0.5 - p) * 1.8;
+        armR.shoulder.rotation.y = (0.5 - p) * 1.8 * dirSign;
         armR.elbow.rotation.x = -0.6 * (1 - p) - 0.2;
-        torso.rotation.y = (0.5 - p) * 0.55;
-        head.rotation.y = (0.5 - p) * 0.3;
+        torso.rotation.y = step >= 2 ? p * Math.PI * 2 : (0.5 - p) * 0.55 * dirSign;
+        head.rotation.y = step >= 2 ? 0 : (0.5 - p) * 0.3 * dirSign;
       } else {
         toward(armR.shoulder, 'x', swing * 0.8 - 0.1, ease(dt, 10));
         toward(armR.shoulder, 'y', 0, ease(dt, 10));

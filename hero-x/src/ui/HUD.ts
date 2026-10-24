@@ -152,6 +152,31 @@ export class HUD {
     }
   }
 
+  private readonly combo: HTMLDivElement = document.createElement('div');
+  private comboTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /**
+   * 근접 콤보 단계 표시: "2연격" 처럼 잠깐 튀어 오르고, 마무리는 "마무리!" 로 크게.
+   * step 은 0부터, total 은 전체 단계 수. 잠시 뒤 스스로 사라진다
+   */
+  showCombo(step: number, total: number): void {
+    if (total <= 1) return;
+    if (!this.combo.isConnected) {
+      this.combo.className = 'combo';
+      this.combo.hidden = true;
+      this.root.appendChild(this.combo);
+    }
+    const finisher = step === total - 1;
+    this.combo.textContent = finisher ? '마무리!' : `${step + 1}연격`;
+    this.combo.classList.toggle('finish', finisher);
+    this.combo.hidden = false;
+    this.combo.classList.remove('pop');
+    void this.combo.offsetWidth;
+    this.combo.classList.add('pop');
+    clearTimeout(this.comboTimer);
+    this.comboTimer = setTimeout(() => (this.combo.hidden = true), finisher ? 900 : 700);
+  }
+
   /** 피격 순간 화면 테두리를 붉게 번쩍인다 */
   flashHit(): void {
     this.root.classList.remove('hit');
