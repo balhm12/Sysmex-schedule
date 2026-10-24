@@ -103,6 +103,17 @@ export class ZoneSystem {
     }
   }
 
+  /** 밖에서 생긴 적(분열 슬라임의 새끼 등)을 그 자리의 구역에 붙인다 → 잡아야 구역이 클리어된다 */
+  attach(enemy: { alive: boolean }, pos: Vec2): void {
+    for (const z of this.journey.zones) {
+      const st = this.state.get(z.id)!;
+      if (st.entered && !st.cleared && inRect(pos, z.rect)) {
+        st.enemies.push(enemy);
+        return;
+      }
+    }
+  }
+
   /** 보스 구역 클리어 표시 (Game 이 보스 처치 때 부른다) */
   markBossCleared(): void {
     const st = this.state.get(this.journey.bossZone);

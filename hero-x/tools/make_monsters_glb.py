@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-몬스터 5종 복셀 모델 생성기 → public/models/monster-*.glb (적 로봇 대신 쓰는 괴물 외형, 더 정교함)
+몬스터 9종 복셀 모델 생성기 → public/models/monster-*.glb (적 로봇 대신 쓰는 괴물 외형, 더 정교함)
 실행: python3 tools/make_monsters_glb.py
 - rusher → 고블린 전사(곤봉) / shooter → 유령 마법사(지팡이, 떠다님) / tank → 트롤 거인(방패·도끼) /
-  stalker → 동굴 박쥐 괴물(날개) / artillery → 돌 골렘 투석병(바위 던짐)
+  stalker → 동굴 박쥐 괴물(날개) / artillery → 돌 골렘 투석병(바위 던짐) /
+  archer → 고블린 궁수(활, 3발) / slime → 분열 슬라임(죽으면 작은 슬라임 2, slimelet 은 같은 모델) / bomber → 폭탄 벌레(자폭) / charger → 뿔 멧돼지(돌진)
 - 사람형 몬스터는 플레이어와 같은 부품 이름(left_leg/right_leg/left_arm/right_arm/head + weapon_*)을 써서
   적 리그가 걷기(팔다리 교차)·공격 예고(무기 팔 치켜들기)·공격(휘두르기)을 만든다.
   떠다니는 몬스터는 float_* 부품을 하나 두면 떠다닌다. 무기에 붙는 발광 부품은 weapon_* 로 이름 지어야 팔과 함께 움직인다(glow_* 는 따로 관절이 됨). 날개는 wing_l/wing_r, 발광은 glow_*, 눈은 eye_* (예고 때 커짐).
@@ -283,12 +284,149 @@ def build_stone_golem():
     return m
 
 
+# ---------------------------------------------------------------- 고블린 궁수
+def build_goblin_archer():
+    m = VoxelModel('goblin_archer', {**COMMON,
+        'skin': mat('#7fb84a', rough=0.85), 'skin_dark': mat('#5a8a30', rough=0.85), 'skin_light': mat('#9fd066', rough=0.85),
+        'cloth': mat('#2f6b3a', rough=0.95), 'cloth_dark': mat('#1f4a27', rough=0.95), 'hood': mat('#3b4a2a', rough=0.95),
+        'eye_glow': mat('#ffd23f', rough=0.3, emissive=[1.0, 0.75, 0.2], strength=1.1),
+        'feather': mat('#e8543a', rough=0.9), 'string': mat('#e9e2cf', rough=0.8)})
+    for sgn, side in ((1, 'left'), (-1, 'right')):
+        x = sgn * 0.24
+        m.box(f'{side}_leg', x, 0.6, 0, 0.3, 0.5, 0.32, 'cloth_dark')
+        m.box(f'{side}_foot', x, 0.12, 0.08, 0.32, 0.24, 0.48, 'leather')
+    m.box('body', 0, 1.18, 0.02, 0.8, 0.7, 0.56, 'cloth')
+    m.box('body_belt', 0, 0.88, 0, 0.84, 0.12, 0.6, 'leather')
+    m.box('body_quiver', -0.3, 1.3, -0.4, 0.26, 0.8, 0.26, 'leather_dark')
+    for i in range(3):
+        m.box(f'body_arrow{i}', -0.3 + (i - 1) * 0.07, 1.85, -0.4 + (i % 2) * 0.05, 0.04, 0.3, 0.04, 'wood')
+        m.box(f'body_arrow{i}_feather', -0.3 + (i - 1) * 0.07, 2.02, -0.4 + (i % 2) * 0.05, 0.08, 0.1, 0.06, 'feather')
+    for sgn, side in ((1, 'left'), (-1, 'right')):
+        x = sgn * 0.54
+        m.box(f'{side}_arm', x, 1.28, 0.04, 0.24, 0.46, 0.26, 'skin')
+        m.box(f'{side}_arm_fore', x, 0.92, 0.12, 0.22, 0.38, 0.24, 'skin_dark')
+        m.box(f'{side}_hand', x, 0.7, 0.16, 0.24, 0.2, 0.26, 'skin_light')
+    m.box('head', 0, 1.95, 0.06, 0.74, 0.62, 0.68, 'skin')
+    m.box('head_hood', 0, 2.2, -0.02, 0.84, 0.3, 0.8, 'hood')
+    m.box('head_hood_peak', 0, 2.42, -0.14, 0.36, 0.22, 0.4, 'hood')
+    m.box('head_hood_back', 0, 1.9, -0.36, 0.8, 0.6, 0.14, 'hood')
+    eyes(m, 'head', 0, 2.02, 0.42, 0.19, 0.17, white='eye_glow', glow=True)
+    m.box('nose', 0, 1.9, 0.5, 0.12, 0.12, 0.28, 'skin_dark')
+    m.box('mouth', 0, 1.78, 0.42, 0.3, 0.05, 0.04, 'leather_dark')
+    for sgn, side in ((1, 'l'), (-1, 'r')):
+        m.box(f'ear_{side}', sgn * 0.55, 2.02, 0.0, 0.36, 0.12, 0.18, 'skin')
+    # 활 (왼손, 앞을 향함): 활대 위아래 + 시위 + 메긴 화살
+    hx, hy, hz = 0.54, 0.7, 0.3
+    m.box('weapon_bow_grip', hx, hy, hz, 0.1, 0.3, 0.1, 'leather')
+    m.box('weapon_bow_upper', hx, hy + 0.55, hz + 0.08, 0.08, 0.8, 0.08, 'wood')
+    m.box('weapon_bow_lower', hx, hy - 0.55, hz + 0.08, 0.08, 0.8, 0.08, 'wood')
+    m.box('weapon_bow_tip_u', hx, hy + 1.0, hz + 0.02, 0.07, 0.14, 0.07, 'wood_dark')
+    m.box('weapon_bow_tip_d', hx, hy - 1.0, hz + 0.02, 0.07, 0.14, 0.07, 'wood_dark')
+    m.box('weapon_string', hx, hy, hz - 0.18, 0.03, 2.0, 0.03, 'string')
+    m.box('weapon_arrow', hx, hy, hz + 0.2, 0.04, 0.04, 1.1, 'wood')
+    m.box('weapon_arrow_head', hx, hy, hz + 0.78, 0.06, 0.08, 0.14, 'iron')
+    return m
+
+
+# ---------------------------------------------------------------- 분열 슬라임
+def build_slime():
+    m = VoxelModel('slime', {**COMMON,
+        'jelly': mat('#5fd36b', 0.82, rough=0.3, blend=True), 'jelly_dark': mat('#3f9e4a', 0.9, rough=0.35, blend=True),
+        'jelly_light': mat('#a4f0a8', 0.75, rough=0.25, blend=True),
+        'core': mat('#2f7a3a', rough=0.5, emissive=[0.2, 0.6, 0.25], strength=1.2),
+        'eye_glow': mat('#ffffff', rough=0.3, emissive=[0.9, 1.0, 0.9], strength=1.0)})
+    rng = random.Random(3)
+    # 둥근 몸: 층층이 쌓은 상자 (아래가 넓음) + 흘러내린 덩어리
+    layers = ((1.9, 0.3, 0.15), (2.1, 0.5, 0.55), (1.9, 0.5, 1.05), (1.5, 0.45, 1.5), (1.0, 0.35, 1.85), (0.5, 0.25, 2.1))
+    for i, (w, h, y) in enumerate(layers):
+        m.box(f'body_layer{i}', 0, y, 0, w, h, w * 0.95, 'jelly' if i % 2 else 'jelly_dark')
+    for i in range(6):
+        a = rng.uniform(0, math.pi * 2)
+        m.box(f'body_blob{i}', math.cos(a) * 0.9, 0.2, math.sin(a) * 0.85, 0.3 + rng.uniform(0, 0.2), 0.25, 0.3, 'jelly_light')
+    m.box('body_core', 0, 0.95, 0, 0.5, 0.5, 0.5, 'core')
+    m.box('body_core_bit', 0.3, 1.3, 0.1, 0.2, 0.2, 0.2, 'core')
+    m.box('body_shine', -0.5, 1.6, 0.55, 0.3, 0.3, 0.1, 'jelly_light')
+    # 눈·입 (앞면)
+    m.box('eye_l', 0.32, 1.25, 0.86, 0.26, 0.3, 0.1, 'eye_glow')
+    m.box('eye_r', -0.32, 1.25, 0.86, 0.26, 0.3, 0.1, 'eye_glow')
+    m.box('eye_l_pupil', 0.3, 1.22, 0.93, 0.12, 0.16, 0.04, 'pupil')
+    m.box('eye_r_pupil', -0.34, 1.22, 0.93, 0.12, 0.16, 0.04, 'pupil')
+    m.box('mouth', 0, 0.85, 0.9, 0.5, 0.1, 0.06, 'jelly_dark')
+    return m
+
+
+# ---------------------------------------------------------------- 폭탄 벌레
+def build_bomber():
+    m = VoxelModel('bomber', {**COMMON,
+        'shell': mat('#8a2e22', rough=0.5, metal=0.1), 'shell_dark': mat('#5a1c14', rough=0.6),
+        'belly': mat('#3a2a26', rough=0.8), 'leg': mat('#2a1d1a', rough=0.8),
+        'sac': mat('#ff4f3d', rough=0.3, emissive=[1.0, 0.3, 0.15], strength=1.6),
+        'sac_core': mat('#ffd08a', rough=0.3, emissive=[1.0, 0.75, 0.35], strength=1.4),
+        'eye_glow': mat('#ffb347', rough=0.3, emissive=[1.0, 0.6, 0.15], strength=1.3)})
+    # 몸통: 낮은 딱정벌레 + 등딱지 두 장 + 뒤쪽 발광 폭탄 주머니
+    m.box('body', 0, 0.55, 0, 0.9, 0.5, 1.2, 'belly')
+    m.mirror('body_shell_l', 'body_shell_r', 0.26, 0.8, -0.05, 0.5, 0.26, 1.1, 'shell')
+    m.box('body_shell_ridge', 0, 0.92, -0.05, 0.08, 0.14, 1.1, 'shell_dark')
+    m.box('glow_sac', 0, 0.8, -0.62, 0.7, 0.6, 0.5, 'sac')
+    m.box('glow_sac_core', 0, 0.85, -0.9, 0.3, 0.3, 0.1, 'sac_core')
+    for i in range(4):
+        m.box(f'body_spot{i}', (i % 2 * 2 - 1) * 0.28, 0.95, 0.2 - (i // 2) * 0.5, 0.14, 0.04, 0.14, 'shell_dark')
+    # 머리 + 더듬이 + 눈 + 턱
+    m.box('head', 0, 0.6, 0.72, 0.6, 0.4, 0.4, 'shell_dark')
+    eyes(m, 'head', 0, 0.68, 0.9, 0.17, 0.14, white='eye_glow', glow=True)
+    m.mirror('mouth_jaw_l', 'mouth_jaw_r', 0.14, 0.46, 0.98, 0.1, 0.1, 0.22, 'leg')
+    m.box('antenna_l', 0.18, 0.95, 0.9, 0.05, 0.4, 0.05, 'leg')
+    m.box('antenna_r', -0.18, 0.95, 0.9, 0.05, 0.4, 0.05, 'leg')
+    # 다리 6개 (leg_* → 걸을 때 흔들림)
+    for i, z in enumerate((0.4, 0.0, -0.4)):
+        for sgn, side in ((1, 'l'), (-1, 'r')):
+            m.box(f'leg_{side}{i}', sgn * 0.6, 0.35, z, 0.36, 0.1, 0.1, 'leg')
+            m.box(f'leg_{side}{i}_foot', sgn * 0.8, 0.18, z, 0.1, 0.36, 0.1, 'leg')
+    return m
+
+
+# ---------------------------------------------------------------- 뿔 멧돼지
+def build_boar():
+    m = VoxelModel('boar', {**COMMON,
+        'fur': mat('#6b4630', rough=0.95), 'fur_dark': mat('#4a2f1f', rough=0.95), 'fur_light': mat('#8f6a4a', rough=0.95),
+        'mane': mat('#2e1c12', rough=0.98), 'tusk': mat('#f3f0e6', rough=0.5), 'hoof': mat('#2a1d1a', rough=0.8),
+        'eye_glow': mat('#ff6a3d', rough=0.3, emissive=[1.0, 0.35, 0.15], strength=1.3)})
+    # 몸통 (앞이 높고 두꺼움) + 갈기 + 배
+    m.box('body', 0, 1.15, -0.1, 1.2, 1.0, 2.0, 'fur')
+    m.box('body_front', 0, 1.3, 0.75, 1.3, 1.1, 0.6, 'fur_dark')
+    m.box('body_belly', 0, 0.75, -0.1, 1.0, 0.3, 1.6, 'fur_light')
+    m.box('body_mane', 0, 1.75, 0.1, 0.4, 0.3, 1.6, 'mane')
+    for i in range(5):
+        m.box(f'body_mane_tuft{i}', 0, 1.95, 0.7 - i * 0.35, 0.2, 0.2, 0.16, 'mane')
+    m.box('body_tail', 0, 1.3, -1.15, 0.12, 0.12, 0.4, 'fur_dark')
+    m.box('body_tail_tuft', 0, 1.1, -1.35, 0.2, 0.3, 0.14, 'mane')
+    # 머리: 큰 주둥이, 뿔 모양 엄니 2쌍, 귀, 작은 눈
+    m.box('head', 0, 1.25, 1.35, 0.9, 0.8, 0.7, 'fur_dark')
+    m.box('head_snout', 0, 1.05, 1.85, 0.6, 0.5, 0.4, 'fur')
+    m.box('nose', 0, 1.1, 2.08, 0.4, 0.3, 0.08, 'hoof')
+    eyes(m, 'head', 0, 1.42, 1.72, 0.26, 0.14, white='eye_glow', glow=True)
+    m.mirror('mouth_tusk_l', 'mouth_tusk_r', 0.3, 1.0, 1.9, 0.12, 0.45, 0.12, 'tusk')
+    m.mirror('mouth_tusk_tip_l', 'mouth_tusk_tip_r', 0.34, 1.3, 1.98, 0.1, 0.2, 0.1, 'tusk')
+    m.mirror('head_horn_l', 'head_horn_r', 0.3, 1.8, 1.3, 0.14, 0.4, 0.14, 'tusk')
+    m.mirror('ear_l', 'ear_r', 0.42, 1.75, 1.15, 0.2, 0.3, 0.12, 'fur')
+    # 다리 4개 (leg_* 위 모서리 관절)
+    for zpos, tag in ((0.65, 'f'), (-0.75, 'b')):
+        for sgn, side in ((1, 'l'), (-1, 'r')):
+            m.box(f'leg_{tag}{side}', sgn * 0.42, 0.45, zpos, 0.32, 0.7, 0.34, 'fur_dark')
+            m.box(f'leg_{tag}{side}_hoof', sgn * 0.42, 0.1, zpos + 0.04, 0.34, 0.2, 0.38, 'hoof')
+    return m
+
+
 MONSTERS = {
     'rusher': build_goblin,
     'shooter': build_ghost_mage,
     'tank': build_troll,
     'stalker': build_cave_bat,
     'artillery': build_stone_golem,
+    'archer': build_goblin_archer,
+    'slime': build_slime,
+    'bomber': build_bomber,
+    'charger': build_boar,
 }
 
 if __name__ == '__main__':

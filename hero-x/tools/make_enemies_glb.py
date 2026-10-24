@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-적 5종 복셀 모델 생성기 → public/models/enemy-*.glb
+적 6종 복셀 모델 생성기 → public/models/enemy-*.glb (로봇 외형: 요새 skin 'robot-*')
 실행: python3 tools/make_enemies_glb.py
 - 돌진 로봇(rusher) · 포격 드론(shooter) · 철벽 로봇(tank) · 박쥐 드론(stalker) · 요새 포대(artillery)
 - 부품 이름 규칙(src/assets/PartRig.ts 의 적 리그): wheel_* 바퀴(이동 시 회전) / claw_l|r 집게(예고 때 벌어짐) /
@@ -182,7 +182,27 @@ def build_artillery():
     return m
 
 
+def build_bomber():
+    """자폭 드론: 작고 둥근 몸통 + 로터 + 붉은 발광 폭탄 (강철 요새의 폭탄 벌레 외형, 모델 이름 bomber → enemy-bomber.glb)"""
+    m = VoxelModel('bomber', {**COMMON,
+        'body': mat('#c0392b', rough=0.5, metal=0.4), 'body_dark': mat('#7d2219', rough=0.5),
+        'bomb': mat('#ff4f3d', emissive=[1.0, 0.3, 0.15], strength=1.6), 'bomb_core': mat('#ffd08a', emissive=[1.0, 0.75, 0.35], strength=1.3)})
+    m.box('body', 0, 1.0, 0, 0.8, 0.6, 0.8, 'body')
+    m.box('body_band', 0, 1.0, 0, 0.86, 0.14, 0.86, 'warn_y')
+    m.mirror('body_stripe_l', 'body_stripe_r', 0.44, 1.0, 0, 0.04, 0.14, 0.3, 'warn_k')
+    m.box('body_stripe_f', 0, 1.0, 0.44, 0.3, 0.14, 0.04, 'warn_k')
+    m.box('body_stripe_b', 0, 1.0, -0.44, 0.3, 0.14, 0.04, 'warn_k')
+    m.box('glow_bomb', 0, 0.55, 0, 0.6, 0.5, 0.6, 'bomb')
+    m.box('glow_bomb_core', 0, 0.55, 0.31, 0.24, 0.24, 0.04, 'bomb_core')
+    m.mirror('eye_l', 'eye_r', 0.16, 1.1, 0.41, 0.14, 0.12, 0.04, 'glass')
+    m.box('body_mast', 0, 1.45, 0, 0.12, 0.3, 0.12, 'steel_dark')
+    m.box('rotor_a', 0, 1.62, 0, 1.6, 0.05, 0.16, 'steel')
+    m.box('rotor_b', 0, 1.62, 0, 0.16, 0.05, 1.6, 'steel')
+    m.box('antenna_a', 0.3, 1.5, -0.3, 0.04, 0.5, 0.04, 'steel')
+    return m
+
+
 if __name__ == '__main__':
-    for build in (build_rusher, build_shooter, build_tank, build_stalker, build_artillery):
+    for build in (build_rusher, build_shooter, build_tank, build_stalker, build_artillery, build_bomber):
         model = build()
         model.export(OUT / f'enemy-{model.name}.glb')

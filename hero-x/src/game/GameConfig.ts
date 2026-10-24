@@ -43,12 +43,22 @@ export interface EnemyTypeConfig {
   color: string;
   /** 처치 점수 */
   score: number;
-  /** 공격 방식: 'melee'(근접, 기본) 또는 'ranged'(투사체) */
-  attackKind?: 'melee' | 'ranged';
+  /** 공격 방식: 'melee'(근접, 기본) / 'ranged'(투사체) / 'charge'(예고 뒤 돌진, 닿으면 피해) / 'explode'(다가와서 자폭, 범위 피해) */
+  attackKind?: 'melee' | 'ranged' | 'charge' | 'explode';
   /** (원거리형) 플레이어가 이 거리보다 가까우면 물러난다 */
   retreatRange?: number;
   /** (원거리형) 투사체 속도 */
   projectileSpeed?: number;
+  /** (원거리형) 한 번에 쏘는 투사체 수와 부채꼴 각도(도). 기본 1발 */
+  projectileCount?: number;
+  spreadDegrees?: number;
+  /** (돌진형) 돌진 속도·시간 */
+  chargeSpeed?: number;
+  chargeDuration?: number;
+  /** (자폭형) 폭발 반지름 */
+  explodeRadius?: number;
+  /** 죽을 때 갈라져 나오는 작은 적 */
+  splitInto?: { type: string; count: number };
   /** 밀려남 저항: 받는 밀침에 곱하는 값 (1 = 보통, 0.3 = 거의 안 밀림) */
   knockbackResist?: number;
   /** 외형: 기존 모델을 재사용할 때 지정 ('rusher' | 'shooter' | 'tank'). 없으면 종류 이름과 같은 모델 */
@@ -204,6 +214,8 @@ export interface GameConfigType {
     deathDuration: number;
     /** 우회 이동: 앞 lookAhead 유닛이 막히면 좌우로 꺾는다. interval(초)마다 다시 판단 (성능·떨림 방지) */
     detour: { lookAhead: number; interval: number };
+    /** 개체마다 몸집을 ±이 비율만큼 무작위로 (보기용. 충돌 반지름은 그대로) */
+    sizeJitter: number;
   };
   /** 카메라 (3인칭, 위에서 비스듬히 따라오는 던전 탐험 시점) */
   camera: {
@@ -398,7 +410,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.11.0', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.12.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -531,6 +543,88 @@ export const GameConfig: GameConfigType = {
         knockbackResist: 0.4,
         model: 'tank',
       },
+      // 고블린 궁수: 화살 3발을 부채꼴로 쏜다. 가까이 오면 물러난다 → 옆으로 돌아 접근
+      archer: {
+        name: '고블린 궁수',
+        hp: 24,
+        speed: 3.4,
+        radius: 0.5,
+        damage: 6,
+        attackRange: 10,
+        attackWindup: 0.55,
+        attackCooldown: 2.4,
+        aggroRange: 20,
+        color: '#c9a227',
+        score: 16,
+        attackKind: 'ranged',
+        retreatRange: 4,
+        projectileSpeed: 14,
+        projectileCount: 3,
+        spreadDegrees: 24,
+      },
+      // 분열 슬라임: 느리고 튼튼, 죽으면 작은 슬라임 2마리로 갈라진다
+      slime: {
+        name: '분열 슬라임',
+        hp: 45,
+        speed: 2.6,
+        radius: 0.7,
+        damage: 9,
+        attackRange: 1.6,
+        attackWindup: 0.45,
+        attackCooldown: 1.6,
+        aggroRange: 16,
+        color: '#5fd36b',
+        score: 18,
+        knockbackResist: 0.6,
+        splitInto: { type: 'slimelet', count: 2 },
+      },
+      slimelet: {
+        name: '작은 슬라임',
+        hp: 12,
+        speed: 4.6,
+        radius: 0.4,
+        damage: 5,
+        attackRange: 1.2,
+        attackWindup: 0.3,
+        attackCooldown: 1.1,
+        aggroRange: 18,
+        color: '#8fe68f',
+        score: 5,
+      },
+      // 폭탄 벌레: 빠르게 달려와 깜빡이다 터진다(범위 피해, 자신도 사라짐). 터지기 전에 잡거나 멀어지기
+      bomber: {
+        name: '폭탄 벌레',
+        hp: 16,
+        speed: 5.6,
+        radius: 0.45,
+        damage: 22,
+        attackRange: 1.8,
+        attackWindup: 0.7,
+        attackCooldown: 1,
+        aggroRange: 18,
+        color: '#ff4f3d',
+        score: 14,
+        attackKind: 'explode',
+        explodeRadius: 3.0,
+      },
+      // 뿔 멧돼지: 멀리서 예고 뒤 직선 돌진. 옆으로 피하면 지나간다. 돌진 중엔 피격으로 안 멈춤
+      charger: {
+        name: '뿔 멧돼지',
+        hp: 55,
+        speed: 3.0,
+        radius: 0.7,
+        damage: 16,
+        attackRange: 7,
+        attackWindup: 0.7,
+        attackCooldown: 2.6,
+        aggroRange: 18,
+        color: '#8a5a3a',
+        score: 24,
+        attackKind: 'charge',
+        chargeSpeed: 14,
+        chargeDuration: 0.65,
+        knockbackResist: 0.5,
+      },
     },
     spawns: [
       // 던전 1 '잊혀진 숲'. 다른 던전의 배치는 src/game/DungeonDefs.ts 에 있다
@@ -548,6 +642,7 @@ export const GameConfig: GameConfigType = {
     ],
     separation: 2.5,
     detour: { lookAhead: 3.5, interval: 0.3 },
+    sizeJitter: 0.12,
     deathDuration: 0.6,
   },
 

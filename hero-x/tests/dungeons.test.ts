@@ -109,6 +109,33 @@ describe('던전 정의 (DungeonDefs)', () => {
     }
   });
 
+  it('새 적 종류 5종(궁수·분열 슬라임·작은 슬라임·폭탄 벌레·뿔 멧돼지)은 능력치가 허용 범위 안이고 서로 다른 공격 방식을 쓴다', () => {
+    const t = GameConfig.enemies.types;
+    for (const k of ['archer', 'slime', 'slimelet', 'bomber', 'charger']) {
+      expect(t[k], k).toBeDefined();
+      for (const [key, { min, max }] of Object.entries(ENEMY_TYPE_LIMITS)) {
+        const v = t[k][key as keyof (typeof t)[string]] as number;
+        expect(v, `${k}.${key}`).toBeGreaterThanOrEqual(min);
+        expect(v, `${k}.${key}`).toBeLessThanOrEqual(max);
+      }
+    }
+    expect(t.archer.attackKind).toBe('ranged');
+    expect(t.archer.projectileCount).toBeGreaterThan(1);
+    expect(t.slime.splitInto?.type).toBe('slimelet');
+    expect(t[t.slime.splitInto!.type]).toBeDefined();
+    expect(t.bomber.attackKind).toBe('explode');
+    expect(t.bomber.explodeRadius).toBeGreaterThan(0);
+    expect(t.charger.attackKind).toBe('charge');
+    expect(t.charger.chargeSpeed!).toBeGreaterThan(t.charger.speed);
+    expect(Object.keys(t).length).toBeGreaterThanOrEqual(10);
+    // 모든 여정 던전에 새 종류가 하나 이상 섞여 있다 (단조로움 완화)
+    for (const d of DUNGEONS.filter((x) => x.journey)) {
+      const types = new Set(d.journey!.zones.flatMap((z) => zoneSpawns(z).map((s) => s.type)));
+      expect(types.size, d.id).toBeGreaterThanOrEqual(5);
+      expect([...types].some((x) => ['archer', 'slime', 'bomber', 'charger'].includes(x)), d.id).toBe(true);
+    }
+  });
+
   it('장비 템플릿은 16종이고 id 가 겹치지 않는다', () => {
     expect(ITEM_TEMPLATES.length).toBe(16);
     expect(new Set(ITEM_TEMPLATES.map((t) => t.id)).size).toBe(16);

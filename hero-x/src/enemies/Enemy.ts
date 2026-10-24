@@ -117,8 +117,8 @@ export class Enemy {
       this.detourDir = null;
     }
     let next: Vec2 = {
-      x: p.x + move.x * this.def.speed * this.mul.speed * dt + this.knock.x * dt,
-      z: p.z + move.z * this.def.speed * this.mul.speed * dt + this.knock.z * dt,
+      x: p.x + move.x * this.def.speed * this.mul.speed * (decision.speedMul ?? 1) * dt + this.knock.x * dt,
+      z: p.z + move.z * this.def.speed * this.mul.speed * (decision.speedMul ?? 1) * dt + this.knock.z * dt,
     };
     const decay = Math.exp(-8 * dt);
     this.knock.x *= decay;

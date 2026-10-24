@@ -108,3 +108,48 @@ describe('EnemyAI (원거리형)', () => {
     expect(fired).toBe(true);
   });
 });
+
+describe('EnemyAI (돌진형 · 자폭형)', () => {
+  const chargeParams: AIParams = { attackRange: 7, attackWindup: 0.3, attackCooldown: 2, aggroRange: 18, attackKind: 'charge', speed: 3, chargeSpeed: 15, chargeDuration: 0.6 };
+  it('돌진형: 사거리 안에서 예고 → 예고가 끝난 방향으로 빠르게 달린다 (speedMul = chargeSpeed/speed), 닿으면 공격, 돌진 중 피격돼도 안 멈춤', () => {
+    const ai = new EnemyAI();
+    ai.update(0.1, { x: 0, z: 0 }, { x: 6, z: 0 }, chargeParams); // idle → chase
+    let d = ai.update(0.1, { x: 0, z: 0 }, { x: 6, z: 0 }, chargeParams); // chase → windup
+    expect(d.state).toBe('windup');
+    for (let i = 0; i < 3; i++) d = ai.update(0.1, { x: 0, z: 0 }, { x: 6, z: 0 }, chargeParams);
+    expect(d.state).toBe('charge');
+    expect(d.move.x).toBeCloseTo(1, 6);
+    expect(d.speedMul).toBeCloseTo(5, 6);
+    ai.onHurt();
+    d = ai.update(0.1, { x: 1.5, z: 0 }, { x: 6, z: 0 }, chargeParams);
+    expect(d.state).toBe('charge'); // 피격으로 안 멈춤
+    // 플레이어가 옆으로 피하면 방향은 그대로 → 지나간다
+    d = ai.update(0.1, { x: 3, z: 0 }, { x: 6, z: 3 }, chargeParams);
+    expect(d.move).toEqual({ x: 1, z: 0 });
+    // 닿으면 공격하고 멈춘다
+    d = ai.update(0.1, { x: 5, z: 0 }, { x: 6, z: 0 }, chargeParams);
+    expect(d.attackNow).toBe(true);
+    expect(d.state).toBe('chase');
+    expect(d.move).toEqual({ x: 0, z: 0 });
+  });
+  it('돌진형: 시간이 다 되면 공격 없이 멈춘다 (벽에 막힌 경우)', () => {
+    const ai = new EnemyAI();
+    ai.update(0.1, { x: 0, z: 0 }, { x: 6, z: 0 }, chargeParams);
+    for (let i = 0; i < 4; i++) ai.update(0.1, { x: 0, z: 0 }, { x: 6, z: 0 }, chargeParams);
+    let d = ai.update(0.1, { x: 0, z: 0 }, { x: 6, z: 0 }, chargeParams);
+    expect(d.state).toBe('charge');
+    for (let i = 0; i < 7; i++) d = ai.update(0.1, { x: 0, z: 0 }, { x: 6, z: 0 }, chargeParams);
+    expect(d.state).toBe('chase');
+    expect(d.attackNow).toBe(false);
+  });
+  it('자폭형은 근접과 같이 예고 뒤 attackNow (범위 처리는 Game)', () => {
+    const p: AIParams = { attackRange: 1.8, attackWindup: 0.2, attackCooldown: 1, aggroRange: 10, attackKind: 'explode' };
+    const ai = new EnemyAI();
+    ai.update(0.1, { x: 0, z: 0 }, { x: 1, z: 0 }, p);
+    ai.update(0.1, { x: 0, z: 0 }, { x: 1, z: 0 }, p);
+    const d = ai.update(0.1, { x: 0, z: 0 }, { x: 1, z: 0 }, p);
+    const d2 = ai.update(0.1, { x: 0, z: 0 }, { x: 1, z: 0 }, p);
+    expect(d.state === 'windup' || d2.attackNow).toBe(true);
+    expect(d2.attackNow).toBe(true);
+  });
+});

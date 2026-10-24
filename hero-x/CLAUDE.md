@@ -58,8 +58,8 @@ hero-x/
 ├─ public/models/           정식 .glb 모델과 manifest.json, 넣는 방법 README (player.glb = 아들 복셀 캐릭터)
 ├─ tools/voxel_glb.py       복셀(박스 쌓기) → glTF 2.0 바이너리 공용 모듈 (파이썬 표준 라이브러리만). 색은 sRGB→선형 변환해서 넣는다
 ├─ tools/make_player_glb.py 아들 복셀 캐릭터 .glb 생성기 → public/models/player.glb
-├─ tools/make_enemies_glb.py 적 5종 로봇 복셀 .glb 생성기 → public/models/enemy-*.glb (선택 외형)
-├─ tools/make_monsters_glb.py 적 5종 몬스터 복셀 .glb 생성기 → public/models/monster-*.glb (현재 manifest 가 쓰는 외형. 사람형은 플레이어와 같은 부품 이름 + weapon_*, 떠다님은 float_*, 부품 이름 규칙은 public/models/README)
+├─ tools/make_enemies_glb.py 적 6종 로봇 복셀 .glb 생성기 → public/models/enemy-*.glb (요새 skin 'robot-*' 외형)
+├─ tools/make_monsters_glb.py 적 9종 몬스터 복셀 .glb 생성기 → public/models/monster-*.glb (현재 manifest 가 쓰는 외형. 사람형은 플레이어와 같은 부품 이름 + weapon_*, 떠다님은 float_*, 부품 이름 규칙은 public/models/README)
 ├─ tools/make_bosses_glb.py  보스 3종 복셀 .glb 생성기 → public/models/boss-{guardian,golem,commander}.glb (사람형 부품 이름 + weapon_* + eye_* + glow_*; Boss.ts 가 패턴 바닥 원·2단계 붉은 눈을 덧입힌다)
 │  ├─ render/
 │  │  ├─ materials.ts      PBR 재질 도우미 (pbr/metal/glow). 새 물체는 Lambert 대신 이걸 쓴다
@@ -87,7 +87,7 @@ hero-x/
 │  │  ├─ Projectile.ts     투사체 시스템 (플레이어·적 공용, 장애물 충돌, 명중 콜백)
 │  │  └─ Effects.ts        휘두르기 부채꼴·검 궤적(slash)·충격파·예고 원·빛 기둥(pillar)·파편 효과 (풀 재사용)
 │  ├─ enemies/
-│  │  ├─ EnemyAI.ts        적 상태 기계 (idle/chase/windup/hurt/dead, 근접형·원거리형, 테스트 대상)
+│  │  ├─ EnemyAI.ts        적 상태 기계 (idle/chase/windup/charge/hurt/dead, 근접·원거리·돌진·자폭형, 테스트 대상)
 │  │  ├─ EnemyModels.ts    종류별 임시 모델 + EnemyModel 인터페이스
 │  │  ├─ Enemy.ts          적 한 마리 (능력치·체력·AI·모델 연결, 이동·충돌, 추적 중 우회 이동 steerAround). 상속 가능(protected 필드, 모델 주입)
 │  │  ├─ BossAI.ts         보스 패턴 상태 기계 (chase/windup/charge/recover, 2단계 시간 배율, 테스트 대상)
@@ -199,6 +199,7 @@ hero-x/
 - 방어력은 `Game.damagePlayer` 에서 `applyDefense` 로, 체력 보너스는 `Game.applyStats`, 속도 보너스는 `PlayerController` 의 배율 함수로 적용된다. 새 능력치를 추가하면 이 세 곳을 확인한다.
 - 새 장비 → `ItemDatabase.ts` 의 `ITEM_TEMPLATES` 에 항목 추가 (분류 melee/ranged/armor/trinket, 일반 등급 기준 수치).
 - 던전 추가·수정 → `DungeonDefs.ts` 의 `DUNGEONS` 에 항목 추가/수정 (해금은 `requiresClear`, 보스는 `boss` 에 바꿀 값만). **여정형 던전**은 `journey`(구역 `zones`·통로 `corridors`·문 `gates`, `halfX/halfZ` 직사각형 범위, `start`)를 적는다: 적은 `spawns: []` 로 두고 구역 `waves`(`enter`/`half`)로 등장, 정예는 `elite`(체력 배율, 1.5 이상이면 몸집·이름 배너), 보스는 `boss.spawn` 을 보스 구역 안에, 상자·장애물은 걷는 사각형 안에. 벽은 적지 않는다(`buildWallBoxes` 가 격자로 만든다). 메인 경로는 `mainIndex` 순서, 선택 경로는 `mainIndex` 없이. `tests/journey.test.ts` 가 연결성(BFS)·구역 안 배치·문 위치·벽 구멍을 검사한다. 지도를 눈으로 보려면 Playwright 로 `/src/game/DungeonDefs.ts` 를 import 해 캔버스에 그린다(스크래치 `map-journey.cjs`). `GameConfig.world.obstacles/dungeon.chests/enemies.spawns` 는 여정이 없는 열린 경기장 던전의 기본값(현재 숲은 안 씀). `tests/dungeons.test.ts` 가 모든 던전의 배치 겹침·영역을 검사한다. 던전 교체는 `Game.loadDungeon` 한 곳(공간·상자 새로 생성, 충돌 세계는 껍데기 객체로 공유).
+- 적 공격 방식 `attackKind`: 'melee'(기본) / 'ranged'(`projectileSpeed`, 여러 발이면 `projectileCount`+`spreadDegrees`) / 'charge'(`EnemyAI` 의 charge 상태: 예고 끝 방향으로 `chargeSpeed`·`chargeDuration` 돌진, `AIDecision.speedMul`, 닿으면 attackNow, 피격으로 안 멈춤) / 'explode'(`Game.onEnemyAttack` 이 `explodeRadius` 범위 피해 + 효과 + 그 적을 처치 처리). 죽을 때 갈라지는 적은 `splitInto`(`Game.splitOnDeath` → `ZoneSystem.attach` 로 그 구역에 붙여 클리어 판정에 포함). 몸집 무작위는 `enemies.sizeJitter`(보기용). 적 종류 10종: rusher·shooter·tank·stalker·artillery·archer·slime·slimelet·bomber·charger.
 - 새 적이 기존 외형을 써도 되면 `enemies.types.<종류>.model` 에 'rusher' | 'shooter' | 'tank' 를 적는다. 던전 분위기에 맞춰 **같은 종류를 다른 외형**으로 내보내려면 적 배치에 `skin: '<manifest enemies 키>'` 를 적는다(요새는 `robot-<종류>` → `enemy-*.glb` 로봇; `DungeonDefs` 의 `R()` 도우미). `EnemySpawner.spawn(..., skin)` → `createEnemyModel(type, def, skin)` 이 `enemy:<skin>` 을 먼저 찾는다.
 - 여정 던전은 세 개(`FOREST_JOURNEY`·`CAVE_JOURNEY`·`FORTRESS_JOURNEY`). 구역 소품 표는 던전별(`decorLayout.zonePropsFor`: 숲 `ZONE_PROPS`, 동굴 `CAVE_ZONE_PROPS`, 요새 `FORTRESS_ZONE_PROPS`). `tests/journey.test.ts`·`tests/decor.test.ts` 는 여정이 있는 모든 던전을 돈다. 브라우저 공통 시나리오는 스크래치 `smoke30.cjs <id>`(구역 중심을 차례로 돌며 등장 수·증원·문·보스·결과·선택 구역 정예 배너 확인), 지도는 `map-journey.cjs <id>`.
 - 터치 조작: 조이스틱은 기본 '떠다니는' 방식(`.touch-zone` 전체 화면, 버튼보다 아래 층; 설정 `floatingJoystick`). 새 동작 버튼은 `TouchControls.ts` 의 HTML 에 `data-code`(GameConfig.controls 의 키 코드)만 적으면 된다. 터치 조작이 켜지면 `Game.getAimPoint` 가 자동 조준(`nearestEnemyPoint`)을 쓴다. 휴대폰 기본값(그림자 끔·해상도 0.8)은 `Settings.defaultSettings` 에서 `isTouchDevice()` 로 정한다. 모바일 검증은 Playwright `devices['Pixel 5']` 에뮬레이션 + `PointerEvent(pointerType: 'touch')` 로 한다.

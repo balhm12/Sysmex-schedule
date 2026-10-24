@@ -2,6 +2,30 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.12.0 · 적 종류 5 → 10 (궁수·분열 슬라임·폭탄 벌레·뿔 멧돼지·작은 슬라임) · 몸집 무작위
+
+### 변경 내용
+- **새 공격 방식**(`EnemyTypeConfig.attackKind`): `charge`(돌진 — `EnemyAI` 에 charge 상태 추가: 예고가 끝난 순간의 방향으로 `chargeSpeed`·`chargeDuration` 만큼 직진, `AIDecision.speedMul`, 닿으면 피해, 시간이 다 되면 멈춤, 돌진 중 피격으로 안 멈춤), `explode`(자폭 — `Game.onEnemyAttack` 이 `explodeRadius` 안이면 피해(공중이면 면함) + 충격파·파편·폭발음·흔들림, 그 적은 처치 처리). 원거리는 `projectileCount`+`spreadDegrees` 로 여러 발 부채꼴. `splitInto` 로 죽을 때 작은 적 생성(`Game.splitOnDeath` → 여정이면 `ZoneSystem.attach` 로 그 구역의 적 목록에 넣어 새끼까지 잡아야 클리어).
+- **새 적 5종**(`GameConfig.enemies.types`): 고블린 궁수(화살 3발 부채꼴, 가까우면 후퇴) / 분열 슬라임(느리고 잘 안 밀림, 죽으면 작은 슬라임 2) / 작은 슬라임(빠르고 약함) / 폭탄 벌레(빠르게 접근 → 0.7초 예고 → 반지름 3 폭발 22) / 뿔 멧돼지(7 거리에서 예고 → 속도 14 돌진 16, 밀림 저항). 복셀 모델 `monster-{archer,slime,bomber,charger}.glb`(`tools/make_monsters_glb.py`, 작은 슬라임은 슬라임 모델 재사용) + 요새용 자폭 드론 `enemy-bomber.glb`(`tools/make_enemies_glb.py`, skin `robot-bomber`).
+- **여정에 섞음**: 숲(둘째 공터 슬라임·궁수, 갈림길 궁수, 매복 멧돼지, 큰 전투 궁수·멧돼지·슬라임 + 증원 슬라임 → 48마리), 동굴(수정 광장·박쥐 소굴 폭탄 벌레, 회랑·대광장 슬라임, 대광장 폭탄 벌레 + 증원 → 59마리), 요새(조립장·포대 마당·앞마당 자폭 드론 → 57마리). 모든 던전이 종류 5가지 이상.
+- **몸집 무작위** `enemies.sizeJitter` 0.12: 같은 종류라도 개체마다 ±12% 크기(보기용, 충돌은 그대로). 정예는 기존대로 1.25배.
+- 디버그 `debugDefeatRegularEnemies` 는 목록을 복사해 돌아 분열 새끼를 같은 호출에서 죽이지 않는다.
+
+### 수정 파일
+`src/enemies/{EnemyAI,Enemy,EnemySpawner}.ts`, `src/game/{GameConfig,Game,DungeonDefs}.ts`, `src/dungeon/ZoneSystem.ts`, `tools/{make_monsters_glb,make_enemies_glb}.py`, `public/models/{monster-archer,monster-slime,monster-bomber,monster-charger,enemy-bomber}.glb`(새), `public/models/manifest.json`, `public/models/README.md`, `tests/{enemyAI,dungeons,journey}.test.ts`, `package.json`, `CLAUDE.md`, `GAME_GUIDE.md`, `CHANGELOG.md`
+
+### 에셋·라이선스
+- 새 .glb 5개 모두 이 저장소의 파이썬 스크립트가 생성한 자체 제작물.
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 167개·빌드). 새 테스트: 돌진형 상태 전이·속도 배율·방향 고정·피격 무시·시간 만료, 자폭형 예고→attackNow, 새 종류 5종 능력치 범위·공격 방식·분열 대상 존재, 모든 여정 던전에 새 종류 포함·종류 5가지 이상, skin 키(robot-bomber 포함).
+- Playwright `smoke31`: 새 모델 6개 로드, 궁수 동시 투사체 3, 슬라임 처치 → 작은 슬라임 2(그 자리 2 유닛 안), 폭탄 벌레 폭발로 플레이어 체력 300 → 276 + 자신 소멸, 뿔 멧돼지 돌진 상태 진입·도달, 고블린 6마리 몸집 6가지.
+- 여정 3종 공통 시나리오(`smoke30`): 분열 새끼까지 잡아야 클리어되는 흐름 포함 통과(아래 실행 기록).
+
+### 알려진 문제
+- 헤드리스 소프트웨어 렌더(약 1.5~2 FPS)에서는 프레임 시간이 0.2초로 잘려 게임이 느리게 흐른다(실기기와 무관). 돌진 속도 검증은 단위 테스트가 맡는다.
+- 자폭은 플레이어가 공중(점프)이면 피해를 입지 않는다 — 의도된 회피 수단.
+
 ## 2026-10-24 · v1.11.0 · 수정 동굴·강철 요새를 여정형으로 (2차 개선 5단계: 세 던전 모두 길을 떠나는 구조, 로봇 공장 테마)
 
 ### 변경 내용

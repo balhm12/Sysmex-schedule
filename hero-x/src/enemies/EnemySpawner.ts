@@ -34,7 +34,9 @@ export class EnemySpawner {
     const def = GameConfig.enemies.types[type];
     if (!def) return null;
     const enemy = new Enemy(type, def, { x, z }, { hp: this.multipliers.hp * elite, speed: this.multipliers.speed }, skin ? (t, d) => createEnemyModel(t, d, skin) : undefined);
-    if (elite >= 1.5) enemy.object3d.scale.setScalar(1.25);
+    // 몸집: 정예는 크게, 그 외는 개체마다 조금씩 다르게 (보기용)
+    const jitter = GameConfig.enemies.sizeJitter;
+    enemy.object3d.scale.setScalar(elite >= 1.5 ? 1.25 : 1 + (Math.random() * 2 - 1) * jitter);
     this.scene.add(enemy.object3d);
     this.enemies.push(enemy);
     return enemy;

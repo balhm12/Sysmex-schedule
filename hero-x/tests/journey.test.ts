@@ -86,7 +86,7 @@ describe('여정 던전 전체', () => {
     expect(JOURNEY_DUNGEONS.map((d) => d.id)).toEqual(['forest', 'cave', 'fortress']);
     const skins = new Set<string>();
     for (const d of JOURNEY_DUNGEONS) for (const z of d.journey!.zones) for (const sp of zoneSpawns(z)) if (sp.skin) skins.add(sp.skin);
-    expect([...skins].sort()).toEqual(['robot-artillery', 'robot-rusher', 'robot-shooter', 'robot-stalker', 'robot-tank']);
+    expect([...skins].sort()).toEqual(['robot-artillery', 'robot-bomber', 'robot-rusher', 'robot-shooter', 'robot-stalker', 'robot-tank']);
   });
   it('던전마다 모양이 다르다 (구역 사각형 배치가 겹치지 않음)', () => {
     const sig = (d: (typeof JOURNEY_DUNGEONS)[number]) => d.journey!.zones.map((z) => `${z.rect.x},${z.rect.z},${z.rect.w},${z.rect.d}`).join('|');

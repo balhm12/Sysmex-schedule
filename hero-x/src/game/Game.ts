@@ -311,6 +311,7 @@ export class Game {
           if (enemy.type === 'boss') this.cameraCtrl.shake(GameConfig.juice.slamShake.amp, 0.6);
           if (this.mode === 'intro') this.intro?.onKill();
           else this.loot.dropFor(enemy.def.score, { x: enemy.position.x, z: enemy.position.z }, this.dungeonDef.rewardMul);
+          this.splitOnDeath(enemy);
           if (this.settings.haptics) vibrate(enemy.type === 'boss' ? [60, 40, 120] : 18);
         }
         if (!this.settings.showDamageNumbers) return;
@@ -1144,7 +1145,8 @@ export class Game {
 
   /** 일반 적을 모두 즉시 처치한다 (테스트·디버그용: 보스전으로 바로 가기) */
   debugDefeatRegularEnemies(): void {
-    for (const e of this.spawner.getEnemies()) {
+    // 목록을 복사해서 돈다: 분열 슬라임이 죽으며 새로 생기는 새끼까지 같은 호출에서 죽이지 않게
+    for (const e of [...this.spawner.getEnemies()]) {
       if (e.alive && e !== this.boss) this.combat.damageEnemy(e, 99999, { x: 0, z: 1 }, 0);
     }
   }
@@ -1265,14 +1267,47 @@ export class Game {
     const toPlayer: Vec2 = { x: (p.x - e.x) / len, z: (p.z - e.z) / len };
     damage = damage * getDifficultyPreset(this.difficulty).enemyDamage;
     if (enemy.def.attackKind === 'ranged') {
-      this.projectiles.spawn(
-        { x: e.x + toPlayer.x * (enemy.radius + 0.3), z: e.z + toPlayer.z * (enemy.radius + 0.3) },
-        toPlayer,
-        { damage, speed: enemy.def.projectileSpeed ?? 10, lifetime: 3, radius: 0.2, knockback: 0, color: 0xff5577, friendly: false },
-      );
+      // 여러 발이면 부채꼴로 퍼뜨린다 (궁수)
+      const count = Math.max(1, enemy.def.projectileCount ?? 1);
+      const spread = ((enemy.def.spreadDegrees ?? 0) * Math.PI) / 180;
+      for (let i = 0; i < count; i++) {
+        const a = count > 1 ? -spread / 2 + (spread * i) / (count - 1) : 0;
+        const dir: Vec2 = { x: toPlayer.x * Math.cos(a) - toPlayer.z * Math.sin(a), z: toPlayer.x * Math.sin(a) + toPlayer.z * Math.cos(a) };
+        this.projectiles.spawn(
+          { x: e.x + dir.x * (enemy.radius + 0.3), z: e.z + dir.z * (enemy.radius + 0.3) },
+          dir,
+          { damage, speed: enemy.def.projectileSpeed ?? 10, lifetime: 3, radius: 0.2, knockback: 0, color: count > 1 ? 0xffc86b : 0xff5577, friendly: false },
+        );
+      }
+      return;
+    }
+    if (enemy.def.attackKind === 'explode') {
+      // 자폭: 반지름 안이면 피해, 적은 사라진다 (처치로 친다 — 구역 클리어 판정을 위해)
+      const r = enemy.def.explodeRadius ?? 3;
+      this.effects.shockwave(new THREE.Vector3(e.x, 0, e.z), r, 0.5, 0xff7a45);
+      this.effects.burst(new THREE.Vector3(e.x, 0.8, e.z), 0xff9a3d, 20, 7);
+      this.audio.play('boom', 0.1);
+      this.cameraCtrl.shake(GameConfig.juice.slamShake.amp * 0.6, 0.3);
+      if (len <= r && !(this.player.jumpY > 1.0)) this.damagePlayer(damage, { x: e.x, z: e.z });
+      this.combat.damageEnemy(enemy, 1e9, { x: 0, z: 1 }, 0);
       return;
     }
     this.damagePlayer(damage, { x: e.x, z: e.z });
+  }
+
+  /** 분열: 죽은 적의 splitInto 만큼 작은 적을 둘레에 만든다 (여정이면 그 구역에 붙여 클리어 판정에 넣는다) */
+  private splitOnDeath(enemy: Enemy): void {
+    const split = enemy.def.splitInto;
+    if (!split || this.mode !== 'play' || this.ended) return;
+    const p = enemy.position;
+    for (let i = 0; i < split.count; i++) {
+      const a = (i / split.count) * Math.PI * 2 + Math.random() * 0.8;
+      const child = this.spawner.spawn(split.type, p.x + Math.cos(a) * 0.9, p.z + Math.sin(a) * 0.9);
+      if (!child) continue;
+      child.ai.state = 'chase';
+      this.zones?.attach(child, { x: child.position.x, z: child.position.z });
+    }
+    this.effects.burst(new THREE.Vector3(p.x, 0.6, p.z), new THREE.Color(enemy.def.color).getHex(), 12, 5);
   }
 
   /** 플레이어 피해 처리 (근접·투사체 공용). from: 피해가 온 위치. 방어력만큼 줄어든다 */
