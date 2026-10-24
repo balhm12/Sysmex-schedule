@@ -2,6 +2,23 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.30.0 · 목표 표시를 바닥 원으로, 플레이어 발밑 위치 고리
+
+### 변경 내용
+- **높은 빛 기둥 제거**: 다음 목표 구역(적이 나타나는 자리)에 서 있던 높이 40 의 밝은 청록 기둥이 캐릭터 위로 솟아 보이던 문제. 이제 `src/render/groundMarkers.ts`(새) 의 `ObjectiveMarker` 가 **넓고 옅은 바닥 원(반지름 3.2) + 가장자리 고리 + 높이 3.5 의 아주 투명한 낮은 기둥** 으로 표시한다. 숨 쉬듯 고리 크기·밝기가 천천히 변한다.
+- **플레이어 발밑 고리** `PlayerRing`: 캐릭터가 서 있는 자리를 바닥의 얇은 원(반지름 0.62)으로만 표시한다. 매 프레임 플레이어 위치를 따라가고, 쓰러지면 숨긴다.
+- 설정 `juice.beacon`(radius/opacity/height/color)·`juice.playerRing`(radius/opacity/color) 추가, `CONFIG_LIMITS` 포함. `playerRing.opacity` 를 0 으로 두면 고리가 꺼진다.
+
+### 수정 파일
+`src/render/groundMarkers.ts`(새), `src/game/{Game.ts,GameConfig.ts}`, `tests/groundMarkers.test.ts`(새), `package.json`, `CHANGELOG.md`, `CLAUDE.md`, `GAME_GUIDE.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 249개·빌드). 새 테스트: 표시 높이 ≤ 설정 높이·지름 = 반지름×2, 모든 재질 투명도가 숨 쉬는 동안에도 0.5 미만, 숨김/위치, 발밑 고리가 납작하고 위치를 따라감.
+- Playwright `smoke44`(요새, 터치 HUD): 씬에 높이 20 넘는 기둥 없음, 목표 표시가 Circle/Ring/Cylinder(높이 3.5, 최대 투명도 0.3~0.39, 반지름 3.2)로 구역 중심에 보임, 발밑 고리가 플레이어 좌표와 일치, 구역에 들어가면 표시가 다음 구역으로 넘어감, `playerRing.opacity` 0 이면 숨김, 페이지 오류 0. 화면 캡처로 통로에서 보이는 넓은 원·캐릭터 발밑 고리 확인.
+
+### 알려진 문제
+- 없음.
+
 ## 2026-10-24 · v1.29.0 · 지시서 8~9단계(모바일·로딩 표시) + 툰 외곽선·림 라이트
 
 ### 변경 내용

@@ -481,6 +481,10 @@ export interface GameConfigType {
     ranged: { muzzleRadius: number; muzzleTime: number; trailLength: number; impactRadius: number; impactTime: number; impactRing: number };
     /** 콤보 마무리 연출: 충격파 반지름 배율(사거리 기준)·짧은 멈춤(초) */
     comboFinish: { shockMul: number; hitStop: number };
+    /** 다음 목표 구역(적이 나타나는 자리) 바닥 표시: 반지름, 기본 투명도(0~1, 낮을수록 옅음), 낮은 기둥 높이, 색 */
+    beacon: { radius: number; opacity: number; height: number; color: string };
+    /** 플레이어 발밑 위치 고리: 반지름, 투명도, 색 (opacity 0 이면 안 보임) */
+    playerRing: { radius: number; opacity: number; color: string };
   };
   /** 성능 */
   performance: {
@@ -504,7 +508,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.29.0', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.30.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -994,6 +998,8 @@ export const GameConfig: GameConfigType = {
     bossEntrance: { shockRadius: 9, pillarHeight: 14, duration: 1.6, slowMo: 0.3 },
     ranged: { muzzleRadius: 0.55, muzzleTime: 0.18, trailLength: 2.2, impactRadius: 0.7, impactTime: 0.25, impactRing: 1.1 },
     comboFinish: { shockMul: 1.1, hitStop: 0.05 },
+    beacon: { radius: 3.2, opacity: 0.14, height: 3.5, color: '#5cf2d8' },
+    playerRing: { radius: 0.62, opacity: 0.45, color: '#bffcf2' },
   },
   performance: {
     autoQualityInterval: 6,
@@ -1059,6 +1065,11 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'juice.ranged.impactRing': { min: 0, max: 10 },
   'juice.comboFinish.shockMul': { min: 0, max: 5 },
   'juice.comboFinish.hitStop': { min: 0, max: 0.5 },
+  'juice.beacon.radius': { min: 0.5, max: 20 },
+  'juice.beacon.opacity': { min: 0, max: 0.5 },
+  'juice.beacon.height': { min: 0, max: 40 },
+  'juice.playerRing.radius': { min: 0.2, max: 5 },
+  'juice.playerRing.opacity': { min: 0, max: 1 },
   'enemies.separation': { min: 0, max: 20 },
   'loot.healChance': { min: 0, max: 1 },
   'loot.healAmount': { min: 1, max: 9999 },

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CombatSystem } from '../combat/CombatSystem';
 import { Effects } from '../combat/Effects';
+import { ObjectiveMarker, PlayerRing } from '../render/groundMarkers';
 import { ProjectileSystem } from '../combat/Projectile';
 import { ChestSystem } from '../dungeon/Chest';
 import { DungeonScene } from '../dungeon/DungeonScene';
@@ -203,7 +204,10 @@ export class Game {
   /** 여정 던전 진행기 (여정이 없는 던전이면 null) */
   private zones: ZoneSystem | null = null;
   /** 다음 목표를 가리키는 빛 기둥 */
-  private beacon!: THREE.Mesh;
+  /** 다음 목표 구역 바닥 표시(넓고 옅은 원·낮은 기둥) */
+  private beacon!: ObjectiveMarker;
+  /** 플레이어 발밑 위치 고리 */
+  private playerRing!: PlayerRing;
   /** 보물 상자 수학 문제 창 */
   private quizUI!: QuizUI;
   private bossIntroUI!: BossIntroUI;
@@ -319,14 +323,11 @@ export class Game {
     this.aimRing.position.y = 0.06;
     this.aimRing.visible = false;
     this.scene.add(this.aimRing);
-    this.beacon = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.7, 0.9, 40, 16, 1, true),
-      new THREE.MeshBasicMaterial({ color: 0x5cf2d8, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }),
-    );
-    this.beacon.position.y = 20;
-    this.beacon.visible = false;
-    this.beacon.name = 'Beacon';
-    this.scene.add(this.beacon);
+    // 목표 위치는 높은 빛 기둥 대신 넓고 옅은 바닥 표시로, 플레이어 자리는 발밑 고리로만 알린다
+    this.beacon = new ObjectiveMarker(GameConfig.juice.beacon);
+    this.scene.add(this.beacon.group);
+    this.playerRing = new PlayerRing(GameConfig.juice.playerRing);
+    this.scene.add(this.playerRing.mesh);
     this.effects = new Effects(this.scene);
     this.projectiles = new ProjectileSystem(this.scene);
     this.spawner = new EnemySpawner(this.scene);
@@ -1135,7 +1136,7 @@ export class Game {
     this.player.health.reset(this.effectiveMaxHp());
     this.zones?.reset();
     this.hud.setObjective('', 0, 0);
-    this.beacon.visible = false;
+    this.beacon.setTarget(null);
     this.controller.reset();
     this.combat.reset();
     this.result.hide();
@@ -1172,6 +1173,8 @@ export class Game {
     this.aimRing.removeFromParent();
     this.aimRing.geometry.dispose();
     (this.aimRing.material as THREE.Material).dispose();
+    this.beacon.dispose();
+    this.playerRing.dispose();
     this.spawner.dispose();
     this.projectiles.dispose();
     this.loot.dispose();
@@ -1782,12 +1785,8 @@ export class Game {
       }
       const o = this.zones.objective;
       this.hud.setObjective(o.text, o.done, o.total);
-      const b = this.zones.beacon;
-      this.beacon.visible = b !== null;
-      if (b) {
-        this.beacon.position.set(b.x, 20, b.z);
-        (this.beacon.material as THREE.MeshBasicMaterial).opacity = 0.2 + 0.12 * Math.sin(performance.now() * 0.004);
-      }
+      this.beacon.setTarget(this.zones.beacon);
+      this.beacon.update(performance.now());
     }
     this.projectiles.update(dt, {
       world: this.dungeon,
@@ -1825,6 +1824,9 @@ export class Game {
     const aim = this.settings.touchControls && !this.ended ? this.nearestEnemyPoint(GameConfig.combat.autoAimRange) : null;
     this.aimRing.visible = aim !== null;
     if (aim) this.aimRing.position.set(aim.x, 0.06, aim.z);
+    // 플레이어 위치 고리: 발밑(점프 중에도 바닥)에 따라간다. 투명도 0 이면 끔
+    this.playerRing.mesh.visible = GameConfig.juice.playerRing.opacity > 0 && !this.ended;
+    this.playerRing.setPosition(p.x, p.z);
     this.hud.setChests(this.chests.openedCount, this.chests.total);
     this.player.update(dt);
     for (const m of this.debugModels) m.update(dt, { state: 'idle', moving: false, windup: 0, death: 0 });
