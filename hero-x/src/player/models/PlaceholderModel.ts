@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { buildArmorModel, buildWeaponModel, disposeVisual, type EquipmentLooks } from '../EquipmentVisuals';
+import type { EquipmentLooks } from '../EquipmentVisuals';
 import { glow, pbr } from '../../render/materials';
+import { createHeroAnimator, createHeroEquipment, disposeModelTree } from './heroAnimator';
 
 /** 모델이 매 프레임 받는 상태 */
 export interface PlayerModelState {
@@ -137,8 +138,6 @@ export function createPlaceholderModel(colors: PlaceholderColors): PlayerModel {
   addMesh(sword, new THREE.CylinderGeometry(0.035, 0.035, 0.2, 8), darkMat, 0, 0, -0.08).rotation.x = Math.PI / 2;
   armR.elbow.add(sword);
   // 장착 장비 외형 (setEquipment 로 교체)
-  const gear: { melee: THREE.Group | null; ranged: THREE.Group | null; armor: THREE.Group | null } = { melee: null, ranged: null, armor: null };
-
   // 머리: 둥근 머리 + 얼굴(눈·눈썹·입) + 머리카락 뭉치 + 바이저(머리띠)
   const head = new THREE.Group();
   head.position.y = 1.42;
@@ -168,12 +167,19 @@ export function createPlaceholderModel(colors: PlaceholderColors): PlayerModel {
   head.add(facePlane);
   root.add(head);
 
-  let walkT = 0;
-  let idleT = Math.random() * 10;
-  const ease = (dt: number, k: number) => 1 - Math.exp(-k * dt);
-  const toward = (obj: { rotation: THREE.Euler }, axis: 'x' | 'y' | 'z', target: number, k: number) => {
-    obj.rotation[axis] += (target - obj.rotation[axis]) * k;
+  const rig = {
+    root,
+    torso,
+    head,
+    legL: { upper: legL.hip, lower: legL.knee },
+    legR: { upper: legR.hip, lower: legR.knee },
+    armL: { upper: armL.shoulder, lower: armL.elbow },
+    armR: { upper: armR.shoulder, lower: armR.elbow },
+    hurtMats: [bodyMat, skinMat],
+    cape: { geo: capeGeo, base: capeBase },
   };
+  const animate = createHeroAnimator(rig);
+  const equip = createHeroEquipment(rig, sword, new THREE.Vector3(0, -0.24, 0), 0.46, new THREE.Box3(new THREE.Vector3(-0.29, 0.52, -0.18), new THREE.Vector3(0.29, 1.04, 0.18)));
 
   return {
     root,
@@ -191,140 +197,13 @@ export function createPlaceholderModel(colors: PlaceholderColors): PlayerModel {
       face.visible = texture === null;
     },
     update(dt, state) {
-      idleT += dt;
-      if (state.dead) {
-        // 쓰러짐: 옆으로 눕는다
-        root.rotation.z = THREE.MathUtils.lerp(root.rotation.z, Math.PI / 2, ease(dt, 8));
-        root.position.y = THREE.MathUtils.lerp(root.position.y, 0.4, ease(dt, 8));
-        return;
-      }
-      root.rotation.z = 0;
-      const k = ease(dt, 14);
-      const hurt = state.hurt ?? 0;
-      // 피격: 뒤로 젖혀지며 붉게
-      bodyMat.emissive.setRGB(hurt * 0.8, 0, 0);
-      skinMat.emissive.setRGB(hurt * 0.5, 0, 0);
-
-      // 망토 흔들림: 아래로 갈수록 크게, 이동 중에는 뒤로 날린다
-      const capePos = capeGeo.attributes.position as THREE.BufferAttribute;
-      const wind = Math.sin(idleT * 3) * 0.04;
-      const fly = (state.moving ? Math.min(1, state.speed / 7) : 0) * (state.dashing ? 1.6 : 1);
-      for (let i = 0; i < capePos.count; i++) {
-        const y = capeBase[i * 3 + 1];
-        const depth = -y / 0.7; // 0(위)~1(아래)
-        capePos.setZ(i, capeBase[i * 3 + 2] - depth * depth * (0.35 * fly) + wind * depth);
-        capePos.setX(i, capeBase[i * 3] + Math.sin(idleT * 4 + depth * 3) * 0.03 * depth);
-      }
-      capePos.needsUpdate = true;
-
-      if (state.dashing) {
-        // 회피: 앞으로 숙이고 팔을 뒤로, 다리를 모은다
-        toward(torso, 'x', 0.55, k);
-        toward(armL.shoulder, 'x', 1.4, k);
-        toward(armR.shoulder, 'x', 1.4, k);
-        toward(legL.hip, 'x', -0.6, k);
-        toward(legR.hip, 'x', 0.3, k);
-        toward(legL.knee, 'x', 0.8, k);
-        toward(legR.knee, 'x', 0.4, k);
-        root.position.y = 0;
-        return;
-      }
-      toward(torso, 'x', hurt * -0.35 + (state.moving ? 0.08 : 0), k);
-
-      if (state.airborne) {
-        // 점프: 무릎을 접고 팔을 벌린다
-        toward(legL.hip, 'x', -0.9, k);
-        toward(legR.hip, 'x', 0.5, k);
-        toward(legL.knee, 'x', 1.2, k);
-        toward(legR.knee, 'x', 0.9, k);
-        toward(armL.shoulder, 'x', -2.2, k);
-        toward(armL.elbow, 'x', -0.4, k);
-        if (state.attack === null) toward(armR.shoulder, 'x', -2.2, k);
-        root.position.y = 0;
-        return;
-      }
-      // 걷기: 허벅지는 앞뒤로, 정강이는 뒤로 갈 때 접힌다. 팔은 반대로
-      const amount = state.moving ? 1 : 0;
-      walkT += dt * (state.speed > 0 ? state.speed * 1.7 : 0);
-      const swing = Math.sin(walkT) * 0.8 * amount;
-      const kneeL = Math.max(0, -Math.sin(walkT)) * 0.9 * amount;
-      const kneeR = Math.max(0, Math.sin(walkT)) * 0.9 * amount;
-      toward(legL.hip, 'x', swing, k);
-      toward(legR.hip, 'x', -swing, k);
-      toward(legL.knee, 'x', kneeL, k);
-      toward(legR.knee, 'x', kneeR, k);
-      toward(armL.shoulder, 'x', -swing * 0.8, k);
-      toward(armL.elbow, 'x', -0.3 - Math.max(0, -swing) * 0.4, k);
-      // 숨쉬기(정지)·들썩임(이동)
-      const breathe = state.moving ? 0 : Math.sin(idleT * 2.2) * 0.012;
-      torso.scale.set(1, 1 + breathe, 1);
-      root.position.y = Math.abs(Math.sin(walkT)) * 0.06 * amount;
-
-      if (state.attack !== null && state.attackKind === 'ranged') {
-        // 쏘기: 팔을 앞으로 뻗고 반동으로 살짝 튄다
-        const p = state.attack;
-        const recoil = Math.sin(Math.min(1, p * 1.6) * Math.PI);
-        armR.shoulder.rotation.x = -Math.PI / 2 + recoil * 0.35;
-        armR.shoulder.rotation.y = 0;
-        armR.elbow.rotation.x = -recoil * 0.4;
-        torso.rotation.y = 0;
-        torso.rotation.x = -recoil * 0.08;
-        head.rotation.y = 0;
-      } else if (state.attack !== null) {
-        // 휘두르기: 오른팔을 뒤로 당겼다가 앞으로 크게 뿌리고, 몸통·머리가 따라 돈다
-        // 콤보 2단은 반대 방향으로 되돌려 베고, 3단은 몸을 한 바퀴 돌린다
-        const p = state.attack;
-        const step = state.attackStep ?? 0;
-        const dirSign = step === 1 ? -1 : 1;
-        const windup = Math.min(1, p * 2.5);
-        const swingK = Math.sin(p * Math.PI);
-        armR.shoulder.rotation.x = -Math.PI / 2 * windup - swingK * 0.4;
-        armR.shoulder.rotation.y = (0.5 - p) * 1.8 * dirSign;
-        armR.elbow.rotation.x = -0.6 * (1 - p) - 0.2;
-        torso.rotation.y = step >= 2 ? p * Math.PI * 2 : (0.5 - p) * 0.55 * dirSign;
-        head.rotation.y = step >= 2 ? 0 : (0.5 - p) * 0.3 * dirSign;
-      } else {
-        toward(armR.shoulder, 'x', swing * 0.8 - 0.1, ease(dt, 10));
-        toward(armR.shoulder, 'y', 0, ease(dt, 10));
-        toward(armR.elbow, 'x', -0.35 + Math.sin(idleT * 2.2) * 0.03, ease(dt, 10));
-        toward(torso, 'y', 0, ease(dt, 10));
-        toward(head, 'y', 0, ease(dt, 10));
-      }
-      // 피격 시 머리도 뒤로
-      toward(head, 'x', hurt * -0.3, k);
+      animate(dt, state);
     },
     setEquipment(looks: EquipmentLooks) {
-      disposeVisual(gear.melee);
-      disposeVisual(gear.ranged);
-      disposeVisual(gear.armor);
-      gear.melee = gear.ranged = gear.armor = null;
-      // 교체 무기를 들면 기본 에너지 검은 숨긴다
-      sword.visible = looks.melee === null;
-      if (looks.melee) {
-        gear.melee = buildWeaponModel(looks.melee, 0.46);
-        gear.melee.position.set(0, -0.24, 0);
-        armR.elbow.add(gear.melee);
-      }
-      if (looks.ranged) {
-        gear.ranged = buildWeaponModel(looks.ranged, 0.46);
-        gear.ranged.position.set(0, -0.24, 0);
-        armL.elbow.add(gear.ranged);
-      }
-      if (looks.armor) {
-        gear.armor = buildArmorModel(looks.armor, new THREE.Box3(new THREE.Vector3(-0.29, 0.52, -0.18), new THREE.Vector3(0.29, 1.04, 0.18)));
-        torso.add(gear.armor);
-      }
+      equip(looks);
     },
     dispose() {
-      root.traverse((obj) => {
-        const mesh = obj as THREE.Mesh;
-        if (mesh.isMesh) {
-          mesh.geometry.dispose();
-          const m = mesh.material;
-          if (Array.isArray(m)) m.forEach((x) => x.dispose());
-          else m.dispose();
-        }
-      });
+      disposeModelTree(root);
     },
   };
 }

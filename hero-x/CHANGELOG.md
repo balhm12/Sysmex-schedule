@@ -2,6 +2,23 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.23.0 · 매끈한 카툰(치비) 아들 캐릭터 — 픽셀 느낌 없이
+
+### 변경 내용
+- **새 기본 플레이어 모델** `src/player/models/HeroModel.ts`(새, 코드 모델·외부 파일 없음): v1.22.0 둥근 복셀 캐릭터와 같은 생김새(둥근 큰 머리·갈색 머리카락·큰 눈·둥근 안경·미소·홍조·파란 모험가 복장·금 장식·스카프·허리띠·주머니·배낭·갈색 장화·빛나는 검)를 **구·캡슐·둥근 상자(RoundedBoxGeometry)·고리(Torus)** 로 매끈하게 다시 만들었다. 복셀 칸이 보이지 않는다. 메시 140개, 키 약 1.9(게임 단위 그대로). 얼굴 사진 기능(`setFace`)도 지원.
+- **공유 동작기** `src/player/models/heroAnimator.ts`(새): 임시 모델과 새 모델이 같은 관절 구조(`HeroRig`: 몸통·머리·어깨→팔꿈치·엉덩이→무릎)로 걷기·숨쉬기·점프·회피·피격·콤보 3단·원거리 반동·쓰러짐·망토 흔들림을 공유한다(`createHeroAnimator`), 장비 부착(`createHeroEquipment`)·정리(`disposeModelTree`)도 공유. `PlaceholderModel` 은 이 공유 코드를 쓰도록 정리(동작은 같음).
+- `Game` 기본 플레이어 = `createHeroModel`. `manifest.json` 의 `player` 는 `null`(파일 모델을 쓰지 않음). 파일로 바꾸려면 manifest 에 `player-chibi.glb`(둥근 복셀) / `player-knight.glb`(KayKit 기사) / `player.glb`(각진 복셀)를 적는다.
+
+### 수정 파일
+`src/player/models/{HeroModel.ts(새),heroAnimator.ts(새),PlaceholderModel.ts}`, `src/game/Game.ts`, `public/models/{manifest.json,README.md}`, `tests/heroModel.test.ts`(새), `package.json`, `CHANGELOG.md`, `CLAUDE.md`, `GAME_GUIDE.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 227개·빌드). 새 테스트: 모델 구성(메시 60개 이상·검·키 1.7~2.4·발이 땅에), 모든 상태로 갱신해도 예외 없음, 장비 부착·기본 검 숨김/복원.
+- 게임 안 근접 화면(정지·달리기·공격·회피·장비)으로 확인. 장비(smoke36)·콤보(smoke35) 자동 플레이 회귀 통과.
+
+### 알려진 문제
+- 검은 손에서 앞(+Z)으로 뻗어 정면에서는 빛 덩어리로 보인다(휘두르면 잘 보임). 머리카락 뭉치 배치는 결정적 난수라 같은 모양으로 재생된다. 임시 모델(`PlaceholderModel`)은 더 쓰지 않지만 단순 대안으로 남겨 두었다.
+
 ## 2026-10-24 · v1.22.0 · 둥근(치비) 복셀 아들 캐릭터로 교체
 
 ### 변경 내용

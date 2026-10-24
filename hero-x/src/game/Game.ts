@@ -21,7 +21,7 @@ import type { Drop } from '../items/loot';
 import { PlayerStats } from '../player/PlayerStats';
 import { Player } from '../player/Player';
 import { PlayerController } from '../player/PlayerController';
-import { createPlaceholderModel } from '../player/models/PlaceholderModel';
+import { createHeroModel } from '../player/models/HeroModel';
 import { faceFromFile, faceTexture, loadFace, saveFace } from '../player/FaceTexture';
 import { modelRegistry } from '../assets/ModelRegistry';
 import { IntroDirector } from '../cinematic/IntroDirector';
@@ -295,7 +295,7 @@ export class Game {
     this.dungeon.addCollisionBoxes(this.chests.getCollisionBoxes());
     // 충돌 세계는 던전이 바뀌어도 같은 객체를 쓰도록 현재 던전으로 넘겨주는 껍데기를 준다
     const world = { getObstacleBoxes: () => this.dungeon.getObstacleBoxes(), getArenaBounds: () => this.dungeon.getArenaBounds() };
-    this.player = new Player(createPlaceholderModel(GameConfig.player.colors), GameConfig.player.startPosition);
+    this.player = new Player(createHeroModel(GameConfig.player.colors), GameConfig.player.startPosition);
     this.scene.add(this.player.object3d);
     this.cameraCtrl = new CameraController(this.camera);
     this.controller = new PlayerController(this.player, this.input, world, () => this.cameraCtrl.getYaw(), () => 1 + this.equipment.totals().moveSpeed);
