@@ -1,3 +1,4 @@
+import type { InstallHint } from '../pwa/installHint';
 import { difficultyLevels, getDifficultyPreset } from '../game/Difficulty';
 import { GameConfig, type DifficultyLevel } from '../game/GameConfig';
 
@@ -21,6 +22,10 @@ export interface MainMenuCallbacks {
   progressText: () => string;
   /** 저장 상태 문구 */
   saveNote: () => string;
+  /** 설치 안내 종류 ('prompt' 버튼 / 'ios' 안내 / 그 밖 숨김) */
+  installHint: () => InstallHint;
+  /** 설치 프롬프트 띄우기 */
+  installApp: () => Promise<unknown>;
   difficulty: { get: () => DifficultyLevel; set: (level: DifficultyLevel) => void };
 }
 
@@ -56,6 +61,11 @@ export class MainMenu {
           <button class="btn secondary" id="menu-guide" type="button">조작 안내</button>
           <button class="btn secondary" id="menu-settings" type="button">설정</button>
           <button class="btn secondary" id="menu-intro" type="button">인트로 보기</button>
+          <button class="btn secondary" id="menu-install" type="button" hidden>📱 앱으로 설치</button>
+        </div>
+        <div class="menu-install-hint" id="menu-install-hint" hidden>
+          <p><b>iPhone·iPad</b>: Safari 아래쪽 <b>공유</b>(네모에서 화살표가 나오는 모양) → <b>홈 화면에 추가</b>를 누르면 앱처럼 전체 화면으로 열립니다.</p>
+          <div class="btns"><button class="btn small ghost" id="menu-install-hint-close" type="button">닫기</button></div>
         </div>
         <div class="diff-row"><span class="hud-label">난이도</span>${diffButtons}</div>
         <div class="menu-confirm" id="menu-confirm" hidden>
@@ -82,6 +92,12 @@ export class MainMenu {
     q<HTMLButtonElement>('#menu-settings').addEventListener('click', () => this.cb.openSettings());
     q<HTMLButtonElement>('#menu-dungeons').addEventListener('click', () => this.cb.openDungeons());
     q<HTMLButtonElement>('#menu-intro').addEventListener('click', () => this.cb.playIntro());
+    q<HTMLButtonElement>('#menu-install').addEventListener('click', () => {
+      const hint = this.cb.installHint();
+      if (hint === 'ios') q<HTMLElement>('#menu-install-hint').hidden = false;
+      else void this.cb.installApp();
+    });
+    q<HTMLButtonElement>('#menu-install-hint-close').addEventListener('click', () => (q<HTMLElement>('#menu-install-hint').hidden = true));
     this.el.querySelectorAll<HTMLButtonElement>('.diff-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         this.cb.difficulty.set(btn.dataset.level as DifficultyLevel);
@@ -116,6 +132,10 @@ export class MainMenu {
     progress.textContent = text;
     progress.hidden = text === '';
     (this.el.querySelector('#menu-save') as HTMLElement).textContent = this.cb.saveNote();
+    const hint = this.cb.installHint();
+    const install = this.el.querySelector('#menu-install') as HTMLButtonElement;
+    install.hidden = hint === 'standalone' || hint === 'none';
+    install.textContent = hint === 'ios' ? '📱 홈 화면에 추가하는 법' : '📱 앱으로 설치';
     const current = this.cb.difficulty.get();
     this.el.querySelectorAll<HTMLButtonElement>('.diff-btn').forEach((btn) => btn.setAttribute('aria-pressed', String(btn.dataset.level === current)));
   }

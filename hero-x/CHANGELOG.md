@@ -2,6 +2,25 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.18.0 · 휴대폰에서 앱처럼 (PWA: 홈 화면 설치·전체 화면·오프라인 실행)
+
+### 변경 내용
+- **웹 앱 매니페스트** `public/manifest.webmanifest`: 이름 'HERO X - 모험의 던전', `display: standalone`(주소창 없는 전체 화면), 시작 주소·범위 `./`(배포 폴더 어디서나), 테마 색, 아이콘 192/512 + maskable. `index.html` 에 매니페스트·Apple 터치 아이콘·앱 제목 메타 추가.
+- **아이콘** `tools/make_icons.py`(Pillow, 아이콘을 다시 만들 때만 필요) → `public/icons/{icon-192,icon-512,maskable-512,apple-touch-icon-180}.png`: 복셀 영웅 얼굴 + 빛나는 검 픽셀 아트(자체 제작).
+- **서비스 워커** `src/pwa/sw.js`(템플릿) + `vite.config.ts` 플러그인: 빌드 때 `__VERSION__` 을 package.json 버전으로 바꿔 `dist/sw.js` 로 내보내고, 캐시 이름이 버전마다 달라 옛 캐시는 자동 정리. 개발 서버에서는 등록하지 않는다(같은 주소가 모듈·스타일로 다르게 서빙돼 캐시가 섞임). 전략: 페이지 이동은 네트워크 우선(새 버전 바로) → 실패 시 캐시의 index.html, 그 밖의 같은 출처 파일(JS·CSS·모델·소리·아이콘)은 캐시 우선 + 뒤에서 갱신. 두 번째 실행부터 **오프라인에서도 열린다**.
+- **설치 안내** `src/pwa/{installHint,registerPwa}.ts`: `beforeinstallprompt` 를 붙잡아 메인 메뉴 **'📱 앱으로 설치'** 버튼(안드로이드 Chrome·데스크톱 Chrome/Edge)으로 띄운다. iPhone/iPad Safari 는 프롬프트가 없어 **'홈 화면에 추가하는 법'** 안내(공유 → 홈 화면에 추가). 이미 앱으로 실행 중이거나 지원하지 않는 브라우저면 버튼 숨김. 새 버전이 설치되면 HUD 배너 '새 버전이 준비되었습니다'. `getDebugState().pwa`.
+
+### 수정 파일
+`public/manifest.webmanifest`(새), `public/icons/*.png`(새), `tools/make_icons.py`(새), `src/pwa/{sw.js,installHint.ts,registerPwa.ts}`(새), `vite.config.ts`, `index.html`, `src/ui/MainMenu.ts`, `src/game/Game.ts`, `src/style.css`, `tests/pwa.test.ts`(새), `package.json`, `README.md`, `CLAUDE.md`, `GAME_GUIDE.md`, `CHANGELOG.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 196개·빌드). 새 테스트: 설치 안내 판단(앱 실행 중 / 프롬프트 / iPhone Safari / iPhone Chrome·데스크톱 숨김).
+- Playwright `smoke34`(빌드 결과를 `vite preview` 로): 매니페스트(HERO X·standalone·아이콘 3)·아이콘 PNG·`sw.js` 버전 치환 → 서비스 워커가 페이지 제어, 캐시 26항목 → **오프라인으로 새로고침해도 메뉴·캔버스가 뜸** → 데스크톱은 설치 버튼 숨김 → iPhone 13 에뮬레이션에서 '홈 화면에 추가하는 법' 버튼·안내 → 설치 프롬프트 이벤트를 흉내 내면 '앱으로 설치' 버튼.
+
+### 알려진 문제
+- 실제 설치 프롬프트는 HTTPS(GitHub Pages 는 해당)와 브라우저 조건(방문 횟수 등)에 따라 뜬다. iOS 는 Safari 에서만 홈 화면 추가가 된다.
+- 첫 실행은 온라인이어야 한다(그때 파일이 캐시된다). 모델·소리 파일은 처음 쓰일 때 캐시된다.
+
 ## 2026-10-24 · v1.17.0 · 보스 등장 팝업 (초상화·설명·패턴 표·피하는 법)
 
 ### 변경 내용

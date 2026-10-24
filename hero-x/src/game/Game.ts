@@ -27,6 +27,7 @@ import { IntroSet } from '../cinematic/IntroSet';
 import { makeMathProblem } from './mathQuiz';
 import { QuizUI } from '../ui/QuizUI';
 import { BossIntroUI } from '../ui/BossIntroUI';
+import { PwaInstaller } from '../pwa/registerPwa';
 import { INTRO_ENEMY_HP, INTRO_ORIGIN } from '../cinematic/introTimeline';
 import { ZoneSystem } from '../dungeon/ZoneSystem';
 import type { ZoneDef } from '../dungeon/journey';
@@ -71,6 +72,7 @@ export interface GameDebugState {
   floatingJoystick: boolean;
   dash: { active: boolean; cooldown: number; invulnerable: number };
   aimRingVisible: boolean;
+  pwa: { hint: string; controller: boolean };
   audio: { ready: boolean; track: string | null; voices: number; fileMusic: boolean; files: string[]; fetched: string[] ; mood: string };
   contextLost: boolean;
   face: boolean;
@@ -186,6 +188,8 @@ export class Game {
   /** 보물 상자 수학 문제 창 */
   private quizUI!: QuizUI;
   private bossIntroUI!: BossIntroUI;
+  /** 앱 설치·오프라인(서비스 워커) 연결 */
+  private readonly pwa = new PwaInstaller();
   private introNext: 'menu' | 'newGame' = 'menu';
   /** 인트로를 건너뛴 직후 같은 키가 메뉴를 누르지 않게 하는 잠깐의 보호 시간 */
   private skipGuardUntil = 0;
@@ -380,11 +384,17 @@ export class Game {
       hasProgress: () => this.runActive || this.hasSavedProgress,
       progressText: () => this.progressText(),
       saveNote: () => this.saveStatus,
+      installHint: () => this.pwa.hint,
+      installApp: () => this.pwa.promptInstall(),
       openInventory: () => this.toggleInventory(true),
       openGuide: () => this.guide.show(),
       hasRun: () => this.runActive,
       difficulty: { get: () => this.difficulty, set: (level) => this.setDifficulty(level) },
     });
+    // 앱 설치 안내: 설치 프롬프트가 생기면 메뉴 버튼이 나타난다. 서비스 워커로 두 번째부터 오프라인 실행
+    this.pwa.onChange(() => this.menu.refresh());
+    this.pwa.onUpdated = () => this.hud.showBanner('새 버전이 준비되었습니다 — 다음에 열면 적용됩니다', 3200);
+    this.pwa.registerServiceWorker();
     this.settingsUI = new SettingsUI(uiRoot, {
       get: () => this.settings,
       set: (key, value) => this.updateSetting(key, value),
@@ -1185,6 +1195,7 @@ export class Game {
       floatingJoystick: this.touch.isFloating,
       dash: { active: this.controller.dashing, cooldown: this.controller.dashCooldownRatio, invulnerable: this.player.health.invulnerable },
       aimRingVisible: this.aimRing.visible,
+      pwa: { hint: this.pwa.hint, controller: typeof navigator !== 'undefined' && 'serviceWorker' in navigator ? !!navigator.serviceWorker.controller : false },
       audio: { ready: this.audio.ready, track: this.audio.currentTrack, voices: this.audio.voices, fileMusic: this.audio.usingFileMusic, files: this.audio.fileKeys, fetched: soundRegistry.loadedKeys , mood: this.audio.currentMood },
       contextLost: this.contextLost,
       face: this.face !== null,

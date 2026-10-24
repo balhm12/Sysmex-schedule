@@ -55,6 +55,12 @@ hero-x/
 │  │  ├─ movement.ts       이동·충돌·우회 조종(segmentBlocked/steerAround) 순수 함수 (테스트 대상)
 │  │  ├─ FaceTexture.ts    얼굴 사진 자르기·저장(localStorage)·텍스처 (cropRect 는 테스트 대상)
 │  │  └─ models/PlaceholderModel.ts  관절형 영웅 모델(걷기·공격·점프·회피·피격·망토) + PlayerModel 인터페이스 (setFace 로 얼굴 사진)
+├─ public/manifest.webmanifest  웹 앱 매니페스트 (앱 이름·standalone·아이콘)
+├─ public/icons/            앱 아이콘 PNG (tools/make_icons.py 산출물, Pillow 필요)
+│  ├─ pwa/
+│  │  ├─ sw.js             서비스 워커 템플릿 (__VERSION__ 은 vite 플러그인이 빌드 때 치환; 이동은 네트워크 우선, 그 밖은 캐시 우선+갱신; 개발 서버에서는 미등록)
+│  │  ├─ installHint.ts    설치 안내 판단 (standalone/prompt/ios/none, 순수 함수, 테스트 대상)
+│  │  └─ registerPwa.ts    PwaInstaller: 서비스 워커 등록·갱신 알림, beforeinstallprompt 붙잡기·promptInstall
 ├─ public/models/           정식 .glb 모델과 manifest.json, 넣는 방법 README (player.glb = 아들 복셀 캐릭터)
 ├─ tools/voxel_glb.py       복셀(박스 쌓기) → glTF 2.0 바이너리 공용 모듈 (파이썬 표준 라이브러리만). 색은 sRGB→선형 변환해서 넣는다
 ├─ tools/make_player_glb.py 아들 복셀 캐릭터 .glb 생성기 → public/models/player.glb
@@ -210,6 +216,7 @@ hero-x/
 - 새 적이 기존 외형을 써도 되면 `enemies.types.<종류>.model` 에 'rusher' | 'shooter' | 'tank' 를 적는다. 던전 분위기에 맞춰 **같은 종류를 다른 외형**으로 내보내려면 적 배치에 `skin: '<manifest enemies 키>'` 를 적는다(요새는 `robot-<종류>` → `enemy-*.glb` 로봇; `DungeonDefs` 의 `R()` 도우미). `EnemySpawner.spawn(..., skin)` → `createEnemyModel(type, def, skin)` 이 `enemy:<skin>` 을 먼저 찾는다.
 - 여정 던전은 네 개(`FOREST_JOURNEY`·`CAVE_JOURNEY`·`FORTRESS_JOURNEY`·`ICE_JOURNEY`). 구역 소품 표는 던전별(`decorLayout.zonePropsFor`: 숲 `ZONE_PROPS`, 동굴 `CAVE_ZONE_PROPS`, 요새 `FORTRESS_ZONE_PROPS`, 얼음 `ICE_ZONE_PROPS`). 새 던전 추가 = `DUNGEONS` 항목(여정·테마·보스) + `DECOR_KINDS`/소품 표 + `MUSIC` 트랙 + `Game.dungeonMusic` 매핑 + (새 보스 외형이면) `make_bosses_glb.py` 빌더·`BossModelKind`·manifest. `tests/journey.test.ts`·`tests/decor.test.ts` 는 여정이 있는 모든 던전을 돈다. 브라우저 공통 시나리오는 스크래치 `smoke30.cjs <id>`(구역 중심을 차례로 돌며 등장 수·증원·문·보스·결과·선택 구역 정예 배너 확인), 지도는 `map-journey.cjs <id>`.
 - 터치 조작: 조이스틱은 기본 '떠다니는' 방식(`.touch-zone` 전체 화면, 버튼보다 아래 층; 설정 `floatingJoystick`). 새 동작 버튼은 `TouchControls.ts` 의 HTML 에 `data-code`(GameConfig.controls 의 키 코드)만 적으면 된다. 터치 조작이 켜지면 `Game.getAimPoint` 가 자동 조준(`nearestEnemyPoint`)을 쓴다. 휴대폰 기본값(그림자 끔·해상도 0.8)은 `Settings.defaultSettings` 에서 `isTouchDevice()` 로 정한다. 모바일 검증은 Playwright `devices['Pixel 5']` 에뮬레이션 + `PointerEvent(pointerType: 'touch')` 로 한다.
+- 앱 설치(PWA): 서비스 워커 템플릿은 `src/pwa/sw.js`(public 에 두지 않는다 — 버전 치환을 위해 `vite.config.ts` 의 `serviceWorkerPlugin` 이 빌드 때 `dist/sw.js` 로 내보낸다). 개발 서버(`npm run dev`)에서는 등록하지 않는다 — 같은 주소 `/src/style.css` 가 모듈과 스타일로 다르게 서빙돼 캐시가 섞여 화면이 안 뜨기 때문(`import.meta.env.DEV` 검사). 캐시 이름은 `hero-x-<version>` 이라 `package.json` 버전을 올리면 옛 캐시가 정리된다. 설치 버튼은 `MainMenu` 의 `#menu-install`(`installHint()` 가 'prompt' 면 프롬프트, 'ios' 면 안내 상자). 검증은 `vite preview` 로 빌드 결과를 띄우고 `context.setOffline(true)` 후 새로고침(스크래치 `smoke34.cjs`). 서비스 워커는 localhost/127.0.0.1 또는 HTTPS 에서만 동작한다.
 - 배포: `hero-x` 브랜치에 push 하면 워크플로가 `npm run check` 후 `dist` 를 main 의 `game/` 에 넣는다. main 의 다른 파일은 건드리지 않는다(`keep_files: true`). 배포 주소는 README 3-1.
 - 창 층위는 CSS `.guide`(20) > `.guide.result`(15) > `.guide.menu`(10). 메뉴 위에 여는 새 창은 기본 `.guide` 층위를 그대로 쓴다.
 - "상자를 더/보상을 더 좋게" → 첫 던전은 `dungeon.chests` 배열, 다른 던전은 `DungeonDefs.ts`. 상자 보상은 `dungeon.chestLoot`(공통). 상자 위치는 장애물·적 배치와 겹치지 않아야 한다 (`tests/chest.test.ts` 가 확인).
@@ -238,6 +245,6 @@ hero-x/
 5. 설정 화면과 저장 ✅ (v0.5.0: 자동 저장·이어하기·버전·손상 처리, 설정 화면·기본값 복원)
 6. 콘텐츠 확장 ✅ (v0.6.0-a.1 던전 3개·던전 선택·새 적·새 장비 / v0.6.1 모바일 / v0.6.2 보스별 패턴·외형)
 7. 품질 개선 ✅ (v0.7.0-a.1 효과음·음악 / v0.7.0-b.1 얼굴 사진·glb 교체 구조 / v1.0.0 자동 화질·오류 처리·문서)
-8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장(동굴·요새 여정형, 로봇 공장 테마) ✅ v1.11.0 / 적 10종 ✅ v1.12.0 / 메시 합치기 ✅ v1.13.0 / 네 번째 던전 얼음 봉우리 ✅ v1.14.0 / 소품 합치기·구역 음악 분위기 ✅ v1.15.0 / 벽·장애물 그래픽 ✅ v1.16.0 / 보스 등장 팝업 ✅ v1.17.0
+8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장(동굴·요새 여정형, 로봇 공장 테마) ✅ v1.11.0 / 적 10종 ✅ v1.12.0 / 메시 합치기 ✅ v1.13.0 / 네 번째 던전 얼음 봉우리 ✅ v1.14.0 / 소품 합치기·구역 음악 분위기 ✅ v1.15.0 / 벽·장애물 그래픽 ✅ v1.16.0 / 보스 등장 팝업 ✅ v1.17.0 / 앱처럼 설치(PWA) ✅ v1.18.0
 
 각 단계는 완료 기준을 만족하고 기존 기능이 정상일 때만 다음 단계로 넘어간다.

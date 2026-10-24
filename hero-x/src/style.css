@@ -1348,3 +1348,19 @@ body {
     font-size: 12px;
   }
 }
+
+/* 앱 설치 안내 (iOS) */
+.menu-install-hint {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(92, 242, 216, 0.08);
+  border: 1px solid rgba(92, 242, 216, 0.25);
+  font-size: 13px;
+  line-height: 1.5;
+  color: #dfe6ff;
+  word-break: keep-all;
+}
+.menu-install-hint p {
+  margin: 0 0 8px;
+}
