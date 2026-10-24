@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { buildWallBoxes, inRect, isWalkable, mainPathLength, mainZones, rasterize, unreachableZones, zoneAt, zoneSpawns } from '../src/dungeon/journey';
-import { DUNGEONS, FOREST_JOURNEY, resolveBossConfig } from '../src/game/DungeonDefs';
+import { DUNGEONS, resolveBossConfig } from '../src/game/DungeonDefs';
 import { GameConfig } from '../src/game/GameConfig';
 
-const J = FOREST_JOURNEY;
-const forest = DUNGEONS[0];
+const JOURNEY_DUNGEONS = DUNGEONS.filter((d) => d.journey);
 
-describe('잊혀진 숲 여정 (journey)', () => {
+describe.each(JOURNEY_DUNGEONS.map((d) => [d.name, d] as const))('%s 여정 (journey)', (_name, forest) => {
+  const J = forest.journey!;
+
   it('모든 구역이 시작점에서 걸어서 닿고, 메인 경로가 출발→보스 순서로 이어진다', () => {
     expect(unreachableZones(J)).toEqual([]);
     const main = mainZones(J);
@@ -77,5 +78,18 @@ describe('잊혀진 숲 여정 (journey)', () => {
     const len = mainPathLength(J);
     expect(len).toBeGreaterThan(200);
     expect(len / GameConfig.player.moveSpeed).toBeGreaterThan(30); // 초 (직선 거리 합이라 실제 길은 더 길다)
+  });
+});
+
+describe('여정 던전 전체', () => {
+  it('세 던전 모두 여정형이고, 적 외형(skin)은 manifest 에 있는 키만 쓴다', () => {
+    expect(JOURNEY_DUNGEONS.map((d) => d.id)).toEqual(['forest', 'cave', 'fortress']);
+    const skins = new Set<string>();
+    for (const d of JOURNEY_DUNGEONS) for (const z of d.journey!.zones) for (const sp of zoneSpawns(z)) if (sp.skin) skins.add(sp.skin);
+    expect([...skins].sort()).toEqual(['robot-artillery', 'robot-rusher', 'robot-shooter', 'robot-stalker', 'robot-tank']);
+  });
+  it('던전마다 모양이 다르다 (구역 사각형 배치가 겹치지 않음)', () => {
+    const sig = (d: (typeof JOURNEY_DUNGEONS)[number]) => d.journey!.zones.map((z) => `${z.rect.x},${z.rect.z},${z.rect.w},${z.rect.d}`).join('|');
+    expect(new Set(JOURNEY_DUNGEONS.map(sig)).size).toBe(JOURNEY_DUNGEONS.length);
   });
 });

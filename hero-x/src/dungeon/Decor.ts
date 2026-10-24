@@ -233,6 +233,29 @@ export class Decor {
         }
         break;
       }
+      case 'crystalPillar': {
+        // 수정 기둥: 바위 받침 + 큰 수정 + 작은 수정 2개 (끝이 발광)
+        add(new THREE.DodecahedronGeometry(0.5, 0), pbr({ color: '#4b4660', roughness: 0.95 }), 0.3);
+        const big = add(new THREE.ConeGeometry(0.34, 2.2 + r() * 1.2, 5), pbr({ color: r() < 0.5 ? '#8fe8ff' : '#c7a2ff', roughness: 0.25, metalness: 0.1 }), 1.5);
+        big.rotation.set((r() - 0.5) * 0.25, 0, (r() - 0.5) * 0.25);
+        for (let i = 0; i < 2; i++) {
+          const a = r() * Math.PI * 2;
+          const sm = add(new THREE.ConeGeometry(0.16, 0.8 + r() * 0.5, 5), glow(r() < 0.5 ? '#8fe8ff' : '#c7a2ff', 1.0), 0.6, Math.cos(a) * 0.45, Math.sin(a) * 0.45);
+          sm.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5);
+        }
+        break;
+      }
+      case 'machine': {
+        // 공장 기계: 강철 상자 + 발광 조작판 + 배관 + 위의 작은 경고등
+        add(new THREE.BoxGeometry(1.6, 1.3, 1.0), pbr({ color: '#5c6069', roughness: 0.5, metalness: 0.7 }), 0.65);
+        add(new THREE.BoxGeometry(0.9, 0.5, 0.06), glow('#7fe9d0', 1.3), 0.85, 0, 0.53, false);
+        add(new THREE.BoxGeometry(0.3, 0.12, 0.05), glow('#ff9a3d', 1.6), 1.1, -0.5, 0.53, false);
+        add(new THREE.CylinderGeometry(0.1, 0.1, 1.2, 8), pbr({ color: '#8d9099', roughness: 0.4, metalness: 0.85 }), 1.5, 0.5, -0.2);
+        const lm = glow('#ff3b3b', 1.6);
+        add(new THREE.SphereGeometry(0.1, 8, 6), lm, 1.42, -0.5, -0.2, false);
+        this.lamps.push(lm);
+        break;
+      }
       case 'tent': {
         // 작은 천막: 삼각 지붕 + 기둥
         add(new THREE.ConeGeometry(1.3, 1.5, 4), pbr({ color: '#8a4a3a', roughness: 0.95 }), 0.95).rotation.y = Math.PI / 4;

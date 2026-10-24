@@ -98,7 +98,9 @@ export function planDecor(def: DungeonDef, bossSpawn: Vec2, seed = 1, outsideDep
  * - center: 구역 중심 (쉼터의 모닥불처럼 한 개짜리)
  */
 export type PropPlace = 'edge' | 'corner' | 'center';
-export const ZONE_PROPS: Record<ZoneKind, Array<[string, number, PropPlace]>> = {
+export type ZonePropTable = Record<ZoneKind, Array<[string, number, PropPlace]>>;
+/** 숲(기본) 구역 소품 */
+export const ZONE_PROPS: ZonePropTable = {
   start: [['signpost', 1, 'center'], ['torch', 2, 'corner'], ['fence', 4, 'edge']],
   fight: [['stump', 3, 'edge'], ['log', 2, 'edge'], ['fence', 3, 'edge']],
   path: [['torch', 4, 'edge'], ['rock', 3, 'edge']],
@@ -110,6 +112,39 @@ export const ZONE_PROPS: Record<ZoneKind, Array<[string, number, PropPlace]>> = 
   arena: [['ruinPillar', 6, 'edge'], ['torch', 4, 'corner'], ['ruinWall', 2, 'edge']],
   boss: [['bossPillar', 4, 'corner'], ['torch', 6, 'edge'], ['bones', 3, 'edge']],
 };
+
+/** 수정 동굴: 횃불·수정 기둥·종유석·발광 버섯·뼈 */
+export const CAVE_ZONE_PROPS: ZonePropTable = {
+  start: [['torch', 2, 'corner'], ['crystalPillar', 2, 'edge'], ['stalagmite', 2, 'edge']],
+  fight: [['crystalPillar', 3, 'edge'], ['stalagmite', 3, 'edge'], ['mushroomGlow', 2, 'edge']],
+  path: [['torch', 3, 'edge'], ['stalagmite', 3, 'edge']],
+  treasure: [['crystalPillar', 3, 'corner'], ['mushroomGlow', 5, 'edge'], ['bones', 1, 'edge']],
+  branch: [['torch', 2, 'corner'], ['crystalPillar', 2, 'edge']],
+  secret: [['crystalPillar', 3, 'corner'], ['bones', 4, 'edge'], ['mushroomGlow', 4, 'edge']],
+  ambush: [['stalagmite', 4, 'edge'], ['bones', 3, 'edge'], ['mushroomGlow', 2, 'edge']],
+  rest: [['campfire', 1, 'center'], ['logSeat', 2, 'center'], ['torch', 2, 'corner'], ['mushroomGlow', 3, 'edge']],
+  arena: [['crystalPillar', 6, 'edge'], ['torch', 4, 'corner'], ['stalagmite', 2, 'edge']],
+  boss: [['bossPillar', 4, 'corner'], ['crystalPillar', 4, 'edge'], ['bones', 3, 'edge']],
+};
+
+/** 강철 요새(로봇 공장): 경고등·기계·컨테이너·드럼통·배관 */
+export const FORTRESS_ZONE_PROPS: ZonePropTable = {
+  start: [['lamp', 2, 'corner'], ['crate', 3, 'edge'], ['machine', 1, 'edge']],
+  fight: [['barrel', 3, 'edge'], ['crate', 3, 'edge'], ['lamp', 2, 'corner']],
+  path: [['lamp', 4, 'edge'], ['pipe', 3, 'edge']],
+  treasure: [['crate', 4, 'edge'], ['barrel', 3, 'edge'], ['machine', 1, 'corner']],
+  branch: [['lamp', 2, 'corner'], ['machine', 1, 'edge'], ['barrel', 2, 'edge']],
+  secret: [['machine', 2, 'corner'], ['barrel', 3, 'edge'], ['crate', 2, 'edge']],
+  ambush: [['barrel', 4, 'edge'], ['pipe', 2, 'edge'], ['lamp', 2, 'corner']],
+  rest: [['machine', 2, 'edge'], ['lamp', 2, 'corner'], ['crate', 2, 'edge'], ['barrel', 2, 'edge']],
+  arena: [['machine', 4, 'edge'], ['lamp', 4, 'corner'], ['pipe', 2, 'edge']],
+  boss: [['bossPillar', 4, 'corner'], ['lamp', 6, 'edge'], ['machine', 2, 'edge']],
+};
+
+/** 던전별 구역 소품 표 (없으면 숲 표) */
+export function zonePropsFor(dungeonId: string): ZonePropTable {
+  return dungeonId === 'cave' ? CAVE_ZONE_PROPS : dungeonId === 'fortress' ? FORTRESS_ZONE_PROPS : ZONE_PROPS;
+}
 
 /** 구역 안 소품 자리가 비어 있는지: 걷는 칸 위, 적 등장 자리·상자·장애물·문과 안 겹침 */
 function isZoneFree(p: Vec2, j: JourneyDef, def: DungeonDef, bossSpawn: Vec2, taken: DecorItem[], gap: number): boolean {
@@ -130,13 +165,14 @@ function isZoneFree(p: Vec2, j: JourneyDef, def: DungeonDef, bossSpawn: Vec2, ta
 export function planZoneProps(def: DungeonDef, bossSpawn: Vec2, seed = 1): DecorItem[] {
   const j = def.journey;
   if (!j) return [];
-  const rnd = seededRandom(seed * 7 + 101);
+  const rnd = seededRandom(seed * 7 + 101 + def.id.length * 31);
+  const table = zonePropsFor(def.id);
   const out: DecorItem[] = [];
   for (const z of j.zones) {
     const r = z.rect;
     // 가운데 소품의 기준점: 구역 중심. 모닥불을 놓으면 그 자리가 기준이 된다 (통나무 의자가 모닥불을 향함)
     let anchor: Vec2 = { x: r.x, z: r.z };
-    for (const [kind, count, place] of ZONE_PROPS[z.kind] ?? []) {
+    for (const [kind, count, place] of table[z.kind] ?? []) {
       let placed = 0;
       for (let tries = 0; tries < count * 40 && placed < count; tries++) {
         let p: Vec2;

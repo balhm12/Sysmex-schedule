@@ -199,7 +199,8 @@ hero-x/
 - 방어력은 `Game.damagePlayer` 에서 `applyDefense` 로, 체력 보너스는 `Game.applyStats`, 속도 보너스는 `PlayerController` 의 배율 함수로 적용된다. 새 능력치를 추가하면 이 세 곳을 확인한다.
 - 새 장비 → `ItemDatabase.ts` 의 `ITEM_TEMPLATES` 에 항목 추가 (분류 melee/ranged/armor/trinket, 일반 등급 기준 수치).
 - 던전 추가·수정 → `DungeonDefs.ts` 의 `DUNGEONS` 에 항목 추가/수정 (해금은 `requiresClear`, 보스는 `boss` 에 바꿀 값만). **여정형 던전**은 `journey`(구역 `zones`·통로 `corridors`·문 `gates`, `halfX/halfZ` 직사각형 범위, `start`)를 적는다: 적은 `spawns: []` 로 두고 구역 `waves`(`enter`/`half`)로 등장, 정예는 `elite`(체력 배율, 1.5 이상이면 몸집·이름 배너), 보스는 `boss.spawn` 을 보스 구역 안에, 상자·장애물은 걷는 사각형 안에. 벽은 적지 않는다(`buildWallBoxes` 가 격자로 만든다). 메인 경로는 `mainIndex` 순서, 선택 경로는 `mainIndex` 없이. `tests/journey.test.ts` 가 연결성(BFS)·구역 안 배치·문 위치·벽 구멍을 검사한다. 지도를 눈으로 보려면 Playwright 로 `/src/game/DungeonDefs.ts` 를 import 해 캔버스에 그린다(스크래치 `map-journey.cjs`). `GameConfig.world.obstacles/dungeon.chests/enemies.spawns` 는 여정이 없는 열린 경기장 던전의 기본값(현재 숲은 안 씀). `tests/dungeons.test.ts` 가 모든 던전의 배치 겹침·영역을 검사한다. 던전 교체는 `Game.loadDungeon` 한 곳(공간·상자 새로 생성, 충돌 세계는 껍데기 객체로 공유).
-- 새 적이 기존 외형을 써도 되면 `enemies.types.<종류>.model` 에 'rusher' | 'shooter' | 'tank' 를 적는다.
+- 새 적이 기존 외형을 써도 되면 `enemies.types.<종류>.model` 에 'rusher' | 'shooter' | 'tank' 를 적는다. 던전 분위기에 맞춰 **같은 종류를 다른 외형**으로 내보내려면 적 배치에 `skin: '<manifest enemies 키>'` 를 적는다(요새는 `robot-<종류>` → `enemy-*.glb` 로봇; `DungeonDefs` 의 `R()` 도우미). `EnemySpawner.spawn(..., skin)` → `createEnemyModel(type, def, skin)` 이 `enemy:<skin>` 을 먼저 찾는다.
+- 여정 던전은 세 개(`FOREST_JOURNEY`·`CAVE_JOURNEY`·`FORTRESS_JOURNEY`). 구역 소품 표는 던전별(`decorLayout.zonePropsFor`: 숲 `ZONE_PROPS`, 동굴 `CAVE_ZONE_PROPS`, 요새 `FORTRESS_ZONE_PROPS`). `tests/journey.test.ts`·`tests/decor.test.ts` 는 여정이 있는 모든 던전을 돈다. 브라우저 공통 시나리오는 스크래치 `smoke30.cjs <id>`(구역 중심을 차례로 돌며 등장 수·증원·문·보스·결과·선택 구역 정예 배너 확인), 지도는 `map-journey.cjs <id>`.
 - 터치 조작: 조이스틱은 기본 '떠다니는' 방식(`.touch-zone` 전체 화면, 버튼보다 아래 층; 설정 `floatingJoystick`). 새 동작 버튼은 `TouchControls.ts` 의 HTML 에 `data-code`(GameConfig.controls 의 키 코드)만 적으면 된다. 터치 조작이 켜지면 `Game.getAimPoint` 가 자동 조준(`nearestEnemyPoint`)을 쓴다. 휴대폰 기본값(그림자 끔·해상도 0.8)은 `Settings.defaultSettings` 에서 `isTouchDevice()` 로 정한다. 모바일 검증은 Playwright `devices['Pixel 5']` 에뮬레이션 + `PointerEvent(pointerType: 'touch')` 로 한다.
 - 배포: `hero-x` 브랜치에 push 하면 워크플로가 `npm run check` 후 `dist` 를 main 의 `game/` 에 넣는다. main 의 다른 파일은 건드리지 않는다(`keep_files: true`). 배포 주소는 README 3-1.
 - 창 층위는 CSS `.guide`(20) > `.guide.result`(15) > `.guide.menu`(10). 메뉴 위에 여는 새 창은 기본 `.guide` 층위를 그대로 쓴다.
@@ -228,6 +229,6 @@ hero-x/
 5. 설정 화면과 저장 ✅ (v0.5.0: 자동 저장·이어하기·버전·손상 처리, 설정 화면·기본값 복원)
 6. 콘텐츠 확장 ✅ (v0.6.0-a.1 던전 3개·던전 선택·새 적·새 장비 / v0.6.1 모바일 / v0.6.2 보스별 패턴·외형)
 7. 품질 개선 ✅ (v0.7.0-a.1 효과음·음악 / v0.7.0-b.1 얼굴 사진·glb 교체 구조 / v1.0.0 자동 화질·오류 처리·문서)
-8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장 (진행 예정)
+8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장(동굴·요새 여정형, 로봇 공장 테마) ✅ v1.11.0
 
 각 단계는 완료 기준을 만족하고 기존 기능이 정상일 때만 다음 단계로 넘어간다.

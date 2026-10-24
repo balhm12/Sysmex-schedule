@@ -1,4 +1,10 @@
 import { DUNGEONS, isDungeonUnlocked, type DungeonDef } from '../game/DungeonDefs';
+import { zoneSpawns } from '../dungeon/journey';
+
+/** 던전의 적 수: 열린 경기장은 spawns, 여정 던전은 모든 구역 파도의 합 */
+function enemyCount(d: DungeonDef): number {
+  return d.journey ? d.journey.zones.reduce((n, z) => n + zoneSpawns(z).length, 0) : d.spawns.length;
+}
 
 export interface DungeonSelectCallbacks {
   /** 던전별 클리어 횟수 (해금 판단) */
@@ -57,7 +63,7 @@ export class DungeonSelectUI {
           <div class="dungeon-text">
             <div class="dungeon-name">${d.name}</div>
             <div class="dungeon-sub">${d.subtitle}</div>
-            <div class="dungeon-meta">권장 레벨 ${d.recommendedLevel}${levelNote} · 적 ${d.spawns.length}마리 · 상자 ${d.chests.length}개 · ${status}</div>
+            <div class="dungeon-meta">권장 레벨 ${d.recommendedLevel}${levelNote} · 적 ${enemyCount(d)}마리 · 상자 ${d.chests.length}개 · ${status}</div>
           </div>
           <button class="btn${unlocked ? '' : ' secondary'}" type="button" data-dungeon="${d.id}" ${unlocked ? '' : 'disabled'}>${unlocked ? '입장' : '잠김'}</button>
         </div>`;

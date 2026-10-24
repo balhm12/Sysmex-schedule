@@ -165,6 +165,160 @@ const forestTheme: DungeonTheme = {
   groundRoughness: 0.95,
 };
 
+
+/**
+ * 수정 동굴 여정 (목표 10분+): 동굴 입구 → 좁은 틈(박쥐 매복) → 수정 광장 → [서쪽 지하 호수: 보물] → 종유석 회랑(증원)
+ * → 갈림길(봉쇄 문) → [서쪽 골렘의 둥지: 정예 돌 골렘 + 상자] → 박쥐 소굴(매복·증원) → 고요한 샘(쉼터) → 수정 대광장(증원) → 봉쇄 문 → 수정 골렘.
+ */
+export const CAVE_JOURNEY: JourneyDef = {
+  halfX: 36,
+  halfZ: 110,
+  cell: 2,
+  wallHeight: 3.0,
+  start: { x: 0, z: 90 },
+  bossZone: 'boss',
+  zones: [
+    { id: 'start', name: '동굴 입구', kind: 'start', rect: { x: 0, z: 88, w: 14, d: 14 }, mainIndex: 0, objective: '동굴 깊은 곳으로 — 빛 기둥을 따라가세요' },
+    {
+      id: 'path1', name: '좁은 틈', kind: 'path', rect: { x: 0, z: 66, w: 6, d: 20 }, mainIndex: 1, objective: '좁은 틈을 지나라 — 천장의 박쥐를 조심!',
+      waves: [{ when: 'enter', spawns: [{ type: 'stalker', x: 0, z: 70 }, { type: 'stalker', x: 1, z: 62 }, { type: 'stalker', x: -1, z: 58 }] }],
+    },
+    {
+      id: 'fight1', name: '수정 광장', kind: 'fight', rect: { x: 0, z: 40, w: 26, d: 22 }, mainIndex: 2, objective: '수정 광장의 적을 물리쳐라',
+      waves: [{ when: 'enter', spawns: [{ type: 'stalker', x: -8, z: 44 }, { type: 'stalker', x: 8, z: 44 }, { type: 'stalker', x: 0, z: 33 }, { type: 'rusher', x: -5, z: 38 }, { type: 'rusher', x: 5, z: 38 }, { type: 'shooter', x: 0, z: 47 }] }],
+    },
+    {
+      id: 'treasure', name: '지하 호수', kind: 'treasure', rect: { x: -26, z: 40, w: 14, d: 12 }, objective: '호숫가의 보물 상자를 열어라',
+      waves: [{ when: 'enter', spawns: [{ type: 'shooter', x: -30, z: 36 }, { type: 'shooter', x: -22, z: 44 }] }],
+    },
+    {
+      id: 'fight2', name: '종유석 회랑', kind: 'fight', rect: { x: 14, z: 12, w: 28, d: 18 }, mainIndex: 3, objective: '종유석 회랑의 적을 물리쳐라',
+      waves: [
+        { when: 'enter', spawns: [{ type: 'rusher', x: 6, z: 14 }, { type: 'rusher', x: 14, z: 6 }, { type: 'rusher', x: 22, z: 14 }, { type: 'shooter', x: 10, z: 18 }, { type: 'shooter', x: 24, z: 6 }, { type: 'stalker', x: 18, z: 16 }, { type: 'stalker', x: 4, z: 6 }] },
+        { when: 'half', spawns: [{ type: 'stalker', x: 24, z: 18 }, { type: 'stalker', x: 2, z: 16 }] },
+      ],
+    },
+    {
+      id: 'junction', name: '갈림길', kind: 'branch', rect: { x: -10, z: 2, w: 12, d: 12 }, mainIndex: 4, objective: '갈림길의 적을 물리치면 북쪽 문이 열린다 (서쪽에도 길이…)',
+      waves: [{ when: 'enter', spawns: [{ type: 'rusher', x: -13, z: 5 }, { type: 'rusher', x: -7, z: -1 }, { type: 'shooter', x: -10, z: 6 }] }],
+    },
+    {
+      id: 'secret', name: '골렘의 둥지', kind: 'secret', rect: { x: -28, z: 2, w: 14, d: 14 }, objective: '수정 심장 골렘을 물리쳐라 (희귀 상자)',
+      waves: [{ when: 'enter', spawns: [{ type: 'artillery', x: -31, z: -2, elite: 2.0, name: '수정 심장 골렘' }, { type: 'stalker', x: -24, z: 6 }, { type: 'stalker', x: -32, z: 6 }] }],
+    },
+    {
+      id: 'ambush', name: '박쥐 소굴', kind: 'ambush', rect: { x: -10, z: -24, w: 24, d: 16 }, mainIndex: 5, objective: '박쥐 떼다! 모두 물리쳐라',
+      waves: [
+        { when: 'enter', spawns: [{ type: 'stalker', x: -20, z: -20 }, { type: 'stalker', x: 0, z: -20 }, { type: 'stalker', x: -20, z: -28 }, { type: 'stalker', x: 0, z: -28 }, { type: 'stalker', x: -10, z: -30 }, { type: 'stalker', x: -14, z: -18 }, { type: 'shooter', x: -6, z: -26 }] },
+        { when: 'half', spawns: [{ type: 'stalker', x: -19, z: -24 }, { type: 'stalker', x: -1, z: -24 }, { type: 'stalker', x: -10, z: -18 }] },
+      ],
+    },
+    { id: 'rest', name: '고요한 샘', kind: 'rest', rect: { x: 6, z: -46, w: 14, d: 12 }, mainIndex: 6, objective: '잠시 쉬어가자 — 상자와 회복 아이템' },
+    {
+      id: 'arena', name: '수정 대광장', kind: 'arena', rect: { x: 0, z: -72, w: 34, d: 24 }, mainIndex: 7, objective: '큰 전투! 모두 물리치면 골렘의 문이 열린다',
+      waves: [
+        { when: 'enter', spawns: [{ type: 'rusher', x: -10, z: -66 }, { type: 'rusher', x: 10, z: -66 }, { type: 'rusher', x: 0, z: -78 }, { type: 'shooter', x: -14, z: -76 }, { type: 'shooter', x: 14, z: -76 }, { type: 'shooter', x: 0, z: -62 }, { type: 'stalker', x: -6, z: -72 }, { type: 'stalker', x: 6, z: -72 }, { type: 'stalker', x: 12, z: -80 }, { type: 'tank', x: -12, z: -80 }] },
+        { when: 'half', spawns: [{ type: 'stalker', x: -15, z: -64 }, { type: 'stalker', x: 15, z: -64 }, { type: 'stalker', x: 0, z: -82 }, { type: 'shooter', x: 8, z: -62 }] },
+      ],
+    },
+    { id: 'boss', name: '골렘의 심장', kind: 'boss', rect: { x: 0, z: -100, w: 30, d: 16 }, mainIndex: 8, objective: '수정 골렘을 쓰러뜨려라!' },
+  ],
+  corridors: [
+    { x: 0, z: 78, w: 6, d: 6 },
+    { x: 0, z: 53, w: 6, d: 6 },
+    { x: -16, z: 40, w: 6, d: 4 },
+    { x: 8, z: 25, w: 6, d: 8 },
+    { x: -2, z: 6, w: 4, d: 6 },
+    { x: -18, z: 2, w: 4, d: 6 },
+    { x: -10, z: -11, w: 6, d: 12 },
+    { x: 0, z: -36, w: 6, d: 10 },
+    { x: 6, z: -56, w: 6, d: 10 },
+    { x: 0, z: -88, w: 8, d: 8 },
+  ],
+  gates: [
+    { id: 'gate-north', rect: { x: -10, z: -9, w: 6, d: 1.2 }, opensWhenCleared: 'junction' },
+    { id: 'gate-boss', rect: { x: 0, z: -87, w: 8, d: 1.2 }, opensWhenCleared: 'arena' },
+  ],
+};
+
+/** 강철 요새(로봇 공장) 여정의 적: 모두 로봇 외형(skin 'robot-종류') */
+const R = (type: string, x: number, z: number, extra: Partial<EnemySpawnConfig> = {}): EnemySpawnConfig => ({ type, x, z, skin: `robot-${type}`, ...extra });
+
+/**
+ * 강철 요새 여정 (목표 10분+, 로봇 공장 분위기): 정문 → 경비 초소 → 컨베이어 통로(드론·포대) → 조립장(증원) → [서쪽 창고: 보물]
+ * → 교차로(봉쇄 문) → [남쪽 무기고: 정예 경비대장 + 상자] → 포대 마당(매복·증원) → 정비실(쉼터) → 사령부 앞마당(증원) → 봉쇄 문 → 요새 사령관.
+ */
+export const FORTRESS_JOURNEY: JourneyDef = {
+  halfX: 38,
+  halfZ: 102,
+  cell: 2,
+  wallHeight: 3.2,
+  start: { x: 0, z: 88 },
+  bossZone: 'boss',
+  zones: [
+    { id: 'start', name: '요새 정문', kind: 'start', rect: { x: 0, z: 88, w: 16, d: 12 }, mainIndex: 0, objective: '요새 안으로 — 빛 기둥을 따라가세요' },
+    {
+      id: 'fight1', name: '경비 초소', kind: 'fight', rect: { x: 0, z: 64, w: 22, d: 20 }, mainIndex: 1, objective: '경비 로봇을 모두 부숴라',
+      waves: [{ when: 'enter', spawns: [R('rusher', -6, 68), R('rusher', 6, 68), R('rusher', -4, 58), R('rusher', 5, 57), R('shooter', 0, 70)] }],
+    },
+    {
+      id: 'path1', name: '컨베이어 통로', kind: 'path', rect: { x: 18, z: 38, w: 8, d: 24 }, mainIndex: 2, objective: '컨베이어 통로를 지나라 — 드론과 포대를 조심!',
+      waves: [{ when: 'enter', spawns: [R('stalker', 18, 44), R('stalker', 17, 36), R('stalker', 19, 30), R('artillery', 18, 28)] }],
+    },
+    {
+      id: 'fight2', name: '조립장', kind: 'fight', rect: { x: 10, z: 8, w: 30, d: 20 }, mainIndex: 3, objective: '조립장의 로봇을 모두 부숴라',
+      waves: [
+        { when: 'enter', spawns: [R('tank', 10, 2), R('rusher', 0, 12), R('rusher', 20, 12), R('rusher', 10, 16), R('shooter', -2, 2), R('shooter', 22, 2)] },
+        { when: 'half', spawns: [R('rusher', 2, 16), R('rusher', 18, 16)] },
+      ],
+    },
+    {
+      id: 'treasure', name: '창고', kind: 'treasure', rect: { x: -18, z: 10, w: 14, d: 12 }, objective: '창고의 보물 상자를 열어라',
+      waves: [{ when: 'enter', spawns: [R('shooter', -22, 14), R('shooter', -14, 6)] }],
+    },
+    {
+      id: 'junction', name: '교차로', kind: 'branch', rect: { x: 30, z: -12, w: 12, d: 12 }, mainIndex: 4, objective: '교차로의 로봇을 부수면 서쪽 문이 열린다 (남쪽에도 길이…)',
+      waves: [{ when: 'enter', spawns: [R('rusher', 27, -9), R('rusher', 33, -15), R('artillery', 33, -8)] }],
+    },
+    {
+      id: 'secret', name: '무기고', kind: 'secret', rect: { x: 30, z: -34, w: 12, d: 14 }, objective: '요새 경비대장을 부숴라 (희귀 상자)',
+      waves: [{ when: 'enter', spawns: [R('tank', 30, -38, { elite: 2.2, name: '요새 경비대장' }), R('rusher', 26, -30), R('rusher', 34, -30)] }],
+    },
+    {
+      id: 'ambush', name: '포대 마당', kind: 'ambush', rect: { x: 0, z: -18, w: 24, d: 16 }, mainIndex: 5, objective: '포대 사격이다! 모두 부숴라',
+      waves: [
+        { when: 'enter', spawns: [R('artillery', -7, -19), R('artillery', 7, -19), R('stalker', -6, -14), R('stalker', 6, -14), R('stalker', 0, -24), R('rusher', 0, -12)] },
+        { when: 'half', spawns: [R('stalker', -10, -12), R('stalker', 10, -12), R('stalker', 0, -24)] },
+      ],
+    },
+    { id: 'rest', name: '정비실', kind: 'rest', rect: { x: -18, z: -36, w: 14, d: 12 }, mainIndex: 6, objective: '잠시 정비 — 상자와 회복 아이템' },
+    {
+      id: 'arena', name: '사령부 앞마당', kind: 'arena', rect: { x: 0, z: -62, w: 36, d: 24 }, mainIndex: 7, objective: '큰 전투! 모두 부수면 사령관의 문이 열린다',
+      waves: [
+        { when: 'enter', spawns: [R('tank', -8, -66), R('tank', 8, -66), R('artillery', -14, -70), R('artillery', 14, -70), R('shooter', -12, -56), R('shooter', 12, -56), R('shooter', 0, -72), R('rusher', -4, -60), R('rusher', 4, -60), R('rusher', 0, -66), R('stalker', -16, -62), R('stalker', 16, -62)] },
+        { when: 'half', spawns: [R('rusher', -10, -54), R('rusher', 10, -54), R('rusher', 0, -70), R('shooter', 6, -70)] },
+      ],
+    },
+    { id: 'boss', name: '사령관의 홀', kind: 'boss', rect: { x: 0, z: -92, w: 32, d: 16 }, mainIndex: 8, objective: '요새 사령관을 쓰러뜨려라!' },
+  ],
+  corridors: [
+    { x: 0, z: 78, w: 8, d: 8 },
+    { x: 12, z: 52, w: 12, d: 6 },
+    { x: 18, z: 22, w: 6, d: 8 },
+    { x: -8, z: 10, w: 6, d: 4 },
+    { x: 24, z: -3, w: 8, d: 6 },
+    { x: 30, z: -22, w: 6, d: 10 },
+    { x: 18, z: -12, w: 12, d: 6 },
+    { x: -10, z: -29, w: 10, d: 8 },
+    { x: -14, z: -46, w: 6, d: 10 },
+    { x: 0, z: -79, w: 8, d: 10 },
+  ],
+  gates: [
+    { id: 'gate-west', rect: { x: 19, z: -12, w: 1.2, d: 6 }, opensWhenCleared: 'junction' },
+    { id: 'gate-boss', rect: { x: 0, z: -78, w: 8, d: 1.2 }, opensWhenCleared: 'arena' },
+  ],
+};
+
 export const DUNGEONS: DungeonDef[] = [
   {
     id: 'forest',
@@ -198,10 +352,12 @@ export const DUNGEONS: DungeonDef[] = [
   {
     id: 'cave',
     name: '수정 동굴',
-    subtitle: '어둡고 좁은 동굴. 빠른 동굴 박쥐이 떼로 덤빈다.',
+    subtitle: '어둡고 좁은 동굴 길. 박쥐 떼와 수정 골렘이 기다린다.',
     recommendedLevel: 4,
     requiresClear: 'forest',
     arenaHalfSize: 24,
+    journey: CAVE_JOURNEY,
+    start: CAVE_JOURNEY.start,
     theme: {
       backgroundColor: '#161a33',
       fogNear: 16,
@@ -221,42 +377,24 @@ export const DUNGEONS: DungeonDef[] = [
       groundRoughness: 0.75,
     },
     obstacles: [
-      // 수정 기둥
-      { x: 7, z: -7, w: 1.4, d: 1.4, h: 5, color: '#8fe8ff' },
-      { x: -9, z: -5, w: 1.6, d: 1.6, h: 6, color: '#c7a2ff' },
-      { x: 10, z: 8, w: 1.4, d: 1.4, h: 4.5, color: '#8fe8ff' },
-      { x: -11, z: 10, w: 1.8, d: 1.8, h: 5.5, color: '#c7a2ff' },
-      { x: 2, z: 14, w: 1.2, d: 1.2, h: 4, color: '#8fe8ff' },
-      // 바위 무리
-      { x: -4, z: -14, w: 4, d: 2.2, h: 2.2, color: '#5a5f8c' },
-      { x: 16, z: -2, w: 2.6, d: 4, h: 2.6, color: '#5a5f8c' },
-      { x: -17, z: 2, w: 2.4, d: 5, h: 2.4, color: '#5a5f8c' },
-      { x: 6, z: 19, w: 5, d: 2, h: 2, color: '#5a5f8c' },
-      // 종유석 벽
-      { x: 0, z: -9, w: 7, d: 1, h: 3, color: '#4a3f7a' },
-      { x: 14, z: 16, w: 1, d: 7, h: 3, color: '#4a3f7a' },
+      // 수정 광장·회랑의 수정 기둥 (못 오름), 오를 수 있는 바위
+      { x: 9, z: 46, w: 1.4, d: 1.4, h: 5, color: '#8fe8ff', kind: 'pillar' },
+      { x: -9, z: 34, w: 1.6, d: 1.6, h: 6, color: '#c7a2ff', kind: 'pillar' },
+      { x: 12, z: 10, w: 2, d: 2, h: 2, color: '#5a5f8c', kind: 'crate' },
+      { x: 14.2, z: 10, w: 2, d: 2, h: 2, color: '#5a5f8c', kind: 'crate' },
+      { x: 20, z: 10, w: 1.4, d: 1.4, h: 4.5, color: '#8fe8ff', kind: 'pillar' },
+      // 대광장 양쪽 수정 기둥
+      { x: -10, z: -70, w: 1.2, d: 1.2, h: 4, color: '#c7a2ff', kind: 'pillar' },
+      { x: 10, z: -70, w: 1.2, d: 1.2, h: 4, color: '#c7a2ff', kind: 'pillar' },
+      // 종유석 돌담
+      { x: 1, z: -42, w: 3, d: 0.7, h: 1.4, color: '#4a3f7a', kind: 'ruin' },
     ],
     chests: [
-      { x: -19, z: -16 },
-      { x: 19, z: 12 },
-      { x: -2, z: 20 },
+      { x: -26, z: 40 },
+      { x: -28, z: 2 },
+      { x: 9, z: -48 },
     ],
-    spawns: [
-      { type: 'stalker', x: 9, z: -13 },
-      { type: 'stalker', x: -13, z: -11 },
-      { type: 'stalker', x: 15, z: 5 },
-      { type: 'stalker', x: -15, z: 14 },
-      { type: 'stalker', x: 4, z: 9 },
-      { type: 'stalker', x: -7, z: 16 },
-      { type: 'shooter', x: 18, z: -10 },
-      { type: 'shooter', x: -18, z: -6 },
-      { type: 'shooter', x: 17, z: 18 },
-      { type: 'shooter', x: -12, z: 19 },
-      { type: 'rusher', x: 12, z: 0 },
-      { type: 'rusher', x: -8, z: 7 },
-      { type: 'rusher', x: 0, z: -17 },
-      { type: 'tank', x: -1, z: 18 },
-    ],
+    spawns: [],
     boss: {
       name: '수정 골렘',
       hp: 650,
@@ -264,7 +402,7 @@ export const DUNGEONS: DungeonDef[] = [
       speed: 2.6,
       radius: 1.8,
       score: 500,
-      spawn: { x: 0, z: -17 },
+      spawn: { x: 0, z: -101 },
       contactDamage: 24,
       model: 'golem',
       // 돌진 대신 동굴 박쥐을 소환한다. 느리지만 내려찍기가 넓다
@@ -283,10 +421,12 @@ export const DUNGEONS: DungeonDef[] = [
   {
     id: 'fortress',
     name: '강철 요새',
-    subtitle: '붉은 강철 요새. 트롤 거인과 포대가 길목을 지킨다.',
+    subtitle: '붉은 강철 로봇 공장. 경비 로봇·포대·사령관이 길목을 지킨다.',
     recommendedLevel: 8,
     requiresClear: 'cave',
     arenaHalfSize: 30,
+    journey: FORTRESS_JOURNEY,
+    start: FORTRESS_JOURNEY.start,
     theme: {
       backgroundColor: '#2b2d33',
       fogNear: 30,
@@ -307,48 +447,23 @@ export const DUNGEONS: DungeonDef[] = [
       groundRoughness: 0.55,
     },
     obstacles: [
-      // 중앙 격벽
-      { x: 0, z: -8, w: 12, d: 1.2, h: 3, color: '#7a2b2b' },
-      { x: 0, z: 8, w: 12, d: 1.2, h: 3, color: '#7a2b2b' },
-      { x: -12, z: 0, w: 1.2, d: 10, h: 3, color: '#7a2b2b' },
-      { x: 12, z: 0, w: 1.2, d: 10, h: 3, color: '#7a2b2b' },
-      // 포탑 받침
-      { x: -20, z: -20, w: 3, d: 3, h: 2, color: '#8d9099' },
-      { x: 20, z: -20, w: 3, d: 3, h: 2, color: '#8d9099' },
-      { x: -20, z: 20, w: 3, d: 3, h: 2, color: '#8d9099' },
-      { x: 20, z: 20, w: 3, d: 3, h: 2, color: '#8d9099' },
-      // 컨테이너
-      { x: 18, z: 4, w: 4, d: 2, h: 2.4, color: '#b0392f' },
-      { x: -18, z: -4, w: 4, d: 2, h: 2.4, color: '#b0392f' },
-      { x: 6, z: 20, w: 2, d: 4, h: 2.4, color: '#c9a227' },
-      { x: -6, z: -20, w: 2, d: 4, h: 2.4, color: '#c9a227' },
+      // 조립장 컨테이너 (오를 수 있음)
+      { x: 6, z: 7, w: 4, d: 2, h: 2.4, color: '#b0392f', kind: 'crate' },
+      { x: 16, z: 8, w: 2, d: 4, h: 2.4, color: '#c9a227', kind: 'crate' },
+      // 포대 마당 받침
+      { x: -9, z: -24, w: 3, d: 3, h: 2, color: '#8d9099', kind: 'crate' },
+      { x: 9, z: -24, w: 3, d: 3, h: 2, color: '#8d9099', kind: 'crate' },
+      // 앞마당 격벽
+      { x: -8, z: -62, w: 6, d: 1.2, h: 3, color: '#7a2b2b', kind: 'ruin' },
+      { x: 8, z: -62, w: 6, d: 1.2, h: 3, color: '#7a2b2b', kind: 'ruin' },
     ],
     chests: [
-      { x: -26, z: 0 },
-      { x: 26, z: 0 },
-      { x: 0, z: 26 },
-      { x: 0, z: -26 },
+      { x: -18, z: 10 },
+      { x: 30, z: -34 },
+      { x: -20, z: -38 },
+      { x: 0, z: -56 },
     ],
-    spawns: [
-      { type: 'tank', x: 0, z: -14 },
-      { type: 'tank', x: 0, z: 14 },
-      { type: 'tank', x: -16, z: 0 },
-      { type: 'tank', x: 16, z: 0 },
-      { type: 'artillery', x: -20, z: -16 },
-      { type: 'artillery', x: 20, z: -16 },
-      { type: 'artillery', x: -20, z: 16 },
-      { type: 'artillery', x: 20, z: 16 },
-      { type: 'shooter', x: 24, z: -6 },
-      { type: 'shooter', x: -24, z: 6 },
-      { type: 'shooter', x: 8, z: 24 },
-      { type: 'rusher', x: -8, z: -12 },
-      { type: 'rusher', x: 8, z: 12 },
-      { type: 'rusher', x: 22, z: 10 },
-      { type: 'rusher', x: -22, z: -10 },
-      { type: 'stalker', x: 10, z: -24 },
-      { type: 'stalker', x: -10, z: 24 },
-      { type: 'stalker', x: 26, z: 24 },
-    ],
+    spawns: [],
     boss: {
       name: '요새 사령관',
       hp: 900,
@@ -356,7 +471,7 @@ export const DUNGEONS: DungeonDef[] = [
       speed: 3.2,
       radius: 1.7,
       score: 800,
-      spawn: { x: 0, z: -22 },
+      spawn: { x: 0, z: -93 },
       contactDamage: 28,
       model: 'commander',
       // 포격을 플레이어 자리에 떨어뜨린다 (예고 원이 보이면 자리를 옮기거나 점프)

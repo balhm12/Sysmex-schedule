@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DECOR_KINDS, planDecor, planZoneProps, seededRandom, ZONE_PROPS } from '../src/dungeon/decorLayout';
+import { DECOR_KINDS, planDecor, planZoneProps, seededRandom, zonePropsFor } from '../src/dungeon/decorLayout';
 import { isWalkable, zoneAt, zoneSpawns } from '../src/dungeon/journey';
 import { DUNGEONS, resolveBossConfig } from '../src/game/DungeonDefs';
 
@@ -38,12 +38,18 @@ describe('던전 장식 배치 (planDecor)', () => {
 });
 
 describe('여정 구역 테마 소품 (planZoneProps)', () => {
-  const forest = DUNGEONS.find((d) => d.id === 'forest')!;
-  const boss = resolveBossConfig(forest).spawn;
-  it('여정이 없는 던전은 소품이 없다', () => {
-    for (const d of DUNGEONS.filter((x) => !x.journey)) expect(planZoneProps(d, resolveBossConfig(d).spawn)).toEqual([]);
+  it('여정이 없는 던전 정의는 소품이 없다', () => {
+    const d = { ...DUNGEONS[0], journey: undefined };
+    expect(planZoneProps(d, resolveBossConfig(d).spawn)).toEqual([]);
   });
-  it('숲: 결정적이고, 모든 구역에 소품이 있으며, 소품은 걷는 칸 위·구역 안에 있고 적 등장·상자·시작·보스 자리와 겹치지 않는다', () => {
+  it('던전마다 소품 표가 다르다 (숲 횃불·울타리 / 동굴 수정 / 요새 기계·경고등)', () => {
+    expect(zonePropsFor('forest').start.map((k) => k[0])).toContain('signpost');
+    expect(zonePropsFor('cave').arena.map((k) => k[0])).toContain('crystalPillar');
+    expect(zonePropsFor('fortress').arena.map((k) => k[0])).toContain('machine');
+  });
+  it.each(DUNGEONS.filter((d) => d.journey).map((d) => [d.id, d] as const))('%s: 결정적이고, 모든 구역에 소품이 있으며, 소품은 걷는 칸 위·구역 안에 있고 적 등장·상자·시작·보스 자리와 겹치지 않는다', (_id, forest) => {
+    const boss = resolveBossConfig(forest).spawn;
+    const ZONE_PROPS = zonePropsFor(forest.id);
     const props = planZoneProps(forest, boss);
     expect(props).toEqual(planZoneProps(forest, boss));
     expect(props.length).toBeGreaterThan(40);
@@ -62,10 +68,15 @@ describe('여정 구역 테마 소품 (planZoneProps)', () => {
     }
     for (const z of j.zones) expect(zonesWithProps.has(z.id), `구역 ${z.id} 에 소품 없음`).toBe(true);
     // 쉼터엔 모닥불 하나가 구역 가운데 근처에(상자가 가운데를 차지하면 조금 비켜서), 통나무 의자는 모닥불 둘레
-    const fire = props.filter((p) => p.kind === 'campfire');
-    expect(fire).toHaveLength(1);
     const rest = j.zones.find((z) => z.id === 'rest')!;
-    expect(Math.hypot(fire[0].x - rest.rect.x, fire[0].z - rest.rect.z)).toBeLessThan(3);
-    for (const seat of props.filter((p) => p.kind === 'logSeat')) expect(Math.hypot(seat.x - fire[0].x, seat.z - fire[0].z)).toBeLessThan(2.6);
+    const centerKind = ZONE_PROPS.rest.find((k) => k[2] === 'center')?.[0];
+    if (centerKind) {
+      const center = props.filter((p) => p.kind === centerKind && zoneAt(j, p)?.id === 'rest');
+      expect(center.length).toBeGreaterThanOrEqual(1);
+      expect(Math.hypot(center[0].x - rest.rect.x, center[0].z - rest.rect.z)).toBeLessThan(3);
+      if (centerKind === 'campfire') for (const seat of props.filter((p) => p.kind === 'logSeat' && zoneAt(j, p)?.id === 'rest')) expect(Math.hypot(seat.x - center[0].x, seat.z - center[0].z)).toBeLessThan(2.6);
+    }
+    // 부피가 있는 소품(기계·천막·기둥)은 구역 가운데(플레이어가 서는 곳)에서 1.5 이상 떨어져 있다
+    for (const p of props) if (['machine', 'tent', 'ruinPillar', 'crystalPillar', 'bossPillar'].includes(p.kind)) { const z = zoneAt(j, p)!; expect(Math.hypot(p.x - z.rect.x, p.z - z.rect.z), `${p.kind} 가 ${z.id} 가운데`).toBeGreaterThan(1.5); }
   });
 });

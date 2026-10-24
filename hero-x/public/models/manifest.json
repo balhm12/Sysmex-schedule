@@ -18,6 +18,21 @@
     },
     "artillery": {
       "file": "monster-artillery.glb"
+    },
+    "robot-rusher": {
+      "file": "enemy-rusher.glb"
+    },
+    "robot-shooter": {
+      "file": "enemy-shooter.glb"
+    },
+    "robot-tank": {
+      "file": "enemy-tank.glb"
+    },
+    "robot-stalker": {
+      "file": "enemy-stalker.glb"
+    },
+    "robot-artillery": {
+      "file": "enemy-artillery.glb"
     }
   },
   "bosses": {
@@ -30,5 +45,6 @@
     "commander": {
       "file": "boss-commander.glb"
     }
-  }
+  },
+  "_설명2": "enemies 의 'robot-*' 항목은 적 배치(spawns)의 skin 으로 고르는 보조 외형(강철 요새 = 로봇 공장). 종류 이름 항목이 기본 외형."
 }

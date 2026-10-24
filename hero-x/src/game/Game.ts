@@ -1008,7 +1008,7 @@ export class Game {
     }
     this.zones = new ZoneSystem(j, {
       spawn: (sp) => {
-        const e = this.spawner.spawn(sp.type, sp.x, sp.z, sp.elite ?? 1);
+        const e = this.spawner.spawn(sp.type, sp.x, sp.z, sp.elite ?? 1, sp.skin);
         if (e && sp.elite && sp.elite >= 1.5) this.hud.showBanner(`${sp.name ?? GameConfig.enemies.types[sp.type]?.name ?? sp.type} 등장!`, 1800);
         return e;
       },

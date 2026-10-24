@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GameConfig, type EnemySpawnConfig } from '../game/GameConfig';
 import { Logger } from '../utils/Logger';
 import { Enemy, type EnemyContext } from './Enemy';
+import { createEnemyModel } from './EnemyModels';
 
 /**
  * 적 배치·관리
@@ -29,10 +30,10 @@ export class EnemySpawner {
   }
 
   /** 적 한 마리 생성. elite(정예 배율)가 있으면 체력이 그만큼 세지고 1.5 이상이면 몸집도 커진다 */
-  spawn(type: string, x: number, z: number, elite = 1): Enemy | null {
+  spawn(type: string, x: number, z: number, elite = 1, skin?: string): Enemy | null {
     const def = GameConfig.enemies.types[type];
     if (!def) return null;
-    const enemy = new Enemy(type, def, { x, z }, { hp: this.multipliers.hp * elite, speed: this.multipliers.speed });
+    const enemy = new Enemy(type, def, { x, z }, { hp: this.multipliers.hp * elite, speed: this.multipliers.speed }, skin ? (t, d) => createEnemyModel(t, d, skin) : undefined);
     if (elite >= 1.5) enemy.object3d.scale.setScalar(1.25);
     this.scene.add(enemy.object3d);
     this.enemies.push(enemy);

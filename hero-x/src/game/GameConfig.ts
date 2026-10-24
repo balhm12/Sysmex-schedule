@@ -96,6 +96,8 @@ export interface EnemySpawnConfig {
   elite?: number;
   /** 정예 이름 (배너·디버그용) */
   name?: string;
+  /** 외형 키: manifest.json `enemies.<skin>` 의 .glb 를 쓴다 (없으면 종류 기본 외형). 예: 'robot-rusher' */
+  skin?: string;
 }
 
 export interface GameConfigType {
@@ -396,7 +398,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.10.0', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.11.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
