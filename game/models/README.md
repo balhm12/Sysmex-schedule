@@ -1,5 +1,16 @@
 # 정식 3D 모델 넣기 (.glb)
 
+## 현재 플레이어 모델: KayKit Adventurers 기사 (CC0)
+
+- 파일: `player-knight.glb` (1,133 KB) — 원본 `Knight.glb`(3,574 KB, 애니메이션 76개)에서 게임에 쓰는 18개 클립만 남겨 `tools/prune_glb.mjs` 로 줄인 것.
+- 출처: **KayKit : Adventurers Character Pack 1.0**, Kay Lousberg (https://kaylousberg.itch.io/kaykit-adventurers, GitHub `KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0`)
+- 라이선스: **CC0 1.0** (개인·교육·상업 이용 무료, 출처 표기 의무 없음. 저장소 LICENSE.txt 원문: "This content is free to use in personal, educational and commercial projects.")
+- 내용: 삼각형 약 6,950개, 텍스처 1장(1024×1024 그라디언트 아틀라스, 14 KB), 뼈 41개, 정면 +Z, 키 약 1.6(게임에서 1.9 로 맞춤).
+- 남긴 클립: Idle, Walking_A, Running_A, 1H_Melee_Attack_Chop / Slice_Horizontal / Slice_Diagonal / Stab, 2H_Melee_Attack_Spin, 1H_Ranged_Shoot, Spellcast_Shoot, Dodge_Forward, Jump_Full_Short, Jump_Idle, Jump_Land, Hit_A, Death_A, Cheer, PickUp.
+- 손 슬롯 뼈(`handslot.r`/`handslot.l`) 아래에 검·방패 변형이 전부 들어 있어 `manifest.json` 의 `defaultParts` 로 기본 표시(`1H_Sword`, `Round_Shield`)만 남긴다. 장비를 들면 그 손의 기본 무기·방패는 숨고 게임의 장비 외형이 같은 뼈에 붙는다.
+- 같은 팩의 다른 캐릭터(Barbarian/Mage/Rogue/Rogue_Hooded)도 같은 뼈·클립 이름이라 파일만 바꿔 쓸 수 있다: `node tools/prune_glb.mjs <원본.glb> public/models/player-xxx.glb "<클립 목록>"` 뒤 manifest 의 `file` 변경.
+- 예전 복셀 캐릭터(아들 모델)로 되돌리려면 manifest 의 `player.file` 을 `player.glb` 로 바꾸면 된다(파일은 그대로 두었다).
+
 이 폴더에 `.glb` 파일을 넣고 `manifest.json` 에 파일 이름을 적으면 게임이 그 모델을 씁니다. 파일이 없거나 항목이 `null` 이면 코드로 그린 임시 모델을 그대로 씁니다. 파일을 넣은 뒤 `git push` 하면 휴대폰(GitHub Pages)에도 반영됩니다.
 
 ## manifest.json 예
@@ -17,12 +28,13 @@
 - `offsetY`: 발이 땅에 안 닿거나 묻히면 조정 (예: 0.1 / -0.1)
 - `rotationY`: 모델이 뒤를 보면 180
 - `rotationX`: 모델이 누워 있으면(위가 Z 축인 복셀 도구·trimesh 출력) -90
+- `defaultParts`: 손 슬롯 뼈 아래에 여러 무기·방패 변형이 함께 들어 있는 모델에서 기본으로 보일 메시 이름 목록
 
 ## 모델 조건
 
 - 형식: glTF 2.0 바이너리(`.glb`), 텍스처 포함. 크기는 5MB 이하 권장(휴대폰 로딩).
 - 정면이 +Z 를 보게 만듭니다. 반대면 `rotationY: 180`.
-- 애니메이션 클립 이름에 `idle`, `walk` 또는 `run`, `attack`, `jump`, `die` 가 들어 있으면 자동으로 재생합니다.
+- 애니메이션 클립이 있는 뼈대 모델은 `src/assets/skinnedClips.ts` 의 역할표로 재생합니다: 정확한 이름(KayKit: `Idle`, `Walking_A`, `Running_A`, `1H_Melee_Attack_*`, `2H_Melee_Attack_Spin`, `1H_Ranged_Shoot`, `Dodge_Forward`, `Jump_Full_Short`/`Jump_Idle`, `Hit_A`, `Death_A`)을 먼저 찾고, 없으면 `idle`/`walk`/`run`/`attack`/`shoot`/`dodge`/`jump`/`hit`/`death` 키워드로 찾습니다. 장비 외형은 `handslot.r`/`handslot.l`(없으면 `hand.r`/`hand.l`)과 `chest`(없으면 `spine`) 뼈에 붙습니다.
 - 클립이 없어도 **부품 이름**이 있으면 게임이 관절을 만들어 걷기·공격·점프·회피·피격·쓰러짐 동작을 넣습니다(`src/assets/PartRig.ts`).
   이름 규칙: `left_`/`right_` 접두어 + `leg`/`boot`/`knee`/`foot`(다리), `arm`/`hand`/`bracer`/`shoulder`(팔). 머리는 `head`/`hair`/`eye`/`glass`… 로 시작, 무기는 `sword`/`weapon`/`shield`… 로 시작(가까운 팔에 붙음). 몸통·가방·허리띠 등 나머지는 그대로 둡니다.
 - 둘 다 없으면 정지 모델로도 동작합니다(걷기 흔들림만).
