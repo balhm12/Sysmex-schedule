@@ -167,9 +167,9 @@ body {
 /* ---- 전투 HUD (2단계) ---- */
 .hud-top {
   position: absolute;
-  left: 14px;
-  top: 12px;
-  right: 14px;
+  left: max(14px, env(safe-area-inset-left));
+  top: max(12px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -190,13 +190,13 @@ body {
   min-width: 220px;
 }
 .hud-label {
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.12em;
   color: #9fabc9;
   margin-right: 8px;
 }
 .hud-value {
-  font-size: 13px;
+  font-size: 14px;
   color: #cdd6f4;
   margin-top: 4px;
 }
@@ -813,19 +813,21 @@ body {
 .touch-top {
   position: absolute;
   right: max(14px, env(safe-area-inset-right));
-  top: max(64px, env(safe-area-inset-top));
+  top: calc(max(12px, env(safe-area-inset-top)) + 56px);
   display: flex;
   gap: 8px;
   pointer-events: auto;
 }
 .touch-small {
-  padding: 8px 12px;
-  border-radius: 10px;
+  min-height: 44px;
+  min-width: 64px;
+  padding: 8px 14px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   background: rgba(20, 28, 54, 0.7);
   color: #fff;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 15px;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -845,10 +847,21 @@ body {
     font-size: 15px;
   }
   .hud-top {
-    left: 10px;
-    top: 8px;
-    right: 10px;
-    font-size: 12px;
+    left: max(10px, env(safe-area-inset-left));
+    top: max(8px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+    gap: 8px;
+  }
+  .hud-panel {
+    padding: 6px 10px;
+    border-radius: 12px;
+  }
+  .hud-stats {
+    gap: 12px;
+    font-size: 13px;
+  }
+  .hud-stats b {
+    font-size: 16px;
   }
   .boss-bar {
     top: 72px;
@@ -981,7 +994,7 @@ body {
     flex-direction: row;
     flex-wrap: wrap;
     gap: 4px 12px;
-    font-size: 12px;
+    font-size: 13px;
   }
   .hud-stats > div {
     white-space: nowrap;
@@ -1149,4 +1162,54 @@ body {
 .result-panel .btns {
   flex-wrap: wrap;
   justify-content: center;
+}
+
+/* 휴대폰 가로 모드(높이 520px 이하): 체력 패널을 두 열로 납작하게, 상단 패널과 버튼 사이 간격 확보 */
+@media (max-height: 520px) and (orientation: landscape) {
+  .hud-hp {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 150px auto;
+    grid-template-areas:
+      'lab lvl'
+      'bar lvl'
+      'txt gold';
+    column-gap: 14px;
+    row-gap: 2px;
+    align-items: center;
+  }
+  .hud-hp > :nth-child(1) { grid-area: lab; }
+  .hud-hp > :nth-child(2) { grid-area: bar; margin-top: 0; }
+  .hud-hp > :nth-child(3) { grid-area: txt; margin-top: 0; }
+  .hud-hp > :nth-child(4) { grid-area: lvl; margin-top: 0; }
+  .hud-hp > :nth-child(5) { grid-area: gold; margin-top: 0; }
+  .hud-hp .xp-bar {
+    width: 70px;
+  }
+  /* 가로 휴대폰에서는 점수를 숨겨 한 줄로 (점수는 결과 화면에서 확인) */
+  .hud-stats {
+    white-space: nowrap;
+    gap: 10px;
+  }
+  .hud-stats > div:nth-child(5) {
+    display: none;
+  }
+  .touch-top {
+    top: calc(max(8px, env(safe-area-inset-top)) + 54px);
+  }
+  .touch-stick {
+    width: 120px;
+    height: 120px;
+  }
+  .touch-buttons {
+    bottom: max(10px, env(safe-area-inset-bottom));
+    right: max(10px, env(safe-area-inset-right));
+  }
+}
+/* 세로 모드: 회전 안내는 조작 버튼 위쪽에 (버튼과 겹치지 않게) */
+@media (orientation: portrait) and (pointer: coarse) {
+  .rotate-hint {
+    bottom: max(292px, calc(env(safe-area-inset-bottom) + 292px));
+    font-size: 13px;
+  }
 }
