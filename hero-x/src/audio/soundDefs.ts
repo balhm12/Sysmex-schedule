@@ -19,13 +19,14 @@ export type SfxName =
   | 'dash'
   | 'bossAppear'
   | 'slam'
+  | 'zap'
   | 'boom'
   | 'summon'
   | 'clear'
   | 'defeat'
   | 'ui';
 
-export const SFX_NAMES: SfxName[] = ['melee', 'ranged', 'enemyHit', 'kill', 'hurt', 'pickup', 'equip', 'heal', 'levelup', 'chest', 'jump', 'dash', 'bossAppear', 'slam', 'boom', 'summon', 'clear', 'defeat', 'ui'];
+export const SFX_NAMES: SfxName[] = ['melee', 'ranged', 'enemyHit', 'kill', 'hurt', 'pickup', 'equip', 'heal', 'levelup', 'chest', 'jump', 'dash', 'bossAppear', 'slam', 'zap', 'boom', 'summon', 'clear', 'defeat', 'ui'];
 
 /** 한 효과음을 이루는 소리 조각 (여러 조각을 겹쳐 하나의 효과음을 만든다) */
 export interface SfxPart {
@@ -243,6 +244,17 @@ export const SFX: Record<SfxName, SfxDef> = {
     reverb: 0.5,
   },
   // 메뉴 클릭: 짧은 톡
+  // 감전: 지직거리는 높은 소음 + 떨리는 사각파
+  zap: {
+    parts: [
+      { wave: 'noise', freq: 0, duration: 0.22, gain: 0.35, filter: 4200, filterType: 'bandpass', distortion: 0.7 },
+      { wave: 'square', freq: 1800, freqEnd: 900, duration: 0.18, gain: 0.12, filter: 5000, distortion: 0.5 },
+      { wave: 'sawtooth', freq: 240, freqEnd: 160, duration: 0.12, gain: 0.1, filter: 1200 },
+    ],
+    reverb: 0.15,
+    pitchJitter: 3,
+    gainJitter: 0.2,
+  },
   ui: {
     parts: [
       { wave: 'sine', freq: 700, duration: 0.05, gain: 0.12 },

@@ -13,7 +13,7 @@ import type { ProjectileSystem } from './Projectile';
 /**
  * 플레이어의 공격 처리
  * - 근접: 공격 입력 → 마우스 방향으로 몸을 돌림 → 부채꼴 안의 적에게 피해와 밀침 → 효과 표시
- *   연달아 누르면 콤보(GameConfig.combat.melee.combo): 1단 가로 베기 → 2단 되돌려 베기 → 3단 회전 마무리
+ *   연달아 누르면 콤보(GameConfig.combat.melee.combo): 가로 → 되돌려 → 가로 → 올려 → 5단 회전 마무리(맞은 적 감전)
  * - 원거리: 발사 입력 → 마우스 방향으로 에너지 탄 발사 (명중 처리는 ProjectileSystem 이 콜백으로 알려줌)
  * - 공격 수치는 GameConfig.combat 에서 읽는다.
  * - 적 목록과 조준 지점은 함수로 받아서 다른 시스템을 직접 알지 않는다.
@@ -31,7 +31,11 @@ export class CombatSystem {
   /** 콤보를 이어갈 수 있는 남은 시간(초). 쿨다운이 끝난 뒤부터 줄어든다 */
   private comboTimer = 0;
   /** 휘두르는 중 아직 판정하지 않은 타격 (동작의 타격 시점에 맞춰 적용) */
-  private pendingHit: { time: number; damage: number; range: number; arcDegrees: number; knockback: number } | null = null;
+  private pendingHit: { time: number; damage: number; range: number; arcDegrees: number; knockback: number; finisher: boolean } | null = null;
+  /** 마무리에 맞아 감전된 적 알림 (효과음·진동용) */
+  onShock: ((enemy: Enemy) => void) | null = null;
+  /** 감전시킨 횟수 (검증용) */
+  shocks = 0;
   /** 공격을 시작할 때 알림 (효과음용). step 은 근접 콤보 단계(0부터), finisher 는 마무리 단계인지 */
   onAttack: ((kind: 'melee' | 'ranged', step: number, finisher: boolean) => void) | null = null;
   private readonly tmp = new THREE.Vector3();
@@ -99,7 +103,7 @@ export class CombatSystem {
       if (this.pendingHit.time <= 0) {
         const h = this.pendingHit;
         this.pendingHit = null;
-        this.applyMeleeHit(h.damage, h.range, h.arcDegrees, h.knockback);
+        this.applyMeleeHit(h.damage, h.range, h.arcDegrees, h.knockback, h.finisher);
       }
     }
 
@@ -160,7 +164,7 @@ export class CombatSystem {
     this.faceAim();
     const pos = this.player.position;
     const range = cfg.range * step.rangeMul;
-    this.player.triggerAttack(step.swingTime, 'melee', index);
+    this.player.triggerAttack(step.swingTime, 'melee', index, sweepSign(step));
     const color = new THREE.Color(step.color).getHex();
     this.effects.swing(pos, this.player.facing, range, step.arcDegrees, step.swingTime, finisher ? color : 0x5cf2d8);
     this.effects.slash(pos, this.player.facing, range, step.arcDegrees, step.swingTime * 1.3, color, sweepSign(step));
@@ -173,12 +177,12 @@ export class CombatSystem {
 
     const damage = Math.round((cfg.damage + this.getWeaponAttack('melee')) * step.damageMul * this.getDamageMultiplier());
     const delay = step.swingTime * cfg.hitFraction;
-    if (delay <= 0) this.applyMeleeHit(damage, range, step.arcDegrees, cfg.knockback * step.knockbackMul);
-    else this.pendingHit = { time: delay, damage, range, arcDegrees: step.arcDegrees, knockback: cfg.knockback * step.knockbackMul };
+    if (delay <= 0) this.applyMeleeHit(damage, range, step.arcDegrees, cfg.knockback * step.knockbackMul, finisher);
+    else this.pendingHit = { time: delay, damage, range, arcDegrees: step.arcDegrees, knockback: cfg.knockback * step.knockbackMul, finisher };
   }
 
-  /** 부채꼴 안의 살아 있는 적에게 피해·밀침 */
-  private applyMeleeHit(damage: number, range: number, arcDegrees: number, knockback: number): void {
+  /** 부채꼴 안의 살아 있는 적에게 피해·밀침. 마무리(finisher)에 맞은 적은 감전된다(번개 효과 + 멈춤 + 추가 피해) */
+  private applyMeleeHit(damage: number, range: number, arcDegrees: number, knockback: number, finisher = false): void {
     const pos = this.player.position;
     const origin: Vec2 = { x: pos.x, z: pos.z };
     for (const enemy of this.getEnemies()) {
@@ -186,8 +190,22 @@ export class CombatSystem {
       const ep = enemy.position;
       if (!isInMeleeArc(origin, this.player.facing, { x: ep.x, z: ep.z }, enemy.radius, range, arcDegrees)) continue;
       const len = Math.hypot(ep.x - pos.x, ep.z - pos.z) || 1;
-      this.damageEnemy(enemy, damage, { x: (ep.x - pos.x) / len, z: (ep.z - pos.z) / len }, knockback);
+      if (!this.damageEnemy(enemy, damage, { x: (ep.x - pos.x) / len, z: (ep.z - pos.z) / len }, knockback)) continue;
+      if (finisher && enemy.alive) this.shockEnemy(enemy, damage);
     }
+  }
+
+  /** 감전: 설정(combat.melee.combo.shock)만큼 멈추고 초당 추가 피해, 번개 연출(juice.shock) */
+  private shockEnemy(enemy: Enemy, finisherDamage: number): void {
+    const cfg = GameConfig.combat.melee.combo.shock;
+    const fx = GameConfig.juice.shock;
+    enemy.shock(cfg.stun, finisherDamage * cfg.tickDamageRatio);
+    const ep = enemy.position;
+    this.tmp.set(ep.x, 0.05, ep.z);
+    const height = Math.max(1.2, enemy.radius * 2.6);
+    this.effects.lightning(this.tmp, enemy.radius * 1.4, height, fx.bolts, fx.duration, new THREE.Color(fx.color));
+    this.shocks++;
+    this.onShock?.(enemy);
   }
 
   /** 원거리 공격: 장착한 무기의 방식대로(탄 수·퍼짐·속도·크기·관통) 총구 섬광과 함께 쏜다. 명중 연출은 Game 이 ProjectileSystem 콜백으로 */

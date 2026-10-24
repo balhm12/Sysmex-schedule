@@ -217,7 +217,8 @@ export function buildPartRig(root: THREE.Object3D): PartRig | null {
       } else if (s.attack !== null) {
         const a = s.attack;
         const step = s.attackStep ?? 0;
-        if (step >= 2) {
+        const sweep = s.attackSweep ?? (step === 1 ? -1 : step >= 2 ? 0 : 1);
+        if (sweep === 0) {
           // 회전 베기: 검을 옆으로 뻗고 한 바퀴. 처음 15%는 웅크리며 준비
           const k = ease(Math.max(0, (a - 0.15) / 0.85));
           sword = lerp(-0.4, -1.5, Math.min(1, a / 0.15));
@@ -227,7 +228,7 @@ export function buildPartRig(root: THREE.Object3D): PartRig | null {
           other = -0.9;
           bob -= 0.05 * Math.sin(a * Math.PI);
         } else {
-          const dirSign = step === 1 ? -1 : 1;
+          const dirSign = sweep;
           // 뒤로 당김은 아주 짧게(12%) — 누른 즉시 검이 나가는 느낌
           if (a < 0.12) {
             sword = lerp(0, -2.2, ease(a / 0.12));

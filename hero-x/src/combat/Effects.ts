@@ -19,6 +19,14 @@ export class Effects {
   private readonly pillars: Array<{ mesh: THREE.Mesh; life: number; max: number; height: number }> = [];
   private readonly particles: Array<{ mesh: THREE.Mesh; v: THREE.Vector3; life: number; max: number }> = [];
   private readonly particleGeo = new THREE.BoxGeometry(0.16, 0.16, 0.16);
+  /**
+   * 번개: 적 둘레에서 지그재그로 튀는 가닥 여러 개. 매 프레임 꺾이는 점을 새로 뽑아 '지직' 거린다.
+   * WebGL 선은 1픽셀이라 안 보이므로 마디마다 가는 상자 메시(발광)로 그린다 (가닥 하나 = 마디 BOLT_POINTS-1 개)
+   */
+  private readonly bolts: Array<{ group: THREE.Group; segs: THREE.Mesh[]; life: number; max: number; center: THREE.Vector3; radius: number; height: number; seed: number; pts: THREE.Vector3[] }> = [];
+  private readonly boltGeo = new THREE.BoxGeometry(1, 1, 1);
+  private static readonly BOLT_POINTS = 8;
+  private static readonly BOLT_WIDTH = 0.07;
 
   constructor(scene: THREE.Scene, particleCount = 120) {
     this.root.name = 'Effects';
@@ -121,11 +129,66 @@ export class Effects {
     this.flashes.push({ mesh, life: duration, max: duration, radius });
   }
 
+  /**
+   * 감전 번개: center(적 발밑) 둘레 radius 안에서 height 높이까지 지그재그 선 count 가닥이 duration 초 동안 튄다.
+   * 가운데에 짧은 섬광도 함께 낸다.
+   */
+  lightning(center: THREE.Vector3, radius: number, height: number, count: number, duration: number, color: THREE.ColorRepresentation): void {
+    if (count <= 0 || duration <= 0) return;
+    for (let i = 0; i < count; i++) {
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending });
+      const group = new THREE.Group();
+      const segs: THREE.Mesh[] = [];
+      const pts: THREE.Vector3[] = [];
+      for (let k = 0; k < Effects.BOLT_POINTS; k++) pts.push(new THREE.Vector3());
+      for (let k = 0; k < Effects.BOLT_POINTS - 1; k++) {
+        const m = new THREE.Mesh(this.boltGeo, mat);
+        m.frustumCulled = false;
+        group.add(m);
+        segs.push(m);
+      }
+      this.root.add(group);
+      const b = { group, segs, life: duration, max: duration, center: center.clone(), radius, height, seed: Math.random() * 1000, pts };
+      this.rebuildBolt(b, 0);
+      this.bolts.push(b);
+    }
+    this.flash(new THREE.Vector3(center.x, center.y + height * 0.5, center.z), radius * 0.9, Math.min(0.2, duration), color);
+  }
+
+  /** 번개 한 가닥의 꺾이는 점을 새로 뽑고(위에서 아래로 내려오며 좌우로 튄다) 마디 상자를 점 사이에 맞춘다 */
+  private rebuildBolt(b: { segs: THREE.Mesh[]; pts: THREE.Vector3[]; center: THREE.Vector3; radius: number; height: number; seed: number }, t: number): void {
+    const n = Effects.BOLT_POINTS;
+    const a0 = b.seed + t * 7;
+    const r = b.radius;
+    for (let i = 0; i < n; i++) {
+      const k = i / (n - 1);
+      const ang = a0 + (Math.random() - 0.5) * 2.5;
+      const rr = r * (0.3 + Math.random() * 0.9);
+      const y = b.center.y + b.height * (1 - k) + (Math.random() - 0.5) * 0.15;
+      b.pts[i].set(b.center.x + Math.cos(ang) * rr, Math.max(0.05, y), b.center.z + Math.sin(ang) * rr);
+    }
+    const w = Effects.BOLT_WIDTH;
+    for (let i = 0; i < n - 1; i++) {
+      const a = b.pts[i];
+      const c = b.pts[i + 1];
+      const m = b.segs[i];
+      m.position.copy(a).add(c).multiplyScalar(0.5);
+      const len = a.distanceTo(c);
+      m.scale.set(w, w, Math.max(0.01, len));
+      m.lookAt(c);
+    }
+  }
+
   /** 지금 화면에 살아 있는 효과 수 (디버그·검증용) */
   get activeCount(): number {
     let particles = 0;
     for (const p of this.particles) if (p.life > 0) particles++;
-    return this.swings.length + this.slashes.length + this.pillars.length + this.flashes.length + particles;
+    return this.swings.length + this.slashes.length + this.pillars.length + this.flashes.length + this.bolts.length + particles;
+  }
+
+  /** 살아 있는 번개 가닥 수 (검증용) */
+  get boltCount(): number {
+    return this.bolts.length;
   }
 
   /** 파편 터뜨리기 (타격: 적게, 처치: 많이) */
@@ -211,6 +274,19 @@ export class Effects {
         this.pillars.splice(i, 1);
       }
     }
+    for (let i = this.bolts.length - 1; i >= 0; i--) {
+      const b = this.bolts[i];
+      b.life -= dt;
+      const k = Math.max(0, b.life / b.max);
+      this.rebuildBolt(b, b.max - b.life);
+      // 깜빡이며 끝으로 갈수록 옅어진다 (마디들이 재질을 공유한다)
+      (b.segs[0].material as THREE.MeshBasicMaterial).opacity = (0.5 + 0.5 * Math.random()) * Math.min(1, k * 1.5);
+      if (b.life <= 0) {
+        this.root.remove(b.group);
+        (b.segs[0].material as THREE.Material).dispose();
+        this.bolts.splice(i, 1);
+      }
+    }
     for (const p of this.particles) {
       if (p.life <= 0) continue;
       p.life -= dt;
@@ -235,6 +311,9 @@ export class Effects {
     this.flashGeo.dispose();
     for (const f of this.flashes) (f.mesh.material as THREE.Material).dispose();
     this.flashes.length = 0;
+    for (const b of this.bolts) (b.segs[0].material as THREE.Material).dispose();
+    this.bolts.length = 0;
+    this.boltGeo.dispose();
     this.particles.forEach((p) => (p.mesh.material as THREE.Material).dispose());
     for (const list of [this.swings, this.slashes, this.pillars] as Array<Array<{ mesh: THREE.Mesh }>>) {
       for (const s of list) {

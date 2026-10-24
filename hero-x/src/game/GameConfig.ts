@@ -258,6 +258,8 @@ export interface GameConfigType {
       combo: {
         window: number;
         steps: ComboStepConfig[];
+        /** 마무리 단계에 맞은 적의 감전: stun 멈춤(초), 보스는 bossMul 배, tickDamageRatio 는 감전 중 초당 추가 피해(마무리 피해 대비) */
+        shock: { stun: number; bossMul: number; tickDamageRatio: number };
       };
     };
 
@@ -481,6 +483,8 @@ export interface GameConfigType {
     ranged: { muzzleRadius: number; muzzleTime: number; trailLength: number; impactRadius: number; impactTime: number; impactRing: number };
     /** 콤보 마무리 연출: 충격파 반지름 배율(사거리 기준)·짧은 멈춤(초) */
     comboFinish: { shockMul: number; hitStop: number };
+    /** 감전 연출(마무리에 맞은 적): 번개 가닥 수, 번개가 보이는 시간(초), 색 */
+    shock: { bolts: number; duration: number; color: string };
     /** 다음 목표 구역(적이 나타나는 자리) 바닥 표시: 반지름, 기본 투명도(0~1, 낮을수록 옅음), 낮은 기둥 높이, 색 */
     beacon: { radius: number; opacity: number; height: number; color: string };
     /** 플레이어 발밑 위치 고리: 반지름, 투명도, 색 (opacity 0 이면 안 보임) */
@@ -508,7 +512,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.30.0', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.31.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -556,13 +560,19 @@ export const GameConfig: GameConfigType = {
       combo: {
         window: 0.55,
         steps: [
-          // 1단계: 오른쪽에서 왼쪽으로 가로 베기 (기본)
+          // 1단: 오른쪽에서 왼쪽으로 가로 베기 (기본)
           { damageMul: 1, rangeMul: 1, arcDegrees: 110, swingTime: 0.22, cooldownMul: 1, knockbackMul: 1, sweep: 'right', color: '#bffcf2' },
-          // 2단계: 되돌려 베기 — 조금 빠르고 넓다
-          { damageMul: 1.15, rangeMul: 1.05, arcDegrees: 130, swingTime: 0.2, cooldownMul: 0.9, knockbackMul: 1.1, sweep: 'left', color: '#7df2ff' },
-          // 3단계(마무리): 제자리 회전 베기 — 사방을 치고 세게 밀어내며, 뒤에 빈틈이 있다
-          { damageMul: 1.6, rangeMul: 1.2, arcDegrees: 360, swingTime: 0.34, cooldownMul: 1.7, knockbackMul: 1.8, sweep: 'spin', color: '#ffd23f' },
+          // 2단: 되돌려 베기 — 조금 빠르고 넓다
+          { damageMul: 1.1, rangeMul: 1.05, arcDegrees: 130, swingTime: 0.2, cooldownMul: 0.9, knockbackMul: 1.05, sweep: 'left', color: '#7df2ff' },
+          // 3단: 빠른 가로 베기
+          { damageMul: 1.2, rangeMul: 1.05, arcDegrees: 120, swingTime: 0.18, cooldownMul: 0.85, knockbackMul: 1.1, sweep: 'right', color: '#7df2ff' },
+          // 4단: 올려 베기(되돌림) — 전기가 모이기 시작하는 색
+          { damageMul: 1.3, rangeMul: 1.1, arcDegrees: 140, swingTime: 0.2, cooldownMul: 0.9, knockbackMul: 1.2, sweep: 'left', color: '#9ff3ff' },
+          // 5단(마무리): 제자리 회전 베기 — 사방을 치고 세게 밀어내며 맞은 적을 감전시킨다. 뒤에 빈틈이 있다
+          { damageMul: 1.8, rangeMul: 1.2, arcDegrees: 360, swingTime: 0.34, cooldownMul: 1.7, knockbackMul: 1.8, sweep: 'spin', color: '#ffe066' },
         ],
+        // 마무리(마지막 단계)에 맞은 적의 감전: 멈춤 시간(초, 보스는 bossMul 배), 감전 중 초당 추가 피해(마무리 피해의 비율)
+        shock: { stun: 0.7, bossMul: 0.3, tickDamageRatio: 0.25 },
       },
     },
     ranged: {
@@ -577,16 +587,23 @@ export const GameConfig: GameConfigType = {
     weaponStyles: {
       // ---- 근접 ----
       sword: {
-        label: '3단 베기',
-        description: '가로 베기 → 되돌려 베기 → 회전 베기. 균형 잡힌 기본 검술.',
+        label: '5단 베기',
+        description: '가로 → 되돌려 → 가로 → 올려 베기 → 회전 베기. 마무리에 맞은 적은 감전된다.',
         look: 'sword',
         melee: {
           window: 0.55,
           cooldownMul: 1,
           steps: [
+            // 1단: 오른쪽에서 왼쪽으로 가로 베기 (기본)
             { damageMul: 1, rangeMul: 1, arcDegrees: 110, swingTime: 0.22, cooldownMul: 1, knockbackMul: 1, sweep: 'right', color: '#bffcf2' },
-            { damageMul: 1.15, rangeMul: 1.05, arcDegrees: 130, swingTime: 0.2, cooldownMul: 0.9, knockbackMul: 1.1, sweep: 'left', color: '#7df2ff' },
-            { damageMul: 1.6, rangeMul: 1.2, arcDegrees: 360, swingTime: 0.34, cooldownMul: 1.7, knockbackMul: 1.8, sweep: 'spin', color: '#ffd23f' },
+            // 2단: 되돌려 베기 — 조금 빠르고 넓다
+            { damageMul: 1.1, rangeMul: 1.05, arcDegrees: 130, swingTime: 0.2, cooldownMul: 0.9, knockbackMul: 1.05, sweep: 'left', color: '#7df2ff' },
+            // 3단: 빠른 가로 베기
+            { damageMul: 1.2, rangeMul: 1.05, arcDegrees: 120, swingTime: 0.18, cooldownMul: 0.85, knockbackMul: 1.1, sweep: 'right', color: '#7df2ff' },
+            // 4단: 올려 베기(되돌림) — 전기가 모이기 시작하는 색
+            { damageMul: 1.3, rangeMul: 1.1, arcDegrees: 140, swingTime: 0.2, cooldownMul: 0.9, knockbackMul: 1.2, sweep: 'left', color: '#9ff3ff' },
+            // 5단(마무리): 제자리 회전 베기 — 사방을 치고 세게 밀어내며 맞은 적을 감전시킨다. 뒤에 빈틈이 있다
+            { damageMul: 1.8, rangeMul: 1.2, arcDegrees: 360, swingTime: 0.34, cooldownMul: 1.7, knockbackMul: 1.8, sweep: 'spin', color: '#ffe066' },
           ],
         },
       },
@@ -998,6 +1015,7 @@ export const GameConfig: GameConfigType = {
     bossEntrance: { shockRadius: 9, pillarHeight: 14, duration: 1.6, slowMo: 0.3 },
     ranged: { muzzleRadius: 0.55, muzzleTime: 0.18, trailLength: 2.2, impactRadius: 0.7, impactTime: 0.25, impactRing: 1.1 },
     comboFinish: { shockMul: 1.1, hitStop: 0.05 },
+    shock: { bolts: 4, duration: 0.8, color: '#9ff3ff' },
     beacon: { radius: 3.2, opacity: 0.14, height: 3.5, color: '#5cf2d8' },
     playerRing: { radius: 0.62, opacity: 0.45, color: '#bffcf2' },
   },
@@ -1065,6 +1083,11 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'juice.ranged.impactRing': { min: 0, max: 10 },
   'juice.comboFinish.shockMul': { min: 0, max: 5 },
   'juice.comboFinish.hitStop': { min: 0, max: 0.5 },
+  'juice.shock.bolts': { min: 0, max: 16 },
+  'juice.shock.duration': { min: 0.05, max: 5 },
+  'combat.melee.combo.shock.stun': { min: 0, max: 5 },
+  'combat.melee.combo.shock.bossMul': { min: 0, max: 1 },
+  'combat.melee.combo.shock.tickDamageRatio': { min: 0, max: 5 },
   'juice.beacon.radius': { min: 0.5, max: 20 },
   'juice.beacon.opacity': { min: 0, max: 0.5 },
   'juice.beacon.height': { min: 0, max: 40 },

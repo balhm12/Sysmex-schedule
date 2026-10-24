@@ -2,6 +2,23 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.31.0 · 머리카락 정리 · 5연격 콤보 · 마무리 감전(번개)
+
+### 변경 내용
+- **머리카락 정리** `HeroModel.ts`: 사방으로 삐죽 뻗던 가닥(46개, 길이 최대 0.32)을 머리를 따라 눕는 짧은 결(22개, 0.1~0.19)로 바꾸고 모자 부분을 조금 키웠다. 앞머리도 짧고 덜 벌어지게, 정수리 삐침은 작은 두 가닥만.
+- **5연격 콤보**: `combat.melee.combo.steps` 와 `weaponStyles.sword`(라벨 '5단 베기')가 5단계 — 가로(1×) → 되돌려(1.1×) → 빠른 가로(1.2×) → 올려 베기(1.3×) → 회전 마무리(1.8×, 360°). HUD 는 `2연격`…`4연격`, `마무리!`. 베기 방향은 `PlayerModelState.attackSweep`(1/-1/0)으로 모델에 전달되어 단계 수와 상관없이 동작이 맞는다(창 4단·망치 2단도 이제 설정한 방향대로).
+- **마무리 감전**: 5단에 맞은 적은 `Enemy.shock` 으로 0.7초(보스 0.3배) 멈추고 마무리 피해의 25%/초 추가 피해를 받는다(`combat.melee.combo.shock`). `Effects.lightning` 이 적 둘레에 지그재그 번개 4가닥(마디 상자 메시, 매 프레임 새로 꺾임)을 0.8초 띄우고 섬광을 낸다(`juice.shock`). 새 효과음 `zap`(지직) + 진동 25ms.
+
+### 수정 파일
+`src/player/models/HeroModel.ts`, `src/player/{Player.ts,models/PlaceholderModel.ts,models/heroAnimator.ts}`, `src/assets/PartRig.ts`, `src/combat/{CombatSystem.ts,Effects.ts}`, `src/enemies/{Enemy.ts,Boss.ts}`, `src/audio/soundDefs.ts`, `src/game/{Game.ts,GameConfig.ts}`, `tests/shock.test.ts`(새), `tests/combo.test.ts`, `package.json`, `CHANGELOG.md`, `CLAUDE.md`, `GAME_GUIDE.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 254개·빌드). 새 테스트: 번개 가닥 수·수명, 감전 중 이동 정지·해제 후 추적 재개, 초당 추가 피해 누적, 죽은 적 감전 안 됨, 보스 감전 시간 bossMul 배.
+- Playwright `smoke45`: 연타로 0→1→2→3→4 단계와 HUD '마무리!', 마무리 명중 시 감전 1회·감전 중 적 1·번개 4가닥, 감전 중 추가 피해 3, 감전·번개 해제, 5연격 총 피해 80(기대 77 + 추가), 오디오 동작, 페이지 오류 0. `shots46` 정면·옆·뒤 근접 화면으로 머리카락 확인.
+
+### 알려진 문제
+- 번개는 적 발밑 기준 고정 높이(반지름×2.6)라 아주 큰 보스는 몸 아래쪽에만 보인다.
+
 ## 2026-10-24 · v1.30.0 · 목표 표시를 바닥 원으로, 플레이어 발밑 위치 고리
 
 ### 변경 내용

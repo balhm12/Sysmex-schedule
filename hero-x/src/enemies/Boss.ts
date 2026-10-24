@@ -75,11 +75,21 @@ export class Boss extends Enemy {
     /* 패턴 유지 */
   }
 
+  /** 보스는 감전이 짧다 */
+  protected override shockDurationMul(): number {
+    return GameConfig.combat.melee.combo.shock.bossMul;
+  }
+
   override update(dt: number, ctx: EnemyContext): void {
     const bctx = ctx as BossContext;
     if (this.health.isDead) {
       this.deathTimer += dt;
       this.model.update(dt, { state: 'dead', moving: false, windup: 0, death: Math.min(1, this.deathTimer / Math.max(0.01, GameConfig.enemies.deathDuration)) });
+      return;
+    }
+    // 감전 중에는 패턴이 잠시 멈춘다 (bossMul 로 짧게)
+    if (this.tickShock(dt, ctx)) {
+      this.model.update(dt, { state: 'hurt', moving: false, windup: 0, death: 0 });
       return;
     }
     const b = this.cfg;

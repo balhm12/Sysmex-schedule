@@ -11,8 +11,10 @@ export interface PlayerModelState {
   attack: number | null;
   /** 공격 종류: 근접(베기) / 원거리(쏘기). 없으면 근접 */
   attackKind?: 'melee' | 'ranged';
-  /** 근접 콤보 단계(0부터): 0 가로 베기, 1 되돌려 베기, 2 이상 회전 베기 */
+  /** 근접 콤보 단계(0부터) */
   attackStep?: number;
+  /** 이번 베기의 방향: 1 오른→왼, -1 왼→오른, 0 회전 베기. 없으면 단계로 추정(0 오른, 1 왼, 2 이상 회전) */
+  attackSweep?: 1 | -1 | 0;
   /** 이번 공격 동작의 전체 시간(초). 클립 속도를 맞출 때 쓴다 */
   attackDuration?: number;
   /** 몸을 돌리는 속도(rad/s, 왼쪽 +). 방향 전환 때 몸을 기울이는 데 쓴다 */

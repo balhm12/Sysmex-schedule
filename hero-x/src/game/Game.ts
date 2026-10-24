@@ -127,6 +127,10 @@ export interface GameDebugState {
   attacks: number;
   /** 마지막으로 나간 근접 콤보 단계(0부터). 콤보가 끊겼으면 -1 */
   combo: number;
+  /** 감전시킨 횟수·지금 감전 중인 적 수·화면의 번개 가닥 수 */
+  shocks: number;
+  shockedEnemies: number;
+  bolts: number;
   /** 화면에 살아 있는 전투 효과 수 */
   effects: number;
   inventoryVisible: boolean;
@@ -362,6 +366,11 @@ export class Game {
         this.cameraCtrl.shake(GameConfig.juice.hitShake.amp * 0.6, 0.2);
       }
       if (kind === 'melee') this.hud.showCombo(step, meleeComboFor(weaponStyleFor('melee', this.equipment.equipped.melee)).steps.length);
+    };
+    // 콤보 마무리에 맞은 적의 감전: 지직 소리 + 짧은 진동
+    this.combat.onShock = () => {
+      this.audio.play('zap', 0.08);
+      if (this.settings.haptics) vibrate(25);
     };
     this.loot = new LootSystem(this.scene);
 
@@ -1356,6 +1365,9 @@ export class Game {
       chestPositions: this.dungeonDef.chests.map((c) => ({ x: c.x, z: c.z })),
       attacks: this.combat.attacks,
       combo: this.combat.comboStep,
+      shocks: this.combat.shocks,
+      shockedEnemies: this.spawner.getEnemies().filter((e) => e.shocked).length,
+      bolts: this.effects.boltCount,
       effects: this.effects.activeCount,
       inventoryVisible: this.inventoryUI.visible,
       chests: { opened: this.chests.openedCount, total: this.chests.total, nearby: this.chests.nearest({ x: this.player.position.x, z: this.player.position.z }) !== null },
@@ -1771,6 +1783,10 @@ export class Game {
       playerPos: { x: p.x, z: p.z },
       world: this.dungeon,
       onAttackPlayer: (enemy, damage) => this.onEnemyAttack(enemy, damage),
+      // 감전 추가 피해: 밀침 없이 피해만 (처치·숫자 표시는 damageEnemy 가 처리)
+      onShockDamage: (enemy, damage) => {
+        if (!this.ended) this.combat.damageEnemy(enemy, damage, { x: 0, z: 0 }, 0);
+      },
       onBossAttack: (boss: Boss, attack: BossAttack) => this.onBossAttack(boss, attack),
       playerRadius: GameConfig.player.radius,
     });

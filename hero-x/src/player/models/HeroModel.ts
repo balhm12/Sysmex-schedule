@@ -201,15 +201,15 @@ export function createHeroModel(colors: PlaceholderColors): PlayerModel {
   add(face, sphere(0.03, 10, 8), M.skinDark, 0, -0.085, 0.41); // 코
   add(face, ring(0.055, 0.012, Math.PI), M.mouth, 0, -0.17, 0.39).rotation.z = Math.PI; // 미소
   // 머리카락: 모자(윗부분·뒷부분) 위에 뾰족한 가닥을 겹쳐 결을 만든다
-  const cap = add(head, new THREE.SphereGeometry(R + 0.035, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.6), M.hair, 0, HY + 0.02, -0.03);
+  const cap = add(head, new THREE.SphereGeometry(R + 0.045, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.62), M.hair, 0, HY + 0.02, -0.03);
   cap.rotation.x = -0.2;
   blob(head, R + 0.015, 1, 0.9, 0.78, M.hairDark, 0, HY - 0.08, -0.13); // 뒷머리 덩어리
   for (const sx of [-1, 1]) blob(head, 0.12, 0.5, 1.3, 1.0, M.hair, sx * (R + 0.02), HY + 0.0, -0.05); // 옆머리
   const rng = (seed: number) => { let s = seed; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; };
   const rand = rng(23);
   const hairMat = () => (rand() < 0.22 ? M.hairLight : rand() < 0.3 ? M.hairDark : M.hair);
-  // 정수리·옆·뒤: 구면 위 점에서 바깥+위쪽으로 뻗는 가닥 (뒤로 갈수록 아래로 눕는다)
-  for (let i = 0; i < 46; i++) {
+  // 정수리·옆·뒤: 구면 위 점에서 머리를 따라 눕는 짧은 가닥 (결만 보이게, 삐죽하지 않게)
+  for (let i = 0; i < 22; i++) {
     const th = rand() * Math.PI * 2; // 둘레 각 (0 = +X)
     const ph = 0.12 + rand() * 0.95; // 0 = 정수리, 클수록 옆
     const rr = R + 0.01;
@@ -219,11 +219,12 @@ export function createHeroModel(colors: PlaceholderColors): PlayerModel {
     const normal = new THREE.Vector3(px, py, pz + 0.03).normalize();
     const front = pz > 0.15; // 앞쪽은 앞머리가 맡는다 → 짧게
     const up = new THREE.Vector3(0, 1, 0);
-    const swirl = new THREE.Vector3(-Math.sin(th), 0, Math.cos(th)).multiplyScalar(0.35);
-    const dir = normal.clone().multiplyScalar(0.9).add(up.multiplyScalar(0.55)).add(swirl);
-    if (pz < -0.1) dir.y -= 0.6; // 뒷머리는 아래로
-    const len = front ? 0.14 + rand() * 0.08 : 0.18 + rand() * 0.14;
-    strand(head, px, HY + 0.02 + py - 0.02, pz, dir, len, 0.055 + rand() * 0.03, hairMat());
+    const swirl = new THREE.Vector3(-Math.sin(th), 0, Math.cos(th)).multiplyScalar(0.7);
+    // 바깥쪽 성분은 작게, 둘레 방향(swirl)으로 눕혀서 머리에 붙은 결처럼
+    const dir = normal.clone().multiplyScalar(0.35).add(up.multiplyScalar(0.2)).add(swirl);
+    if (pz < -0.1) dir.y -= 0.5; // 뒷머리는 아래로
+    const len = front ? 0.1 + rand() * 0.05 : 0.12 + rand() * 0.07;
+    strand(head, px, HY + 0.02 + py - 0.02, pz, dir, len, 0.065 + rand() * 0.03, hairMat());
   }
   // 앞머리: 이마 위에서 아래·옆으로 흐르는 가닥 (가운데 가르마, 길이 제각각)
   const fringe = [-62, -50, -38, -27, -16, -6, 5, 15, 26, 37, 49, 60];
@@ -233,14 +234,13 @@ export function createHeroModel(colors: PlaceholderColors): PlayerModel {
     const px = Math.sin(a) * rr;
     const pz = Math.cos(a) * rr - 0.02;
     const side = Math.sign(deg) || 1;
-    const len = 0.2 + 0.1 * Math.abs(Math.sin(i * 1.9)) + rand() * 0.05;
-    const dir = new THREE.Vector3(Math.sin(a) * 0.5 + side * 0.25, -1, Math.cos(a) * 0.45);
-    strand(head, px, HY + 0.3, pz, dir, len, 0.06, i % 5 === 1 ? M.hairDark : i % 4 === 3 ? M.hairLight : M.hair);
+    const len = 0.16 + 0.05 * Math.abs(Math.sin(i * 1.9)) + rand() * 0.03;
+    const dir = new THREE.Vector3(Math.sin(a) * 0.4 + side * 0.15, -1, Math.cos(a) * 0.3);
+    strand(head, px, HY + 0.3, pz, dir, len, 0.065, i % 5 === 1 ? M.hairDark : i % 4 === 3 ? M.hairLight : M.hair);
   });
-  // 정수리 삐침 세 가닥
-  strand(head, -0.08, HY + R + 0.0, -0.02, new THREE.Vector3(-0.35, 1, 0.1), 0.3, 0.06, M.hairLight);
-  strand(head, 0.1, HY + R - 0.01, 0.04, new THREE.Vector3(0.3, 1, 0.25), 0.26, 0.055, M.hair);
-  strand(head, 0.02, HY + R - 0.02, -0.12, new THREE.Vector3(0.05, 1, -0.4), 0.24, 0.05, M.hairDark);
+  // 정수리 삐침: 작은 가닥 둘만 (귀여운 포인트)
+  strand(head, -0.06, HY + R + 0.02, -0.02, new THREE.Vector3(-0.5, 1, 0.15), 0.17, 0.055, M.hairLight);
+  strand(head, 0.08, HY + R + 0.01, 0.02, new THREE.Vector3(0.45, 0.9, 0.3), 0.14, 0.05, M.hair);
   // 얼굴 사진(설정에서 넣은 경우): 얼굴 앞 구면 조각에 텍스처
   const faceMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 1 });
   const facePlane = new THREE.Mesh(new THREE.SphereGeometry(R + 0.005, 24, 18, Math.PI * 0.22, Math.PI * 0.56, Math.PI * 0.22, Math.PI * 0.56), faceMat);

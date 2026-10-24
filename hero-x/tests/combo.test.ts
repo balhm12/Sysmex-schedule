@@ -36,7 +36,9 @@ describe('콤보 설정(GameConfig.combat.melee.combo)', () => {
   const combo = GameConfig.combat.melee.combo;
 
   it('2단계 이상이고 첫 단계는 기본 베기(배율 1)', () => {
-    expect(combo.steps.length).toBeGreaterThanOrEqual(2);
+    expect(combo.steps.length).toBe(5); // 5연격 (v1.31.0)
+    expect(combo.shock.stun).toBeGreaterThan(0);
+    expect(combo.shock.bossMul).toBeLessThanOrEqual(1);
     expect(combo.steps[0].damageMul).toBe(1);
     expect(combo.steps[0].rangeMul).toBe(1);
     expect(combo.steps[0].arcDegrees).toBe(GameConfig.combat.melee.arcDegrees);

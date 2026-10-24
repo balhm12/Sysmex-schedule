@@ -13,6 +13,8 @@ export interface EnemyContext {
   others: Enemy[];
   /** 적이 공격을 실행했을 때 호출 (근접이면 피해, 원거리면 투사체 발사는 Game 이 결정) */
   onAttackPlayer: (enemy: Enemy, damage: number) => void;
+  /** 감전 중 추가 피해를 줄 때 호출 (피해 적용·숫자 표시는 Game 이 맡는다) */
+  onShockDamage?: (enemy: Enemy, damage: number) => void;
 }
 
 /**
@@ -34,6 +36,11 @@ export class Enemy {
   protected facing = 0;
   protected readonly knock: Vec2 = { x: 0, z: 0 };
   protected deathTimer = 0;
+  /** 감전(콤보 마무리에 맞음) 남은 시간(초). 0 보다 크면 움직이지도 공격하지도 못한다 */
+  protected shockTimer = 0;
+  /** 감전 중 초당 추가 피해 */
+  protected shockDps = 0;
+  private shockAccum = 0;
 
   constructor(
     readonly type: string,
@@ -88,6 +95,41 @@ export class Enemy {
     this.ai.onHurt();
   }
 
+  /** 감전: duration 초 동안 멈추고(보스는 짧게) 초당 dps 만큼 추가 피해. 이미 감전 중이면 긴 쪽을 쓴다 */
+  shock(duration: number, dps = 0): void {
+    if (!this.alive) return;
+    this.shockTimer = Math.max(this.shockTimer, duration * this.shockDurationMul());
+    this.shockDps = Math.max(this.shockDps, dps);
+  }
+
+  /** 감전 시간 배율 (보스가 덮어쓴다) */
+  protected shockDurationMul(): number {
+    return 1;
+  }
+
+  get shocked(): boolean {
+    return this.shockTimer > 0;
+  }
+
+  /** 감전 시간을 흘리고 초당 추가 피해를 1 단위로 모아 ctx.onShockDamage 로 준다. 감전 중이면 true */
+  protected tickShock(dt: number, ctx: EnemyContext): boolean {
+    if (this.shockTimer <= 0) return false;
+    this.shockTimer -= dt;
+    if (this.shockDps > 0) {
+      this.shockAccum += this.shockDps * dt;
+      if (this.shockAccum >= 1) {
+        const dmg = Math.floor(this.shockAccum);
+        this.shockAccum -= dmg;
+        ctx.onShockDamage?.(this, dmg);
+      }
+    }
+    if (this.shockTimer <= 0) {
+      this.shockDps = 0;
+      this.shockAccum = 0;
+    }
+    return true;
+  }
+
   update(dt: number, ctx: EnemyContext): void {
     if (this.health.isDead) {
       this.deathTimer += dt;
@@ -97,7 +139,12 @@ export class Enemy {
 
     const p = this.object3d.position;
     const self: Vec2 = { x: p.x, z: p.z };
-    const decision = this.ai.update(dt, self, ctx.playerPos, this.def);
+    let decision = this.ai.update(dt, self, ctx.playerPos, this.def);
+    // 감전 중: 제자리에서 떨기만 하고(hurt 자세) 공격·이동 없음
+    if (this.tickShock(dt, ctx)) {
+      this.ai.onHurt(0.05);
+      decision = { move: { x: 0, z: 0 }, attackNow: false, state: 'hurt' };
+    }
 
     // 이동 + 밀림
     // 우회 이동: 추적 중 앞이 울타리·장애물로 막히면 interval 마다 좌우로 꺾은 방향을 고른다 (A* 는 아님)

@@ -56,7 +56,7 @@ hero-x/
 │  │  ├─ PlayerStats.ts     레벨·경험치·골드 (최대 체력·공격력 배율 계산, 테스트 대상)
 │  │  ├─ movement.ts       이동·충돌·우회 조종(segmentBlocked/steerAround) 순수 함수 (테스트 대상)
 │  │  ├─ FaceTexture.ts    얼굴 사진 자르기·저장(localStorage)·텍스처 (cropRect 는 테스트 대상)
-│  │  ├─ models/HeroModel.ts   ★ 기본 플레이어: 매끈한 카툰 치비 아들 캐릭터(뾰족한 머리카락 가닥·네모 안경·후드 코트·가죽 장비·검, 천·가죽 질감), setFace 지원
+│  │  ├─ models/HeroModel.ts   ★ 기본 플레이어: 매끈한 카툰 치비 아들 캐릭터(둥근 머리에 눕힌 짧은 머리카락 결·네모 안경·후드 코트·가죽 장비·검, 천·가죽 질감), setFace 지원
 │  │  ├─ models/heroAnimator.ts 코드 모델 공용 관절 동작(HeroRig: 걷기·콤보·회피·점프·피격·쓰러짐)·장비 부착·정리 (테스트: heroModel.test)
 │  │  └─ models/PlaceholderModel.ts  단순 임시 모델(지금은 안 씀) + PlayerModel/PlayerModelState 인터페이스
 ├─ public/manifest.webmanifest  웹 앱 매니페스트 (앱 이름·standalone·아이콘)
@@ -107,15 +107,15 @@ hero-x/
 │  │  ├─ Health.ts         체력·무적·사망 (플레이어와 적 공용, 테스트 대상)
 │  │  ├─ melee.ts          근접 공격 부채꼴 판정 순수 함수 (테스트 대상)
 │  │  ├─ combo.ts          근접 콤보 단계 계산 (nextComboStep/sweepSign/isFinisher, 순수 함수, 테스트 대상)
-│  │  ├─ CombatSystem.ts   플레이어 근접(3단 콤보)·원거리 공격 (입력 → 조준 → 판정/발사 → 피해·효과)
+│  │  ├─ CombatSystem.ts   플레이어 근접(5단 콤보, 마무리에 맞은 적 감전 shockEnemy)·원거리 공격 (입력 → 조준 → 판정/발사 → 피해·효과)
 │  │  ├─ Projectile.ts     투사체 시스템 (플레이어·적 공용, 빛 꼬리, 장애물 충돌, 명중·소멸 콜백 onImpact)
-│  │  └─ Effects.ts        휘두르기 부채꼴·검 궤적(slash, 방향 sweep)·섬광(flash)·충격파·예고 원·빛 기둥(pillar)·파편 효과 (풀 재사용)
+│  │  └─ Effects.ts        휘두르기 부채꼴·검 궤적(slash, 방향 sweep)·섬광(flash)·충격파·예고 원·빛 기둥(pillar)·번개(lightning, 감전)·파편 효과 (풀 재사용)
 │  ├─ enemies/
 │  │  ├─ EnemyAI.ts        적 상태 기계 (idle/chase/windup/charge/hurt/dead, 근접·원거리·돌진·자폭형, 테스트 대상)
 │  │  ├─ EnemyModels.ts    EnemyModel 인터페이스 + 생성 분기(.glb → 매끈한 모델 → legacy 상자 모델)
 │  │  ├─ SmoothEnemyModels.ts ★ 매끈한 카툰 적 10종 + 로봇 외형 6종(skin 'robot-*') 코드 모델 (테스트 대상)
 │  │  ├─ SmoothBossModels.ts  ★ 매끈한 카툰 보스 4종 코드 모델 (패턴 원·2단계 눈 포함, 테스트 대상)
-│  │  ├─ Enemy.ts          적 한 마리 (능력치·체력·AI·모델 연결, 이동·충돌, 추적 중 우회 이동 steerAround). 상속 가능(protected 필드, 모델 주입)
+│  │  ├─ Enemy.ts          적 한 마리 (능력치·체력·AI·모델 연결, 이동·충돌, 추적 중 우회 이동 steerAround, 감전 shock/tickShock). 상속 가능(protected 필드, 모델 주입)
 │  │  ├─ BossAI.ts         보스 패턴 상태 기계 (chase/windup/charge/recover, 2단계 시간 배율, 테스트 대상)
 │  │  ├─ Boss.ts           보스 엔티티(Enemy 상속)·패턴 실행 콜백·보스 모델(.glb 가 있으면 decorateGltfBoss 로 패턴 원·2단계 눈 추가, 없으면 코드 모델)
 │  │  └─ EnemySpawner.ts   설정 기반 배치·갱신·정리
@@ -249,7 +249,7 @@ hero-x/
 - 근접 타격 시점: `combat.melee.hitFraction`(휘두르기 시간 비율) 뒤에 `pendingHit` → `applyMeleeHit`. 동작의 검이 앞을 지나는 순간(PartRig/heroAnimator 는 진행 35~50%)에 맞춘다. 테스트 `tests/combatTiming.test.ts`.
 - 코드 모델 동작(`heroAnimator`): `speedRatio` 0.55 부터 달리기 자세 섞임, 착지 눌림(airborne 끝 감지), `turnRate` 로 방향 전환 기울임. 수치는 함수 안 상수.
 - 공격 입력: `CombatSystem` 은 `onPress` 로 예약 플래그를 세워 쿨다운 중이나 프레임 사이의 짧은 탭도 쿨다운이 끝나는 즉시 한 번 나가게 한다. 반응 속도는 `combat.melee.cooldown`(0.34)과 `PartRig` 의 뒤로 당김 비율(12%)로 조정.
-- 근접 콤보: `combat.melee.combo.steps`(단계별 배율·각도·방향 sweep·색)와 `combo.window`(쿨다운이 끝난 뒤 이어가기 시간). `CombatSystem.comboStep/comboTimer` 가 단계를 추적하고 `combo.ts` 의 `nextComboStep` 이 다음 단계를 정한다(마무리 뒤·시간 초과면 0). 단계는 `player.triggerAttack(swingTime, 'melee', step)` → `PlayerModelState.attackStep` 으로 모델에 전달(`PartRig`: 1단 가로, 2단 반대쪽, 3단 회전 `spin`; 원거리 `attackKind: 'ranged'` 는 팔 뻗기+반동). 단계를 늘리면 `PartRig`/`PlaceholderModel` 의 `step >= 2` 분기가 그대로 회전 베기로 쓰인다. 마무리 연출은 `juice.comboFinish`, 소리는 `Game` 의 `combat.onAttack(kind, step, finisher)` 에서 `audio.play(name, gap, pitchMul)`. HUD 표시는 `hud.showCombo`. 테스트는 `getDebugState().combo`(스크래치 `smoke35.cjs`: 공격이 나간 직후 바로 다음 키를 눌러야 헤드리스에서도 이어진다).
+- 근접 콤보(5단): `combat.melee.combo.steps`(단계별 배율·각도·방향 sweep·색)와 `combo.window`(쿨다운이 끝난 뒤 이어가기 시간). `CombatSystem.comboStep/comboTimer` 가 단계를 추적하고 `combo.ts` 의 `nextComboStep` 이 다음 단계를 정한다(마무리 뒤·시간 초과면 0). 단계는 `player.triggerAttack(swingTime, 'melee', step, sweepSign(step))` → `PlayerModelState.attackStep/attackSweep` 으로 모델에 전달(`heroAnimator`/`PartRig`: sweep 1 가로, -1 반대쪽, 0 회전 `spin`; 원거리 `attackKind: 'ranged'` 는 팔 뻗기+반동). 단계 수는 steps 길이만 바꾸면 되고 동작은 각 단계의 `sweep` 을 따른다. **감전**: 마무리(마지막 단계)에 맞은 적은 `CombatSystem.shockEnemy` → `Enemy.shock(stun, dps)`(설정 `combo.shock`: `stun`, 보스 `bossMul`, `tickDamageRatio`) + `Effects.lightning`(`juice.shock`: 가닥 수·시간·색, 마디 상자 메시) + `onShock` 콜백(Game: 'zap' 효과음·진동). 감전 중 적은 `tickShock` 이 `state: 'hurt'` 로 멈추고 추가 피해를 `EnemyContext.onShockDamage` 로 준다(Game 이 `damageEnemy` 로 적용). 보스는 `Boss.update` 앞에서 같은 `tickShock` 으로 패턴을 멈춘다. 테스트 `tests/shock.test.ts`, 브라우저 `smoke45.cjs`(`getDebugState().shocks/shockedEnemies/bolts`). 마무리 연출은 `juice.comboFinish`, 소리는 `Game` 의 `combat.onAttack(kind, step, finisher)` 에서 `audio.play(name, gap, pitchMul)`. HUD 표시는 `hud.showCombo`. 테스트는 `getDebugState().combo`(스크래치 `smoke35.cjs`: 공격이 나간 직후 바로 다음 키를 눌러야 헤드리스에서도 이어진다).
 - 원거리 연출: 총구 섬광·파편은 `CombatSystem.rangedAttack`(`effects.flash`), 꼬리는 `ProjectileSystem`(탄마다 꼬리 메시, `juice.ranged.trailLength`), 명중·벽 충돌 연출은 `ProjectileContext.onImpact` 를 `Game` 이 받아 `effects.flash/burst/shockwave`. 섬광 시간(`muzzleTime/impactTime`)은 헤드리스 검증 때 늘려서 관찰한다(한 프레임에 0.3초 이상 흐르면 0.18초 섬광을 못 본다).
 - "보스를 약하게/세게" → `boss.hp`, `boss.slam.damage`, `boss.contactDamage`, `boss.windup`(예고가 길수록 쉬움). 던전별 보스는 `DungeonDefs.ts` 의 `boss` 덮어쓰기. 패턴 구성은 `boss.closePatterns`(순환 순서)와 `boss.useCharge`, 외형은 `boss.model`('guardian' | 'golem' | 'commander' | 'frost'). 새 보스 패턴은 `BossPattern` 타입 + `boss.windup` 항목 + `Boss.update` 의 실행 분기 + `Game.onBossAttack` 의 효과 처리에 추가한다(시간이 걸리는 효과는 `Game.updateMortars` 처럼 루프에서 진행). 새 외형은 `tools/make_bosses_glb.py` 에 복셀 모델을 추가해 `manifest.json` `bosses.<외형>` 에 등록(코드 모델은 `createBossModel` 의 `kind` 분기). .glb 보스는 `decorateGltfBoss` 가 패턴 색 바닥 원과 2단계 붉은 눈(`eye_*` 재질)을 덧입힌다. 보스가 가까우면(`camera.bossZoom.range`) 카메라가 `bossZoom.scale` 배 멀어진다. 테스트: `__heroX.debugSetBossHpRatio(0.2)` 로 2단계, `__heroX.debugSpawnDrop('xp', 5000)` 로 레벨 업, `debugSpawnDrop('equip', 1, 'legendary')` 로 희귀 드롭을 만든다.
 - 보스 등장 팝업: `spawnBoss` 끝에서 설정 `bossIntro` 가 켜져 있고 `mode === 'play'` 면 `paused = true` 후 `bossIntroUI.show(cfg, maxHp, onClose)`; 닫히면 `paused = false` 와 `lastTime` 재설정. 보스 설명 문구는 `BossConfig.title/lore`(던전별 `boss` 덮어쓰기), 패턴 표는 `describeBossPatterns` 가 설정에서 만든다(새 패턴을 추가하면 여기에도 분기). Escape 는 팝업이 열려 있으면 팝업만 닫는다. 자동 테스트에서 팝업을 피하려면 설정 `bossIntro: false`.
@@ -274,6 +274,6 @@ hero-x/
 6. 콘텐츠 확장 ✅ (v0.6.0-a.1 던전 3개·던전 선택·새 적·새 장비 / v0.6.1 모바일 / v0.6.2 보스별 패턴·외형)
 7. 품질 개선 ✅ (v0.7.0-a.1 효과음·음악 / v0.7.0-b.1 얼굴 사진·glb 교체 구조 / v1.0.0 자동 화질·오류 처리·문서)
 8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장(동굴·요새 여정형, 로봇 공장 테마) ✅ v1.11.0 / 적 10종 ✅ v1.12.0 / 메시 합치기 ✅ v1.13.0 / 네 번째 던전 얼음 봉우리 ✅ v1.14.0 / 소품 합치기·구역 음악 분위기 ✅ v1.15.0 / 벽·장애물 그래픽 ✅ v1.16.0 / 보스 등장 팝업 ✅ v1.17.0 / 앱처럼 설치(PWA) ✅ v1.18.0 / 근접 3단 콤보·원거리 연출 ✅ v1.19.0 / 장비 자동 장착·무기별 공격 방식·장비 외형 ✅ v1.20.0
-9. 캐릭터 리뉴얼·애니메이션 개선(지시서 2차): 1~3 분석·모델 확보(KayKit CC0)·교체 호환 ✅ v1.21.0 / 둥근 복셀 아들 캐릭터로 교체 ✅ v1.22.0 / 매끈한 카툰 치비(코드 모델) ✅ v1.23.0 / 코드 모델 고급화(머리카락 결·네모 안경·후드 코트·질감) ✅ v1.24.0 / 적·보스 전체 매끈한 스타일 ✅ v1.25.0 / 넓은 화면 시야 좁히기·가로 전용 ✅ v1.26.0 / 4~5 애니메이션 상태·공격 동기화 ✅ v1.27.0 / 6~7 이동 가속·감속·회전·카메라 앞보기 ✅ v1.28.0 / 8~9 모바일·로딩 표시 + ② 툰 외곽선·림 라이트 ✅ v1.29.0 / 목표 바닥 원·발밑 위치 고리 ✅ v1.30.0
+9. 캐릭터 리뉴얼·애니메이션 개선(지시서 2차): 1~3 분석·모델 확보(KayKit CC0)·교체 호환 ✅ v1.21.0 / 둥근 복셀 아들 캐릭터로 교체 ✅ v1.22.0 / 매끈한 카툰 치비(코드 모델) ✅ v1.23.0 / 코드 모델 고급화(머리카락 결·네모 안경·후드 코트·질감) ✅ v1.24.0 / 적·보스 전체 매끈한 스타일 ✅ v1.25.0 / 넓은 화면 시야 좁히기·가로 전용 ✅ v1.26.0 / 4~5 애니메이션 상태·공격 동기화 ✅ v1.27.0 / 6~7 이동 가속·감속·회전·카메라 앞보기 ✅ v1.28.0 / 8~9 모바일·로딩 표시 + ② 툰 외곽선·림 라이트 ✅ v1.29.0 / 목표 바닥 원·발밑 위치 고리 ✅ v1.30.0 / 머리카락 정리·5연격·마무리 감전(번개) ✅ v1.31.0
 
 각 단계는 완료 기준을 만족하고 기존 기능이 정상일 때만 다음 단계로 넘어간다.

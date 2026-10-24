@@ -137,17 +137,19 @@ export function createHeroAnimator(rig: HeroRig): (dt: number, state: PlayerMode
       head.rotation.y = 0;
     } else if (state.attack !== null) {
       // 휘두르기: 오른팔을 뒤로 당겼다가 앞으로 크게 뿌리고, 몸통·머리가 따라 돈다
-      // 콤보 2단은 반대 방향으로 되돌려 베고, 3단은 몸을 한 바퀴 돌린다
+      // 베기 방향(attackSweep): 1 오른→왼, -1 되돌려 베기, 0 회전 베기(몸을 한 바퀴)
       const p = state.attack;
       const step = state.attackStep ?? 0;
-      const dirSign = step === 1 ? -1 : 1;
+      const sweep = state.attackSweep ?? (step === 1 ? -1 : step >= 2 ? 0 : 1);
+      const spin = sweep === 0;
+      const dirSign = spin ? 1 : sweep;
       const windup = Math.min(1, p * 2.5);
       const swingK = Math.sin(p * Math.PI);
       armR.upper.rotation.x = -Math.PI / 2 * windup - swingK * 0.4;
       armR.upper.rotation.y = (0.5 - p) * 1.8 * dirSign;
       armR.lower.rotation.x = -0.6 * (1 - p) - 0.2;
-      torso.rotation.y = step >= 2 ? p * Math.PI * 2 : (0.5 - p) * 0.55 * dirSign;
-      head.rotation.y = step >= 2 ? 0 : (0.5 - p) * 0.3 * dirSign;
+      torso.rotation.y = spin ? p * Math.PI * 2 : (0.5 - p) * 0.55 * dirSign;
+      head.rotation.y = spin ? 0 : (0.5 - p) * 0.3 * dirSign;
     } else {
       toward(armR.upper, 'x', swing * (0.8 + run * 0.4) - 0.1, ease(dt, 10));
       toward(armR.upper, 'y', 0, ease(dt, 10));
