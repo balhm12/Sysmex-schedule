@@ -377,7 +377,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.6.0' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.7.0' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],

@@ -25,6 +25,11 @@ export class CameraController {
 
   constructor(readonly camera: THREE.PerspectiveCamera) {}
 
+  /** 다음 갱신 때 카메라를 바로 제자리로 (인트로처럼 카메라를 따로 움직인 뒤 복귀) */
+  resetFollow(): void {
+    this.first = true;
+  }
+
   /** 매 프레임: target(플레이어 위치)을 따라간다 */
   update(dt: number, target: THREE.Vector3): void {
     const c = GameConfig.camera;

@@ -65,6 +65,10 @@ hero-x/
 │  │  ├─ Quality.ts        화질 프리셋(낮음/중간/높음: 블룸·MSAA·그림자 해상도·바닥 선명도)
 │  │  ├─ RenderPipeline.ts 렌더러·톤매핑·환경광·후처리(블룸) 한 곳 관리. Game 은 pipeline.render() 만 호출
 │  │  └─ groundTexture.ts  노이즈 바닥 색 지도·노멀맵 생성 (파일 없음)
+│  ├─ cinematic/
+│  │  ├─ introTimeline.ts  ★ 인트로 연출 시간표: 시각 → 카메라 위치·줌(fov)·시간 배율·주인공 행동·자막 (순수 함수, 테스트 대상)
+│  │  └─ IntroDirector.ts  인트로 진행기: 몬스터 등장, 가상 입력으로 주인공 조종, 카메라·자막 적용, 처치 줌 펀치
+│  ├─ ui/IntroOverlay.ts   인트로 덮개(검은 띠·제목·자막·건너뛰기)
 │  ├─ assets/ModelRegistry.ts  ★ public/models/manifest.json 의 .glb 를 읽어 플레이어·적·보스 모델로 교체 (없으면 임시 모델). rotationX/Y·scale·offsetY 보정
 │  ├─ assets/PartRig.ts      클립 없는 .glb 의 부품 이름으로 관절을 만들어 동작 (플레이어: left_leg/right_arm/head/sword… 걷기·공격 / 적: wheel_/claw_/rotor_/wing_/barrel_/shield/piston_/antenna_/glow_/eye_) (classifyPart·classifyEnemyPart 테스트 대상)
 │  ├─ audio/
@@ -196,7 +200,8 @@ hero-x/
 - 승리 흐름은 `Game.checkVictory`: 일반 적 전멸 → `spawnBoss` → 보스 사망 → `onBossDefeated`(보상) → 결과 화면. 테스트에서는 `__heroX.debugDefeatRegularEnemies()` 로 바로 보스전으로 간다.
 - 사용자 설정은 `Settings.ts` 의 `UserSettings`/`SETTING_DEFS` 에만 추가한다(화면은 자동 생성). 게임 코드는 `GameConfig.hud/debug/graphics` 대신 `this.settings` 를 읽는다. 플레이어 체력·공격력은 `effectiveMaxHp()`/`effectiveDamageMultiplier()` 를 거친다. 난이도는 `setDifficulty` 한 곳에서 설정·저장·메뉴를 함께 갱신한다.
 - 저장: 성장·장비·난이도·기록만 저장하고 던전 안 상태는 저장하지 않는다. 저장 형식을 바꾸면 `SAVE_VERSION` 을 올리고 `migrateSaveData` 에 변환을 추가한 뒤 `tests/save.test.ts` 에 옛 형식 → 새 형식 테스트를 더한다. 장비는 원형 id·등급만 저장하고 `createItem` 으로 다시 만든다. 저장 시점은 `Game.markDirty()`(자동 저장 간격 뒤) 또는 `Game.saveNow()`(메뉴·결과·탭 닫기)로만 다룬다. 저장 데이터 초기화는 사용자가 '새 게임'을 확인했을 때만 한다.
-- 게임 흐름은 `Game.mode`('menu' | 'play' | 'result') 하나로 관리한다. 메뉴·결과 전환은 `newGame / continueGame / retry / openMenu / showResult` 만 사용하고, 루프는 `mode !== 'play'` 이거나 `paused` 면 그리기만 한다. 브라우저 자동 검증은 `#menu-new` 버튼으로 시작한다.
+- 인트로 연출: `Game.startIntro(next)` 가 숲 던전을 초기화하고 `mode = 'intro'` 로 `IntroDirector` 를 돌린다(메뉴 '인트로 보기', 처음 '새 게임' 때 한 번 — `hero-x.introSeen` 플래그). `frame()` 은 인트로 시간 배율을 곱해 `simulate()` 하고 연출기가 카메라·자막을 덮어쓴다. 인트로 중에는 피해 없음(`damagePlayer` 반환), 드롭 없음, 승리 판정·자동 저장 없음. 아무 키·화면 터치·건너뛰기 버튼이 `endIntro()` 를 부르고 `restart()` 로 던전을 복구한다. 장면·카메라 수치는 `introTimeline.ts` 만 고친다. 브라우저 테스트는 시작 전에 `localStorage.setItem('hero-x.introSeen','1')` 을 넣어 인트로를 건너뛴다.
+- 게임 흐름은 `Game.mode`('menu' | 'play' | 'result' | 'intro') 하나로 관리한다. 메뉴·결과 전환은 `newGame / continueGame / retry / openMenu / showResult` 만 사용하고, 루프는 `mode !== 'play'` 이거나 `paused` 면 그리기만 한다. 브라우저 자동 검증은 `#menu-new` 버튼으로 시작한다.
 - 주의: 3D 효과의 방향을 바꿀 때는 `node -e` 로 벡터에 회전을 적용해 보고 확인한다 (2-b 의 부채꼴 반대 방향 버그 참고). 키를 '누르는 순간' 반응해야 하는 동작(점프 등)은 폴링이 아니라 `InputManager.onPress` 로 받는다 (낮은 FPS 에서 짧은 탭을 놓침).
 - 새 적 종류 → `enemies.types` 에 능력치 추가 + 외형은 `tools/make_monsters_glb.py`(또는 로봇은 `make_enemies_glb.py`)에 복셀 모델을 추가하고 `manifest.json` `enemies.<종류>` 에 등록(또는 `EnemyModels.ts` 임시 모델 분기) + (행동이 다르면) `EnemyAI.ts` 확장. 적 .glb 의 재질은 개체마다 복제되므로(`cloneMaterials`) 피격 번쩍임·발광이 섞이지 않는다.
 - "더 어렵게/쉽게" → 먼저 난이도 버튼 안내. 전체 조정은 `difficulty.presets` 배율, 특정 적만이면 `enemies.types.<종류>`.

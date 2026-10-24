@@ -11,6 +11,8 @@ export interface MainMenuCallbacks {
   openSettings: () => void;
   /** 던전 선택 화면 열기 (이어갈 진행이 있을 때) */
   openDungeons: () => void;
+  /** 인트로 연출 보기 */
+  playIntro: () => void;
   /** 멈춰 둔 던전이 있는지 */
   hasRun: () => boolean;
   /** 이어갈 진행(멈춘 던전 또는 저장된 성장)이 있는지 (이어하기 버튼 활성화, 새 게임 확인창) */
@@ -53,6 +55,7 @@ export class MainMenu {
           <button class="btn secondary" id="menu-inventory" type="button">장비</button>
           <button class="btn secondary" id="menu-guide" type="button">조작 안내</button>
           <button class="btn secondary" id="menu-settings" type="button">설정</button>
+          <button class="btn secondary" id="menu-intro" type="button">인트로 보기</button>
         </div>
         <div class="diff-row"><span class="hud-label">난이도</span>${diffButtons}</div>
         <div class="menu-confirm" id="menu-confirm" hidden>
@@ -78,6 +81,7 @@ export class MainMenu {
     q<HTMLButtonElement>('#menu-guide').addEventListener('click', () => this.cb.openGuide());
     q<HTMLButtonElement>('#menu-settings').addEventListener('click', () => this.cb.openSettings());
     q<HTMLButtonElement>('#menu-dungeons').addEventListener('click', () => this.cb.openDungeons());
+    q<HTMLButtonElement>('#menu-intro').addEventListener('click', () => this.cb.playIntro());
     this.el.querySelectorAll<HTMLButtonElement>('.diff-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         this.cb.difficulty.set(btn.dataset.level as DifficultyLevel);

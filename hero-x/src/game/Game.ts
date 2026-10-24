@@ -22,6 +22,9 @@ import { PlayerController } from '../player/PlayerController';
 import { createPlaceholderModel } from '../player/models/PlaceholderModel';
 import { faceFromFile, faceTexture, loadFace, saveFace } from '../player/FaceTexture';
 import { modelRegistry } from '../assets/ModelRegistry';
+import { IntroDirector } from '../cinematic/IntroDirector';
+import { INTRO_ENEMY_HP } from '../cinematic/introTimeline';
+import { IntroOverlay } from '../ui/IntroOverlay';
 import { soundRegistry } from '../assets/SoundRegistry';
 import type { Vec2 } from '../player/movement';
 import { ControlsGuide } from '../ui/ControlsGuide';
@@ -78,6 +81,7 @@ export interface GameDebugState {
   guideVisible: boolean;
   resultVisible: boolean;
   mode: string;
+  intro: { time: number; shot: string; fov: number } | null;
   menuVisible: boolean;
   runActive: boolean;
   enemies: Array<{ type: string; x: number; z: number; hp: number; state: string }>;
@@ -155,7 +159,13 @@ export class Game {
   /** 사용자 설정 (설정 화면에서 바꾸고 브라우저에 저장) */
   private settings: UserSettings = defaultSettings();
   /** 게임 흐름: menu(메인 메뉴) → play(던전) → result(결과) */
-  private mode: 'menu' | 'play' | 'result' = 'menu';
+  private mode: 'menu' | 'play' | 'result' | 'intro' = 'menu';
+  /** 인트로 연출 (진행 중일 때만) */
+  private intro: IntroDirector | null = null;
+  private introOverlay!: IntroOverlay;
+  private introNext: 'menu' | 'newGame' = 'menu';
+  /** 인트로를 건너뛴 직후 같은 키가 메뉴를 누르지 않게 하는 잠깐의 보호 시간 */
+  private skipGuardUntil = 0;
   /** 진행 중인 게임이 있는지 (메뉴에서 '이어하기' 가능) */
   private runActive = false;
   private readonly hud: HUD;
@@ -272,7 +282,8 @@ export class Game {
         if (killed) {
           this.hitStopTime = Math.max(this.hitStopTime, enemy.type === 'boss' ? GameConfig.juice.bossHitStop : GameConfig.juice.hitStop.duration);
           if (enemy.type === 'boss') this.cameraCtrl.shake(GameConfig.juice.slamShake.amp, 0.6);
-          this.loot.dropFor(enemy.def.score, { x: enemy.position.x, z: enemy.position.z }, this.dungeonDef.rewardMul);
+          if (this.mode === 'intro') this.intro?.onKill();
+          else this.loot.dropFor(enemy.def.score, { x: enemy.position.x, z: enemy.position.z }, this.dungeonDef.rewardMul);
           if (this.settings.haptics) vibrate(enemy.type === 'boss' ? [60, 40, 120] : 18);
         }
         if (!this.settings.showDamageNumbers) return;
@@ -300,6 +311,7 @@ export class Game {
     );
     this.hud = new HUD(uiRoot);
     this.hud.setDungeonName(this.dungeonDef.name);
+    this.introOverlay = new IntroOverlay(uiRoot, () => this.endIntro());
     this.result = new ResultUI(uiRoot, () => this.retry(), () => this.openMenu(), () => this.openDungeons());
     this.dungeonSelect = new DungeonSelectUI(uiRoot, {
       clears: () => this.records.dungeonClears,
@@ -313,6 +325,7 @@ export class Game {
       continueGame: () => this.continueGame(),
       openSettings: () => this.openSettings(),
       openDungeons: () => this.openDungeons(),
+      playIntro: () => this.startIntro('menu'),
       hasProgress: () => this.runActive || this.hasSavedProgress,
       progressText: () => this.progressText(),
       saveNote: () => this.saveStatus,
@@ -377,7 +390,14 @@ export class Game {
       else if (this.mode === 'play') this.openMenu();
     });
     this.input.onPress(['Enter'], () => {
-      if (this.mode === 'menu' && !this.inventoryUI.visible && !this.guide.visible && !this.settingsUI.visible && !this.dungeonSelect.visible) this.menu.pressPrimary();
+      if (this.mode === 'menu' && performance.now() > this.skipGuardUntil && !this.inventoryUI.visible && !this.guide.visible && !this.settingsUI.visible && !this.dungeonSelect.visible) this.menu.pressPrimary();
+    });
+    // 인트로는 아무 키나 화면 터치로 건너뛴다
+    window.addEventListener('keydown', () => {
+      if (this.mode === 'intro') this.endIntro();
+    });
+    canvas.addEventListener('pointerdown', () => {
+      if (this.mode === 'intro') this.endIntro();
     });
     this.hud.hide();
     this.menu.show();
@@ -525,6 +545,10 @@ export class Game {
 
   /** 새 게임: 레벨·골드·장비·기록을 모두 초기화하고 던전에 들어간다. 저장 데이터도 새로 쓴다 */
   newGame(): void {
+    if (!this.introSeen()) {
+      this.startIntro('newGame');
+      return;
+    }
     this.stats.reset();
     this.equipment.reset();
     this.records = cloneRecords(EMPTY_RECORDS);
@@ -602,6 +626,94 @@ export class Game {
     this.restart();
     this.runActive = true;
     this.enterPlay();
+  }
+
+  private introSeen(): boolean {
+    try {
+      return this.storage?.getItem('hero-x.introSeen') === '1';
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * 인트로 연출 시작: 숲 던전에서 주인공이 몬스터와 싸우는 장면을 카메라 연출로 보여준다.
+   * next 가 'newGame' 이면 끝난 뒤 새 게임을 시작한다(처음 플레이할 때 한 번). 성장·저장에는 영향이 없다(드롭·피해 없음).
+   */
+  startIntro(next: 'menu' | 'newGame'): void {
+    if (this.mode === 'intro') return;
+    try {
+      this.storage?.setItem('hero-x.introSeen', '1');
+    } catch {
+      /* 저장 불가 환경이면 매번 보여준다 */
+    }
+    this.introNext = next;
+    this.loadDungeon(DUNGEONS[0]);
+    this.restart();
+    this.spawner.clear();
+    this.player.position.set(0, 0, 3);
+    this.mode = 'intro';
+    this.paused = false;
+    this.menu.hide();
+    this.guide.hide();
+    this.settingsUI.hide();
+    this.dungeonSelect.hide();
+    this.result.hide();
+    this.inventoryUI.hide();
+    this.hud.hide();
+    this.touch.hide();
+    this.introOverlay.show();
+    this.audio.playMusic('boss');
+    this.intro = new IntroDirector({
+      spawn: (type, x, z) => {
+        const e = this.spawner.spawn(type, x, z);
+        if (e) e.health.reset(Math.max(1, Math.round(e.health.maxHp * INTRO_ENEMY_HP)));
+      },
+      hero: () => ({ x: this.player.position.x, z: this.player.position.z }),
+      nearestEnemy: () => {
+        const p = this.player.position;
+        let best: { dist: number; dx: number; dz: number } | null = null;
+        for (const e of this.spawner.getEnemies()) {
+          if (!e.alive) continue;
+          const dx = e.position.x - p.x;
+          const dz = e.position.z - p.z;
+          const dist = Math.hypot(dx, dz);
+          if (!best || dist < best.dist) best = { dist, dx: dist > 1e-6 ? dx / dist : 0, dz: dist > 1e-6 ? dz / dist : 0 };
+        }
+        return best;
+      },
+      setAxis: (x, z) => this.input.setVirtualAxis(x, z),
+      press: (code) => this.input.pressVirtual(code),
+      release: (code) => this.input.releaseVirtual(code),
+      camera: this.camera,
+      overlay: this.introOverlay,
+      onEnd: () => this.endIntro(),
+    });
+    this.lastTime = performance.now();
+    Logger.info('인트로 연출을 시작합니다.');
+  }
+
+  /** 인트로 끝(또는 건너뛰기): 던전을 원래대로 되돌리고 메뉴 또는 새 게임으로 */
+  endIntro(): void {
+    if (this.mode !== 'intro') return;
+    const intro = this.intro;
+    this.intro = null;
+    intro?.finish();
+    this.introOverlay.hide();
+    this.input.setVirtualAxis(0, 0);
+    this.input.releaseVirtual(GameConfig.controls.attackMelee[0]);
+    this.camera.fov = GameConfig.camera.fov;
+    this.camera.updateProjectionMatrix();
+    this.cameraCtrl.resetFollow();
+    this.skipGuardUntil = performance.now() + 400;
+    this.restart();
+    this.mode = 'menu';
+    if (this.introNext === 'newGame') {
+      this.newGame();
+      return;
+    }
+    this.menu.show();
+    this.audio.playMusic('menu');
   }
 
   /** 메인 메뉴 열기 (던전은 그대로 멈춘다) */
@@ -927,6 +1039,7 @@ export class Game {
       guideVisible: this.guide.visible,
       resultVisible: this.result.visible,
       mode: this.mode,
+      intro: this.intro ? { time: this.intro.time, shot: this.intro.shot, fov: this.camera.fov } : null,
       menuVisible: this.menu.visible,
       runActive: this.runActive,
       enemies: this.spawner.getEnemies().map((e) => ({ type: e.type, x: e.position.x, z: e.position.z, hp: e.health.hp, state: e.ai.state })),
@@ -963,6 +1076,7 @@ export class Game {
 
   /** 마우스가 가리키는 바닥 위 지점 (없으면 null) */
   private getAimPoint(): Vec2 | null {
+    if (this.mode === 'intro') return this.nearestEnemyPoint(30);
     // 터치 조작: 가까운 적을 자동 조준 (없으면 바라보는 방향 유지)
     if (this.settings.touchControls) return this.nearestEnemyPoint(GameConfig.combat.autoAimRange);
     const pointer = this.input.getPointer();
@@ -1009,6 +1123,7 @@ export class Game {
 
   /** 플레이어 피해 처리 (근접·투사체 공용). from: 피해가 온 위치. 방어력만큼 줄어든다 */
   private damagePlayer(rawDamage: number, from: Vec2): void {
+    if (this.mode === 'intro') return; // 인트로에서는 주인공이 다치지 않는다
     if (this.ended) return;
     const damage = applyDefense(rawDamage, this.equipment.totals().defense);
     if (!this.player.health.takeDamage(damage)) return;
@@ -1235,6 +1350,20 @@ export class Game {
     this.lastTime = now;
 
     if (this.contextLost) return;
+    if (this.mode === 'intro' && this.intro) {
+      // 인트로: 연출 시간 배율(슬로 모션)을 곱해 시뮬레이션하고, 연출기가 카메라·자막을 적용한 뒤 그린다
+      let rem = elapsed * this.intro.timeScale;
+      while (rem > 1e-6 && this.mode === 'intro') {
+        const dt = Math.min(GameConfig.performance.maxStep, rem);
+        rem -= dt;
+        this.simulate(dt);
+      }
+      this.intro?.update(elapsed);
+      this.pipeline.render(this.scene, this.camera);
+      this.frames++;
+      this.updateFps(elapsed);
+      return;
+    }
     if (this.paused || this.mode === 'menu') {
       // 장비 화면이 열렸거나 메인 메뉴 중에는 그리기만 한다
       this.pipeline.render(this.scene, this.camera);
@@ -1319,6 +1448,7 @@ export class Game {
     this.cameraCtrl.update(dt, this.camTarget);
     this.dungeon.updateLight(p);
     this.dungeon.update(dt);
+    if (this.mode === 'intro') return; // 인트로: 승리 판정·자동 저장 없음
     this.checkVictory();
 
     // 자동 저장: 바뀐 것이 있고 간격이 지났으면
