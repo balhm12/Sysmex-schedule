@@ -2,7 +2,8 @@
  * 인트로 연출 시간표 (순수 함수, 테스트 대상)
  * - 실시간 t(초)에 따라 카메라 위치·바라볼 점·시야각(fov, 줌), 시간 배율(슬로 모션), 주인공 행동(걷기·공격·회피), 자막을 돌려준다.
  * - 좌표는 주인공 위치 기준 세계 축: 몬스터는 -Z 쪽에서 몰려오고 카메라는 주로 +Z(뒤) 쪽에 있다.
- * - 장면: 설정(멀리서 줌 인) → 접근(낮은 옆 앵글) → 전투(주위를 도는 카메라, 처치 때 줌 펀치) → 슬로 모션 얼굴 클로즈업 → 마무리(줌 아웃 + 제목)
+ * - 장면: 교실(앞쪽에서 주인공과 칠판으로 줌 인) → 몬스터 난입(낮은 옆 앵글) → 전투(주위를 도는 카메라, 처치 때 줌 펀치) → 슬로 모션 얼굴 클로즈업 → 마무리(줌 아웃 + 제목)
+ * - 주인공은 (0, 3) 책상 앞에서 +Z(칠판)를 보고 있다. 몬스터는 -Z 에서 온다. 교실 세트는 IntroSet 이 만든다.
  */
 export interface HeroPose {
   x: number;
@@ -53,7 +54,7 @@ const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const smooth = (k: number) => k * k * (3 - 2 * k);
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 
-export function introAt(t: number, hero: HeroPose, punch = 0): IntroFrame {
+export function introAt(t: number, hero: HeroPose, punch = 0, school = '초등학교'): IntroFrame {
   const T = INTRO_TIMES;
   const base: IntroFrame = {
     shot: 'done',
@@ -68,16 +69,16 @@ export function introAt(t: number, hero: HeroPose, punch = 0): IntroFrame {
     caption: '',
   };
   if (t < T.establish) {
-    // 1. 설정: 높고 먼 곳에서 주인공에게 줌 인
+    // 1. 교실: 앞쪽(-Z) 위에서 공부하는 주인공과 뒤의 칠판으로 줌 인
     const k = smooth(clamp01(t / T.establish));
     return {
       ...base,
       shot: 'establish',
-      cam: { x: hero.x, y: lerp(14, 6, k), z: hero.z + lerp(16, 9, k) },
-      look: { x: hero.x, y: 1, z: hero.z },
-      fov: lerp(55, 40, k),
+      cam: { x: hero.x + lerp(-3, -1.2, k), y: lerp(9, 3.2, k), z: hero.z - lerp(13, 6.5, k) },
+      look: { x: hero.x, y: lerp(1.2, 1.5, k), z: hero.z + 1.5 },
+      fov: lerp(52, 38, k),
       title: t > 0.6,
-      caption: t > 1.2 ? '잊혀진 숲, 어둠이 깃들다' : '',
+      caption: t > 1.0 ? `${school} 3학년 교실, 조용한 수학 시간` : '',
     };
   }
   if (t < T.approach) {
@@ -89,7 +90,7 @@ export function introAt(t: number, hero: HeroPose, punch = 0): IntroFrame {
       look: { x: hero.x, y: 1.2, z: hero.z - 2.5 },
       fov: 46,
       walk: t < 5.0,
-      caption: '몬스터들이 몰려온다',
+      caption: '갑자기 몬스터들이 교실로 들이닥쳤다!',
     };
   }
   if (t < T.fight) {

@@ -68,7 +68,10 @@ hero-x/
 │  ├─ cinematic/
 │  │  ├─ introTimeline.ts  ★ 인트로 연출 시간표: 시각 → 카메라 위치·줌(fov)·시간 배율·주인공 행동·자막 (순수 함수, 테스트 대상)
 │  │  └─ IntroDirector.ts  인트로 진행기: 몬스터 등장, 가상 입력으로 주인공 조종, 카메라·자막 적용, 처치 줌 펀치
+│  │  └─ IntroSet.ts       인트로 교실 세트(창릉초등학교: 나무 바닥·뒷벽·캔버스 글자 칠판·책상·의자·교탁, 충돌 상자 포함)
 │  ├─ ui/IntroOverlay.ts   인트로 덮개(검은 띠·제목·자막·건너뛰기)
+│  ├─ game/mathQuiz.ts     ★ 초등 3학년 수학 문제 생성(덧셈·뺄셈·곱셈구구·나눗셈·두 자리×한 자리, 보기 4개) (순수 함수, 테스트 대상)
+│  ├─ ui/QuizUI.ts         보물 상자 수학 문제 창(오답이면 새 문제, 정답이면 상자 열림)
 │  ├─ assets/ModelRegistry.ts  ★ public/models/manifest.json 의 .glb 를 읽어 플레이어·적·보스 모델로 교체 (없으면 임시 모델). rotationX/Y·scale·offsetY 보정
 │  ├─ assets/PartRig.ts      클립 없는 .glb 의 부품 이름으로 관절을 만들어 동작 (플레이어: left_leg/right_arm/head/sword… 걷기·공격 / 적: wheel_/claw_/rotor_/wing_/barrel_/shield/piston_/antenna_/glow_/eye_) (classifyPart·classifyEnemyPart 테스트 대상)
 │  ├─ audio/
@@ -195,12 +198,14 @@ hero-x/
 - 배포: `hero-x` 브랜치에 push 하면 워크플로가 `npm run check` 후 `dist` 를 main 의 `game/` 에 넣는다. main 의 다른 파일은 건드리지 않는다(`keep_files: true`). 배포 주소는 README 3-1.
 - 창 층위는 CSS `.guide`(20) > `.guide.result`(15) > `.guide.menu`(10). 메뉴 위에 여는 새 창은 기본 `.guide` 층위를 그대로 쓴다.
 - "상자를 더/보상을 더 좋게" → 첫 던전은 `dungeon.chests` 배열, 다른 던전은 `DungeonDefs.ts`. 상자 보상은 `dungeon.chestLoot`(공통). 상자 위치는 장애물·적 배치와 겹치지 않아야 한다 (`tests/chest.test.ts` 가 확인).
-- 상호작용(E)이 필요한 새 물체는 `Game.tryInteract` 에 분기를 추가하고 HUD 안내 문구(`currentPrompt`)를 함께 처리한다.
+- 상호작용(E)이 필요한 새 물체는 `Game.tryInteract` 에 분기를 추가하고 HUD 안내 문구(`currentPrompt`)를 함께 처리한다. 보물 상자는 설정 `chestQuiz`(기본 켬)가 켜져 있으면 `QuizUI` 로 수학 문제를 먼저 풀고(`paused`), 맞히면 `openChestNow`. 문제 범위를 바꾸려면 `mathQuiz.ts` 의 종류별 숫자 범위만 고친다.
+- 클리어 뒤 흐름: `showResult(title, sub, next)` 에 다음 던전을 넘기면 `ResultUI` 가 '다음 던전' 버튼과 카운트다운(`dungeon.autoAdvanceSeconds`, 0 이면 버튼만)을 보여주고 끝나면 `enterDungeon(next)`. 다른 버튼을 누르면 취소.
+- 공격 입력: `CombatSystem` 은 `onPress` 로 예약 플래그를 세워 쿨다운 중이나 프레임 사이의 짧은 탭도 쿨다운이 끝나는 즉시 한 번 나가게 한다. 반응 속도는 `combat.melee.cooldown`(0.34)과 `PartRig` 의 뒤로 당김 비율(12%)로 조정.
 - "보스를 약하게/세게" → `boss.hp`, `boss.slam.damage`, `boss.contactDamage`, `boss.windup`(예고가 길수록 쉬움). 던전별 보스는 `DungeonDefs.ts` 의 `boss` 덮어쓰기. 패턴 구성은 `boss.closePatterns`(순환 순서)와 `boss.useCharge`, 외형은 `boss.model`('guardian' | 'golem' | 'commander'). 새 보스 패턴은 `BossPattern` 타입 + `boss.windup` 항목 + `Boss.update` 의 실행 분기 + `Game.onBossAttack` 의 효과 처리에 추가한다(시간이 걸리는 효과는 `Game.updateMortars` 처럼 루프에서 진행). 새 외형은 `createBossModel` 의 `kind` 분기.
 - 승리 흐름은 `Game.checkVictory`: 일반 적 전멸 → `spawnBoss` → 보스 사망 → `onBossDefeated`(보상) → 결과 화면. 테스트에서는 `__heroX.debugDefeatRegularEnemies()` 로 바로 보스전으로 간다.
 - 사용자 설정은 `Settings.ts` 의 `UserSettings`/`SETTING_DEFS` 에만 추가한다(화면은 자동 생성). 게임 코드는 `GameConfig.hud/debug/graphics` 대신 `this.settings` 를 읽는다. 플레이어 체력·공격력은 `effectiveMaxHp()`/`effectiveDamageMultiplier()` 를 거친다. 난이도는 `setDifficulty` 한 곳에서 설정·저장·메뉴를 함께 갱신한다.
 - 저장: 성장·장비·난이도·기록만 저장하고 던전 안 상태는 저장하지 않는다. 저장 형식을 바꾸면 `SAVE_VERSION` 을 올리고 `migrateSaveData` 에 변환을 추가한 뒤 `tests/save.test.ts` 에 옛 형식 → 새 형식 테스트를 더한다. 장비는 원형 id·등급만 저장하고 `createItem` 으로 다시 만든다. 저장 시점은 `Game.markDirty()`(자동 저장 간격 뒤) 또는 `Game.saveNow()`(메뉴·결과·탭 닫기)로만 다룬다. 저장 데이터 초기화는 사용자가 '새 게임'을 확인했을 때만 한다.
-- 인트로 연출: `Game.startIntro(next)` 가 숲 던전을 초기화하고 `mode = 'intro'` 로 `IntroDirector` 를 돌린다(메뉴 '인트로 보기', 처음 '새 게임' 때 한 번 — `hero-x.introSeen` 플래그). `frame()` 은 인트로 시간 배율을 곱해 `simulate()` 하고 연출기가 카메라·자막을 덮어쓴다. 인트로 중에는 피해 없음(`damagePlayer` 반환), 드롭 없음, 승리 판정·자동 저장 없음. 아무 키·화면 터치·건너뛰기 버튼이 `endIntro()` 를 부르고 `restart()` 로 던전을 복구한다. 장면·카메라 수치는 `introTimeline.ts` 만 고친다. 브라우저 테스트는 시작 전에 `localStorage.setItem('hero-x.introSeen','1')` 을 넣어 인트로를 건너뛴다.
+- 인트로 연출: `Game.startIntro(next)` 가 숲 던전을 초기화하고 `IntroSet`(교실 세트, 학교 이름은 `GameConfig.meta.school`)을 올린 뒤 `mode = 'intro'` 로 `IntroDirector` 를 돌린다(메뉴 '인트로 보기', 처음 '새 게임' 때 한 번 — `hero-x.introSeen` 플래그). `frame()` 은 인트로 시간 배율을 곱해 `simulate()` 하고 연출기가 카메라·자막을 덮어쓴다. 인트로 중에는 피해 없음(`damagePlayer` 반환), 드롭 없음, 승리 판정·자동 저장 없음. 아무 키·화면 터치·건너뛰기 버튼이 `endIntro()` 를 부르고 `restart()` 로 던전을 복구한다. 장면·카메라 수치는 `introTimeline.ts` 만 고친다. 브라우저 테스트는 시작 전에 `localStorage.setItem('hero-x.introSeen','1')` 을 넣어 인트로를 건너뛴다.
 - 게임 흐름은 `Game.mode`('menu' | 'play' | 'result' | 'intro') 하나로 관리한다. 메뉴·결과 전환은 `newGame / continueGame / retry / openMenu / showResult` 만 사용하고, 루프는 `mode !== 'play'` 이거나 `paused` 면 그리기만 한다. 브라우저 자동 검증은 `#menu-new` 버튼으로 시작한다.
 - 주의: 3D 효과의 방향을 바꿀 때는 `node -e` 로 벡터에 회전을 적용해 보고 확인한다 (2-b 의 부채꼴 반대 방향 버그 참고). 키를 '누르는 순간' 반응해야 하는 동작(점프 등)은 폴링이 아니라 `InputManager.onPress` 로 받는다 (낮은 FPS 에서 짧은 탭을 놓침).
 - 새 적 종류 → `enemies.types` 에 능력치 추가 + 외형은 `tools/make_monsters_glb.py`(또는 로봇은 `make_enemies_glb.py`)에 복셀 모델을 추가하고 `manifest.json` `enemies.<종류>` 에 등록(또는 `EnemyModels.ts` 임시 모델 분기) + (행동이 다르면) `EnemyAI.ts` 확장. 적 .glb 의 재질은 개체마다 복제되므로(`cloneMaterials`) 피격 번쩍임·발광이 섞이지 않는다.

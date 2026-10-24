@@ -50,14 +50,38 @@ export class CombatSystem {
     this.rangedCooldown = 0;
   }
 
+  /** 지금까지 휘두른/쏜 횟수 (디버그·검증용) */
+  attacks = 0;
+  /**
+   * 누른 순간을 기억하는 예약 플래그: 쿨다운 중에 누르거나, 프레임 사이에 아주 짧게 톡 눌러도(느린 기기)
+   * 쿨다운이 끝나는 즉시 한 번 나간다. 공격이 나가면 지워지므로 두 번 나가지 않는다.
+   */
+  private meleeQueued = false;
+  private rangedQueued = false;
+  private pressAttached = false;
+
   update(dt: number): void {
+    if (!this.pressAttached) {
+      this.pressAttached = true;
+      const c = GameConfig.controls;
+      this.input.onPress(c.attackMelee, () => (this.meleeQueued = true));
+      this.input.onPress(c.attackRanged, () => (this.rangedQueued = true));
+    }
     if (this.meleeCooldown > 0) this.meleeCooldown -= dt;
     if (this.rangedCooldown > 0) this.rangedCooldown -= dt;
-    if (this.player.health.isDead) return;
+    if (this.player.health.isDead) {
+      this.meleeQueued = this.rangedQueued = false;
+      return;
+    }
 
     const c = GameConfig.controls;
-    if (this.meleeCooldown <= 0 && this.input.isActionDown(c.attackMelee)) this.meleeAttack();
-    else if (this.rangedCooldown <= 0 && this.input.isActionDown(c.attackRanged)) this.rangedAttack();
+    if (this.meleeCooldown <= 0 && (this.input.isActionDown(c.attackMelee) || this.meleeQueued)) {
+      this.meleeQueued = false;
+      this.meleeAttack();
+    } else if (this.rangedCooldown <= 0 && (this.input.isActionDown(c.attackRanged) || this.rangedQueued)) {
+      this.rangedQueued = false;
+      this.rangedAttack();
+    }
   }
 
   /**
@@ -94,6 +118,7 @@ export class CombatSystem {
   private meleeAttack(): void {
     const cfg = GameConfig.combat.melee;
     this.meleeCooldown = cfg.cooldown;
+    this.attacks++;
     this.onAttack?.('melee');
     this.faceAim();
     const pos = this.player.position;
@@ -114,6 +139,7 @@ export class CombatSystem {
   private rangedAttack(): void {
     const cfg = GameConfig.combat.ranged;
     this.rangedCooldown = cfg.cooldown;
+    this.attacks++;
     this.onAttack?.('ranged');
     const dir = this.faceAim();
     const pos = this.player.position;

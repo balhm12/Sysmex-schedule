@@ -1094,3 +1094,59 @@ body {
   pointer-events: auto;
   z-index: 1;
 }
+
+/* ---- 보물 상자 수학 문제 ---- */
+.quiz-question {
+  margin: 10px 0 14px;
+  text-align: center;
+  font-size: clamp(28px, 6vw, 40px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #ffd23f;
+}
+.quiz-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.quiz-choice {
+  font-size: 22px;
+  font-weight: 800;
+  min-height: 52px;
+}
+.quiz-feedback {
+  min-height: 1.4em;
+  margin: 12px 0 4px;
+  text-align: center;
+  font-size: 15px;
+  color: #9fe3b1;
+}
+.quiz-feedback.wrong {
+  color: #ff9b9b;
+}
+.quiz.shake .guide-panel {
+  animation: quiz-shake 0.35s ease;
+}
+@keyframes quiz-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+/* 결과 화면: 다음 던전 카운트다운 */
+.result-next {
+  margin: 6px 0 10px;
+  text-align: center;
+  font-size: 15px;
+  color: #ffd23f;
+}
+
+/* 한국어 제목은 단어 중간에서 줄이 끊기지 않게, 결과 화면 버튼은 줄바꿈 허용 */
+.guide-title,
+.quiz-question {
+  word-break: keep-all;
+}
+.result-panel .btns {
+  flex-wrap: wrap;
+  justify-content: center;
+}

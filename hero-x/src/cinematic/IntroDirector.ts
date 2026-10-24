@@ -17,6 +17,8 @@ export interface IntroHooks {
   release(code: string): void;
   camera: THREE.PerspectiveCamera;
   overlay: IntroOverlay;
+  /** 몬스터가 들이닥치는 순간 (음악 전환 등) */
+  onMonsters?(): void;
   /** 인트로가 끝났을 때 */
   onEnd(): void;
 }
@@ -65,13 +67,14 @@ export class IntroDirector {
     this.t += dt;
     this.punch = Math.max(0, this.punch - dt * 2.5);
     const hero = this.hooks.hero();
-    const f = (this.frame = introAt(this.t, hero, this.punch));
+    const f = (this.frame = introAt(this.t, hero, this.punch, GameConfig.meta.school));
     if (f.shot === 'done') {
       this.finish();
       return;
     }
     if (!this.spawned && this.t >= INTRO_SPAWN_AT) {
       this.spawned = true;
+      this.hooks.onMonsters?.();
       for (const s of INTRO_SPAWNS) this.hooks.spawn(s.type, s.x, s.z);
     }
     // 이동: 접근 장면에서는 앞으로, 전투 장면에서는 적이 멀면 다가간다

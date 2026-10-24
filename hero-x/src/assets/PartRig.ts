@@ -166,12 +166,13 @@ export function buildPartRig(root: THREE.Object3D): PartRig | null {
       let other = 0;
       if (s.attack !== null) {
         const a = s.attack;
-        if (a < 0.3) {
-          sword = lerp(0, -2.2, ease(a / 0.3));
-          armSwordSide = lerp(0, 0.5, a / 0.3);
-          bodyYaw = lerp(0, 0.35, a / 0.3);
+        // 뒤로 당김은 아주 짧게(12%) — 누른 즉시 검이 나가는 느낌
+        if (a < 0.12) {
+          sword = lerp(0, -2.2, ease(a / 0.12));
+          armSwordSide = lerp(0, 0.5, a / 0.12);
+          bodyYaw = lerp(0, 0.35, a / 0.12);
         } else {
-          const k = ease((a - 0.3) / 0.7);
+          const k = ease((a - 0.12) / 0.88);
           sword = lerp(-2.2, 1.1, k);
           armSwordSide = lerp(0.5, -0.2, k);
           bodyYaw = lerp(0.35, -0.3, k);

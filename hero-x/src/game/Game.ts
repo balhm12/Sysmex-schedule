@@ -23,6 +23,9 @@ import { createPlaceholderModel } from '../player/models/PlaceholderModel';
 import { faceFromFile, faceTexture, loadFace, saveFace } from '../player/FaceTexture';
 import { modelRegistry } from '../assets/ModelRegistry';
 import { IntroDirector } from '../cinematic/IntroDirector';
+import { IntroSet } from '../cinematic/IntroSet';
+import { makeMathProblem } from './mathQuiz';
+import { QuizUI } from '../ui/QuizUI';
 import { INTRO_ENEMY_HP } from '../cinematic/introTimeline';
 import { IntroOverlay } from '../ui/IntroOverlay';
 import { soundRegistry } from '../assets/SoundRegistry';
@@ -94,6 +97,9 @@ export interface GameDebugState {
   stats: { level: number; xp: number; xpToNext: number; gold: number; maxHp: number };
   equipment: { inventory: number; equipped: Record<string, string | null>; totals: { attack: number; defense: number; maxHp: number; moveSpeed: number } };
   paused: boolean;
+  chestsOpened: number;
+  chestPositions: Array<{ x: number; z: number }>;
+  attacks: number;
   inventoryVisible: boolean;
   chests: { opened: number; total: number; nearby: boolean };
   prompt: string;
@@ -163,6 +169,9 @@ export class Game {
   /** 인트로 연출 (진행 중일 때만) */
   private intro: IntroDirector | null = null;
   private introOverlay!: IntroOverlay;
+  private introSet: IntroSet | null = null;
+  /** 보물 상자 수학 문제 창 */
+  private quizUI!: QuizUI;
   private introNext: 'menu' | 'newGame' = 'menu';
   /** 인트로를 건너뛴 직후 같은 키가 메뉴를 누르지 않게 하는 잠깐의 보호 시간 */
   private skipGuardUntil = 0;
@@ -312,6 +321,23 @@ export class Game {
     this.hud = new HUD(uiRoot);
     this.hud.setDungeonName(this.dungeonDef.name);
     this.introOverlay = new IntroOverlay(uiRoot, () => this.endIntro());
+    this.quizUI = new QuizUI(uiRoot, {
+      onCorrect: () => {
+        this.paused = false;
+        const p = this.player.position;
+        const chest = this.chests.nearest({ x: p.x, z: p.z });
+        if (chest) this.openChestNow(chest.x, chest.z);
+        this.lastTime = performance.now();
+      },
+      onWrong: () => {
+        this.audio.play('hurt', 0.1);
+        return makeMathProblem();
+      },
+      onClose: () => {
+        this.paused = false;
+        this.lastTime = performance.now();
+      },
+    });
     this.result = new ResultUI(uiRoot, () => this.retry(), () => this.openMenu(), () => this.openDungeons());
     this.dungeonSelect = new DungeonSelectUI(uiRoot, {
       clears: () => this.records.dungeonClears,
@@ -383,7 +409,8 @@ export class Game {
     });
     this.input.onPress(GameConfig.controls.interact, () => this.tryInteract());
     this.input.onPress(['Escape'], () => {
-      if (this.guide.visible) this.guide.hide();
+      if (this.quizUI.visible) this.quizUI.close();
+      else if (this.guide.visible) this.guide.hide();
       else if (this.settingsUI.visible) this.settingsUI.pressBack();
       else if (this.dungeonSelect.visible) this.closeDungeons();
       else if (this.inventoryUI.visible) this.toggleInventory(false);
@@ -663,7 +690,12 @@ export class Game {
     this.hud.hide();
     this.touch.hide();
     this.introOverlay.show();
-    this.audio.playMusic('boss');
+    this.audio.playMusic('menu');
+    // 교실 세트 (주인공은 칠판 쪽(+Z)을 보며 공부 중)
+    this.introSet = new IntroSet({ x: 0, z: 3 }, GameConfig.meta.school);
+    this.scene.add(this.introSet.root);
+    this.dungeon.addCollisionBoxes(this.introSet.boxes);
+    this.player.facing = Math.PI; // 책상(-Z 쪽)을 보고 공부 중 → 카메라에 얼굴이 보인다
     this.intro = new IntroDirector({
       spawn: (type, x, z) => {
         const e = this.spawner.spawn(type, x, z);
@@ -687,6 +719,7 @@ export class Game {
       release: (code) => this.input.releaseVirtual(code),
       camera: this.camera,
       overlay: this.introOverlay,
+      onMonsters: () => this.audio.playMusic('boss'),
       onEnd: () => this.endIntro(),
     });
     this.lastTime = performance.now();
@@ -706,6 +739,11 @@ export class Game {
     this.camera.updateProjectionMatrix();
     this.cameraCtrl.resetFollow();
     this.skipGuardUntil = performance.now() + 400;
+    if (this.introSet) {
+      this.dungeon.removeCollisionBoxes(this.introSet.boxes);
+      this.introSet.dispose();
+      this.introSet = null;
+    }
     this.restart();
     this.mode = 'menu';
     if (this.introNext === 'newGame') {
@@ -875,9 +913,23 @@ export class Game {
 
   /** 상호작용 키: 가까운 보물 상자를 연다 */
   private tryInteract(): void {
-    if (this.ended || this.paused || this.player.health.isDead) return;
+    if (this.ended || this.paused || this.player.health.isDead || this.mode !== 'play') return;
     const p = this.player.position;
     const chest = this.chests.nearest({ x: p.x, z: p.z });
+    if (!chest) return;
+    // 설정이 켜져 있으면 수학 문제를 먼저 풀어야 열린다 (게임은 멈춤)
+    if (this.settings.chestQuiz) {
+      this.paused = true;
+      this.audio.play('ui');
+      this.quizUI.open(makeMathProblem());
+      return;
+    }
+    this.openChestNow(chest.x, chest.z);
+  }
+
+  /** 상자 열기 실행 (문제를 맞혔거나 문제 설정이 꺼져 있을 때) */
+  private openChestNow(x: number, z: number): void {
+    const chest = this.chests.nearest({ x, z }, 0.5);
     if (!chest || !this.chests.open(chest)) return;
     const drops = this.loot.dropChest({ x: chest.x, z: chest.z });
     this.audio.play('chest');
@@ -951,7 +1003,7 @@ export class Game {
   }
 
   /** 결과 화면 표시 (쓰러짐·클리어 공용) */
-  private showResult(title: string, sub: string): void {
+  private showResult(title: string, sub: string, next: DungeonDef | null = null): void {
     this.ended = true;
     this.mode = 'result';
     this.runActive = false;
@@ -964,7 +1016,8 @@ export class Game {
     this.audio.play(this.player.health.isDead ? 'defeat' : 'clear');
     this.audio.playMusic(null);
     this.saveNow();
-    this.result.show(title, sub);
+    // 클리어 뒤 다음 던전이 열려 있으면 카운트다운 후 자동 이동 (설정 dungeon.autoAdvanceSeconds, 0 이면 버튼만)
+    this.result.show(title, sub, next ? { name: next.name, seconds: GameConfig.dungeon.autoAdvanceSeconds, onNext: () => this.enterDungeon(next) } : undefined);
   }
 
   /** 모든 자원 정리 (페이지를 떠나거나 게임을 완전히 종료할 때) */
@@ -994,6 +1047,11 @@ export class Game {
   }
 
   /** 일반 적을 모두 즉시 처치한다 (테스트·디버그용: 보스전으로 바로 가기) */
+  /** 보스를 즉시 처치한다 (테스트·디버그용: 클리어 흐름 확인) */
+  debugKillBoss(): void {
+    if (this.boss && this.boss.alive) this.combat.damageEnemy(this.boss, 1e9, { x: 0, z: 1 }, 0);
+  }
+
   debugDefeatRegularEnemies(): void {
     for (const e of this.spawner.getEnemies()) {
       if (e.alive && e !== this.boss) this.combat.damageEnemy(e, 99999, { x: 0, z: 1 }, 0);
@@ -1056,6 +1114,9 @@ export class Game {
         totals: this.equipment.totals(),
       },
       paused: this.paused,
+      chestsOpened: this.chests.openedCount,
+      chestPositions: this.dungeonDef.chests.map((c) => ({ x: c.x, z: c.z })),
+      attacks: this.combat.attacks,
       inventoryVisible: this.inventoryUI.visible,
       chests: { opened: this.chests.openedCount, total: this.chests.total, nearby: this.chests.nearest({ x: this.player.position.x, z: this.player.position.z }) !== null },
       prompt: this.currentPrompt,
@@ -1310,7 +1371,8 @@ export class Game {
     // 보상을 줍거나 3초가 지나면 결과 화면
     if (this.bossDefeated && (this.loot.count === 0 || this.boss.removable)) {
       const unlockNote = this.unlockedNow ? ` · 새 던전 '${this.unlockedNow.name}' 이(가) 열렸습니다!` : '';
-      this.showResult('던전 클리어!', `${this.dungeonDef.name} · 처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}${unlockNote}`);
+      const next = nextDungeonAfter(this.dungeonDef.id);
+      this.showResult('던전 클리어!', `${this.dungeonDef.name} · 처치 ${this.combat.kills} · 점수 ${this.combat.score} · 레벨 ${this.stats.level} · 골드 ${this.stats.gold}${unlockNote}`, next && isDungeonUnlocked(next, this.records.dungeonClears) ? next : null);
     }
   }
 

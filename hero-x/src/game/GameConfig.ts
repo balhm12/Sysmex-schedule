@@ -94,7 +94,7 @@ export interface EnemySpawnConfig {
 
 export interface GameConfigType {
   /** 게임 이름 정보 (제목 변경은 여기서) */
-  meta: { title: string; subtitle: string; version: string };
+  meta: { title: string; subtitle: string; version: string; /** 인트로 교실 칠판에 적히는 학교 이름 */ school: string };
   /** 키 설정: 물리 키 코드(e.code) 목록. 마우스 버튼은 'Mouse0'(왼쪽), 'Mouse2'(오른쪽) */
   controls: {
     up: string[];
@@ -168,6 +168,7 @@ export interface GameConfigType {
       /** 휘두르기 동작 시간(초) */
       swingTime: number;
     };
+
     /** 원거리 공격 (에너지 탄) */
     ranged: {
       damage: number;
@@ -261,6 +262,8 @@ export interface GameConfigType {
     name: string;
     /** 보물 상자 위치 */
     chests: Array<{ x: number; z: number }>;
+    /** 던전 클리어 뒤 다음 던전으로 자동 이동하기까지 초 (0 = 자동 이동 없음) */
+    autoAdvanceSeconds: number;
     chestLoot: {
       /** 골드 범위 (항상) */
       goldMin: number;
@@ -377,7 +380,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.7.0' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.8.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -416,7 +419,7 @@ export const GameConfig: GameConfigType = {
       damage: 12,
       range: 1.9,
       arcDegrees: 110,
-      cooldown: 0.45,
+      cooldown: 0.34,
       knockback: 7,
       swingTime: 0.22,
     },
@@ -602,6 +605,7 @@ export const GameConfig: GameConfigType = {
       { x: 12, z: 2 },
       { x: -4, z: 24 },
     ],
+    autoAdvanceSeconds: 6,
     chestLoot: {
       goldMin: 15,
       goldMax: 40,
@@ -696,6 +700,7 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'player.jumpSpeed': { min: 1, max: 30 },
   'player.gravity': { min: 1, max: 100 },
   'player.climbAssist': { min: 0, max: 3 },
+  'dungeon.autoAdvanceSeconds': { min: 0, max: 60 },
   'player.dash.speed': { min: 1, max: 60 },
   'player.dash.duration': { min: 0.05, max: 2 },
   'player.dash.cooldown': { min: 0, max: 10 },

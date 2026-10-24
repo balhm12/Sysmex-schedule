@@ -51,6 +51,8 @@ export interface UserSettings {
   shadows: boolean;
   /** FPS 표시 */
   showFps: boolean;
+  /** 보물 상자를 열 때 초등 3학년 수학 문제 풀기 */
+  chestQuiz: boolean;
 }
 
 export type SettingKey = keyof UserSettings;
@@ -70,6 +72,7 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: 'floatingJoystick', kind: 'toggle', group: '게임', label: '조이스틱: 누르는 자리에', description: '켜면 버튼이 아닌 아무 곳이나 눌러 그 자리에서 끌면 움직입니다. 끄면 왼쪽 아래 고정 조이스틱.' },
   { key: 'leftHanded', kind: 'toggle', group: '게임', label: '왼손 모드', description: '공격·점프·회피 버튼을 왼쪽에, 고정 조이스틱을 오른쪽에 둡니다.' },
   { key: 'touchButtonScale', kind: 'range', group: '게임', label: '터치 버튼 크기', description: '버튼이 작거나 크면 조절하세요.', min: 0.8, max: 1.4, step: 0.1, unit: '×' },
+  { key: 'chestQuiz', kind: 'toggle', group: '게임', label: '상자 수학 문제', description: '보물 상자를 열 때 초등 3학년 수학 문제(덧셈·뺄셈·곱셈·나눗셈)를 하나 풀어야 열립니다.' },
   { key: 'haptics', kind: 'toggle', group: '게임', label: '진동', description: '맞거나 처치할 때 짧게 진동합니다 (지원하는 휴대폰만, iPhone 은 안 됨).' },
   { key: 'soundMaster', kind: 'range', group: '소리', label: '전체 음량', description: '0 이면 무음. 소리는 첫 조작(터치·키) 뒤부터 납니다.', min: 0, max: 1, step: 0.1 },
   { key: 'soundSfx', kind: 'range', group: '소리', label: '효과음', description: '공격·피격·획득·보스 소리.', min: 0, max: 1, step: 0.1 },
@@ -111,6 +114,7 @@ export function defaultSettings(): UserSettings {
     hitFlash: true,
     shadows: touch ? false : GameConfig.graphics.shadows,
     showFps: GameConfig.debug.showFps,
+    chestQuiz: true,
   };
 }
 

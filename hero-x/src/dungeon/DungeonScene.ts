@@ -202,6 +202,12 @@ export class DungeonScene implements CollisionWorld {
     this.boxes.push(...boxes);
   }
 
+  /** 추가했던 충돌 상자를 뺀다 (같은 객체만) */
+  removeCollisionBoxes(boxes: Box[]): void {
+    const set = new Set(boxes);
+    for (let i = this.boxes.length - 1; i >= 0; i--) if (set.has(this.boxes[i])) this.boxes.splice(i, 1);
+  }
+
   getArenaHalfSize(): number {
     return this.def.arenaHalfSize;
   }

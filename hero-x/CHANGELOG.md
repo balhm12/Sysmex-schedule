@@ -2,6 +2,26 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.8.0 · 교실 인트로 · 수학 문제 상자 · 다음 던전 자동 이동 · 공격 반응 개선
+
+### 변경 내용
+- **공격 반응**: 쿨다운 0.45→0.34초, 검 동작의 뒤로 당김 30%→12%(누르는 즉시 휘두르는 느낌). `CombatSystem` 에 누름 예약: 쿨다운 중이나 프레임 사이의 짧은 탭도 쿨다운이 끝나자마자 한 번 나간다(두 번 나가지 않음).
+- **다음 던전 자동 이동**: 클리어 결과 화면에 '다음 던전: ○○' 버튼과 6초 카운트다운(`dungeon.autoAdvanceSeconds`, 0 이면 버튼만). 끝나면 자동 입장, 다른 버튼을 누르면 취소. 다음 던전이 잠겼거나 마지막이면 표시 안 함.
+- **보물 상자 수학 문제** (`game/mathQuiz.ts`, `ui/QuizUI.ts`): 상자를 열 때 초등 3학년 범위 문제(세 자리 덧셈·뺄셈, 곱셈구구, 나눗셈, 두 자리×한 자리) 보기 4개. 오답이면 새 문제(두 번째 오답부터 정답 안내), 정답이면 열림. 창이 열려 있으면 게임 멈춤(Esc 로 닫기). 설정 `chestQuiz`(게임 그룹, 기본 켬).
+- **교실 인트로** (`cinematic/IntroSet.ts`): 창릉초등학교 3학년 교실(나무 바닥·뒷벽·칠판 글자 '창릉초등학교 3학년 / 오늘의 수학: 347 + 268 = ?'·책상 5개·의자·교탁·시계·창문·책)에서 공부하다가 몬스터가 들이닥치는 장면으로 변경. 첫 장면 카메라는 주인공 앞쪽에서 얼굴과 칠판을 함께 잡고, 자막 '창릉초등학교 3학년 교실, 조용한 수학 시간' → '갑자기 몬스터들이 교실로 들이닥쳤다!'. 조용한 음악으로 시작해 몬스터 등장 때 보스 음악. 책상·교탁·뒷벽은 충돌 상자(인트로 끝나면 제거). 학교 이름은 `GameConfig.meta.school`.
+- 디버그: `chestsOpened`, `chestPositions`, `attacks`, `debugKillBoss()`.
+- `docs/2차개선-분석과-계획.md`: 2차 개선 지시서에 대한 현재 구조 분석·원인·단계 계획.
+
+### 수정 파일
+`src/combat/CombatSystem.ts`, `src/assets/PartRig.ts`, `src/game/GameConfig.ts`, `src/game/Settings.ts`, `src/game/mathQuiz.ts`(새), `src/ui/QuizUI.ts`(새), `src/ui/ResultUI.ts`, `src/cinematic/IntroSet.ts`(새), `src/cinematic/introTimeline.ts`, `src/cinematic/IntroDirector.ts`, `src/dungeon/DungeonScene.ts`, `src/game/Game.ts`, `src/style.css`, `tests/mathQuiz.test.ts`(새), `tests/intro.test.ts`, `docs/2차개선-분석과-계획.md`(새), `package.json`, `CLAUDE.md`, `GAME_GUIDE.md`, `CHANGELOG.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 125개·빌드). 수학 문제 1,000개 범위·정답·보기 검증, 교실 카메라 테스트.
+- Playwright: 상자 앞 E → 문제 창·게임 멈춤 → 오답 → 새 문제 → 정답 → 상자 열림·재개; 설정 끄면 바로 열림; 클리어 → '다음 던전: 수정 동굴' 카운트다운 → 자동 입장(play, cave); 빠른 탭 2번 → 공격 2회; 교실 인트로 장면 스크린샷·영상 확인. 회귀 smoke10/13/16 통과.
+
+### 알려진 문제
+- 교실 세트는 인트로에서만 보인다(게임 본편의 '여정식' 구조는 다음 단계).
+
 ## 2026-10-24 · v1.7.0 · 인트로 영상 (게임 안 실시간 연출, 줌 포함)
 
 ### 변경 내용

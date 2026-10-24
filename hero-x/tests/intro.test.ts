@@ -17,6 +17,8 @@ describe('인트로 시간표 (introAt)', () => {
     const b = introAt(INTRO_TIMES.establish - 0.01, hero);
     expect(b.fov).toBeLessThan(a.fov);
     expect(b.cam.y).toBeLessThan(a.cam.y);
+    expect(a.cam.z).toBeLessThan(hero.z); // 교실 장면은 주인공 앞(-Z)에서 칠판 쪽을 본다
+    expect(introAt(1.5, hero, 0, '창릉초등학교').caption).toContain('창릉초등학교');
     const c = introAt(INTRO_TIMES.slowmo + 0.01, hero);
     const d = introAt(INTRO_TIMES.finale - 0.01, hero);
     expect(d.fov).toBeGreaterThan(c.fov);
