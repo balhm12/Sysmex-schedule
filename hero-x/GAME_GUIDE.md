@@ -346,6 +346,8 @@
 | `player.jumpSpeed` | 8 | 1 ~ 30 | 점프 시작 속도 (높이) |
 | `player.gravity` | 24 | 1 ~ 100 | 중력 (떨어지는 속도) |
 | `player.turnSpeed` | 14 | 1 ~ 40 | 몸을 돌리는 속도 |
+| `player.accelTime` | 0.1 | 0 ~ 1 | 가속 시간(초). 0 이면 즉시 최고 속도 |
+| `player.decelTime` | 0.07 | 0 ~ 1 | 감속 시간(초). 0 이면 즉시 멈춤 |
 | `player.radius` | 0.5 | 0.2 ~ 2 | 충돌 반지름 |
 | `player.colors` | 파랑/노랑 | 색상 코드 | 임시 캐릭터 색 |
 
@@ -398,6 +400,8 @@
 | --- | --- | --- | --- |
 | `camera.offset` | (0, 13, 11) | y 3~40, z 0~40 | 카메라 위치 (높이, 뒤쪽 거리) |
 | `camera.smoothing` | 6 | 0.5 ~ 30 | 카메라가 따라붙는 속도 |
+| `camera.lookAhead` | 2.0 | 0 ~ 10 | 달릴 때 이동 방향으로 앞을 더 보여주는 거리 (0 = 끔) |
+| `camera.lookAheadSmoothing` | 2.5 | 0.2 ~ 20 | 앞보기가 따라붙는 속도 |
 | `camera.fov` | 50 | 30 ~ 90 | 화각 (세로 기준) |
 | `camera.maxHorizontalFov` | 80 | 40 ~ 150 | 가로 시야 상한. 넓은 화면(휴대폰 가로)에서는 이 값을 넘지 않게 자동으로 줌인 |
 | `camera.bossZoom` | scale 1.3, range 22 | 자유 | 보스가 range 안에 살아 있으면 카메라 거리를 scale 배로 |

@@ -19,6 +19,8 @@ export class CameraController {
   private shakeTime = 0;
   private shakeTotal = 0;
   private readonly shakeOffset = new THREE.Vector3();
+  /** 앞보기 오프셋(부드럽게 따라붙는 값) */
+  private readonly ahead = new THREE.Vector3();
 
   /** 카메라 흔들기 (피격·내려찍기·폭발). amp: 유닛, duration: 초 */
   shake(amp: number, duration: number): void {
@@ -41,14 +43,30 @@ export class CameraController {
   /** 다음 갱신 때 카메라를 바로 제자리로 (인트로처럼 카메라를 따로 움직인 뒤 복귀) */
   resetFollow(): void {
     this.first = true;
+    this.ahead.set(0, 0, 0);
   }
 
-  /** 매 프레임: target(플레이어 위치)을 따라간다 */
-  update(dt: number, target: THREE.Vector3): void {
+  /** 앞보기 오프셋 (순수 함수): 속도/최고 속도 비율(최대 1) × amount, 이동 방향으로 */
+  static lookAheadOffset(velocity: { x: number; z: number }, maxSpeed: number, amount: number): { x: number; z: number } {
+    const len = Math.hypot(velocity.x, velocity.z);
+    if (len < 1e-6 || amount <= 0 || maxSpeed <= 0) return { x: 0, z: 0 };
+    const ratio = Math.min(1, len / maxSpeed);
+    return { x: (velocity.x / len) * ratio * amount, z: (velocity.z / len) * ratio * amount };
+  }
+
+  /** 매 프레임: target(플레이어 위치)을 따라간다. velocity(유닛/초)가 있으면 이동 방향 앞을 조금 더 보여준다 */
+  update(dt: number, target: THREE.Vector3, velocity?: { x: number; z: number }, maxSpeed = 1): void {
     const c = GameConfig.camera;
     this.bossZoom += (this.bossZoomTarget - this.bossZoom) * (1 - Math.exp(-2.5 * dt));
     const k0 = this.distanceScale * this.bossZoom;
-    this.desired.set(target.x + c.offset.x * k0, target.y + c.offset.y * k0, target.z + c.offset.z * k0);
+    // 앞보기: 속도 비율(0~1)만큼 이동 방향으로 lookAhead 까지, 천천히 따라붙는다 (멈추면 천천히 돌아온다)
+    const want = CameraController.lookAheadOffset(velocity ?? { x: 0, z: 0 }, maxSpeed, c.lookAhead);
+    const ka = 1 - Math.exp(-c.lookAheadSmoothing * dt);
+    this.ahead.x += (want.x - this.ahead.x) * ka;
+    this.ahead.z += (want.z - this.ahead.z) * ka;
+    const tx = target.x + this.ahead.x;
+    const tz = target.z + this.ahead.z;
+    this.desired.set(tx + c.offset.x * k0, target.y + c.offset.y * k0, tz + c.offset.z * k0);
     if (this.first) {
       // 첫 프레임에는 바로 제자리로 (시작할 때 카메라가 날아오는 느낌 방지)
       this.camera.position.copy(this.desired);
@@ -57,7 +75,7 @@ export class CameraController {
       const k = 1 - Math.exp(-c.smoothing * dt);
       this.camera.position.lerp(this.desired, k);
     }
-    this.lookTarget.set(target.x, target.y + c.lookAtHeight, target.z);
+    this.lookTarget.set(tx, target.y + c.lookAtHeight, tz);
     // 흔들림: 남은 시간에 비례해 줄어드는 무작위 오프셋
     if (this.shakeTime > 0) {
       this.shakeTime = Math.max(0, this.shakeTime - dt);

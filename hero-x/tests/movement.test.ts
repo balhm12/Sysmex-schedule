@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { segmentBlocked, steerAround } from '../src/player/movement';
+import { segmentBlocked, steerAround, stepVelocity } from '../src/player/movement';
 import {
   clampToArena,
   computeMoveDirection,
@@ -195,5 +195,41 @@ describe('적 우회 이동 (segmentBlocked / steerAround)', () => {
     const box = [{ x: 0, z: 0, w: 20, d: 20 }]; // 상자 안에 갇힘
     const dir = { x: 1, z: 0 };
     expect(steerAround({ x: 0, z: 0 }, dir, 0.5, box, 3)).toBe(dir);
+  });
+});
+
+describe('stepVelocity (가속·감속, 프레임 독립)', () => {
+  it('가속: 목표를 향해 점점 빨라지고 accelTime 뒤에는 약 63% 에 이른다', () => {
+    let v = { x: 0, z: 0 };
+    const target = { x: 0, z: 7 };
+    v = stepVelocity(v, target, 0.1, 0.1, 0.07);
+    expect(v.z).toBeGreaterThan(7 * 0.6);
+    expect(v.z).toBeLessThan(7 * 0.66);
+    for (let i = 0; i < 20; i++) v = stepVelocity(v, target, 0.05, 0.1, 0.07);
+    expect(v.z).toBeCloseTo(7, 2);
+  });
+  it('감속: 입력을 놓으면 줄어들다가 아주 작아지면 0 으로', () => {
+    let v = { x: 7, z: 0 };
+    v = stepVelocity(v, { x: 0, z: 0 }, 0.07, 0.1, 0.07);
+    expect(v.x).toBeGreaterThan(7 * 0.34);
+    expect(v.x).toBeLessThan(7 * 0.4);
+    for (let i = 0; i < 20; i++) v = stepVelocity(v, { x: 0, z: 0 }, 0.05, 0.1, 0.07);
+    expect(v).toEqual({ x: 0, z: 0 });
+  });
+  it('프레임 독립: 0.02초 한 번과 0.01초 두 번의 결과가 같다', () => {
+    const target = { x: 7, z: 0 };
+    const one = stepVelocity({ x: 1, z: 0 }, target, 0.02, 0.1, 0.07);
+    const two = stepVelocity(stepVelocity({ x: 1, z: 0 }, target, 0.01, 0.1, 0.07), target, 0.01, 0.1, 0.07);
+    expect(one.x).toBeCloseTo(two.x, 10);
+  });
+  it('반대 방향으로 바꾸면 튀지 않고 0 을 지나 반대로 간다', () => {
+    let v = { x: 7, z: 0 };
+    v = stepVelocity(v, { x: -7, z: 0 }, 0.03, 0.1, 0.07);
+    expect(v.x).toBeLessThan(7);
+    expect(v.x).toBeGreaterThan(-7);
+    expect(Math.abs(v.x)).toBeLessThan(7);
+  });
+  it('시간이 0 이면 즉시 목표 속도', () => {
+    expect(stepVelocity({ x: 0, z: 0 }, { x: 3, z: 4 }, 0.016, 0, 0)).toEqual({ x: 3, z: 4 });
   });
 });

@@ -2,6 +2,24 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-24 · v1.28.0 · 지시서 6~7단계: 이동 가속·감속 + 회전·카메라 앞보기
+
+### 변경 내용
+- **가속·감속** `player.accelTime`(0.1초)·`player.decelTime`(0.07초) + `movement.stepVelocity`(순수 함수, 프레임 독립 지수 보간): 입력을 주면 부드럽게 가속, 놓으면 짧게 감속해 멈춘다. 방향을 반대로 바꾸면 속도 벡터가 0 을 지나며 꺾여 순간적으로 튀지 않는다. 대시는 즉시 속도. `PlayerController.velocity`(현재 속도 벡터)를 둔다. 아주 작은 속도는 0 으로 잘라 미끄러짐을 끝낸다.
+- **동작 동기화**: 걷기 동작은 입력이 아니라 실제 속도(`velocity` 크기)로 → 감속 중에도 발이 미끄러지지 않는다. 회전은 입력이 있을 때만(감속 중엔 방향 유지), 공격 중엔 공격 방향 유지.
+- **카메라 앞보기** `camera.lookAhead`(2.0 유닛)·`camera.lookAheadSmoothing`(2.5): 속도 비율만큼 이동 방향으로 카메라 목표를 앞에 두고 천천히 따라붙는다(멈추면 천천히 돌아옴). `CameraController.lookAheadOffset`(순수 함수). 프레임 독립(지수 보간), 보스 줌아웃·흔들림과 함께 동작. `resetFollow` 때 앞보기도 초기화.
+- 충돌: 속도 보간 뒤에 같은 밀어내기(`resolveCircleVsBoxes`)를 적용하므로 벽에 닿아도 떨리지 않고, 막힌 상태에서 옆 입력은 그대로 통한다.
+
+### 수정 파일
+`src/player/{movement.ts,PlayerController.ts}`, `src/game/{CameraController.ts,Game.ts,GameConfig.ts}`, `tests/{movement.test.ts,cameraLookAhead.test.ts(새)}`, `package.json`, `CHANGELOG.md`, `CLAUDE.md`, `GAME_GUIDE.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 244개·빌드). 새 테스트: 가속(accelTime 뒤 63%)·감속(0 으로)·프레임 독립(0.02 한 번 = 0.01 두 번)·반대 방향 전환·시간 0 즉시; 카메라 앞보기(정지 0, 최고 속도 amount, 절반, 상한, 끔).
+- Playwright `smoke42`: W 로 이동 → 놓으면 멈춤·미끄러짐 짧음 → 달릴 때 카메라가 이동 방향으로 앞서 있음 → 울타리에 막힌 뒤 위치 떨림 없음. 회귀 `smoke35`(콤보)·`smoke41`(가로 시야·세로 안내) 통과.
+
+### 알려진 문제
+- 가속·감속이 더 빠릿하길 원하면 `accelTime/decelTime` 을 줄인다(0 이면 예전처럼 즉시). 앞보기가 어지러우면 `camera.lookAhead` 를 0 으로.
+
 ## 2026-10-24 · v1.27.0 · 지시서 4~5단계: 애니메이션 상태 개선 + 공격 타격 시점 동기화
 
 ### 변경 내용

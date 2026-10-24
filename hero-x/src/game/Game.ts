@@ -1821,7 +1821,7 @@ export class Game {
     // 보스가 가까이 살아 있으면 카메라를 조금 뒤로 (큰 보스 모델이 화면에 들어오게)
     const bz = GameConfig.camera.bossZoom;
     this.cameraCtrl.setBossZoom(!!this.boss && this.boss.alive && Math.hypot(this.boss.position.x - this.player.position.x, this.boss.position.z - this.player.position.z) < bz.range);
-    this.cameraCtrl.update(dt, this.camTarget);
+    this.cameraCtrl.update(dt, this.camTarget, this.controller.velocity, GameConfig.player.moveSpeed * (1 + this.equipment.totals().moveSpeed));
     this.dungeon.updateLight(p);
     this.dungeon.update(dt);
     if (this.mode === 'intro') return; // 인트로: 승리 판정·자동 저장 없음

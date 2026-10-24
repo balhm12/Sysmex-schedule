@@ -219,6 +219,10 @@ export interface GameConfigType {
     climbAssist: number;
     /** 몸을 돌리는 속도 (클수록 빠르게 회전) */
     turnSpeed: number;
+    /** 가속 시간(초): 멈춤에서 최고 속도의 약 63% 까지 걸리는 시간 (작을수록 즉각 반응) */
+    accelTime: number;
+    /** 감속 시간(초): 입력을 놓은 뒤 속도가 약 37% 로 줄 때까지 (작을수록 바로 멈춤) */
+    decelTime: number;
     /** 충돌 반지름 */
     radius: number;
     /** 시작 위치 */
@@ -298,6 +302,10 @@ export interface GameConfigType {
     maxHorizontalFov: number;
     /** 플레이어 기준 카메라 위치 (y: 높이, z: 뒤쪽 거리) */
     offset: { x: number; y: number; z: number };
+    /** 앞보기(유닛): 최고 속도로 달릴 때 카메라 목표를 이동 방향으로 이만큼 앞에 둔다 (0 = 끔). 천천히 따라붙어 흔들리지 않는다 */
+    lookAhead: number;
+    /** 앞보기가 따라붙는 속도 (클수록 빨리) */
+    lookAheadSmoothing: number;
     /** 카메라가 바라보는 지점의 높이 */
     lookAtHeight: number;
     /** 따라오는 부드러움 (클수록 빨리 따라붙음) */
@@ -496,7 +504,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.27.0', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.28.0', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -524,6 +532,8 @@ export const GameConfig: GameConfigType = {
     gravity: 24,
     climbAssist: 1.0,
     turnSpeed: 14,
+    accelTime: 0.1,
+    decelTime: 0.07,
     radius: 0.5,
     startPosition: { x: 0, z: 0 },
     colors: { body: '#2f6df6', accent: '#ffc531', skin: '#f3c6a0', visor: '#5cf2d8' },
@@ -832,6 +842,8 @@ export const GameConfig: GameConfigType = {
     fov: 50,
     maxHorizontalFov: 80,
     offset: { x: 0, y: 13, z: 11 },
+    lookAhead: 2.0,
+    lookAheadSmoothing: 2.5,
     lookAtHeight: 1.0,
     smoothing: 6,
     near: 0.1,
@@ -1024,6 +1036,8 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'combat.ranged.radius': { min: 0.05, max: 2 },
   'combat.ranged.knockback': { min: 0, max: 50 },
   'player.turnSpeed': { min: 1, max: 40 },
+  'player.accelTime': { min: 0, max: 1 },
+  'player.decelTime': { min: 0, max: 1 },
   'player.radius': { min: 0.2, max: 2 },
   'combat.melee.damage': { min: 1, max: 9999 },
   'combat.melee.range': { min: 0.5, max: 10 },
@@ -1104,6 +1118,8 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'camera.offset.y': { min: 3, max: 40 },
   'camera.offset.z': { min: 0, max: 40 },
   'camera.smoothing': { min: 0.5, max: 30 },
+  'camera.lookAhead': { min: 0, max: 10 },
+  'camera.lookAheadSmoothing': { min: 0.2, max: 20 },
   'world.arenaHalfSize': { min: 10, max: 200 },
   'graphics.maxPixelRatio': { min: 1, max: 3 },
   'graphics.bloom.strength': { min: 0, max: 3 },

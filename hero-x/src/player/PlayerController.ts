@@ -9,6 +9,7 @@ import {
   groundHeightAt,
   integrateJump,
   startDash,
+  stepVelocity,
   tickDash,
   lerpAngle,
   resolveCircleVsBoxes,
@@ -24,6 +25,8 @@ import {
  */
 export class PlayerController {
   private readonly knock: Vec2 = { x: 0, z: 0 };
+  /** 현재 속도 벡터 (가속·감속 보간 결과). 카메라 앞보기·애니메이션에 쓴다 */
+  readonly velocity: Vec2 = { x: 0, z: 0 };
   /** 점프 키가 눌린 순간 기록 (프레임 사이에 아주 짧게 눌러도 놓치지 않도록 이벤트로 받는다) */
   private jumpQueued = false;
   private dashQueued = false;
@@ -69,6 +72,8 @@ export class PlayerController {
   reset(): void {
     this.knock.x = 0;
     this.knock.z = 0;
+    this.velocity.x = 0;
+    this.velocity.z = 0;
     this.jumpQueued = false;
     this.dashQueued = false;
     this.dash.timer = 0;
@@ -83,6 +88,8 @@ export class PlayerController {
     if (this.player.health.isDead) {
       this.player.moving = false;
       this.player.speed = 0;
+      this.velocity.x = 0;
+      this.velocity.z = 0;
       return;
     }
 
@@ -118,7 +125,17 @@ export class PlayerController {
     }
     this.player.dashing = this.dash.timer > 0;
 
-    let next = { x: pos.x + dir.x * speed * dt + this.knock.x * dt, z: pos.z + dir.z * speed * dt + this.knock.z * dt };
+    // 가속·감속: 입력 방향×속도를 목표로 속도 벡터를 보간한다 (대시는 즉시). 방향을 바꾸면 튀지 않고 부드럽게 꺾인다
+    const target = { x: dir.x * speed, z: dir.z * speed };
+    if (this.dash.timer > 0) {
+      this.velocity.x = target.x;
+      this.velocity.z = target.z;
+    } else {
+      const v = stepVelocity(this.velocity, target, dt, cfg.accelTime, cfg.decelTime);
+      this.velocity.x = v.x;
+      this.velocity.z = v.z;
+    }
+    let next = { x: pos.x + this.velocity.x * dt + this.knock.x * dt, z: pos.z + this.velocity.z * dt + this.knock.z * dt };
     const decay = Math.exp(-8 * dt);
     this.knock.x *= decay;
     this.knock.z *= decay;
@@ -139,13 +156,15 @@ export class PlayerController {
       this.player.jumpVy = j.vy;
     }
 
-    // 이동 방향으로 부드럽게 몸을 돌린다 (공격 중에는 공격 방향 유지)
+    // 이동 방향으로 부드럽게 몸을 돌린다 (공격 중에는 공격 방향 유지). 입력이 있을 때만 → 감속 중엔 방향을 지킨다
     if (moving && (!this.player.attacking || this.dash.timer > 0)) {
-      const target = directionToFacing(dir);
-      this.player.facing = lerpAngle(this.player.facing, target, 1 - Math.exp(-cfg.turnSpeed * dt));
+      const face = directionToFacing(dir);
+      this.player.facing = lerpAngle(this.player.facing, face, 1 - Math.exp(-cfg.turnSpeed * dt));
     }
 
-    this.player.moving = moving;
-    this.player.speed = moving ? speed : 0;
+    // 실제 속도 기준으로 동작: 감속 중에도 발이 미끄러지지 않게 걷기 동작이 이어진다
+    const actual = Math.hypot(this.velocity.x, this.velocity.z);
+    this.player.moving = moving || actual > 0.3;
+    this.player.speed = this.player.moving ? Math.max(actual, moving ? speed * 0.35 : 0) : 0;
   }
 }

@@ -261,3 +261,20 @@ export function steerAround(pos: Vec2, dir: Vec2, radius: number, boxes: Box[], 
   }
   return { x: candidates[0].x * len, z: candidates[0].z * len };
 }
+
+/**
+ * 속도 보간 (프레임 독립): 목표 속도로 지수적으로 다가간다.
+ * - 목표가 있으면(가속) accelTime, 목표가 0 이면(감속) decelTime 기준. 시간 0 이면 즉시.
+ * - 방향을 반대로 바꾸면 속도 벡터가 0 을 지나며 자연스럽게 줄었다 늘어난다 (순간적으로 튀지 않음).
+ */
+export function stepVelocity(vel: Vec2, target: Vec2, dt: number, accelTime: number, decelTime: number): Vec2 {
+  const accelerating = Math.hypot(target.x, target.z) > 1e-6;
+  const tau = accelerating ? accelTime : decelTime;
+  if (tau <= 1e-6 || dt <= 0) return { x: target.x, z: target.z };
+  const k = 1 - Math.exp(-dt / tau);
+  const nx = vel.x + (target.x - vel.x) * k;
+  const nz = vel.z + (target.z - vel.z) * k;
+  // 아주 작은 속도는 0 으로 (미끄러짐 끝)
+  if (!accelerating && Math.hypot(nx, nz) < 0.02) return { x: 0, z: 0 };
+  return { x: nx, z: nz };
+}
