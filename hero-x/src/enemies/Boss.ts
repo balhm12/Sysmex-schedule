@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { glow, pbr } from '../render/materials';
 import { modelRegistry } from '../assets/ModelRegistry';
+import { createSmoothBossModel } from './SmoothBossModels';
 import { meshHasPart } from '../assets/meshMerge';
 import type { BossConfig } from '../game/DungeonDefs';
 import { GameConfig, type EnemyTypeConfig } from '../game/GameConfig';
@@ -153,6 +154,9 @@ export type BossModelKind = 'guardian' | 'golem' | 'commander' | 'frost';
  * - commander(요새 사령관): 각진 몸통에 어깨 포탑, 포신 팔
  * 예고 때 패턴별로 다른 색·동작.
  */
+/** true 면 예전 상자형 보스 모델 (비교용). 보통은 false */
+const LEGACY_BOX_BOSS = false;
+
 /** 패턴별 예고 색 (바닥 원) */
 const PATTERN_COLOR: Record<BossPattern, number> = { charge: 0xff7a45, slam: 0xff4f79, barrage: 0xb06bff, summon: 0x8fe8ff, mortar: 0xffb14f };
 
@@ -223,11 +227,12 @@ function decorateGltfBoss(inner: EnemyModel, r: number): EnemyModel {
   };
 }
 
-function createBossModel(def: EnemyTypeConfig, kindIn: BossModelKind = 'guardian'): EnemyModel {
+export function createBossModel(def: EnemyTypeConfig, kindIn: BossModelKind = 'guardian'): EnemyModel {
   // 정식 .glb 보스 모델이 등록돼 있으면 그것을 쓰고, 패턴 예고(바닥 원)·2단계(붉은 눈)만 덧입힌다
   const gltf = modelRegistry.createEnemyModel(`boss:${kindIn}`, def.radius * 3.0);
   if (gltf) return decorateGltfBoss(gltf, def.radius);
-  // 코드 모델: 서리 거인은 골렘 모양을 빌려 쓴다 (.glb 가 없을 때만)
+  // 기본: 매끈한 카툰 보스 모델. 아래 상자 모델은 예전 외형(비교용)
+  if (!LEGACY_BOX_BOSS) return createSmoothBossModel(def, kindIn);
   const kind: Exclude<BossModelKind, 'frost'> = kindIn === 'frost' ? 'golem' : kindIn;
   const root = new THREE.Group();
   root.name = `Boss-${def.name}`;

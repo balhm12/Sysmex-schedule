@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { EquipmentLooks } from '../EquipmentVisuals';
 import { fabricTexture } from '../../render/fabricTexture';
 import { glow, pbr } from '../../render/materials';
+import { add, blob, capsule, rbox, ring, sphere, strand } from '../../render/shapes';
 import { createHeroAnimator, createHeroEquipment, disposeModelTree, type HeroRig } from './heroAnimator';
 import type { PlaceholderColors, PlayerModel } from './PlaceholderModel';
 
@@ -55,40 +55,6 @@ export function createHeroModel(colors: PlaceholderColors): PlayerModel {
   M.blade.transparent = true;
   M.blade.opacity = 0.9;
   M.lens.side = THREE.DoubleSide;
-
-  const add = (parent: THREE.Object3D, geo: THREE.BufferGeometry, m: THREE.Material, x = 0, y = 0, z = 0): THREE.Mesh => {
-    const mesh = new THREE.Mesh(geo, m);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    parent.add(mesh);
-    return mesh;
-  };
-  const rbox = (w: number, h: number, d: number, r: number) => new RoundedBoxGeometry(w, h, d, 4, Math.min(r, w / 2, h / 2, d / 2));
-  const sphere = (r: number, w = 20, h = 14) => new THREE.SphereGeometry(r, w, h);
-  const capsule = (r: number, len: number) => new THREE.CapsuleGeometry(r, len, 6, 14);
-  const ring = (r: number, tube: number, arc = Math.PI * 2) => new THREE.TorusGeometry(r, tube, 10, 32, arc);
-  const blob = (parent: THREE.Object3D, r: number, sx: number, sy: number, sz: number, m: THREE.Material, x: number, y: number, z: number): THREE.Mesh => {
-    const mesh = add(parent, sphere(r, 16, 12), m, x, y, z);
-    mesh.scale.set(sx, sy, sz);
-    return mesh;
-  };
-  /** 머리카락 가닥: 아래가 둥글고 끝이 뾰족한 회전체(Y 축 방향 길이 len). dir 쪽으로 눕힌다 */
-  const strandGeo = (len: number, r: number) => {
-    const pts: THREE.Vector2[] = [];
-    const n = 7;
-    for (let i = 0; i <= n; i++) {
-      const t = i / n;
-      // 둥근 밑동 → 가늘어지는 끝
-      const rr = r * Math.sin(Math.min(1, t * 1.6 + 0.08) * Math.PI * 0.5) * (1 - t * t * 0.95) + (i === n ? 0 : 0.002);
-      pts.push(new THREE.Vector2(rr, t * len));
-    }
-    return new THREE.LatheGeometry(pts, 8);
-  };
-  const strand = (parent: THREE.Object3D, x: number, y: number, z: number, dir: THREE.Vector3, len: number, r: number, m: THREE.Material): THREE.Mesh => {
-    const mesh = add(parent, strandGeo(len, r), m, x, y, z);
-    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
-    return mesh;
-  };
 
   // ---------- 다리: 엉덩이(허벅지) → 무릎(정강이·무릎 보호대·장화) ----------
   const makeLeg = (x: number) => {

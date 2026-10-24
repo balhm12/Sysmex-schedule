@@ -3,6 +3,7 @@ import { glow, pbr } from '../render/materials';
 import { modelRegistry } from '../assets/ModelRegistry';
 import type { EnemyTypeConfig } from '../game/GameConfig';
 import type { EnemyState } from './EnemyAI';
+import { createSmoothEnemyModel } from './SmoothEnemyModels';
 
 /** 모델이 매 프레임 받는 상태 */
 export interface EnemyModelState {
@@ -36,6 +37,8 @@ export function createEnemyModel(type: string, def: EnemyTypeConfig, skin?: stri
   // 정식 .glb 모델이 등록돼 있으면 그것을 쓴다 (높이는 충돌 반지름에 비례). skin 이 있으면 그 키를 먼저 본다
   const gltf = (skin ? modelRegistry.createEnemyModel(`enemy:${skin}`, def.radius * 2.8) : null) ?? modelRegistry.createEnemyModel(`enemy:${type}`, def.radius * 2.8);
   if (gltf) return gltf;
+  // 기본: 매끈한 카툰 모델 (SmoothEnemyModels). 아래 상자 모델은 legacy 외형(manifest 'legacy' 가 아닌 한 쓰지 않음)
+  if (!LEGACY_BOX_MODELS) return createSmoothEnemyModel(type, def, skin);
   // def.model 이 있으면 그 외형을, 없으면 종류 이름으로 고른다 (새 종류가 기존 외형을 재사용할 수 있게)
   switch (def.model ?? type) {
     case 'tank':
@@ -47,6 +50,9 @@ export function createEnemyModel(type: string, def: EnemyTypeConfig, skin?: stri
       return createRusherModel(def);
   }
 }
+
+/** true 면 예전 상자형 코드 모델을 쓴다 (비교용). 보통은 false → 매끈한 카툰 모델 */
+const LEGACY_BOX_MODELS = false;
 
 /** 집게 등 금속 부품 재질 (적 색을 살짝 섞은 강철) */
 function steelFor(def: EnemyTypeConfig): THREE.MeshStandardMaterial {

@@ -6,7 +6,8 @@ import { ChestSystem } from '../dungeon/Chest';
 import { DungeonScene } from '../dungeon/DungeonScene';
 import { DUNGEONS, isDungeonUnlocked, nextDungeonAfter, resolveBossConfig, type BossConfig, type DungeonDef } from './DungeonDefs';
 import { DungeonSelectUI } from '../ui/DungeonSelectUI';
-import { Boss, type BossAttack } from '../enemies/Boss';
+import { Boss, bossTypeConfig, createBossModel, type BossAttack } from '../enemies/Boss';
+import type { EnemyModel } from '../enemies/EnemyModels';
 import type { Enemy } from '../enemies/Enemy';
 import { EnemySpawner } from '../enemies/EnemySpawner';
 import { InputManager } from '../input/InputManager';
@@ -1180,10 +1181,21 @@ export class Game {
   }
 
   /** 적 한 마리를 지정 위치에 등장시킨다 (테스트·디버그용: 우회 이동·전투 확인). 만든 적의 index 를 돌려준다 */
-  debugSpawnEnemy(type: string, x: number, z: number): number {
-    const e = this.spawner.spawn(type, x, z);
+  debugSpawnEnemy(type: string, x: number, z: number, skin?: string): number {
+    const e = this.spawner.spawn(type, x, z, 1, skin);
     return e ? this.spawner.getEnemies().indexOf(e) : -1;
   }
+
+  /** 보스 모델만 장식처럼 놓는다 (테스트·디버그용: 외형 확인). 전투와 무관. 만든 Object3D 를 돌려준다 */
+  debugPlaceBossModel(kind: 'guardian' | 'golem' | 'commander' | 'frost', x: number, z: number): THREE.Object3D {
+    const def = bossTypeConfig({ ...GameConfig.boss, model: kind });
+    const m = createBossModel(def, kind);
+    m.root.position.set(x, 0, z);
+    this.scene.add(m.root);
+    this.debugModels.push(m);
+    return m.root;
+  }
+  private readonly debugModels: EnemyModel[] = [];
 
   /** 보스 체력을 지정 비율까지 깎는다 (테스트·디버그용: 2단계 연출 확인) */
   debugSetBossHpRatio(ratio: number): void {
@@ -1788,6 +1800,7 @@ export class Game {
     if (aim) this.aimRing.position.set(aim.x, 0.06, aim.z);
     this.hud.setChests(this.chests.openedCount, this.chests.total);
     this.player.update(dt);
+    for (const m of this.debugModels) m.update(dt, { state: 'idle', moving: false, windup: 0, death: 0 });
     this.effects.update(dt);
     this.damageNumbers.update(dt);
     // 카메라는 점프 높이를 따라가지 않도록 바닥 위치를 본다

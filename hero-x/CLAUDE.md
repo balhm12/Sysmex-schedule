@@ -78,6 +78,7 @@ hero-x/
 │  │  ├─ RenderPipeline.ts 렌더러·톤매핑·환경광·후처리(블룸) 한 곳 관리. Game 은 pipeline.render() 만 호출
 │  │  ├─ groundTexture.ts  노이즈 바닥 색 지도·노멀맵 생성 (파일 없음)
 │  │  ├─ fabricTexture.ts  캐릭터용 천·가죽 질감 캔버스 텍스처(캐시, 캔버스 없으면 null)
+│  │  ├─ shapes.ts         매끈한 카툰 모델 공용 도형(add/rbox/sphere/capsule/ring/cone/blob/strand/disposeTree)
 │  │  └─ surfaceTexture.ts 벽·장애물 표면 6종(hedge/rock/steel/ice/wood/brick) 색 지도·노멀맵 + 월드 좌표 UV 셰이더 패치 (surfaceSample 테스트 대상)
 │  ├─ cinematic/
 │  │  ├─ introTimeline.ts  ★ 인트로 연출 시간표: 시각 → 카메라 위치·줌(fov)·시간 배율·주인공 행동·자막 (순수 함수, 테스트 대상)
@@ -108,7 +109,9 @@ hero-x/
 │  │  └─ Effects.ts        휘두르기 부채꼴·검 궤적(slash, 방향 sweep)·섬광(flash)·충격파·예고 원·빛 기둥(pillar)·파편 효과 (풀 재사용)
 │  ├─ enemies/
 │  │  ├─ EnemyAI.ts        적 상태 기계 (idle/chase/windup/charge/hurt/dead, 근접·원거리·돌진·자폭형, 테스트 대상)
-│  │  ├─ EnemyModels.ts    종류별 임시 모델 + EnemyModel 인터페이스
+│  │  ├─ EnemyModels.ts    EnemyModel 인터페이스 + 생성 분기(.glb → 매끈한 모델 → legacy 상자 모델)
+│  │  ├─ SmoothEnemyModels.ts ★ 매끈한 카툰 적 10종 + 로봇 외형 6종(skin 'robot-*') 코드 모델 (테스트 대상)
+│  │  ├─ SmoothBossModels.ts  ★ 매끈한 카툰 보스 4종 코드 모델 (패턴 원·2단계 눈 포함, 테스트 대상)
 │  │  ├─ Enemy.ts          적 한 마리 (능력치·체력·AI·모델 연결, 이동·충돌, 추적 중 우회 이동 steerAround). 상속 가능(protected 필드, 모델 주입)
 │  │  ├─ BossAI.ts         보스 패턴 상태 기계 (chase/windup/charge/recover, 2단계 시간 배율, 테스트 대상)
 │  │  ├─ Boss.ts           보스 엔티티(Enemy 상속)·패턴 실행 콜백·보스 모델(.glb 가 있으면 decorateGltfBoss 로 패턴 원·2단계 눈 추가, 없으면 코드 모델)
@@ -249,7 +252,7 @@ hero-x/
 - 인트로 연출: `Game.startIntro(next)` 가 숲 던전을 초기화하고 `IntroSet`(교실 세트, 학교 이름은 `GameConfig.meta.school`)을 올린 뒤 `mode = 'intro'` 로 `IntroDirector` 를 돌린다(메뉴 '인트로 보기', 처음 '새 게임' 때 한 번 — `hero-x.introSeen` 플래그). `frame()` 은 인트로 시간 배율을 곱해 `simulate()` 하고 연출기가 카메라·자막을 덮어쓴다. 인트로 중에는 피해 없음(`damagePlayer` 반환), 드롭 없음, 승리 판정·자동 저장 없음. 아무 키·화면 터치·건너뛰기 버튼이 `endIntro()` 를 부르고 `restart()` 로 던전을 복구한다. 장면·카메라 수치는 `introTimeline.ts` 만 고친다. 브라우저 테스트는 시작 전에 `localStorage.setItem('hero-x.introSeen','1')` 을 넣어 인트로를 건너뛴다.
 - 게임 흐름은 `Game.mode`('menu' | 'play' | 'result' | 'intro') 하나로 관리한다. 메뉴·결과 전환은 `newGame / continueGame / retry / openMenu / showResult` 만 사용하고, 루프는 `mode !== 'play'` 이거나 `paused` 면 그리기만 한다. 브라우저 자동 검증은 `#menu-new` 버튼으로 시작한다.
 - 주의: 3D 효과의 방향을 바꿀 때는 `node -e` 로 벡터에 회전을 적용해 보고 확인한다 (2-b 의 부채꼴 반대 방향 버그 참고). 키를 '누르는 순간' 반응해야 하는 동작(점프 등)은 폴링이 아니라 `InputManager.onPress` 로 받는다 (낮은 FPS 에서 짧은 탭을 놓침).
-- 새 적 종류 → `enemies.types` 에 능력치 추가 + 외형은 `tools/make_monsters_glb.py`(또는 로봇은 `make_enemies_glb.py`)에 복셀 모델을 추가하고 `manifest.json` `enemies.<종류>` 에 등록(또는 `EnemyModels.ts` 임시 모델 분기) + (행동이 다르면) `EnemyAI.ts` 확장. 적 .glb 의 재질은 개체마다 복제되므로(`cloneMaterials`) 피격 번쩍임·발광이 섞이지 않는다.
+- 새 적 종류 → `enemies.types` 에 능력치 추가 + 외형은 `SmoothEnemyModels.ts` 에 빌더 함수(둥근 몸 + 특징 부품, `finish(root, r, flashMats, animate)` 로 마무리)를 만들고 `pickBase` 에 분기(로봇 외형은 `robot(def, kind)` 의 종류별 부품) + (행동이 다르면) `EnemyAI.ts` 확장. `tests/smoothEnemies.test.ts` 가 모든 종류를 만들어 상태별 갱신을 돈다. 복셀 .glb(`tools/make_monsters_glb.py` 등)는 manifest 에 적으면 대신 쓰인다. 화면 확인은 스크래치 `shots40.cjs`(줄 세우기·예고 자세). 적 .glb 의 재질은 개체마다 복제되므로(`cloneMaterials`) 피격 번쩍임·발광이 섞이지 않는다.
 - "더 어렵게/쉽게" → 먼저 난이도 버튼 안내. 전체 조정은 `difficulty.presets` 배율, 특정 적만이면 `enemies.types.<종류>`.
 - 난이도 배율은 적 생성 시(체력·속도)와 피해 계산 시(공격력, `Game.onEnemyAttack`)에 적용된다. 새 적 능력치를 추가하면 배율 적용 위치를 함께 확인한다.
 - 새 기능(무기, 아이템…) → 새 파일을 만들고 `Game.ts` 의 루프에 `update()` 를 추가. 설정은 `GameConfig.ts` 에.
@@ -264,6 +267,6 @@ hero-x/
 6. 콘텐츠 확장 ✅ (v0.6.0-a.1 던전 3개·던전 선택·새 적·새 장비 / v0.6.1 모바일 / v0.6.2 보스별 패턴·외형)
 7. 품질 개선 ✅ (v0.7.0-a.1 효과음·음악 / v0.7.0-b.1 얼굴 사진·glb 교체 구조 / v1.0.0 자동 화질·오류 처리·문서)
 8. 2차 개선(`docs/2차개선-분석과-계획.md`) — 1 빠른 개선 ✅ v1.8.0 / 2 모바일 UI ✅ v1.8.1 / 3 여정형 첫 던전 ✅ v1.9.0 / 4 그래픽 고도화 ✅ v1.10.0 / 5 다른 던전 확장(동굴·요새 여정형, 로봇 공장 테마) ✅ v1.11.0 / 적 10종 ✅ v1.12.0 / 메시 합치기 ✅ v1.13.0 / 네 번째 던전 얼음 봉우리 ✅ v1.14.0 / 소품 합치기·구역 음악 분위기 ✅ v1.15.0 / 벽·장애물 그래픽 ✅ v1.16.0 / 보스 등장 팝업 ✅ v1.17.0 / 앱처럼 설치(PWA) ✅ v1.18.0 / 근접 3단 콤보·원거리 연출 ✅ v1.19.0 / 장비 자동 장착·무기별 공격 방식·장비 외형 ✅ v1.20.0
-9. 캐릭터 리뉴얼·애니메이션 개선(지시서 2차): 1~3 분석·모델 확보(KayKit CC0)·교체 호환 ✅ v1.21.0 / 둥근 복셀 아들 캐릭터로 교체 ✅ v1.22.0 / 매끈한 카툰 치비(코드 모델) ✅ v1.23.0 / 코드 모델 고급화(머리카락 결·네모 안경·후드 코트·질감) ✅ v1.24.0 / 4~5 애니메이션 상태·공격 동기화 / 6 이동 가속·감속 / 7 회전·카메라 / 8~9 충돌·모바일·로딩 표시
+9. 캐릭터 리뉴얼·애니메이션 개선(지시서 2차): 1~3 분석·모델 확보(KayKit CC0)·교체 호환 ✅ v1.21.0 / 둥근 복셀 아들 캐릭터로 교체 ✅ v1.22.0 / 매끈한 카툰 치비(코드 모델) ✅ v1.23.0 / 코드 모델 고급화(머리카락 결·네모 안경·후드 코트·질감) ✅ v1.24.0 / 적·보스 전체 매끈한 스타일 ✅ v1.25.0 / 4~5 애니메이션 상태·공격 동기화 / 6 이동 가속·감속 / 7 회전·카메라 / 8~9 충돌·모바일·로딩 표시
 
 각 단계는 완료 기준을 만족하고 기존 기능이 정상일 때만 다음 단계로 넘어간다.

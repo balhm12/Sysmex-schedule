@@ -4,6 +4,10 @@
 
 매끈한 카툰 치비 아들 캐릭터는 파일이 아니라 코드(구·캡슐·둥근 상자)로 만든다. 아래 파일 모델들은 manifest 의 `player` 에 적으면 대신 쓸 수 있다.
 
+## 적·보스 모델: 코드 모델 (`src/enemies/SmoothEnemyModels.ts`, `SmoothBossModels.ts`, manifest `enemies`/`bosses` 비움)
+
+적 10종·로봇 외형 6종·보스 4종은 매끈한 카툰 코드 모델이 기본이다. 이 폴더의 복셀 파일(`monster-*.glb`, `enemy-*.glb`, `boss-*.glb`)은 남겨 두었고, manifest 의 `enemies.<종류>` / `enemies.robot-<종류>` / `bosses.<외형>` 에 `{ "file": "..." }` 로 적으면 대신 쓰인다.
+
 ## 파일 모델 1: 둥근 복셀 아들 캐릭터 `player-chibi.glb` (자체 제작)
 
 - `tools/make_player_chibi_glb.py` 로 생성(1,158 KB, 상자 160개 + 복셀 메시 32개 6,490칸, 재질 28개). 둥근 머리·머리카락·몸·팔다리는 `tools/voxel_shapes.py` 의 껍데기 복셀(타원체·둥근 상자·캡슐·고리)로, 눈·둥근 안경테·장식은 상자로 만든다. 부품 이름 규칙(PartRig)을 따르므로 걷기·공격·회피·점프·피격 동작과 장비 부착이 그대로 동작한다.

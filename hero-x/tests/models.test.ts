@@ -110,14 +110,11 @@ describe('둥근 복셀 플레이어 모델 (public/models/player-chibi.glb)', (
   });
 });
 
-describe('보스 복셀 모델 (public/models/boss-*.glb)', () => {
+describe('보스 복셀 모델 (public/models/boss-*.glb — 지금은 선택 외형, 파일은 남겨 둠)', () => {
   const dir: string = resolve(new URL('.', import.meta.url).pathname, '../public/models');
-  const manifest = JSON.parse(readFileSync(resolve(dir, 'manifest.json'), 'utf8') as string) as { bosses: Record<string, { file: string } | null> };
   for (const kind of ['guardian', 'golem', 'commander', 'frost']) {
-    it(`${kind}: manifest 에 등록돼 있고 파일이 있으며, 사람형 리그 부품(팔·다리·머리·눈)이 들어 있다`, () => {
-      const entry = manifest.bosses[kind];
-      expect(entry?.file).toBe(`boss-${kind}.glb`);
-      const file: string = resolve(dir, entry!.file);
+    it(`${kind}: 파일이 있으며, 사람형 리그 부품(팔·다리·머리·눈)이 들어 있다`, () => {
+      const file: string = resolve(dir, `boss-${kind}.glb`);
       expect(existsSync(file)).toBe(true);
       const names = glbNodeNames(file);
       const kinds = new Set(names.map((n) => classifyPart(n)));
