@@ -30,7 +30,15 @@ cd sysmex-schedule
 npm install            # xlsx(SheetJS)·jsdom
 ```
 
-## 보고서 데이터 만들기
+## 매달 하는 일 — Drive 폴더 하나에 넣고 Colab 실행 (PC 없이)
+1. Drive 「내 드라이브」에 폴더 **`CRM_원본`** 을 한 번 만든다.
+2. 매달 CRM에서 내보낸 파일을 **이름 그대로** 그 폴더에 넣는다 — 「2. 모든 약속_활동 …」(필수) · 「Serial No …」 · 「1. 모든 서비스 케이스 …」 · 설치 공유캘린더 내보내기 `시스템설치_공유캘린더_YYYYMMDD.xlsx`. 기관명매핑·설치_수동입력은 같은 폴더에 xlsx 또는 Google 시트로 둔다(이름에 `기관명매핑` / `수동입력`). 지난달 파일은 지우지 않아도 된다(파일명 날짜 → 수정 시각으로 최신 선택).
+3. [Colab에서 열기](https://colab.research.google.com/github/balhm12/Sysmex-schedule/blob/claude/fsg-report-engine/fsg-report/colab_report.ipynb) → 런타임 › 모두 실행 → 권한 허용. 기간을 비우면 지난달.
+4. 결과는 Drive `FSG_report_out/<기간>/` — `report-data_<기간>.json`(PPT 빌더 입력) · `검산_<기간>.xlsx`(시트 정제 탭과 같은 배치 → 보고서 만들 때 이 파일을 올린다) · `요약_<기간>.txt`(이름 없는 요약, Claude가 Drive 커넥터로 읽음).
+
+PC에서 하려면 아래 CLI를 같은 폴더(Drive 데스크톱 동기화 경로)에 대고 돌리면 된다.
+
+## 보고서 데이터 만들기 (PC, CLI)
 ```powershell
 node fsg-report/report-data.js --period 2026-09 --dir "G:\내 드라이브\CRM_원본"
 node fsg-report/report-data.js --period FY2026Q2 --activity "2. 모든 약속_활동 2026_10_12.xlsx" --out out
@@ -67,6 +75,6 @@ S/N 칸이 0이면 장비 없음(재방문 판정·반복 고장·가동 장비�
 ## 파일
 - `kpi-core.js` 생성 파일(수정 금지) ← `tools/extract-kpi-core.js`
 - `lib/read-crm.js` CRM xlsx 읽기(대시보드 parseActivity 포팅) · `lib/period.js` 기간 표기 · `lib/report-core.js` 집계 · `lib/write-check.js` 검산 워크북
-- `report-data.js` CLI · `compare-sheet.js` 시트 대조
+- `report-data.js` CLI · `compare-sheet.js` 시트 대조 · `colab_report.ipynb` Drive 폴더 → 보고 데이터(PC 없이) · `colab_compare.ipynb` 시트 검산(PC 없이)
 - 테스트: `tests/test_kpi_core_sync.js` `tests/test_report_engine.js` `tests/test_report_tools.js` (`npm test`)
 - `out/`·`data/`·xlsx·csv는 커밋하지 않는다(.gitignore) — 거래처명·직원 실명이 들어간다
