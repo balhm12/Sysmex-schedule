@@ -85,7 +85,7 @@ function main() {
   console.log(`행 ${m.rows.raw} → 예정 제외 ${m.excluded.future} · 시각 없음 ${m.excluded.notime} · 취소 ${m.excluded.cancel} · 온라인 정기점검 ${m.excluded.online} → 집계 ${m.rows.counted}` + (act.hasAtt ? '' : '  ⚠ 필수 참석자 열 없음(담당자만 인정)'));
   console.log(`FSG  FTFR ${k.ftfr}% · 재방문율 ${k.revisitRate}% · MTTR ${k.mttr}분 · 예방정비지수 ${k.pmRatio}% · 고장수리 ${k.repairCount} · PM ${k.pmCount} · 재방문(FTFR 실패) ${k.revisitCount}`);
   k.teams.forEach(t => console.log(`  ${t.team.padEnd(10)} FTFR ${t.ftfr ?? '-'} · 재방문율 ${t.revisit ?? '-'} · MTTR ${t.mttr ?? '-'}`));
-  rep.team.rows.forEach(r => console.log(`  ${r.team.padEnd(10)} 인원 ${r.count} · PM ${r.pm} · A/S ${r.as_} · 설치(CRM 활동) ${r.instCrm} · 합계 ${r.sum} · 1인당 ${r.perHead}`));
+  rep.team.rows.forEach(r => console.log(`  ${r.team.padEnd(10)} 인원 ${r.count} · PM ${r.pm} · A/S ${r.as_} · 설치 ${r.inst}` + (rep.team.instSource === 'CRM 활동' ? '(CRM 활동)' : `(캘린더 기준 기관 수 · 참고 CRM 활동 ${r.instCrm})`) + ` · 합계 ${r.sum} · 1인당 ${r.perHead}`));
   if (rep.team.unmapped) console.log(`  ⚠ 로스터 미매핑 활동 ${rep.team.unmapped}건 (이름은 검산 xlsx 「로스터미매핑」 탭)`);
   const H = rep.health;
   console.log(H ? `가동 장비 ${H.activeCount}대 · PM 커버리지 ${H.pmCoverage}% · 점검 고르기 ${H.pmCV}% · 100대당 고장 ${H.per100}건 · 반복 고장 장비 ${H.chronicRatio}% · 집중관리 후보 ${rep.focus.candidateCount}곳`
