@@ -2236,7 +2236,7 @@ function decodeEmbed(E){
   const out=new Array(E.n), c=E.c, d=E.d;
   for(let i=0;i<E.n;i++){
     out[i]={st:d.st[c.st[i]]||'',t:E.t[i]<0?null:E.t[i]*60000,e:E.e[i]<0?null:E.e[i]*60000,own:d.own[c.own[i]]||'',
-      err:d.err[c.err[i]]||'',acct:d.acct[c.acct[i]]||'',sn:d.sn[c.sn[i]]||'',prod:d.prod[c.prod[i]]||'',purp:d.purp[c.purp[i]]||'',subj:d.subj[c.subj[i]]||'',ft:d.ft?(d.ft[c.ft[i]]||''):'',att:d.att?(d.att[c.att[i]]||''):'',c:E.cr&&E.cr[i]>=0?E.cr[i]*60000:null};
+      err:d.err[c.err[i]]||'',acct:d.acct[c.acct[i]]||'',sn:snOf(d.sn[c.sn[i]]),prod:d.prod[c.prod[i]]||'',purp:d.purp[c.purp[i]]||'',subj:d.subj[c.subj[i]]||'',ft:d.ft?(d.ft[c.ft[i]]||''):'',att:d.att?(d.att[c.att[i]]||''):'',c:E.cr&&E.cr[i]>=0?E.cr[i]*60000:null};
   }
   return out;
 }
@@ -2813,6 +2813,9 @@ function toMs(v){
   const d=new Date(s); if(isNaN(d)) return null;
   return Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),d.getHours(),d.getMinutes());
 }
+/* S/N 칸이 0이면 "장비 없음"으로 본다 (2026-10-25 사용자 결정 A). CRM은 연결된 장비가 없을 때 Serial No. (lookup)에 0을 내보내는데,
+   이를 '0'이라는 장비로 두면 그 기록들이 한 장비의 재방문 이력처럼 묶여 FTFR·재방문율·가동 장비 수가 틀어진다(월간보고 Apps Script와 같은 규칙). */
+function snOf(v){ v=String(v==null?'':v).trim(); return v==='0'?'':v; }
 function col(h, names, fallback){ for(const n of names){const i=h.findIndex(c=>c===n); if(i>=0) return i;} for(const n of names){const i=h.findIndex(c=>c.includes(n)); if(i>=0) return i;} return fallback; }
 function parseActivity(buf){
   const t=xlsxRows(buf,['약속/활동 목적']); if(!t) throw new Error("'약속/활동 목적' 열이 있는 시트를 찾지 못했습니다. CRM '모든 약속/활동' 내보내기 파일인지 확인해 주세요.");
@@ -2820,7 +2823,7 @@ function parseActivity(buf){
     acct:col(h,['거래처'],12),sn:col(h,['Serial No. (lookup)','Serial No'],14),prod:col(h,['Product'],15),purp:col(h,['약속/활동 목적'],16),att:col(h,['필수 참석자'],-1),cr:col(h,['만든 날짜'],-1)};
   const out=[]; for(const r of t.rows){ if(!r.length||r.every(v=>v==='')) continue;
     const g=k=>{const v=r[ix[k]];return v==null?'':String(v).trim();};
-    out.push({st:g('st'),ft:g('ft'),t:toMs(r[ix.t]),e:toMs(r[ix.e]),own:g('own'),err:g('err'),acct:g('acct'),sn:g('sn'),prod:g('prod'),purp:g('purp'),subj:g('subj'),att:g('att'),c:ix.cr>=0?toMs(r[ix.cr]):null}); }
+    out.push({st:g('st'),ft:g('ft'),t:toMs(r[ix.t]),e:toMs(r[ix.e]),own:g('own'),err:g('err'),acct:g('acct'),sn:snOf(g('sn')),prod:g('prod'),purp:g('purp'),subj:g('subj'),att:g('att'),c:ix.cr>=0?toMs(r[ix.cr]):null}); }
   if(!out.length) throw new Error('읽을 수 있는 행이 없습니다.');
   return out;
 }
@@ -2874,7 +2877,7 @@ function parseHr(buf, fname){
 function parseSerial(buf){
   const t=xlsxRows(buf,null); if(!t) throw new Error('시트를 읽지 못했습니다.');
   const h=t.h; const ix={state:col(h,['상태'],3),acct:col(h,['거래처'],6),sn:col(h,['Serial No.','Serial No','Serial'],14),model:col(h,['모델','Product','Model'],13)};
-  const out=t.rows.filter(r=>r.length).map(r=>({state:String(r[ix.state]??'').trim(),acct:String(r[ix.acct]??'').trim(),sn:String(r[ix.sn]??'').trim(),model:String(r[ix.model]??'').trim()}));
+  const out=t.rows.filter(r=>r.length).map(r=>({state:String(r[ix.state]??'').trim(),acct:String(r[ix.acct]??'').trim(),sn:snOf(r[ix.sn]),model:String(r[ix.model]??'').trim()}));
   if(!out.some(s=>s.state==='사용')) throw new Error("상태가 '사용'인 장비를 찾지 못했습니다. Serial No 자산대장 내보내기인지 확인해 주세요.");
   return out;
 }
