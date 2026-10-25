@@ -91,12 +91,10 @@ function compareWorkbook(wb, opt) {
   const actAoa = aoa(wb, '원본_활동');
   const act = R.parseActivityRows({ h: actAoa[0], rows: actAoa.slice(1), sheet: '원본_활동' });
   const notes = [];
-  const serAoa = aoa(wb, '원본_Serial'), caseAoa = aoa(wb, '원본_케이스');
-  let serial = null, cases = null;
+  const serAoa = aoa(wb, '원본_Serial');
+  let serial = null;
   try { if (serAoa && serAoa.length > 1) serial = R.parseSerialRows({ h: serAoa[0], rows: serAoa.slice(1) }); else notes.push('원본_Serial 탭 없음 → 운영건전성·집중관리대상 비교 생략'); }
   catch (e) { notes.push('원본_Serial 읽기 실패(' + e.message + ') → 운영건전성·집중관리대상 비교 생략'); }
-  try { if (caseAoa && caseAoa.length > 1) cases = R.parseCasesRows({ h: caseAoa[0], rows: caseAoa.slice(1) }); else notes.push('원본_케이스 탭 없음 → 병원TOP5(케이스 기준) 비교 생략'); }
-  catch (e) { notes.push('원본_케이스 읽기 실패(' + e.message + ') → 병원TOP5(케이스 기준) 비교 생략'); }
   // 3차 묶음 입력: 원본_설치캘린더 · 기관명매핑 · 설치_수동입력 (있을 때만)
   const calAoa = aoa(wb, '원본_설치캘린더'), mapAoa = aoa(wb, '기관명매핑'), manAoa = aoa(wb, '설치_수동입력');
   let calendar = null, acctMap = null, manualMap = null;
@@ -104,7 +102,7 @@ function compareWorkbook(wb, opt) {
   catch (e) { notes.push('원본_설치캘린더 읽기 실패(' + e.message + ') → 설치 현황 비교 생략'); }
   if (mapAoa && mapAoa.length > 1) acctMap = INS.readAcctMapRows({ h: mapAoa[0], rows: mapAoa.slice(1) });
   if (manAoa && manAoa.length > 1) manualMap = INS.readManualRows({ h: manAoa[0], rows: manAoa.slice(1) }, R.toMs);
-  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, cases, calendar, acctMap, manualMap });
+  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, calendar, acctMap, manualMap });
   const siA = R.col(actAoa[0].map(x => String(x).trim()), ['Serial No. (lookup)', 'Serial No'], 14);
   const zeroAct = actAoa.slice(1).filter(r => String(r[siA] == null ? '' : r[siA]).trim() === '0').length;
   if (zeroAct) notes.push(`S/N 칸이 0인 활동 ${zeroAct}행은 "장비 없음"으로 처리(대시보드·시트와 같은 규칙, 2026-10-25 결정 A)`);
@@ -143,8 +141,10 @@ function compareWorkbook(wb, opt) {
   if (has('정제_수도권')) cells += compareTables('정제_수도권', aoa(wb, '정제_수도권').slice(1), E('정제_수도권').slice(1), r => r[0] === '' ? null : monthLabel(r[0]) + '|' + String(r[1] || '').trim(), [[2, 'PM건수'], [3, 'A/S건수']], tol, diffs);
   if (has('정제_엔지니어생산성')) cells += compareTables('정제_엔지니어생산성', aoa(wb, '정제_엔지니어생산성').slice(1), E('정제_엔지니어생산성').slice(1), rankKey, [[2, '담당자', true], [3, '팀'], [4, '건수'], [5, '직급'], [6, '고장수리%'], [7, 'PM%']], tol, diffs);
   if (has('정제_병원TOP5')) {
-    const eH = E('정제_병원TOP5').slice(1).filter(r => cases || !/케이스 기준|활동 기준/.test(String(r[0])));
-    cells += compareTables('정제_병원TOP5', aoa(wb, '정제_병원TOP5').slice(1), eH, rankKey, [[2, '기관명', true], [3, '건수']], tol, diffs);
+    // 시트는 당월 TOP5를 케이스 기준으로 냈고 엔진은 활동 기준이다(2026-10-26 결정) → 시트에 케이스 기준 행이 있으면 당월은 비교하지 않고 최근 1년만 본다
+    const sH = aoa(wb, '정제_병원TOP5').slice(1), sheetCase = sH.some(r => /케이스 기준/.test(String(r[0])));
+    if (sheetCase) notes.push('병원TOP5 당월: 시트는 케이스 기준, 엔진은 활동 기준(케이스 파일 안 씀) → 당월 행은 비교 생략');
+    cells += compareTables('정제_병원TOP5', sH.filter(r => !/케이스 기준/.test(String(r[0]))), E('정제_병원TOP5').slice(1).filter(r => !sheetCase || !/활동 기준/.test(String(r[0]))), rankKey, [[2, '기관명', true], [3, '건수']], tol, diffs);
   }
   if (has('정제_반복고장TOP5')) cells += compareTables('정제_반복고장TOP5', aoa(wb, '정제_반복고장TOP5').slice(1), E('정제_반복고장TOP5').slice(1), rankKey, [[2, 'S/N', true], [3, '장비'], [4, '기관명', true], [5, '건수']], tol, diffs);
   if (has('정제_장애요인TOP4')) cells += compareTables('정제_장애요인TOP4', aoa(wb, '정제_장애요인TOP4').slice(1), E('정제_장애요인TOP4').slice(1), rankKey, [[2, '장애 요인'], [3, '건수'], [4, '전체 기재 건수']], tol, diffs);
@@ -187,7 +187,7 @@ function compareWorkbook(wb, opt) {
   return { diffs, cells };
   };
   const { diffs, cells } = diffReport(rep);
-  return { diffs, cells, tol, notes, info: { periodRaw, period, cut, roster: roster.length, actRows: act.rows.length, counted: rep.meta.rows.counted, serial: serial ? serial.length : 0, cases: cases ? cases.length : 0, active: rep.fleet ? rep.fleet.activeCount : null,
+  return { diffs, cells, tol, notes, info: { periodRaw, period, cut, roster: roster.length, actRows: act.rows.length, counted: rep.meta.rows.counted, serial: serial ? serial.length : 0, active: rep.fleet ? rep.fleet.activeCount : null,
     calendar: calendar ? calendar.length : 0, acctMap: acctMap ? Object.keys(acctMap.map).length : 0, manual: manualMap ? Object.keys(manualMap).length : 0, install: rep.installBlock ? rep.installBlock.detail.rows.length : null, autoFilled: rep.installBlock ? rep.installBlock.autoFilled.filter(a => a.to).length : 0,
     partSkipped: rep.installBlock ? rep.installBlock.detail.partSkipped : 0,
     hasAtt: act.hasAtt, lastRun: lastRunLog(aoa(wb, '실행로그')) }, report: rep };
@@ -197,7 +197,7 @@ function main() {
   if (!o.sheet) { console.error('사용법: node fsg-report/compare-sheet.js --sheet "FSG_월_분기 보고 데이터.xlsx" [--period 2026-09] [--cut 2026-10-12]'); process.exit(2); }
   const wb = XLSX.read(fs.readFileSync(o.sheet), { type: 'buffer', cellDates: false, dense: true });
   const r = compareWorkbook(wb, o), i = r.info;
-  console.log(`기간 ${i.period.label} (설정 B2 "${i.periodRaw}") · 추출일 ${i.cut || '(없음 → 오늘)'} · 로스터 ${i.roster}명 · 원본_활동 ${i.actRows}행 → 집계 ${i.counted}행 · Serial ${i.serial}행 · 케이스 ${i.cases}행` + (i.active != null ? ` · 가동 장비 ${i.active}대` : '') + (i.hasAtt ? '' : ' ⚠ 필수 참석자 열 없음'));
+  console.log(`기간 ${i.period.label} (설정 B2 "${i.periodRaw}") · 추출일 ${i.cut || '(없음 → 오늘)'} · 로스터 ${i.roster}명 · 원본_활동 ${i.actRows}행 → 집계 ${i.counted}행 · Serial ${i.serial}행` + (i.active != null ? ` · 가동 장비 ${i.active}대` : '') + (i.hasAtt ? '' : ' ⚠ 필수 참석자 열 없음'));
   if (i.install != null) console.log(`설치: 캘린더 ${i.calendar}행 · 기관명매핑 ${i.acctMap}건 · 수동입력 ${i.manual}건 → 이 기간 설치 작업 ${i.install}건` + (i.autoFilled ? ` · 자동 매핑 ${i.autoFilled}건(검산 xlsx 「기관명매핑_자동」)` : ''));
   if (i.partSkipped) console.log(`※ 자산대장의 부품 행 ${i.partSkipped}개(이 기간 설치일자)는 설치 매칭·캘린더 미등록에서 뺐습니다 — 시트는 이 행을 '캘린더 미등록'으로 나열하고 기관 수에 넣으므로, 설치상세 행 수·팀별 기관 수가 그만큼 다를 수 있습니다(의도한 차이, 2026-10-26)`);
   r.notes.forEach(n => console.log('※ ' + n));

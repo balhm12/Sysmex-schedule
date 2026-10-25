@@ -111,21 +111,20 @@ assert.strictEqual(rep.errMonth.total, 7);
 const ER = {}; rep.errRate.months.forEach(r => ER[r[0]] = r.slice(1));
 assert.deepStrictEqual(ER['2026-09'], [83.3, 33.3, 100, 0], 'XN/XR 수리5/6 · SP 1/3 · CN 1/1'); assert.deepStrictEqual(ER['2026-08'], [100, 0, 0, 0]); assert.strictEqual(rep.errRate.months.length, 12);
 assert.strictEqual(rep.health, null);
-assert.strictEqual(rep.hospMonthSrc, '활동 기준'); assert.deepStrictEqual(rep.hospMonth.map(r => [r.account, r.count]), [['H1', 3], ['H2', 3], ['H3', 1], ['H4', 1], ['H5', 1]], '케이스 파일 없으면 당월 TOP5는 활동 기준(H5의 8월 1건 제외)');
+assert.deepStrictEqual(rep.hospMonth.map(r => [r.account, r.count]), [['H1', 3], ['H2', 3], ['H3', 1], ['H4', 1], ['H5', 1]], '당월 TOP5는 활동 기준(H5의 8월 1건 제외)');
 
-// 9. Serial·케이스 입력 — 가동 장비·운영건전성·집중관리·병원TOP5(케이스)
+// 9. Serial 입력 — 가동 장비·운영건전성·집중관리
 const serial = R.parseSerialRows({ h: ['제품 상태', '거래처', 'Model', 'Serial No.', '초도설치', '설치일자'], rows: [
   ['사용', 'H1', 'XN-1000', 'S1', '2020-01-01', '2020-01-01'], ['사용', 'H2', 'SP-50', 'S2', '', '2024-05-01'], ['사용', 'H3', 'CN-3000', 'S3', '2015-03-01', ''],
   ['사용', 'H5', 'XN-2000', 'S5', '2023-01-01', ''], ['사용', 'H9', 'XN-1000', 'S9', '2019-01-01', ''], ['폐기', 'H4', 'XN-1000', 'S4', '2018-01-01', '']] });
-const cases = R.parseCasesRows({ h: ['상태', '거래처', '만든 날짜'], rows: [['해결됨', 'H1', '2026-09-03 10:00'], ['활성', 'H1', '2026-09-10 11:00'], ['해결됨', 'H2', '2026-09-15 09:00'], ['해결됨', '시스멕스코리아', '2026-09-20 09:00'], ['활성', 'H3', '2026-10-01 09:00']] });
-const rep2 = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-09', cut: '2026-09-30', serial, cases });
-assert.deepStrictEqual(rep2.kpi, k, 'Serial·케이스는 KPI에 영향 없음');
+const rep2 = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-09', cut: '2026-09-30', serial });
+assert.deepStrictEqual(rep2.kpi, k, 'Serial은 KPI에 영향 없음');
 assert.deepStrictEqual(rep2.fleet, { activeCount: 4, pmActiveCount: 2 }, '사용 5대 중 12개월 이력 4대(S9 제외, S4는 폐기, S6은 대장에 없음) · 6개월 PM 2대');
 const Hh = rep2.health;
 assert.deepStrictEqual([Hh.activeCount, Hh.pmCoverage, Hh.pmCV, Hh.per100, Hh.chronicUnits, Hh.chronicRatio, Hh.nMonths], [4, 50, 332, 175, 0, 0, 1], 'PM 2/4 · 월별 PM [0×11, 2] CV · 7행/1개월/4대');
 assert.deepStrictEqual(Hh.teamCV, { 'FS EAST': null, 'FS WEST': null, 'FS SOUTH': null, 'FS CENTRAL': null }, '팀마다 1명 이하 → 편차 없음');
 assert.deepStrictEqual([rep2.focus.candidateCount, rep2.focus.totalFleet, rep2.focus.avgPerUnit, rep2.focus.rows.length], [0, 2, 1.5, 0]);
-assert.deepStrictEqual(rep2.hospMonth.map(r => [r.account, r.count]), [['H1', 2], ['H2', 1]], '케이스 기준 당월, 내부 계정·다음 달 제외'); assert.strictEqual(rep2.hospMonthSrc, '케이스 기준');
+assert.deepStrictEqual(rep2.hospMonth, rep.hospMonth, 'Serial은 병원 TOP5에 영향 없음');
 assert.strictEqual(XLSX.utils.sheet_to_json(buildCheckWorkbook(rep).Sheets['정제_병원TOP5'], { header: 1 })[6][0], '2026-09(활동 기준)', '검산 탭 기간 칸에 기준 표기');
 
 // 10. 검산 워크북

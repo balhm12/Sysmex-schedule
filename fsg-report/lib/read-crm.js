@@ -77,19 +77,6 @@ function parseSerialRows(t) {
   if (!out.some(s => s.state === '사용')) throw new Error("상태가 '사용'인 장비를 찾지 못했습니다. Serial No 자산대장 내보내기인지 확인해 주세요.");
   return out;
 }
-/* 서비스 케이스 내보내기 → [{acct, created}] (병원 TOP5 당월은 케이스 건수 기준) */
-function parseCases(buf) {
-  const t = xlsxRows(buf, ['만든 날짜']) || xlsxRows(buf, null);
-  if (!t) throw new Error('케이스 시트를 읽지 못했습니다.');
-  return parseCasesRows(t);
-}
-function parseCasesRows(t) {
-  const h = t.h.map(x => String(x).trim());
-  const ix = { acct: col(h, ['거래처'], -1), created: col(h, ['만든 날짜', '만든날짜', '생성일'], -1) };
-  if (ix.acct < 0 || ix.created < 0) throw new Error("케이스 파일에 '거래처'·'만든 날짜' 열이 있어야 합니다.");
-  return t.rows.filter(r => r.length).map(r => ({ acct: r[ix.acct] == null ? '' : String(r[ix.acct]).trim(), created: toMs(r[ix.created]) }));
-}
-
 /* ── 폴더에서 종류별 최신 파일 고르기 (월간보고 시트 Apps Script v52와 같은 규칙) ── */
 function fileDateKey(name) {
   const s = String(name || ''), m = s.match(/(20\d{2})[-_.](\d{1,2})[-_.](\d{1,2})(?!\d)/) || s.match(/(20\d{2})(\d{2})(\d{2})(?!\d)/);
@@ -99,7 +86,7 @@ function fileDateKey(name) {
   return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
 }
 const TYPES = [
-  { key: 'CASE', pat: /케이스|case/i }, { key: 'SER', pat: /serial|시리얼|자산/i }, { key: 'CAL', pat: /캘린더|calendar/i }, { key: 'ACT', pat: /약속|활동|activit/i },
+  { key: 'CASE', pat: /케이스|case/i }, /* 케이스 파일은 쓰지 않음(폴더에 있어도 무시) */ { key: 'SER', pat: /serial|시리얼|자산/i }, { key: 'CAL', pat: /캘린더|calendar/i }, { key: 'ACT', pat: /약속|활동|activit/i },
 ];
 function classifyByName(name) { for (const T of TYPES) if (T.pat.test(name)) return T.key; return null; }
 function newerThan(a, b) {
@@ -117,4 +104,4 @@ function pickLatest(dir) {
   }
   return picks;
 }
-module.exports = { xlsxRows, toMs, col, snOf, parseActivity, parseActivityRows, parseSerial, parseSerialRows, parseCases, parseCasesRows, fileDateKey, classifyByName, pickLatest, DAY };
+module.exports = { xlsxRows, toMs, col, snOf, parseActivity, parseActivityRows, parseSerial, parseSerialRows, fileDateKey, classifyByName, pickLatest, DAY };

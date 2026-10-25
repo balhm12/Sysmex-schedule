@@ -9,7 +9,6 @@
  *   --dir      CRM 파일 폴더. 파일명으로 종류를 구분해 가장 최신(파일명 날짜 → 수정 시각)을 쓴다
  *   --activity 「2. 모든 약속_활동 …xlsx」 직접 지정 (--dir 보다 우선)
  *   --serial   「Serial No …xlsx」 자산대장 (가동 장비 기준 지표: 운영건전성·집중관리대상). --dir 에 있으면 자동
- *   --cases    「1. 모든 서비스 케이스 …xlsx」 (병원 TOP5 당월). --dir 에 있으면 자동
  *   --calendar 설치 공유캘린더 내보내기 「시스템설치_공유캘린더_YYYYMMDD.xlsx」 (4장 설치 현황). --dir 에 있으면 자동
  *   --acct-map 기관명매핑 xlsx/csv (캘린더 표기 | CRM 표기 | 비고). --dir 의 '기관명매핑*' 자동
  *   --manual   설치_수동입력 xlsx/csv (시작일 | 기관명 | 캘린더 표기 | 모델1 수량1 …). --dir 의 '*수동입력*' 자동
@@ -48,14 +47,13 @@ function main() {
   const o = args(process.argv.slice(2));
   if (!o.period || o.help) { console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^\/\*|^ \* ?/gm, '')); process.exit(o.period ? 0 : 1); }
   const period = parsePeriod(o.period);
-  let actPath = o.activity, serPath = o.serial, casePath = o.cases, picked = null;
-  if (!actPath || (!serPath && o.dir) || (!casePath && o.dir)) {
+  let actPath = o.activity, serPath = o.serial, picked = null;
+  if (!actPath || (!serPath && o.dir)) {
     if (!o.dir && !actPath) throw new Error('--activity 파일 또는 --dir 폴더 중 하나는 필요합니다');
     if (o.dir) {
       picked = R.pickLatest(o.dir);
       if (!actPath) { if (!picked.ACT) throw new Error('폴더에서 활동 파일(이름에 "약속_활동")을 찾지 못했습니다: ' + o.dir); actPath = picked.ACT.path; }
       if (!serPath && picked.SER) serPath = picked.SER.path;
-      if (!casePath && picked.CASE) casePath = picked.CASE.path;
     }
   }
   let calPath = o.calendar, mapPath = o['acct-map'], manPath = o.manual;
@@ -69,12 +67,11 @@ function main() {
   const cut = o.cut || R.fileDateKey(path.basename(actPath)) || null;
   const act = R.parseActivity(fs.readFileSync(actPath));
   const serial = serPath ? R.parseSerial(fs.readFileSync(serPath)) : null;
-  const cases = casePath ? R.parseCases(fs.readFileSync(casePath)) : null;
   const calendar = calPath ? INS.readCalendarRows(table(calPath), R.toMs) : null;
   const acctMap = mapPath ? INS.readAcctMapRows(table(mapPath)) : null;
   const manualMap = manPath ? INS.readManualRows(table(manPath), R.toMs) : null;
-  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, cases, calendar, acctMap, manualMap });
-  rep.meta.files = { activity: path.basename(actPath), serial: serPath ? path.basename(serPath) : '', cases: casePath ? path.basename(casePath) : '',
+  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, calendar, acctMap, manualMap });
+  rep.meta.files = { activity: path.basename(actPath), serial: serPath ? path.basename(serPath) : '',
     calendar: calPath ? path.basename(calPath) : '', acctMap: mapPath ? path.basename(mapPath) : '', manual: manPath ? path.basename(manPath) : '',
     roster: path.basename(rosterSrc), header: { hasAtt: act.hasAtt, hasFormType: act.hasFormType } };
 
@@ -93,7 +90,6 @@ function main() {
   const H = rep.health;
   console.log(H ? `가동 장비 ${H.activeCount}대 · PM 커버리지 ${H.pmCoverage}% · 점검 고르기 ${H.pmCV}% · 100대당 고장 ${H.per100}건 · 반복 고장 장비 ${H.chronicRatio}% · 집중관리 후보 ${rep.focus.candidateCount}곳`
     : '가동 장비 지표 없음 — Serial No 파일을 --serial 또는 --dir 로 주면 운영건전성·집중관리대상이 계산됩니다');
-  if (!cases) console.log('병원 TOP5(당월, 케이스 기준) 없음 — 케이스 파일을 --cases 또는 --dir 로 주면 계산됩니다');
   const IB = rep.installBlock;
   if (IB) { const D = IB.detail; console.log(`설치(캘린더 기준): 작업 ${D.rows.length}건 · 단품 ${IB.install.total}대(수동 ${IB.install.manualUnits}) · System ${IB.systems.list.length}세트 · 캘린더 미등록 ${D.orphan.length}대 · 중복 제외 ${(D.dupOrphan || []).length}대 · 예정 ${D.tentative.length}건` + (IB.autoFilled.filter(a => a.to).length ? ` · 자동 매핑 ${IB.autoFilled.filter(a => a.to).length}건` : '') + (D.partSkipped ? ` · 부품 행 제외 ${D.partSkipped}` : '')); }
   else console.log(serial ? '설치 현황 없음 — 설치 공유캘린더 내보내기를 --calendar 또는 --dir 로 주면 4장 설치 현황이 계산됩니다' : '설치 현황 없음 — Serial No 파일과 설치 공유캘린더가 모두 필요합니다');
