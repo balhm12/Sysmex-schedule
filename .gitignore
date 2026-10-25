@@ -1,0 +1,7 @@
+node_modules/
+
+# fsg-report: 데이터·결과물은 저장소에 넣지 않는다 (거래처명·직원 실명)
+fsg-report/out/
+fsg-report/data/
+fsg-report/**/*.xlsx
+fsg-report/**/*.csv
