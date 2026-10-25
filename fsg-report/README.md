@@ -40,7 +40,7 @@ npm install            # xlsx(SheetJS)·jsdom
 ## 매달 하는 일 — Drive 폴더 하나에 넣고 Colab 실행 (PC 없이)
 1. Drive 「내 드라이브」에 폴더 **`CRM_원본`** 을 한 번 만든다.
 2. 매달 CRM에서 내보낸 파일을 **이름 그대로** 그 폴더에 넣는다 — 「2. 모든 약속_활동 …」(필수) · 「Serial No …」 · 설치 공유캘린더 내보내기 `시스템설치_공유캘린더_YYYYMMDD.xlsx`. 지난달 파일은 지우지 않아도 된다(파일명 날짜 → 수정 시각으로 최신 선택). 활동 파일이 40,000행에 걸리면 기간을 나눠 두 개로 내보내 같이 넣는다.
-3. [Colab에서 열기](https://colab.research.google.com/github/balhm12/Sysmex-schedule/blob/claude/fsg-report-engine/fsg-report/colab_report.ipynb) → 런타임 › 모두 실행 → 권한 허용. 기간을 비우면 지난달.
+3. [Colab에서 열기](https://colab.research.google.com/github/balhm12/Sysmex-schedule/blob/main/fsg-report/colab_report.ipynb) → 런타임 › 모두 실행 → 권한 허용. 기간을 비우면 지난달.
 4. 결과는 Drive `FSG_report_out/<기간>/` — `report-data_<기간>.json`(PPT 빌더 입력) · `검산_<기간>.xlsx`(시트 정제 탭과 같은 배치 → 보고서 만들 때 이 파일을 올린다) · `요약_<기간>.txt`(이름 없는 요약, Claude가 Drive 커넥터로 읽음).
 
 5. (선택) 노트북 5번 칸이 같은 파일을 **KPI 대시보드**(fsg-kpi.html)에도 올린다 — 브라우저 ?admin 화면의 「CRM 데이터 올리기」와 같은 포맷(encodeAct·encodeSer)과 같은 암호화(gzip → PBKDF2 200,000회 + AES-GCM, 접근 코드)로 Firebase `kpi-dashboard/{act,ser,meta}`에 쓰고, 올리기 전 기존 데이터를 `backups/날짜/`에 복사한다(30일 보관). 접근 코드·관리자 계정은 실행 때 묻거나 Colab 보안 비밀(FSG_KPI_CODE·FSG_ADMIN_EMAIL·FSG_ADMIN_PW)에서 읽고 어디에도 기록하지 않는다. 기존 데이터의 접근 코드와 다르면 올리지 않는다(`--force-code`로만 바꿈). `tests/test_push_dashboard.js`가 fsg-kpi.html 안의 `open_`·`decodeEmbed`·`decodeSer`로 되읽어 포맷이 같은지 확인한다.
@@ -73,7 +73,7 @@ node fsg-report/compare-sheet.js --sheet "FSG_월_분기 보고 데이터.xlsx"
 **2026-10-25 2차 묶음 실측(Colab)**: 13탭 730칸 비교 → 다른 칸 12개(위 10칸 + 가동 장비 3,193 vs 3,195). 원인은 하나 — CRM이 장비 없는 활동의 S/N에 내보내는 **0**을 시트 Apps Script는 "S/N 없음"으로, 대시보드·엔진은 '0'이라는 장비로 본 것(활동 15행·자산 2행). 시트 방식으로 계산하면 **0개 차이**. 사용자 결정 A(2026-10-25): S/N 0 = 장비 없음 — 대시보드(`snOf`, PR)와 이 엔진(`read-crm.snOf`) 모두 그 규칙으로 통일했다.
 
 ### PC 없이 검산 (Colab)
-브라우저만 있으면 된다: [Colab에서 열기](https://colab.research.google.com/github/balhm12/Sysmex-schedule/blob/claude/fsg-report-engine/fsg-report/colab_compare.ipynb) → 런타임 › 모두 실행 → 권한 허용.
+브라우저만 있으면 된다: [Colab에서 열기](https://colab.research.google.com/github/balhm12/Sysmex-schedule/blob/main/fsg-report/colab_compare.ipynb) → 런타임 › 모두 실행 → 권한 허용.
 노트북이 시트를 Sheets API로 읽어 사본을 만들고 이 브랜치를 받아 `compare-sheet.js`를 돌린 뒤, 이름 없는 결과 요약을 Drive `FSG_report_out/검산결과_날짜.txt`에 저장한다. 데이터는 사용자 Google 계정 안에서만 처리된다.
 
 ## 계산 기준 (대시보드·시트 v45~v52와 같음)
