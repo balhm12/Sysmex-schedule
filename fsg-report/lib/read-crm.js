@@ -95,13 +95,23 @@ function newerThan(a, b) {
   return a.mtime > b.mtime;
 }
 function pickLatest(dir) {
-  const picks = {};
+  const picks = {}, all = {};
   for (const f of fs.readdirSync(dir)) {
     if (!/\.(xlsx|xlsm|xls|csv)$/i.test(f) || /^~\$/.test(f)) continue;
     const key = classifyByName(f); if (!key) continue;
     const c = { path: path.join(dir, f), name: f, dateKey: fileDateKey(f), mtime: fs.statSync(path.join(dir, f)).mtimeMs };
+    (all[key] = all[key] || []).push(c);
     if (!picks[key] || newerThan(c, picks[key])) picks[key] = c;
   }
+  // CRM 「모든 약속/활동」 내보내기는 40,000행이 상한 → 기간을 나눠 내보낸 같은 추출일 파일이 여럿이면 전부 쓴다(report-data가 합치고 중복 제거)
+  if (picks.ACT) picks.ACT_ALL = picks.ACT.dateKey ? all.ACT.filter(c => c.dateKey === picks.ACT.dateKey).sort((a, b) => a.name < b.name ? -1 : 1) : [picks.ACT];
   return picks;
 }
-module.exports = { xlsxRows, toMs, col, snOf, parseActivity, parseActivityRows, parseSerial, parseSerialRows, fileDateKey, classifyByName, pickLatest, DAY };
+/* 활동 표 여러 개 → 한 표 (똑같은 행은 한 번만) */
+function mergeActivity(parsed) {
+  if (parsed.length === 1) return parsed[0];
+  const seen = {}, rows = []; let dup = 0;
+  parsed.forEach(a => a.rows.forEach(r => { const k = [r.t, r.e, r.own, r.acct, r.sn, r.subj, r.purp, r.st, r.ft, r.err, r.att].join('|'); if (seen[k]) { dup++; return; } seen[k] = 1; rows.push(r); }));
+  return { rows, header: parsed[0].header, hasAtt: parsed.every(a => a.hasAtt), hasFormType: parsed.every(a => a.hasFormType), sheet: parsed.map(a => a.sheet).join('+'), merged: parsed.length, dup };
+}
+module.exports = { xlsxRows, toMs, col, snOf, parseActivity, parseActivityRows, parseSerial, parseSerialRows, fileDateKey, classifyByName, pickLatest, mergeActivity, DAY };

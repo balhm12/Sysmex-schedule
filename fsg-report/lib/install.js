@@ -10,8 +10,9 @@ const C = {
     END: ['종료일', '종료', '종료일자'], TEAM: ['담당팀', '팀'], OWNER: ['담당자', '담당'] },
   CAL_MATCH_TOLERANCE: 7, CAL_MERGE_GAP_DAYS: 5,
   CAL_EXCLUDE_KEYWORDS: ['예정', '미확정', '미정', '보류', 'TBD'], USED_KEYWORDS: ['중고', '리퍼', 'REFURB', 'USED'], DEMO_KEYWORDS: ['데모', 'DEMO', '시연'],
-  MANUAL_SLOTS: 10, DUP_NAME_DAYS: 35, DUP_STRICT_DAYS: 3,
-  AUTO_MAP: { HIGH: 0.75, MID: 0.5, DAYS_BEFORE: 30, DAYS_AFTER: 14 },
+  DUP_NAME_DAYS: 35, DUP_STRICT_DAYS: 3,
+  AUTO_MAP: { HIGH: 0.75, MID: 0.5 },   // 이름 유사도(v49 점수) 문턱
+  LINK: { STRICT_DAYS: 2, FORWARD_DAYS: 35 },   // 자동 연결: 날짜 ±2일 단독 후보 · 지난 작업이 뒤늦게 CRM에 오른 경우 35일까지 귀속
 };
 const INSTALL_CATS = ['XR-Series', 'XN-Series', 'SP-50', 'A1c', 'CA/CS', 'UF/UC', 'HISCL-Series', 'Other'];
 const round1 = v => Math.round(v * 10) / 10;
@@ -165,29 +166,32 @@ function readCalendarRows(t, toMs) {
   return t.rows.filter(r => r && r.length).map(r => ({ gubun: normGubun(g(r, cc.GUBUN)), acct: g(r, cc.ACCOUNT), equip: g(r, cc.EQUIP),
     start: cc.START > 0 ? toMs(r[cc.START - 1]) : null, end: cc.END > 0 ? toMs(r[cc.END - 1]) : null, team: cc.TEAM > 0 ? normTeam(g(r, cc.TEAM)) : '', owner: g(r, cc.OWNER) }));
 }
-/* 기관명매핑 {h, rows}: A 캘린더 표기, B CRM 표기 → {map, pending(B 비어 있는 A 목록)} */
-function readAcctMapRows(t) {
-  const map = {}, pending = [];
-  (t && t.rows || []).forEach(r => { const from = str(r[0]), to = str(r[1]); if (from && to) map[normAcct(from)] = normAcct(to); else if (from) pending.push(from); });
-  return { map, pending };
-}
-/* 설치_수동입력 {h, rows}: 시작일 | 기관명 | 캘린더 표기 | 모델1 수량1 … → {normAcct|YYYY-MM-DD: [{model, qty}]} */
-function readManualRows(t, toMs) {
-  toMs = toMs || require('./read-crm').toMs;
-  const map = {};
-  (t && t.rows || []).forEach(r => { const acct = str(r[1]); if (!acct) return; const items = [];
-    for (let i = 0; i < C.MANUAL_SLOTS; i++) { const model = str(r[3 + i * 2]); if (!model) continue; const q = parseInt(r[4 + i * 2], 10); items.push({ model, qty: q > 0 ? q : 1 }); }
-    if (!items.length) return; const d = toMs(r[0]); const key = normAcct(acct) + '|' + (d != null ? fmt(d) : ''); map[key] = (map[key] || []).concat(items); });
-  return map;
-}
-
 /* ── 계산 ── */
-function matchSerialAccounts(serByAcct, acct, acctMap) {
-  let key = normAcct(acct); if (acctMap && acctMap[key]) key = acctMap[key];
-  if (serByAcct[key]) return serByAcct[key];
-  if (key.length < 4) return [];
-  let out = []; Object.keys(serByAcct).forEach(k => { if (k.length < 4) return; if (k.indexOf(key) >= 0 || key.indexOf(k) >= 0) out = out.concat(serByAcct[k]); });
-  return out;
+/* 캘린더 작업 ↔ 자산대장 설치 행 연결 (2026-10-26: 기관명매핑·설치_수동입력 표를 없애고 자동 연결로 대체)
+   ① 정규화 이름이 같거나 4자 이상 포함 관계 (시트 규칙 그대로)
+   ② 없으면 날짜 창 안의 다른 기관 후보 중 이름 유사도(v49 점수) ≥ 0.5 이고 캘린더 장비 표기의 모델군과 맞는 것 (동점이면 보류)
+   ③ 그래도 없으면 날짜 ±2일·같은 모델군 후보가 딱 한 기관이고 팀이 다르지 않으면(CRM 활동으로 아는 팀) 이름이 달라도 연결
+   캘린더에 제 이름 그대로 작업이 있는 CRM 기관은 ②③ 후보에서 뺀다(그 작업 몫). */
+function linkHits(serByAcct, r, lo, hi, usedSn, ctx) {
+  const key = normAcct(r.acct), inWin = x => x.date >= lo && x.date <= hi && !usedSn[x.sn + '|' + x.date];
+  let hits = [];
+  if (serByAcct[key]) hits = serByAcct[key].filter(inWin);
+  if (!hits.length && key.length >= 4) Object.keys(serByAcct).forEach(k => { if (k.length >= 4 && k !== key && (k.indexOf(key) >= 0 || key.indexOf(k) >= 0)) hits = hits.concat(serByAcct[k].filter(inWin)); });
+  if (hits.length || !ctx || ctx.exactOnly) return { hits, why: '' };
+  const fams = autoCalFamilies(r.equip), anyFam = !Object.keys(fams).length, s = r.start, e = r.end != null ? r.end : s, cand = {};
+  Object.keys(serByAcct).forEach(k => { if (ctx.calAccts[k]) return;
+    serByAcct[k].forEach(x => { if (!inWin(x)) return; if (!anyFam && !fams[modelFamily(x.model)]) return;
+      const c = cand[k] = cand[k] || { k, acct: x.acct, rows: [], strict: false }; c.rows.push(x);
+      if (x.date >= s - C.LINK.STRICT_DAYS * DAY && x.date <= e + C.LINK.STRICT_DAYS * DAY) c.strict = true; }); });
+  const list = Object.keys(cand).map(k => { const c = cand[k]; c.score = autoNameScore(r.acct, c.acct); return c; }).sort((a, b) => b.score - a.score);
+  if (!list.length) return { hits: [], why: '' };
+  const top = list[0], tie = list.length > 1 && list[1].score === top.score;
+  if (top.score >= C.AUTO_MAP.MID && !tie) return { hits: top.rows, acct: top.acct, why: '이름 유사 ' + Math.round(top.score * 100) + '%' + (anyFam ? '' : ' · 같은 모델군') };
+  if (ctx.noUnique || anyFam) return { hits: [], why: '' };
+  const strict = list.filter(c => c.strict);
+  if (strict.length === 1) { const c = strict[0], ct = ctx.acctTeam[c.k] || '', rt = normTeam(r.team);
+    if (!ct || !rt || ct === rt) return { hits: c.rows, acct: c.acct, why: '같은 날(±' + C.LINK.STRICT_DAYS + '일) 같은 모델군 후보 하나' + (ct && rt ? ' · 같은 팀' : '') }; }
+  return { hits: [], why: '' };
 }
 function mergeCalRows(cal) {
   const pass = [], groups = {};
@@ -203,12 +207,6 @@ function mergeCalRows(cal) {
     const gs = uniq('gubun');
     return Object.assign({}, g.rows[0], { start: g.start, end: g.end, equip: uniq('equip').join(' / '), gubun: gs.length > 1 ? '설치·이전설치' : gs[0], team: uniq('team').join('·'), owner: uniq('owner').join('·'), mergedCount: g.rows.length }); });
   return merged.concat(pass);
-}
-function findManual(manualMap, acct, s, e) {
-  if (!manualMap) return null;
-  const pre = normAcct(acct) + '|', gap = C.CAL_MERGE_GAP_DAYS * DAY, lo = s - gap, hi = e + gap; let out = [];
-  Object.keys(manualMap).forEach(k => { if (k.indexOf(pre) !== 0) return; const ds = k.slice(pre.length); if (ds) { const d = ymd(ds); if (d < lo || d > hi) return; } out = out.concat(manualMap[k]); });
-  return out.length ? out : null;
 }
 function calendarAudit(cal, period) {
   const out = [], cnt = {};
@@ -227,64 +225,71 @@ function calendarAudit(cal, period) {
   out.sort((a, b) => a.date < b.date ? -1 : (a.date > b.date ? 1 : 0));
   return out;
 }
-function computeInstallDetail(cal, serial, period, acctMap, manualMap) {
+function computeInstallDetail(cal, serial, period, acctTeam) {
   const audit = calendarAudit(cal, period), tol = C.CAL_MATCH_TOLERANCE, serByAcct = {}; let usedCrm = 0, partSkipped = 0;
   serial.forEach(x => { const acct = x.acct, d = x.install; if (!acct || d == null) return;
     // 2026-10-26 수정(시트와 다름): 자산대장의 부품·소모품 행(VALVE_ASSY 등)은 설치가 아니므로 매칭 후보·캘린더 미등록에서 뺀다.
-    // 시트는 이 행을 '캘린더 미등록'으로 나열하고 그 기관을 팀별 설치 기관 수에 1곳 넣었다(대수는 0). 설치 현황 대수는 원래 제외.
     if (isPartName(x.model)) { if (inMonths(d, period.months)) partSkipped++; return; }
     if (isUsedSerial(x.sn)) { if (inMonths(d, period.months)) usedCrm++; return; }
     (serByAcct[normAcct(acct)] = serByAcct[normAcct(acct)] || []).push({ acct, model: x.model, sn: x.sn, date: d, first: x.first != null ? x.first : null, dealer: x.dealer || '' }); });
-  const rows = [], usedSn = {}, tentative = [], claimedOutside = {}, claimedInside = {}, claimedUsed = {}, claimedDemo = {}; let usedCal = 0, demoCal = 0;
+  const rows = [], usedSn = {}, tentative = [], claimedOutside = {}, claimedInside = {}, claimedUsed = {}, claimedDemo = {}, links = []; let usedCal = 0, demoCal = 0;
   const inP = r => inMonths(r.start, period.months) ? 1 : 0;
   const calJobs = mergeCalRows(cal); calJobs.sort((a, b) => inP(b) - inP(a));
   const win = (s, e) => [s - tol * DAY, e + tol * DAY];
+  const calAccts = {}; calJobs.forEach(r => { if (r.acct) calAccts[normAcct(r.acct)] = true; });
+  const ctxExact = { exactOnly: true }, ctxIn = { calAccts, acctTeam: acctTeam || {} }, ctxOut = { calAccts, acctTeam: acctTeam || {}, noUnique: true };
+  const claim = (list, mark) => list.forEach(x => { const k = x.sn + '|' + x.date; usedSn[k] = true; if (mark) mark[k] = true; });
+  // 중고·Demo 캘린더 줄이 가리키는 CRM 행은 실적에서 뺀다 (시트 규칙)
   calJobs.forEach(r => { const s = r.start; if (!r.acct || s == null) return; let ut = usedTokens(r.equip); if (isUsedLabel(r.acct)) ut = { used: ['*'], hasOther: false }; if (!ut.used.length) return;
     const [lo, hi] = win(s, r.end != null ? r.end : s);
-    matchSerialAccounts(serByAcct, r.acct, acctMap).forEach(x => { const k = x.sn + '|' + x.date; if (x.date >= lo && x.date <= hi && !usedSn[k] && hitIsUsed(x.model, ut.used)) { usedSn[k] = true; claimedUsed[k] = true; } }); });
+    claim(linkHits(serByAcct, r, lo, hi, usedSn, ctxExact).hits.filter(x => hitIsUsed(x.model, ut.used)), claimedUsed); });
   calJobs.forEach(r => { const s = r.start; if (!r.acct || s == null || !isDemoLabel(r.acct + ' ' + r.equip)) return; const [lo, hi] = win(s, r.end != null ? r.end : s);
-    matchSerialAccounts(serByAcct, r.acct, acctMap).forEach(x => { const k = x.sn + '|' + x.date; if (x.date >= lo && x.date <= hi && !usedSn[k]) { usedSn[k] = true; claimedDemo[k] = true; } }); });
-  calJobs.forEach(r => {
-    const gubun = r.gubun; if (!/^(설치|이전설치|설치·이전설치)$/.test(gubun)) return;
-    const acct = r.acct, s = r.start, e = r.end != null ? r.end : s; if (!acct || s == null) return;
-    if (!inMonths(s, period.months)) { if (isTentative(r)) return; const [lo2, hi2] = win(s, e);
-      matchSerialAccounts(serByAcct, acct, acctMap).forEach(x => { const k = x.sn + '|' + x.date; if (x.date >= lo2 && x.date <= hi2 && !usedSn[k]) { usedSn[k] = true; claimedOutside[k] = true; } }); return; }
+    claim(linkHits(serByAcct, r, lo, hi, usedSn, ctxExact).hits, claimedDemo); });
+  const isInstall = r => /^(설치|이전설치|설치·이전설치)$/.test(r.gubun) && r.acct && r.start != null;
+  const outside = calJobs.filter(r => isInstall(r) && !inMonths(r.start, period.months) && !isTentative(r));
+  const inside = calJobs.filter(r => isInstall(r) && inMonths(r.start, period.months));
+  const jobWin = r => { const s = r.start, e = r.end != null ? r.end : s; return [s - tol * DAY, e + tol * DAY, s, e]; };
+  // 기간 밖(주로 지난달) 작업: ±7일 이름 매칭 → 그 뒤 35일까지는 같은 모델군이면 귀속(지난달 설치가 이달 CRM에 오른 경우 → 이달 '캘린더 미등록'으로 다시 세지 않음)
+  outside.forEach(r => { const [lo, hi, s, e] = jobWin(r); claim(linkHits(serByAcct, r, lo, hi, usedSn, ctxExact).hits, claimedOutside); });
+  outside.forEach(r => { const [lo, hi, s, e] = jobWin(r); const fams = autoCalFamilies(r.equip); if (!Object.keys(fams).length) return;
+    claim(linkHits(serByAcct, r, lo, e + C.LINK.FORWARD_DAYS * DAY, usedSn, ctxExact).hits.filter(x => fams[modelFamily(x.model)]), claimedOutside); });
+  // 기간 안 작업: ① 이름 매칭을 전부 먼저 → ② ③ 자동 연결 → 기간 밖 작업의 자동 연결(가장 낮은 우선순위)
+  const plan = [];
+  inside.forEach(r => { const acct = r.acct, s = r.start, e = r.end != null ? r.end : s, gubun = r.gubun;
     const utJob = usedTokens(r.equip);
     if (isUsedLabel(acct) || (utJob.used.length && !utJob.hasOther)) { usedCal++; return; }
     if (isDemoLabel(acct + ' ' + r.equip)) { demoCal++; return; }
     if (isTentative(r)) { tentative.push({ start: fmt(s), end: fmt(e), gubun, acct, team: r.team, owner: r.owner, calEquip: r.equip }); return; }
-    const [lo, hi] = win(s, e);
-    const hits = matchSerialAccounts(serByAcct, acct, acctMap).filter(x => x.date >= lo && x.date <= hi && !usedSn[x.sn + '|' + x.date]);
-    hits.forEach(x => { const k = x.sn + '|' + x.date; usedSn[k] = true; if (!inMonths(x.date, period.months)) claimedInside[k] = true; });
-    let manualModels = null; if (!hits.length) manualModels = findManual(manualMap, acct, s, e);
-    let missing = [], supplement = [];
-    if (hits.length) { const hitFam = {}; hits.forEach(x => hitFam[modelFamily(x.model)] = true);
-      calModelTokens(r.equip).forEach(t => { if (!hitFam[modelFamily(t)] && missing.indexOf(t) < 0) missing.push(t); });
-      if (missing.length) { const fams = missing.map(modelFamily); supplement = (findManual(manualMap, acct, s, e) || []).filter(mi => fams.indexOf(modelFamily(mi.model)) >= 0);
-        const supFam = supplement.map(mi => modelFamily(mi.model)); missing = missing.filter(t => supFam.indexOf(modelFamily(t)) < 0); } }
-    let calBased = null; if (!hits.length && !manualModels && gubun === '이전설치') calBased = calModelTokens(r.equip).map(t => ({ model: t, qty: 1 }));
+    const [lo, hi] = win(s, e), got = linkHits(serByAcct, r, lo, hi, usedSn, ctxExact); claim(got.hits);
+    plan.push({ r, s, e, lo, hi, hits: got.hits, link: '' }); });
+  plan.forEach(p => { if (p.hits.length) return; const got = linkHits(serByAcct, p.r, p.lo, p.hi, usedSn, ctxIn); if (!got.hits.length) return;
+    claim(got.hits); p.hits = got.hits; p.link = got.why; p.linkedAcct = got.acct;
+    links.push({ start: fmt(p.s), calAcct: p.r.acct, crmAcct: got.acct, why: got.why, sns: got.hits.map(x => x.sn).join(', '), models: got.hits.map(x => cleanModel(x.model)).join(', ') }); });
+  outside.forEach(r => { const [lo, hi, s, e] = jobWin(r); const got = linkHits(serByAcct, r, lo, e + C.LINK.FORWARD_DAYS * DAY, usedSn, ctxOut); claim(got.hits, claimedOutside); });
+  plan.forEach(p => { const { r, s, e, hits } = p, gubun = r.gubun, acct = r.acct;
+    hits.forEach(x => { if (!inMonths(x.date, period.months)) claimedInside[x.sn + '|' + x.date] = true; });
+    let missing = [];
+    if (hits.length) { const hitFam = {}; hits.forEach(x => hitFam[modelFamily(x.model)] = true); calModelTokens(r.equip).forEach(t => { if (!hitFam[modelFamily(t)] && missing.indexOf(t) < 0) missing.push(t); }); }
+    // CRM에 없으면 신규·이전설치 모두 캘린더 장비 표기로 센다 (전에는 신규는 0대 + 설치_수동입력 필요)
+    const calBased = hits.length ? null : calModelTokens(r.equip).map(t => ({ model: t, qty: 1 }));
     const byModel = {};
-    if (manualModels) manualModels.forEach(m => byModel[m.model] = (byModel[m.model] || 0) + m.qty);
-    else if (calBased) calBased.forEach(m => byModel[m.model] = (byModel[m.model] || 0) + m.qty);
-    else { hits.forEach(x => byModel[x.model] = (byModel[x.model] || 0) + 1); supplement.forEach(m => byModel[m.model] = (byModel[m.model] || 0) + m.qty); }
+    if (calBased) calBased.forEach(m => byModel[m.model] = (byModel[m.model] || 0) + m.qty); else hits.forEach(x => byModel[x.model] = (byModel[x.model] || 0) + 1);
     const detail = Object.keys(byModel).sort((a, b) => byModel[b] - byModel[a]).map(k => k + ' ' + byModel[k] + '대').join(' · ');
     const unitSum = expandItems(Object.keys(byModel).map(k => ({ model: k, qty: byModel[k] }))).total;
+    const status = hits.length ? 'OK' : (calBased.length ? (gubun === '이전설치' ? '캘린더 기준' : '캘린더 표기(CRM 미등록)') : 'CRM 미등록');
     rows.push({ start: fmt(s), end: fmt(e), gubun, acct, team: r.team, owner: r.owner, calEquip: r.equip, merged: r.mergedCount || 1, units: unitSum, detail,
-      sns: manualModels ? '(수동 입력)' : (calBased ? '(캘린더 표기)' : hits.map(x => x.sn).join(', ') + (supplement.length ? ' + (수동 입력)' : '')),
-      manual: !!manualModels || supplement.length > 0, manualDetail: (manualModels || supplement).map(m => m.model + ' ' + m.qty + '대').join(' · '),
-      calBased: !!calBased, missing, status: hits.length ? 'OK' : (manualModels ? '수동 입력' : (calBased ? '캘린더 기준' : 'CRM 미등록')) });
-  });
+      sns: calBased ? (calBased.length ? '(캘린더 표기)' : '') : hits.map(x => x.sn).join(', '), calBased: !!calBased, missing, status, link: p.link || '', linkedAcct: p.linkedAcct || '' }); });
   const orphan = [], dealerOrphan = [], dealerKeys = {};
   Object.keys(serByAcct).forEach(k => serByAcct[k].forEach(x => { const key = x.sn + '|' + x.date; if (usedSn[key] || !inMonths(x.date, period.months)) return;
     if (x.dealer) { dealerOrphan.push({ date: fmt(x.date), acct: x.acct, model: x.model, sn: x.sn, dealer: x.dealer }); dealerKeys[key] = true; return; }
     orphan.push({ date: fmt(x.date), acct: x.acct, model: x.model, sn: x.sn, moved: !!(x.first != null && x.first !== x.date), key, t: x.date }); }));
-  rows.sort((a, b) => a.start < b.start ? -1 : (a.start > b.start ? 1 : 0));
-  return { rows, orphan, tentative, usedCrm, usedCal, partSkipped, claimedOutside, claimedInside, claimedUsed, claimedDemo, demoCal, audit, dealerOrphan, dealerKeys, dupOrphan: [], claimedDup: {} };
+  rows.sort((a, b) => a.start < b.start ? -1 : (a.start > b.start ? 1 : 0)); links.sort((a, b) => a.start < b.start ? -1 : 1);
+  return { rows, orphan, tentative, usedCrm, usedCal, partSkipped, claimedOutside, claimedInside, claimedUsed, claimedDemo, demoCal, audit, dealerOrphan, dealerKeys, links, dupOrphan: [], claimedDup: {} };
 }
-function dedupeOrphans(detail, acctMap) {
-  detail.dupOrphan = []; detail.claimedDup = {}; acctMap = acctMap || {};
+function dedupeOrphans(detail) {
+  detail.dupOrphan = []; detail.claimedDup = {};
   const ND = C.DUP_NAME_DAYS, SD = C.DUP_STRICT_DAYS;
-  const jobs = detail.rows.filter(j => j.status === '수동 입력' || j.status === '캘린더 기준').map(j => { const fam = {};
+  const jobs = detail.rows.filter(j => j.calBased || j.status === 'CRM 미등록').map(j => { const fam = {};
     detailItems(j.detail).forEach(it => fam[dupFamKey(it.model)] = 1); Object.keys(dupCalFams(j.calEquip)).forEach(f => fam[f] = 1);
     const s = ymd(j.start), e = ymd(j.end) != null ? ymd(j.end) : s; return { job: j, fam, s, e, key: normAcct(j.acct), moved: j.gubun === '이전설치' }; }).filter(x => x.s != null);
   if (!jobs.length || !detail.orphan.length) return 0;
@@ -293,7 +298,7 @@ function dedupeOrphans(detail, acctMap) {
   Object.keys(groups).forEach(gk => { const list = groups[gk], o0 = list[0], ok = normAcct(o0.acct), t = o0.t != null ? o0.t : (ymd(o0.date) || 0);
     const ofam = {}; list.forEach(o => ofam[dupFamKey(o.model)] = 1); const omoved = list.every(o => o.moved); let best = null;
     jobs.forEach(x => { const overlap = Object.keys(ofam).some(f => x.fam[f]); if (!overlap || x.moved !== omoved) return;
-      const nameLink = x.key === ok || acctMap[x.key] === ok || autoNameScore(x.job.acct, o0.acct) >= C.AUTO_MAP.MID;
+      const nameLink = x.key === ok || autoNameScore(x.job.acct, o0.acct) >= C.AUTO_MAP.MID;
       const inName = t >= x.s - ND * DAY && t <= x.e + ND * DAY, inStrict = t >= x.s - SD * DAY && t <= x.e + SD * DAY;
       const subset = Object.keys(ofam).every(f => x.fam[f]), teamOk = !!o0.team && !!x.job.team && o0.team === x.job.team; let why = null;
       if (nameLink && inName) why = '기관명 연결·' + Math.round(Math.abs(t - x.s) / DAY) + '일 차'; else if (inStrict && subset && teamOk) why = '같은 팀·같은 계열·' + Math.round(Math.abs(t - x.s) / DAY) + '일 차';
@@ -344,11 +349,11 @@ function computeInstallStatus(serial, period, detail) {
     if (x.first != null && d != null && x.first !== d) { moved++; return; }
     const ak = normAcct(x.acct); (crmByAcct[ak] = crmByAcct[ak] || []).push({ model, qty: 1 }); });
   Object.keys(crmByAcct).forEach(ak => { const ex = expandItems(crmByAcct[ak]); Object.keys(ex.agg).forEach(lb => newCounts[lb] = (newCounts[lb] || 0) + ex.agg[lb]); total += ex.total; });
-  let manualUnits = 0;
-  if (detail) detail.rows.forEach(r => { if (!r.manual || !r.manualDetail) return; const ex = expandItems(detailItems(r.manualDetail)); Object.keys(ex.agg).forEach(lb => newCounts[lb] = (newCounts[lb] || 0) + ex.agg[lb]); total += ex.total; manualUnits += ex.total; });
+  let calUnits = 0;   // CRM에 없는 신규 설치 = 캘린더 장비 표기로 센 대수 (이전설치는 단품 집계에 안 넣음 — CRM 규칙과 같음)
+  if (detail) detail.rows.forEach(r => { if (!r.calBased || r.gubun === '이전설치' || !r.detail) return; const ex = expandItems(detailItems(r.detail)); Object.keys(ex.agg).forEach(lb => newCounts[lb] = (newCounts[lb] || 0) + ex.agg[lb]); total += ex.total; calUnits += ex.total; });
   const rows = Object.keys(newCounts).sort((a, b) => newCounts[b] - newCounts[a]).map(k => ({ series: k, count: newCounts[k], pct: total ? round1(newCounts[k] / total * 100) : 0 }));
   sysRows.sort((a, b) => a.date < b.date ? -1 : 1);
-  return { rows, total, reExcluded, moved, partExcluded, sysRows, manualUnits };
+  return { rows, total, reExcluded, moved, partExcluded, sysRows, calUnits };
 }
 /* 「정제_팀별설치실적」 — 작업 목록·팀×구분 매트릭스 (writeInstallSummary_) */
 function installSummary(detail, period) {
@@ -356,9 +361,9 @@ function installSummary(detail, period) {
   detail.rows.forEach(r => { const exp = expandDetail(r.detail); let sysTxt = '';
     if (isSystemLabel(r.calEquip)) sysTxt = sysModelsFromText(r.calEquip).map(m => m + (sysGubunFor(r.calEquip, m, r.gubun) === '이전설치' ? ' (이전)' : '')).join(', ');
     jobs.push({ start: r.start, end: r.end, team: r.team, owner: r.owner, acct: r.acct, kind: r.gubun === '이전설치' ? '이전설치' : '신규', sys: sysTxt, cal: r.calEquip, equip: exp.text, units: exp.total, agg: exp.agg,
-      src: r.calBased ? '캘린더 표기' : (r.status === 'OK' ? (r.manual ? 'CRM+수동' : 'CRM') : (r.manual ? '수동 입력' : '—')), sn: r.sns,
+      src: r.calBased ? '캘린더 표기' : (r.status === 'OK' ? 'CRM' : '—'), sn: r.sns,
       status: r.status === 'OK' ? (r.missing && r.missing.length ? '일부 CRM 미확인' : '정상') : r.status,
-      note: [r.merged > 1 ? '캘린더 ' + r.merged + '줄 병합' : '', r.missing && r.missing.length ? '미확인: ' + r.missing.join(', ') : ''].filter(String).join(' · ') }); });
+      note: [r.merged > 1 ? '캘린더 ' + r.merged + '줄 병합' : '', r.missing && r.missing.length ? '미확인: ' + r.missing.join(', ') : '', r.link ? '자동 연결 → ' + r.linkedAcct + ' (' + r.link + ')' : ''].filter(String).join(' · ') }); });
   orphanJobs(detail).forEach(j => { const exp = expandDetail(j.detail), sysM = Object.keys(j.models).filter(m => isSystemModel(m)).map(cleanModel);
     jobs.push({ start: j.date, end: '', team: j.team, owner: '', acct: j.acct, kind: j.gubun === '이전설치' ? '이전설치' : '신규', sys: sysM.join(', '), cal: '', equip: exp.text, units: exp.total, agg: exp.agg, src: 'CRM', sn: '', status: '캘린더 미등록', note: '캘린더에 일정 입력 필요', crmSys: sysM }); });
   jobs.sort((a, b) => a.start < b.start ? -1 : (a.start > b.start ? 1 : 0));
@@ -375,52 +380,27 @@ function installSummary(detail, period) {
   teams.forEach(t => { KINDS.forEach(kd => mat.push(line(t, kd, [M[t + '|' + kd]]))); mat.push(line(t, '소계', KINDS.map(kd => M[t + '|' + kd]))); });
   KINDS.forEach(kd => mat.push(line('전체', kd, teams.map(t => M[t + '|' + kd]))));
   const allCells = []; teams.forEach(t => KINDS.forEach(kd => allCells.push(M[t + '|' + kd]))); mat.push(line('전체', '합계', allCells));
-  const need = jobs.filter(j => j.status === 'CRM 미등록' || j.status === '일부 CRM 미확인').length, calMiss = jobs.filter(j => j.status === '캘린더 미등록').length, tent = detail.tentative || [];
+  const need = jobs.filter(j => /CRM 미등록|일부 CRM 미확인/.test(j.status)).length, calMiss = jobs.filter(j => j.status === '캘린더 미등록').length, tent = detail.tentative || [];
   const notes = [
-    ['확인 필요', 'CRM 미등록 ' + need + '건 → 「설치_수동입력」 탭 · 캘린더 미등록 ' + calMiss + '건 → 캘린더 입력 (둘 다 실적에는 포함)'],
+    ['확인 필요', 'CRM 미등록 ' + need + '건 → 캘린더 장비 표기로 집계(CRM 등록 여부 확인) · 캘린더 미등록 ' + calMiss + '건 → 캘린더 입력 (둘 다 실적에는 포함)' + ((detail.links || []).length ? ' · 이름이 달라 자동 연결한 짝 ' + detail.links.length + '건 → 「자동연결」 탭' : '')],
     ['집계 제외', '예정 ' + tent.length + '건 · 중고 ' + ((detail.usedCrm || 0) + (detail.usedCal || 0)) + '건 · Demo ' + (detail.demoCal || 0) + '건 · 대리점 설치(캘린더 없음) ' + (detail.dealerOrphan || []).length + '대' +
       ((detail.dealerOrphan || []).length ? ' — ' + detail.dealerOrphan.map(x => x.acct + ' ' + cleanModel(x.model) + '(' + x.dealer + ')').join(', ') : '') +
       ((detail.dupOrphan || []).length ? ' · 캘린더 작업과 중복 ' + detail.dupOrphan.length + '대 — ' + dupSummary(detail.dupOrphan) : '')]];
   const list = jobs.concat(tent.map(t => ({ start: t.start, end: t.end, team: t.team, owner: t.owner, acct: t.acct, kind: '예정', sys: '', cal: t.calEquip, equip: '', units: '', src: '—', sn: '', status: '예정(집계 제외)', note: '' })));
   return { head, mat, notes, jobs, list, audit: detail.audit || [], title: '팀별 설치 실적 (' + period.label + ')' };
 }
-/* 자동 기관명 매칭 제안 (v49 suggestAcctMap_) — B가 빈 매핑 행에 대해 */
-function suggestAcctMap(names, cal, serial) {
-  const ser = []; serial.forEach(x => { if (!x.acct || x.install == null) return; ser.push({ acct: x.acct, model: x.model || '', fam: modelFamily(x.model), t: x.install, date: x.install }); });
-  return names.map(name => { const key = normAcct(name), parts = String(name).split(',').map(x => normAcct(x)).filter(x => x);
-    const jobs = cal.filter(r => r.acct && (r.acct === name || normAcct(r.acct) === key || parts.indexOf(normAcct(r.acct)) >= 0));
-    if (!jobs.length) return { pick: '', conf: '', score: 0, note: '자동 매칭 불가 — 캘린더에서 같은 기관명을 못 찾음' };
-    const cand = {};
-    jobs.forEach(j => { const s = j.start; if (s == null) return; const e = j.end != null ? j.end : s; const fams = autoCalFamilies(j.equip + ' ' + name), anyFam = !Object.keys(fams).length;
-      const lo = s - C.AUTO_MAP.DAYS_BEFORE * DAY, hi = e + C.AUTO_MAP.DAYS_AFTER * DAY;
-      ser.forEach(x => { if (x.t < lo || x.t > hi) return; if (!anyFam && !fams[x.fam]) return; const c = cand[x.acct] = cand[x.acct] || { acct: x.acct, n: 0, models: {}, date: x.date }; c.n++; c.models[cleanModel(x.model)] = 1; }); });
-    const list = Object.keys(cand).map(a => { const c = cand[a]; c.score = autoNameScore(name, a); return c; }).sort((p, q) => q.score - p.score || q.n - p.n);
-    if (!list.length) return { pick: '', conf: '', score: 0, note: '자동 매칭 불가 — 기간 내 CRM 자산 기록 없음 (신규 설치면 설치_수동입력에 장비 입력)' };
-    const top = list[0], info = 'CRM ' + fmt(top.date) + ' ' + Object.keys(top.models).slice(0, 3).join('/');
-    if (normAcct(top.acct) === key) return { pick: '', conf: '', score: top.score, note: '매핑 불필요 — CRM 표기와 같음' };
-    const tie = list.length > 1 && list[1].score === top.score && normAcct(list[1].acct) !== normAcct(top.acct);
-    if (top.score >= C.AUTO_MAP.MID && !tie) return { pick: top.acct, conf: top.score >= C.AUTO_MAP.HIGH ? '높음' : '중간', score: top.score, note: info };
-    return { pick: '', conf: '', score: top.score, note: '자동 매칭 보류 — 이름이 달라 확인 필요. 후보: ' + list.slice(0, 3).map(c => c.acct).join(', ') }; });
-}
-/* 전체 흐름 (runRefine 설치 블록): detail → 자동 매핑 채우기 → 재계산 → 팀 붙이기 → 중복 제외 → 설치 현황 → 팀별 실적 설치 칸 → 요약 */
+/* 전체 흐름: 기관→팀(CRM 활동) → detail(자동 연결 포함) → 미등록에 팀 붙이기 → 중복 제외 → 설치 현황 → 팀별 실적 설치 칸 → 요약 */
 function runInstall(opt) {
-  const { cal, serial, period, rows, rosterMap, team } = opt, acctMap = Object.assign({}, (opt.acctMap && opt.acctMap.map) || opt.acctMap || {}), pending = (opt.acctMap && opt.acctMap.pending) || [];
-  const manualMap = opt.manualMap || {};
-  let detail = computeInstallDetail(cal, serial, period, acctMap, manualMap), autoFilled = [];
-  if (pending.length && cal.length) {   // v49: 기관명매핑 B열이 빈 행을 자동 매칭으로 채우고(메모리), 채운 게 있으면 다시 계산
-    const res = suggestAcctMap(pending, cal, serial);
-    res.forEach((r, i) => { if (r.pick) { acctMap[normAcct(pending[i])] = normAcct(r.pick); autoFilled.push({ from: pending[i], to: r.pick, conf: r.conf, note: r.note }); } else autoFilled.push({ from: pending[i], to: '', conf: '', note: r.note }); });
-    if (autoFilled.some(a => a.to)) detail = computeInstallDetail(cal, serial, period, acctMap, manualMap);
-  }
+  const { cal, serial, period, rows, rosterMap, team } = opt;
   const acctTeam = buildAcctTeam(rows, rosterMap);
+  const detail = computeInstallDetail(cal, serial, period, acctTeam);
   detail.orphan.forEach(o => { o.team = acctTeam[normAcct(o.acct)] || ''; });
-  dedupeOrphans(detail, acctMap);
-  detail.orphan.forEach(o => { o.team = acctTeam[normAcct(o.acct)] || ''; });
+  dedupeOrphans(detail);
   applyCalendarInstalls(team, detail);
   const install = computeInstallStatus(serial, period, detail);
   const summary = installSummary(detail, period);
-  return { detail, install, summary, systems: collectSystems(detail), autoFilled, acctMapUsed: acctMap };
+  return { detail, install, summary, systems: collectSystems(detail), links: detail.links };
 }
 module.exports = { C, INSTALL_CATS, normAcct, normGubun, normTeam, cleanModel, expandModel, expandItems, detailItems, expandDetail, installCatOf, calModelTokens, modelFamily,
-  isSystemLabel, isSystemModel, sysModelsFromText, sysGubunFor, resolveCols, readCalendarRows, readAcctMapRows, readManualRows, mergeCalRows, computeInstallDetail, dedupeOrphans,
-  buildAcctTeam, orphanJobs, collectSystems, sysAcctsFor, applyCalendarInstalls, computeInstallStatus, installSummary, suggestAcctMap, autoNameScore, runInstall, fmt, ymd };
+  isSystemLabel, isSystemModel, sysModelsFromText, sysGubunFor, resolveCols, readCalendarRows, mergeCalRows, linkHits, computeInstallDetail, dedupeOrphans,
+  buildAcctTeam, orphanJobs, collectSystems, sysAcctsFor, applyCalendarInstalls, computeInstallStatus, installSummary, autoNameScore, runInstall, fmt, ymd };

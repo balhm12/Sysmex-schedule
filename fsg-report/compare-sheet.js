@@ -95,14 +95,9 @@ function compareWorkbook(wb, opt) {
   let serial = null;
   try { if (serAoa && serAoa.length > 1) serial = R.parseSerialRows({ h: serAoa[0], rows: serAoa.slice(1) }); else notes.push('원본_Serial 탭 없음 → 운영건전성·집중관리대상 비교 생략'); }
   catch (e) { notes.push('원본_Serial 읽기 실패(' + e.message + ') → 운영건전성·집중관리대상 비교 생략'); }
-  // 3차 묶음 입력: 원본_설치캘린더 · 기관명매핑 · 설치_수동입력 (있을 때만)
-  const calAoa = aoa(wb, '원본_설치캘린더'), mapAoa = aoa(wb, '기관명매핑'), manAoa = aoa(wb, '설치_수동입력');
-  let calendar = null, acctMap = null, manualMap = null;
-  try { if (calAoa && calAoa.length > 1) calendar = INS.readCalendarRows({ h: calAoa[0], rows: calAoa.slice(1) }, R.toMs); else notes.push('원본_설치캘린더 탭 없음 → 설치 현황 비교 생략'); }
-  catch (e) { notes.push('원본_설치캘린더 읽기 실패(' + e.message + ') → 설치 현황 비교 생략'); }
-  if (mapAoa && mapAoa.length > 1) acctMap = INS.readAcctMapRows({ h: mapAoa[0], rows: mapAoa.slice(1) });
-  if (manAoa && manAoa.length > 1) manualMap = INS.readManualRows({ h: manAoa[0], rows: manAoa.slice(1) }, R.toMs);
-  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, calendar, acctMap, manualMap });
+  // 설치(4장·팀별실적 설치 칸)는 2026-10-26부터 엔진 규칙이 시트와 다르다(자동 연결, 기관명매핑·설치_수동입력 없음) → 시트와 비교하지 않는다
+  if (aoa(wb, '원본_설치캘린더')) notes.push('설치 현황·팀별 설치 칸: 엔진 규칙이 시트와 달라(자동 연결·매핑/수동입력 없음, 2026-10-26) 비교하지 않음');
+  const rep = buildReport({ raw: act.rows, roster, period, cut, serial });
   const siA = R.col(actAoa[0].map(x => String(x).trim()), ['Serial No. (lookup)', 'Serial No'], 14);
   const zeroAct = actAoa.slice(1).filter(r => String(r[siA] == null ? '' : r[siA]).trim() === '0').length;
   if (zeroAct) notes.push(`S/N 칸이 0인 활동 ${zeroAct}행은 "장비 없음"으로 처리(대시보드·시트와 같은 규칙, 2026-10-25 결정 A)`);
@@ -122,8 +117,7 @@ function compareWorkbook(wb, opt) {
   const sT = aoa(wb, '정제_KPI월별추이'), eT = E('정제_KPI월별추이'), hdr = eT[0];
   cells += compareTables('정제_KPI월별추이', sT.slice(1), eT.slice(1), r => monthLabel(r[0]), hdr.slice(1, -1).map((h, i) => [i + 1, h]), tol, diffs);
   const sTm = aoa(wb, '정제_팀별실적'), eTm = E('정제_팀별실적');
-  const teamCols = rep.installBlock ? [[1, '리더'], [2, '인원'], [3, '설치+이전'], [4, 'PM'], [5, 'A/S'], [6, '합계'], [7, '1인당'], [8, '└ 설치'], [9, '└ 이전설치'], [10, '(참고) CRM 설치 활동']]
-                                    : [[1, '리더'], [2, '인원'], [4, 'PM'], [5, 'A/S']];   // 캘린더·자산대장이 없으면 설치 칸(3·6~10)은 비교하지 않는다
+  const teamCols = [[1, '리더'], [2, '인원'], [4, 'PM'], [5, 'A/S']];   // 설치 칸(3·6~10)은 비교하지 않는다(위 주석)
   cells += compareTables('정제_팀별실적', sTm.slice(1), eTm.slice(1).filter(r => SHEET_TEAMS.includes(r[0])), r => String(r[0] || ''), teamCols, tol, diffs);
   const sC = aoa(wb, '정제_케이스분석'), eC = E('정제_케이스분석');
   const caseKey = r => { const g = String(r[0] || ''); if (!g) return null; return (g.startsWith('상관표') ? '상관표' : g) + '|' + (g === '월별추이' ? monthLabel(r[1]) : String(r[1] || '').trim()); };
@@ -150,34 +144,6 @@ function compareWorkbook(wb, opt) {
   if (has('정제_장애요인TOP4')) cells += compareTables('정제_장애요인TOP4', aoa(wb, '정제_장애요인TOP4').slice(1), E('정제_장애요인TOP4').slice(1), rankKey, [[2, '장애 요인'], [3, '건수'], [4, '전체 기재 건수']], tol, diffs);
   if (has('정제_장비군에러율')) cells += compareTables('정제_장비군에러율', aoa(wb, '정제_장비군에러율').slice(1), E('정제_장비군에러율').slice(1), r => r[0] === '' ? null : monthLabel(r[0]), [[1, 'XN/XR'], [2, 'SP'], [3, 'CN'], [4, 'HISCL']], tol, diffs);
   if (serial && has('정제_운영건전성')) cells += compareTables('정제_운영건전성', aoa(wb, '정제_운영건전성').slice(1), E('정제_운영건전성').slice(1), r => String(r[0] || ''), [[1, '값'], [2, '설명']], tol, diffs);
-  /* ── 3차 묶음: 설치 — 행은 순서(#n)로 맞추고 기관명·담당자·S/N은 비표시 ── */
-  const dateLabel = v => typeof v === 'number' ? INS.fmt(Math.round((v - 25569) * 86400000)) : String(v == null ? '' : v).trim();
-  const idxRows = rows => rows.map((r, i) => Object.assign([], r, { __k: '#' + (i + 1) }));
-  const dayNorm = v => String(v == null ? '' : v).replace(/\d+일 차/g, 'N일 차');
-  if (rep.installBlock && has('정제_설치상세')) {
-    const sD = aoa(wb, '정제_설치상세').slice(1).filter(r => r.some(x => x !== '')), eD = E('정제_설치상세').slice(1);
-    const nD = rows => rows.map(r => { const c = r.slice(); c[0] = dateLabel(c[0]); c[1] = dateLabel(c[1]); c[10] = dayNorm(c[10]); return c; });
-    cells += compareTables('정제_설치상세', idxRows(nD(sD)), idxRows(nD(eD)), r => r.__k, [[0, '시작일'], [1, '종료일'], [2, '구분'], [3, '기관명', true], [4, '팀'], [5, '담당자', true], [6, '캘린더 장비 표기'], [7, '실제 대수'], [8, '실제 장비 상세'], [9, 'S/N', true], [10, '상태', true]], tol, diffs);
-    if (sD.length !== eD.length) diffs.push(['정제_설치상세', '행 수', '', sD.length, eD.length]);
-  }
-  if (rep.installBlock && has('정제_설치현황')) {
-    const sI = aoa(wb, '정제_설치현황').slice(1).filter(r => r.some(x => x !== '')), eI = E('정제_설치현황').slice(1);
-    cells += compareTables('정제_설치현황', idxRows(sI), idxRows(eI), r => r.__k, [[0, '구분'], [1, '모델 / 기관', true], [2, '대수'], [3, '비중·기관', true]], tol, diffs);
-    if (sI.length !== eI.length) diffs.push(['정제_설치현황', '행 수', '', sI.length, eI.length]);
-  }
-  if (rep.installBlock && has('정제_팀별설치실적')) {
-    const sS = aoa(wb, '정제_팀별설치실적'), eS = E('정제_팀별설치실적');
-    const section = (A, startPred, endPred) => { const i = A.findIndex(startPred); if (i < 0) return []; const out = []; for (let j = i + 1; j < A.length; j++) { if (endPred(A[j])) break; out.push(A[j]); } return out; };
-    const isHead = r => String(r[0]).trim() === '팀' && String(r[1]).trim() === '구분';
-    const mat = A => section(A, isHead, r => !r.some(x => x !== '')).filter(r => r[0] !== '');
-    cells += compareTables('정제_팀별설치실적 매트릭스', mat(sS), mat(eS), r => String(r[0]).trim() + '|' + String(r[1]).trim(), [[2, '기관 수'], [3, 'System'], [4, 'XR'], [5, 'XN'], [6, 'SP-50'], [7, 'A1c'], [8, 'CA/CS'], [9, 'UF/UC'], [10, 'HISCL'], [11, 'Other'], [12, '장비 합계']], tol, diffs);
-    const noteRows = A => A.filter(r => ['확인 필요', '집계 제외'].includes(String(r[0]).trim()));
-    cells += compareTables('정제_팀별설치실적 안내', noteRows(sS), noteRows(eS), r => String(r[0]).trim(), [[1, '내용', true]], tol, diffs);
-    const jobList = A => section(A, r => String(r[0]).trim() === '■ 작업 목록', r => !r.some(x => x !== '')).slice(1).map(r => { const c = r.slice(); c[0] = dateLabel(c[0]); c[1] = dateLabel(c[1]); return c; });
-    cells += compareTables('정제_팀별설치실적 작업 목록', idxRows(jobList(sS)), idxRows(jobList(eS)), r => r.__k, [[0, '시작일'], [1, '종료일'], [2, '팀'], [3, '담당자', true], [4, '기관명', true], [5, '구분'], [6, 'System', true], [7, '캘린더 표기'], [8, '실제 장비'], [9, '대수'], [10, '출처'], [11, 'S/N', true], [12, '상태'], [13, '비고']], tol, diffs);
-    const audit = A => section(A, r => /^■ 캘린더 반영 점검/.test(String(r[0])), () => false).slice(1).filter(r => r.some(x => x !== '')).map(r => { const c = r.slice(); c[0] = dateLabel(c[0]); return c; });
-    cells += compareTables('정제_팀별설치실적 캘린더 점검', idxRows(audit(sS)), idxRows(audit(eS)), r => r.__k, [[0, '시작일'], [2, '팀'], [4, '기관명', true], [5, '구분'], [7, '캘린더 표기'], [8, '처리 결과']], tol, diffs);
-  }
   if (serial && has('정제_집중관리대상')) {
     const fk = (rows) => rows.map((r, i) => Object.assign([], r, { __k: /^\(선정 조건/.test(String(r[0])) ? '선정 조건 충족' : '#' + (i + 1) }));
     cells += compareTables('정제_집중관리대상', fk(aoa(wb, '정제_집중관리대상').slice(1)), fk(E('정제_집중관리대상').slice(1)), r => r[0] === '' ? null : r.__k,
@@ -188,8 +154,6 @@ function compareWorkbook(wb, opt) {
   };
   const { diffs, cells } = diffReport(rep);
   return { diffs, cells, tol, notes, info: { periodRaw, period, cut, roster: roster.length, actRows: act.rows.length, counted: rep.meta.rows.counted, serial: serial ? serial.length : 0, active: rep.fleet ? rep.fleet.activeCount : null,
-    calendar: calendar ? calendar.length : 0, acctMap: acctMap ? Object.keys(acctMap.map).length : 0, manual: manualMap ? Object.keys(manualMap).length : 0, install: rep.installBlock ? rep.installBlock.detail.rows.length : null, autoFilled: rep.installBlock ? rep.installBlock.autoFilled.filter(a => a.to).length : 0,
-    partSkipped: rep.installBlock ? rep.installBlock.detail.partSkipped : 0,
     hasAtt: act.hasAtt, lastRun: lastRunLog(aoa(wb, '실행로그')) }, report: rep };
 }
 function main() {
@@ -198,8 +162,6 @@ function main() {
   const wb = XLSX.read(fs.readFileSync(o.sheet), { type: 'buffer', cellDates: false, dense: true });
   const r = compareWorkbook(wb, o), i = r.info;
   console.log(`기간 ${i.period.label} (설정 B2 "${i.periodRaw}") · 추출일 ${i.cut || '(없음 → 오늘)'} · 로스터 ${i.roster}명 · 원본_활동 ${i.actRows}행 → 집계 ${i.counted}행 · Serial ${i.serial}행` + (i.active != null ? ` · 가동 장비 ${i.active}대` : '') + (i.hasAtt ? '' : ' ⚠ 필수 참석자 열 없음'));
-  if (i.install != null) console.log(`설치: 캘린더 ${i.calendar}행 · 기관명매핑 ${i.acctMap}건 · 수동입력 ${i.manual}건 → 이 기간 설치 작업 ${i.install}건` + (i.autoFilled ? ` · 자동 매핑 ${i.autoFilled}건(검산 xlsx 「기관명매핑_자동」)` : ''));
-  if (i.partSkipped) console.log(`※ 자산대장의 부품 행 ${i.partSkipped}개(이 기간 설치일자)는 설치 매칭·캘린더 미등록에서 뺐습니다 — 시트는 이 행을 '캘린더 미등록'으로 나열하고 기관 수에 넣으므로, 설치상세 행 수·팀별 기관 수가 그만큼 다를 수 있습니다(의도한 차이, 2026-10-26)`);
   r.notes.forEach(n => console.log('※ ' + n));
   if (i.lastRun) console.log(`시트 정제 탭의 마지막 실행: ${i.lastRun.at} (기준월 ${i.lastRun.period}, 활동 ${i.lastRun.actRows}행) — 원본 탭을 그 뒤에 바꿨다면 「데이터 정제 실행」 후 다시 내려받아야 비교가 맞습니다`);
   console.log(`비교 칸 ${r.cells}개 · 다른 칸 ${r.diffs.length}개 (허용 오차 ±${r.tol})`);

@@ -6,12 +6,10 @@
  *
  * 옵션
  *   --period   2026-09 | 2026-07~2026-09 | FY2026Q2   (필수)
- *   --dir      CRM 파일 폴더. 파일명으로 종류를 구분해 가장 최신(파일명 날짜 → 수정 시각)을 쓴다
+ *   --dir      CRM 파일 폴더. 파일명으로 종류를 구분해 가장 최신(파일명 날짜 → 수정 시각)을 쓴다. 활동 파일이 같은 날짜로 여럿이면(40,000행 상한 → 기간 나눠 내보내기) 합친다
  *   --activity 「2. 모든 약속_활동 …xlsx」 직접 지정 (--dir 보다 우선)
  *   --serial   「Serial No …xlsx」 자산대장 (가동 장비 기준 지표: 운영건전성·집중관리대상). --dir 에 있으면 자동
  *   --calendar 설치 공유캘린더 내보내기 「시스템설치_공유캘린더_YYYYMMDD.xlsx」 (4장 설치 현황). --dir 에 있으면 자동
- *   --acct-map 기관명매핑 xlsx/csv (캘린더 표기 | CRM 표기 | 비고). --dir 의 '기관명매핑*' 자동
- *   --manual   설치_수동입력 xlsx/csv (시작일 | 기관명 | 캘린더 표기 | 모델1 수량1 …). --dir 의 '*수동입력*' 자동
  *   --roster   로스터 CSV(fsg-roster 형식: 번호,팀,직급,성명,…). 없으면 ../fsg-kpi.html 의 ROSTER 상수(대시보드와 같은 명단)
  *   --cut      CRM 추출일 YYYY-MM-DD. 없으면 활동 파일명의 날짜, 그것도 없으면 오늘. 그 뒤로 잡힌 예정 약속을 뺀다
  *   --out      출력 폴더(기본 fsg-report/out). report-data_<기간>.json 과 검산_<기간>.xlsx 를 쓴다
@@ -56,23 +54,21 @@ function main() {
       if (!serPath && picked.SER) serPath = picked.SER.path;
     }
   }
-  let calPath = o.calendar, mapPath = o['acct-map'], manPath = o.manual;
+  let calPath = o.calendar;
   if (o.dir) { picked = picked || R.pickLatest(o.dir);
     if (!calPath && picked.CAL) calPath = picked.CAL.path;
-    const byName = pat => { const f = fs.readdirSync(o.dir).filter(n => pat.test(n) && /\.(xlsx|xlsm|csv)$/i.test(n)).sort(); return f.length ? path.join(o.dir, f[f.length - 1]) : null; };
-    if (!mapPath) mapPath = byName(/기관명매핑/); if (!manPath) manPath = byName(/수동입력/); }
+  }
   const table = p => { const t = R.xlsxRows(fs.readFileSync(p), null); if (!t) throw new Error('읽을 수 없습니다: ' + p); return t; };
   const rosterSrc = o.roster ? path.resolve(o.roster) : 'fsg-kpi.html ROSTER';
   const roster = o.roster ? loadRosterCsv(o.roster) : loadRosterFromDashboard();
   const cut = o.cut || R.fileDateKey(path.basename(actPath)) || null;
-  const act = R.parseActivity(fs.readFileSync(actPath));
+  const actFiles = (!o.activity && picked && picked.ACT_ALL && picked.ACT_ALL.length > 1) ? picked.ACT_ALL.map(c => c.path) : [actPath];
+  const act = R.mergeActivity(actFiles.map(p => R.parseActivity(fs.readFileSync(p))));
   const serial = serPath ? R.parseSerial(fs.readFileSync(serPath)) : null;
   const calendar = calPath ? INS.readCalendarRows(table(calPath), R.toMs) : null;
-  const acctMap = mapPath ? INS.readAcctMapRows(table(mapPath)) : null;
-  const manualMap = manPath ? INS.readManualRows(table(manPath), R.toMs) : null;
-  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, calendar, acctMap, manualMap });
-  rep.meta.files = { activity: path.basename(actPath), serial: serPath ? path.basename(serPath) : '',
-    calendar: calPath ? path.basename(calPath) : '', acctMap: mapPath ? path.basename(mapPath) : '', manual: manPath ? path.basename(manPath) : '',
+  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, calendar });
+  rep.meta.files = { activity: actFiles.map(p => path.basename(p)).join(' + '), serial: serPath ? path.basename(serPath) : '',
+    calendar: calPath ? path.basename(calPath) : '',
     roster: path.basename(rosterSrc), header: { hasAtt: act.hasAtt, hasFormType: act.hasFormType } };
 
   const out = path.resolve(o.out || path.join(__dirname, 'out')); fs.mkdirSync(out, { recursive: true });
@@ -81,7 +77,7 @@ function main() {
   XLSX.writeFile(buildCheckWorkbook(rep), path.join(out, '검산_' + stem + '.xlsx'));
 
   const k = rep.kpi, m = rep.meta;
-  console.log(`[${m.period.label}] 활동 ${path.basename(actPath)} · 추출일 ${cut || '(오늘)'} · 로스터 ${path.basename(rosterSrc)}`);
+  console.log(`[${m.period.label}] 활동 ${rep.meta.files.activity} · 추출일 ${cut || '(오늘)'} · 로스터 ${path.basename(rosterSrc)}` + (act.merged ? ` · 활동 파일 ${act.merged}개 합침(똑같은 행 ${act.dup}개 제외)` : ''));
   console.log(`행 ${m.rows.raw} → 예정 제외 ${m.excluded.future} · 시각 없음 ${m.excluded.notime} · 취소 ${m.excluded.cancel} · 온라인 정기점검 ${m.excluded.online} → 집계 ${m.rows.counted}` + (act.hasAtt ? '' : '  ⚠ 필수 참석자 열 없음(담당자만 인정)'));
   console.log(`FSG  FTFR ${k.ftfr}% · 재방문율 ${k.revisitRate}% · MTTR ${k.mttr}분 · 예방정비지수 ${k.pmRatio}% · 고장수리 ${k.repairCount} · PM ${k.pmCount} · 재방문(FTFR 실패) ${k.revisitCount}`);
   k.teams.forEach(t => console.log(`  ${t.team.padEnd(10)} FTFR ${t.ftfr ?? '-'} · 재방문율 ${t.revisit ?? '-'} · MTTR ${t.mttr ?? '-'}`));
@@ -91,7 +87,7 @@ function main() {
   console.log(H ? `가동 장비 ${H.activeCount}대 · PM 커버리지 ${H.pmCoverage}% · 점검 고르기 ${H.pmCV}% · 100대당 고장 ${H.per100}건 · 반복 고장 장비 ${H.chronicRatio}% · 집중관리 후보 ${rep.focus.candidateCount}곳`
     : '가동 장비 지표 없음 — Serial No 파일을 --serial 또는 --dir 로 주면 운영건전성·집중관리대상이 계산됩니다');
   const IB = rep.installBlock;
-  if (IB) { const D = IB.detail; console.log(`설치(캘린더 기준): 작업 ${D.rows.length}건 · 단품 ${IB.install.total}대(수동 ${IB.install.manualUnits}) · System ${IB.systems.list.length}세트 · 캘린더 미등록 ${D.orphan.length}대 · 중복 제외 ${(D.dupOrphan || []).length}대 · 예정 ${D.tentative.length}건` + (IB.autoFilled.filter(a => a.to).length ? ` · 자동 매핑 ${IB.autoFilled.filter(a => a.to).length}건` : '') + (D.partSkipped ? ` · 부품 행 제외 ${D.partSkipped}` : '')); }
+  if (IB) { const D = IB.detail; console.log(`설치(캘린더 기준): 작업 ${D.rows.length}건 · 단품 ${IB.install.total}대(캘린더 표기 ${IB.install.calUnits}) · System ${IB.systems.list.length}세트 · 캘린더 미등록 ${D.orphan.length}대 · 중복 제외 ${(D.dupOrphan || []).length}대 · 예정 ${D.tentative.length}건` + (IB.links.length ? ` · 이름 다른 짝 자동 연결 ${IB.links.length}건(검산 xlsx 「자동연결」)` : '') + (D.partSkipped ? ` · 부품 행 제외 ${D.partSkipped}` : '')); }
   else console.log(serial ? '설치 현황 없음 — 설치 공유캘린더 내보내기를 --calendar 또는 --dir 로 주면 4장 설치 현황이 계산됩니다' : '설치 현황 없음 — Serial No 파일과 설치 공유캘린더가 모두 필요합니다');
   console.log(`출력: ${out}`);
 }

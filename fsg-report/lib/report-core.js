@@ -282,7 +282,7 @@ function buildReport(opt) {
   /* ════════ 3차 묶음 ════════ 4장 설치 현황 — 설치 공유캘린더 + 자산대장 + 기관명매핑 + 설치_수동입력 (lib/install.js) */
   let installBlock = null;
   if (opt.calendar && opt.calendar.length && serial) {
-    installBlock = INS.runInstall({ cal: opt.calendar, serial, period, rows, rosterMap: R.map, team, acctMap: opt.acctMap || { map: {}, pending: [] }, manualMap: opt.manualMap || {} });
+    installBlock = INS.runInstall({ cal: opt.calendar, serial, period, rows, rosterMap: R.map, team });
   }
 
   return {
@@ -293,7 +293,7 @@ function buildReport(opt) {
     trendCompare, metro, engYear, engMonth, hospYear, hospMonth, repeatYear, repeatMonth, errYear, errMonth, errRate,
     fleet: fleet ? { activeCount: fleet.activeCount, pmActiveCount: fleet.pmActiveCount } : null, health, focus,
     installBlock,
-    inputs: { serial: !!serial, calendar: !!(opt.calendar && opt.calendar.length), acctMap: !!opt.acctMap, manual: !!opt.manualMap },
+    inputs: { serial: !!serial, calendar: !!(opt.calendar && opt.calendar.length) },
   };
 }
 module.exports = { buildReport, rosterInfo, cutEndMs, errGroup, SHEET_TEAMS, PV, CORR_SERIES, METRO_TEAMS, N, round1 };

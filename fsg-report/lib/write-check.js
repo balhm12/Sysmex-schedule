@@ -78,7 +78,7 @@ function buildCheckWorkbook(rep) {
   /* ── 3차 묶음: 설치 (writeInstallDetail_ · writeInstall_ · writeInstallSummary_ 와 같은 배치) ── */
   const IB = rep.installBlock;
   if (IB) {
-    const D = IB.detail, out = D.rows.map(r => [r.start, r.end, r.gubun, r.acct, r.team, r.owner, r.calEquip, r.units, r.detail, r.sns, r.status + (r.missing && r.missing.length ? ' (일부 CRM 미확인: ' + r.missing.join(', ') + ')' : '')]);
+    const D = IB.detail, out = D.rows.map(r => [r.start, r.end, r.gubun, r.acct, r.team, r.owner, r.calEquip, r.units, r.detail, r.sns, r.status + (r.missing && r.missing.length ? ' (일부 CRM 미확인: ' + r.missing.join(', ') + ')' : '') + (r.link ? ' · 자동 연결 → ' + r.linkedAcct + ' (' + r.link + ')' : '')]);
     D.orphan.forEach(o => out.push([o.date, '', '(캘린더 없음)', o.acct, '', '', '', 1, o.model + ' 1대', o.sn, '캘린더 미등록']));
     (D.dupOrphan || []).forEach(o => out.push([o.date, '', '(캘린더 없음)', o.acct, o.team || '', '', '', 0, o.model + ' (중복)', o.sn, '중복 제외 — ' + o.dupOf.start + ' ' + o.dupOf.acct + ' (' + o.dupOf.status + ', ' + o.dupWhy + ')']));
     (D.tentative || []).forEach(t => out.push([t.start, t.end, t.gubun, t.acct, t.team, t.owner, t.calEquip, '', '', '', '예정(집계 제외)']));
@@ -86,7 +86,7 @@ function buildCheckWorkbook(rep) {
 
     const inst = IB.install, sys = IB.systems, io = [];
     inst.rows.forEach(r => io.push(['단품 장비', r.series, r.count, r.pct]));
-    io.push(['단품 장비 합계', inst.manualUnits ? '(CRM ' + (inst.total - inst.manualUnits) + '대 + 수동 입력 ' + inst.manualUnits + '대)' : '', inst.total, 100]);
+    io.push(['단품 장비 합계', inst.calUnits ? '(CRM ' + (inst.total - inst.calUnits) + '대 + 캘린더 표기 ' + inst.calUnits + '대)' : '', inst.total, 100]);
     const models = Object.keys(sys.byModel).sort((a, b) => sys.byModel[b] - sys.byModel[a]);
     if (!sys.hasCal) io.push(['System 장비', '(원본_설치캘린더 탭 없음 — 캘린더 기준으로 집계)', '', '']);
     else if (models.length) { let sysTotal = 0; models.forEach(m => { io.push(['System 장비', m, sys.byModel[m], INS.sysAcctsFor(sys, m)]); sysTotal += sys.byModel[m]; });
@@ -102,7 +102,7 @@ function buildCheckWorkbook(rep) {
       ['■ 캘린더 반영 점검 — 이 달 캘린더 ' + S.audit.length + '줄 (집계 ' + S.audit.filter(a => /^집계/.test(a.result)).length + ' · 제외 ' + S.audit.filter(a => !/^집계/.test(a.result)).length + ')  ※ 캘린더 화면에 있는데 여기 없는 일정은 「원본_설치캘린더」에 없는 것 → 캘린더를 다시 내보내 붙여넣으세요'],
       ['시작일', '', '팀', '', '기관명', '구분', '', '캘린더 표기', '처리 결과'], ...S.audit.map(a => [a.date, '', a.team, '', a.acct, a.gubun, '', a.equip, a.result])];
     add('정제_팀별설치실적', aoa);
-    if (IB.autoFilled.length) add('기관명매핑_자동', [['캘린더 표기', '자동 매칭(CRM 표기)', '신뢰', '비고'], ...IB.autoFilled.map(a => [a.from, a.to, a.conf, a.note])]);
+    if (IB.links.length) add('자동연결', [['시작일', '캘린더 표기', 'CRM 표기', '근거', 'CRM 모델', 'S/N'], ...IB.links.map(l => [l.start, l.calAcct, l.crmAcct, l.why, l.models, l.sns])]);
   }
   add('로스터미매핑', [['담당자', '건수', '거래처(예)'], ...rep.team.unmappedRows.map(u => [u.name, u.count, u.sample])]);
   const m = rep.meta;
@@ -113,7 +113,7 @@ function buildCheckWorkbook(rep) {
     ['로스터 인원 없는 행', m.unmappedRows], ['재방문율 대상 거래처(방문 3건 이상)', m.eligibleAccounts],
     ['활동 파일', (m.files && m.files.activity) || ''], ['Serial 파일', (m.files && m.files.serial) || (rep.inputs && rep.inputs.serial ? '(시트 사본)' : '(없음)')],
     ['가동 장비', rep.fleet ? rep.fleet.activeCount : ''],
-    ['설치 캘린더', (m.files && m.files.calendar) || (rep.inputs && rep.inputs.calendar ? '(시트 사본)' : '(없음)')], ['기관명매핑 / 설치_수동입력', (rep.inputs && rep.inputs.acctMap ? '있음' : '없음') + ' / ' + (rep.inputs && rep.inputs.manual ? '있음' : '없음')],
+    ['설치 캘린더', (m.files && m.files.calendar) || (rep.inputs && rep.inputs.calendar ? '(시트 사본)' : '(없음)')], ['자동 연결(이름이 다른 짝)', rep.installBlock ? rep.installBlock.links.length : ''],
     ['자산대장 부품 행 제외(설치 아님)', rep.installBlock ? rep.installBlock.detail.partSkipped : ''],
     ['로스터', (m.files && m.files.roster) || ''], ['생성', new Date().toISOString()],
   ]);
