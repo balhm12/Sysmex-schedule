@@ -97,6 +97,11 @@ function compareWorkbook(wb, opt) {
   try { if (caseAoa && caseAoa.length > 1) cases = R.parseCasesRows({ h: caseAoa[0], rows: caseAoa.slice(1) }); else notes.push('원본_케이스 탭 없음 → 병원TOP5(케이스 기준) 비교 생략'); }
   catch (e) { notes.push('원본_케이스 읽기 실패(' + e.message + ') → 병원TOP5(케이스 기준) 비교 생략'); }
   const rep = buildReport({ raw: act.rows, roster, period, cut, serial, cases });
+  if (serAoa && serAoa.length > 1) {   // 진단: '사용' 글자에 공백이 붙은 행(Apps Script는 정확히 '사용'만 인정, 엔진은 공백을 지우고 봄)
+    const h0 = serAoa[0].map(x => String(x).trim()), si = R.col(h0, ['상태'], 3);
+    const loose = serAoa.slice(1).filter(r => { const v = r[si]; return v !== '사용' && String(v == null ? '' : v).trim() === '사용'; }).length;
+    if (loose) notes.push(`원본_Serial에서 상태가 '사용'이지만 앞뒤 공백이 붙은 행 ${loose}개 — 시트 Apps Script는 이 행을 가동 장비에서 빼고, 엔진은 넣는다(가동 장비 수 차이의 후보)`);
+  }
   const eng = buildCheckWorkbook(rep);
   const E = name => XLSX.utils.sheet_to_json(eng.Sheets[name], { header: 1, raw: true, defval: '' });
   const diffs = []; let cells = 0;
@@ -114,7 +119,7 @@ function compareWorkbook(wb, opt) {
 
   /* ── 2차 묶음 ── 이름(담당자·기관명·S/N)은 비교하되 화면에는 내지 않는다 */
   const has = n => !!wb.Sheets[n];
-  const rankKey = r => (r[0] === '' || r[0] == null) ? null : String(r[0]).trim() + '|' + String(r[1]).trim();
+  const rankKey = r => (r[0] === '' || r[0] == null) ? null : (typeof r[0] === 'number' ? monthLabel(r[0]) : String(r[0]).trim()) + '|' + String(r[1]).trim();   // 시트가 '2026-10'을 날짜로 바꾼 칸 대응
   if (has('정제_트렌드비교')) {
     const sX = aoa(wb, '정제_트렌드비교'), eX = E('정제_트렌드비교');
     cells += compareTables('정제_트렌드비교', sX.slice(1), eX.slice(1).filter(r => r[0] && !/^개편 후 반영 월/.test(String(r[0]))), r => String(r[0] || ''), [[1, '개편 전'], [2, '개편 후'], [3, '증감']], tol, diffs);

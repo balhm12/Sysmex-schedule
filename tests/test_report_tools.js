@@ -47,6 +47,8 @@ function sheetCopy(mutate) {
   ca[0][1] = '월/모델'; ca[4][1] = '2026-1';                                                 // 행 4 = 2026-01
   tm[0] = ['팀', '리더', '인원', '설치+이전', 'PM', 'A/S', '합계', '1인당', '', '', ''];
   tm.forEach((r, i) => { if (i > 0 && r[0] && r[0] !== '합계') { r[3] = 99; r[6] = 999; r[7] = 9.9; } });  // 캘린더 기준 설치 칸은 비교 안 함
+  extra['정제_엔지니어생산성'].forEach(r => { if (r[0] === '2026-09') r[0] = 46266; });            // 시트가 '2026-09'를 날짜(2026-09-01)로 바꾼 모양
+  extra['정제_반복고장TOP5'].forEach(r => { if (r[0] === '2026-09') r[0] = 46266; });
   const tabs = Object.assign({ '정제_KPI': kpi, '정제_KPI월별추이': tr, '정제_팀별실적': tm.slice(0, 6), '정제_케이스분석': ca }, extra);
   if (mutate) mutate(tabs);
   Object.keys(tabs).forEach(n => put(n, tabs[n]));
@@ -65,6 +67,8 @@ const nameDiff = bad.diffs.find(d => d[0] === '정제_엔지니어생산성');
 assert.deepStrictEqual(nameDiff.slice(2), ['담당자', '(이름·비표시)', '(이름·비표시)'], '이름은 화면에 내지 않음');
 assert(bad.diffs.some(d => d[0] === '정제_운영건전성' && d[2] === '값'), '0.49 vs 50% 차이 검출');
 // 원본_Serial 탭이 없는 사본 → 건전성·집중관리만 생략하고 나머지는 비교
+const loose = sheetCopy(); { const ws = loose.Sheets['원본_Serial']; const c = XLSX.utils.encode_cell({ r: 1, c: 0 }); ws[c].v = '사용 '; }
+const ls = compareWorkbook(loose); assert(ls.notes.some(n => /공백이 붙은 행 1개/.test(n)), '공백 사용 진단: ' + ls.notes.join(' / '));
 const noSer = sheetCopy(); delete noSer.Sheets['원본_Serial']; noSer.SheetNames = noSer.SheetNames.filter(n => n !== '원본_Serial');
 const ns = compareWorkbook(noSer); assert.strictEqual(ns.diffs.length, 0); assert(ns.notes.length === 1 && /원본_Serial/.test(ns.notes[0]));
 assert.throws(() => compareWorkbook(XLSX.utils.book_new()), /탭이 없습니다/);
