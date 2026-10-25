@@ -97,8 +97,9 @@ function compareWorkbook(wb, opt) {
   try { if (caseAoa && caseAoa.length > 1) cases = R.parseCasesRows({ h: caseAoa[0], rows: caseAoa.slice(1) }); else notes.push('원본_케이스 탭 없음 → 병원TOP5(케이스 기준) 비교 생략'); }
   catch (e) { notes.push('원본_케이스 읽기 실패(' + e.message + ') → 병원TOP5(케이스 기준) 비교 생략'); }
   const rep = buildReport({ raw: act.rows, roster, period, cut, serial, cases });
-  const zeroAct = act.rows.filter(r => r.sn === '0').length, zeroSer = serial ? serial.filter(x => x.sn === '0' && x.state === '사용').length : 0;
-  if (zeroAct || zeroSer) notes.push(`S/N 칸이 0인 행: 원본_활동 ${zeroAct}개 · 원본_Serial('사용') ${zeroSer}개 — 시트 Apps Script는 0을 빈칸으로 보고(S/N 없음), 엔진·대시보드는 '0'이라는 S/N으로 본다`);
+  const siA = R.col(actAoa[0].map(x => String(x).trim()), ['Serial No. (lookup)', 'Serial No'], 14);
+  const zeroAct = actAoa.slice(1).filter(r => String(r[siA] == null ? '' : r[siA]).trim() === '0').length;
+  if (zeroAct) notes.push(`S/N 칸이 0인 활동 ${zeroAct}행은 "장비 없음"으로 처리(대시보드·시트와 같은 규칙, 2026-10-25 결정 A)`);
   if (serAoa && serAoa.length > 1) {   // 진단: '사용' 글자에 공백이 붙은 행(Apps Script는 정확히 '사용'만 인정, 엔진은 공백을 지우고 봄)
     const h0 = serAoa[0].map(x => String(x).trim()), si = R.col(h0, ['상태'], 3);
     const loose = serAoa.slice(1).filter(r => { const v = r[si]; return v !== '사용' && String(v == null ? '' : v).trim() === '사용'; }).length;
@@ -148,14 +149,7 @@ function compareWorkbook(wb, opt) {
   return { diffs, cells };
   };
   const { diffs, cells } = diffReport(rep);
-  let alt = null;
-  if (diffs.length && (zeroAct || zeroSer)) {   // 차이가 있고 S/N 0 행이 있으면 Apps Script 방식으로도 계산해 비교해 본다
-    const repZ = buildReport({ raw: act.rows, roster, period, cut, serial, cases, zeroAsEmpty: true });
-    const dz = diffReport(repZ);
-    alt = { diffs: dz.diffs.length, active: repZ.fleet ? repZ.fleet.activeCount : null };
-    notes.push(`Apps Script 방식(S/N 0 → 빈칸)으로 계산하면 다른 칸 ${dz.diffs.length}개` + (alt.active != null ? ` · 가동 장비 ${alt.active}대` : '') + ' (기본 엔진은 대시보드와 같은 방식)');
-  }
-  return { diffs, cells, tol, notes, alt, info: { periodRaw, period, cut, roster: roster.length, actRows: act.rows.length, counted: rep.meta.rows.counted, serial: serial ? serial.length : 0, cases: cases ? cases.length : 0, active: rep.fleet ? rep.fleet.activeCount : null, hasAtt: act.hasAtt, lastRun: lastRunLog(aoa(wb, '실행로그')) }, report: rep };
+  return { diffs, cells, tol, notes, info: { periodRaw, period, cut, roster: roster.length, actRows: act.rows.length, counted: rep.meta.rows.counted, serial: serial ? serial.length : 0, cases: cases ? cases.length : 0, active: rep.fleet ? rep.fleet.activeCount : null, hasAtt: act.hasAtt, lastRun: lastRunLog(aoa(wb, '실행로그')) }, report: rep };
 }
 function main() {
   const o = args(process.argv.slice(2));

@@ -31,6 +31,8 @@ function toMs(v) {
   const d = new Date(s); if (isNaN(d)) return null;
   return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes());
 }
+/* S/N 칸이 0이면 "장비 없음"으로 본다 — 대시보드 snOf · 월간보고 Apps Script(String(v || ''))와 같은 규칙 (2026-10-25 결정 A) */
+const snOf = v => { v = String(v == null ? '' : v).trim(); return v === '0' ? '' : v; };
 function col(h, names, fallback) {
   for (const n of names) { const i = h.findIndex(c => c === n); if (i >= 0) return i; }
   for (const n of names) { const i = h.findIndex(c => c.includes(n)); if (i >= 0) return i; }
@@ -52,7 +54,7 @@ function parseActivityRows(t) {
   for (const r of t.rows) {
     if (!r.length || r.every(v => v === '')) continue;
     const g = k => { const v = r[ix[k]]; return v == null ? '' : String(v).trim(); };
-    out.push({ st: g('st'), ft: g('ft'), t: toMs(r[ix.t]), e: toMs(r[ix.e]), own: g('own'), err: g('err'), acct: g('acct'), sn: g('sn'),
+    out.push({ st: g('st'), ft: g('ft'), t: toMs(r[ix.t]), e: toMs(r[ix.e]), own: g('own'), err: g('err'), acct: g('acct'), sn: snOf(r[ix.sn]),
       prod: g('prod'), purp: g('purp'), subj: g('subj'), att: g('att'), c: ix.cr >= 0 ? toMs(r[ix.cr]) : null,
       err2: ix.err2 >= 0 ? g('err2') : '', err3: ix.err3 >= 0 ? g('err3') : '' });
   }
@@ -70,7 +72,7 @@ function parseSerialRows(t) {
   const ix = { state: col(h, ['상태'], 3), acct: col(h, ['거래처'], 6), sn: col(h, ['Serial No.', 'Serial No', 'Serial'], 14), model: col(h, ['모델', 'Product', 'Model'], 13),
     install: col(h, ['설치일자', '설치 일자'], -1), first: col(h, ['초도설치', '초도 설치'], -1), dealer: col(h, ['대리점 명', '대리점명', '대리점'], -1) };
   const g = (r, i) => i >= 0 && r[i] != null ? String(r[i]).trim() : '';
-  const out = t.rows.filter(r => r.length).map(r => ({ state: g(r, ix.state), acct: g(r, ix.acct), sn: g(r, ix.sn), model: g(r, ix.model),
+  const out = t.rows.filter(r => r.length).map(r => ({ state: g(r, ix.state), acct: g(r, ix.acct), sn: snOf(r[ix.sn]), model: g(r, ix.model),
     install: ix.install >= 0 ? toMs(r[ix.install]) : null, first: ix.first >= 0 ? toMs(r[ix.first]) : null, dealer: g(r, ix.dealer) }));
   if (!out.some(s => s.state === '사용')) throw new Error("상태가 '사용'인 장비를 찾지 못했습니다. Serial No 자산대장 내보내기인지 확인해 주세요.");
   return out;
@@ -115,4 +117,4 @@ function pickLatest(dir) {
   }
   return picks;
 }
-module.exports = { xlsxRows, toMs, col, parseActivity, parseActivityRows, parseSerial, parseSerialRows, parseCases, parseCasesRows, fileDateKey, classifyByName, pickLatest, DAY };
+module.exports = { xlsxRows, toMs, col, snOf, parseActivity, parseActivityRows, parseSerial, parseSerialRows, parseCases, parseCasesRows, fileDateKey, classifyByName, pickLatest, DAY };
