@@ -49,6 +49,10 @@ node fsg-report/compare-sheet.js --sheet "FSG_월_분기 보고 데이터.xlsx"
 
 **2026-10-25 실측(2·3·5장 묶음)**: 2026-10 기준 시트 사본으로 335칸 비교 → 집계 행 39,026 동일, 건수·MTTR·예방정비지수·현재 월 KPI·팀별실적·케이스분석 전부 일치. 정제_KPI월별추이의 FTFR·재방문율 10칸(4개 달)만 0.1~0.3p 차이 — 대시보드(fsg-kpi.html)는 엔진과 같은 값이므로 시트 쪽 차이(날짜 객체 vs 엑셀 일련번호의 14일 경계)로 본다. 시트는 폐기 예정이라 고치지 않는다.
 
+### PC 없이 검산 (Colab)
+브라우저만 있으면 된다: [Colab에서 열기](https://colab.research.google.com/github/balhm12/Sysmex-schedule/blob/claude/fsg-report-engine/fsg-report/colab_compare.ipynb) → 런타임 › 모두 실행 → 권한 허용.
+노트북이 시트를 Sheets API로 읽어 사본을 만들고 이 브랜치를 받아 `compare-sheet.js`를 돌린 뒤, 이름 없는 결과 요약을 Drive `FSG_report_out/검산결과_날짜.txt`에 저장한다. 데이터는 사용자 Google 계정 안에서만 처리된다.
+
 ## 계산 기준 (대시보드·시트 v45~v52와 같음)
 취소만 제외 · 온라인 정기점검 제외 · 추출일 이후 예정 약속 제외 · 담당자+필수 참석자(로스터 인원) 각 1건 ·
 FTFR·재방문율 = 방문 3건 이상 거래처의 평균(종료 시각 이전 14일, 같은 S/N) · MTTR 0~500분 · 팀 = 거래처를 가장 많이 방문한 팀.
