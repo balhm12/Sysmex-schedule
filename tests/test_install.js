@@ -37,6 +37,10 @@ const calRows = [
   ['설치', '전주에코병원', 'G11', ser(T(2026, 9, 15)), ser(T(2026, 9, 15)), 1, 'FS Central', 'Heath'],   // CRM '에코내과' — 이름 점수 낮음, 같은 날 같은 모델군(A1c) 후보 하나·같은 팀 → 연결
   ['설치', '담대한내과의원', 'XN-550', ser(T(2026, 9, 21)), ser(T(2026, 9, 21)), 1, 'FS Central', 'BONY'],  // CRM '담대한외과의원' — 이름 점수 0.5 → 연결
   ['설치', 'P의원', 'XN-550', ser(T(2026, 9, 25)), ser(T(2026, 9, 25)), 1, 'FS East', '갑'],             // CRM 'Q병원'(같은 날 XN-550)은 SOUTH 기관 → 연결 안 함 → 캘린더 표기 1대, Q는 캘린더 미등록
+  // 우선순위: 같은 기관에 8월 작업(XR)과 9월 이전설치(XR)가 다 있으면 9/24 CRM XR 행은 9월 작업 몫(8월 작업의 35일 귀속이 먼저 가져가면 안 됨)
+  ['설치', 'R병원', 'XR-1000', ser(T(2026, 8, 20)), ser(T(2026, 8, 20)), 1, 'FS West', '을'],
+  ['이전설치', 'R병원', 'XR-9100 이전설치', ser(T(2026, 9, 24)), ser(T(2026, 9, 24)), 1, 'FS West', '을'],
+  ['이전설치', 'S병원', 'UN-2000', ser(T(2026, 9, 26)), ser(T(2026, 9, 26)), 1, 'FS Central', '정'],      // System만 적힌 이전설치, CRM 없음 → 캘린더 기준(0대 · UN-2000 1세트), CRM 미등록 아님
 ];
 const SER_H = ['제품 상태', '거래처', 'Model', 'Serial No.', '초도설치', '설치일자', '대리점 명'];
 const serRows = [
@@ -53,9 +57,10 @@ const serRows = [
   ['사용', '에코내과', 'HLC-723 G11', 'S-E1', '2026-09-15', '2026-09-15', ''],
   ['사용', '담대한외과의원', 'XN-550', 'S-D1', '2026-09-21', '2026-09-21', ''],
   ['사용', 'Q병원', 'XN-550', 'S-Q1', '2026-09-25', '2026-09-25', ''],
+  ['사용', 'R병원', 'XR-10', 'S-R1', '2026-09-24', '2026-09-24', ''],
 ];
 const cal = I.readCalendarRows({ h: CAL_H, rows: calRows }, R.toMs);
-assert.strictEqual(cal.length, 14); assert.strictEqual(cal[0].team, 'FS EAST'); assert.strictEqual(cal[4].gubun, '이전설치'); assert.strictEqual(cal[0].start, T(2026, 9, 8));
+assert.strictEqual(cal.length, 17); assert.strictEqual(cal[0].team, 'FS EAST'); assert.strictEqual(cal[4].gubun, '이전설치'); assert.strictEqual(cal[0].start, T(2026, 9, 8));
 const serial = R.parseSerialRows({ h: SER_H, rows: serRows });
 
 // 활동(팀 판정용) — H병원·I병원은 EAST, 에코내과는 CENTRAL, Q병원은 SOUTH 담당자 활동
@@ -70,7 +75,9 @@ const IB = rep.installBlock; assert(IB, '설치 블록 생성');
 const D = IB.detail, byAcct = {}; D.rows.forEach(r => byAcct[r.acct] = r);
 
 // 작업별 상세
-assert.deepStrictEqual(D.rows.map(r => r.acct), ['A병원', 'B병원', '양병원', '전주에코병원', 'C병원', '담대한내과의원', 'P의원'], '설치 작업 7 — 예정·중고·데모·평가·8월 제외');
+assert.deepStrictEqual(D.rows.map(r => r.acct), ['A병원', 'B병원', '양병원', '전주에코병원', 'C병원', '담대한내과의원', 'R병원', 'P의원', 'S병원'], '설치 작업 9 — 예정·중고·데모·평가·8월 제외');
+assert.deepStrictEqual([byAcct['R병원'].status, byAcct['R병원'].sns, byAcct['R병원'].units], ['OK', 'S-R1', 1], 'R: 9월 작업이 CRM 행을 가져감(8월 작업 35일 귀속보다 우선)'); assert(!D.claimedOutside['S-R1|' + T(2026, 9, 24)]);
+assert.deepStrictEqual([byAcct['S병원'].status, byAcct['S병원'].units, byAcct['S병원'].sns, byAcct['S병원'].calBased], ['캘린더 기준', 0, '(캘린더 표기)', true], 'S: System만 적힌 이전설치 → 캘린더 기준');
 assert.deepStrictEqual([byAcct['A병원'].status, byAcct['A병원'].units, byAcct['A병원'].detail, byAcct['A병원'].sns, byAcct['A병원'].link], ['OK', 1, 'XR-10 1대 · XR-1000 1대', 'S-A1, S-A2', ''], 'A: CRM 매칭 2행 → 중복 제거 1대');
 assert.deepStrictEqual([byAcct['B병원'].status, byAcct['B병원'].merged, byAcct['B병원'].units, byAcct['B병원'].detail, byAcct['B병원'].sns, byAcct['B병원'].calBased], ['캘린더 표기(CRM 미등록)', 3, 1, 'CN-6000 1대', '(캘린더 표기)', true], 'B: 3줄 병합 · CRM 없음 → 캘린더 표기(System 본체 제외)');
 assert.deepStrictEqual([byAcct['C병원'].status, byAcct['C병원'].units, byAcct['C병원'].detail, byAcct['C병원'].calBased], ['캘린더 기준', 1, 'UF-5000 1대', true], 'C: 이전설치 캘린더 표기 기준');
@@ -82,25 +89,25 @@ assert.deepStrictEqual(D.links.map(l => [l.start, l.calAcct, l.crmAcct]), [['202
 assert.strictEqual(D.tentative.length, 1); assert.strictEqual(D.usedCal, 1); assert.strictEqual(D.demoCal, 1); assert.strictEqual(D.partSkipped, 1, '이 기간 부품 행 1개 제외');
 assert.deepStrictEqual(D.orphan.map(o => [o.acct, o.model, o.moved, o.team]), [['H병원', 'XN-10', false, 'FS EAST'], ['I병원', 'UC-3500', true, 'FS EAST'], ['Q병원', 'XN-550', false, 'FS SOUTH']], '캘린더 미등록 (강남차 S-K1은 8월 작업이 선점, 대리점·중고·부품·10월·자동 연결 제외)');
 assert.strictEqual(D.dealerOrphan.length, 1); assert(D.claimedOutside['S-K1|' + T(2026, 9, 1)], '8월 작업 선점 키');
-assert.strictEqual(D.audit.length, 13, '9월 캘린더 줄 13개(8월 제외)'); assert.deepStrictEqual(D.audit.filter(a => /^제외/.test(a.result)).map(a => a.acct), ['D병원 (예정)', 'E병원', 'F병원', 'G병원']);
+assert.strictEqual(D.audit.length, 15, '9월 캘린더 줄 15개(8월 제외)'); assert.deepStrictEqual(D.audit.filter(a => /^제외/.test(a.result)).map(a => a.acct), ['D병원 (예정)', 'E병원', 'F병원', 'G병원']);
 
 // 설치 현황: CRM 단품 = A XR 1 · H XN 1 · 서울양 CS-1600 1 · 에코 G11 1 · 담대한외과 XN-L 1 · Q XN-L 1 = 6 + 캘린더 표기 신규 = B CN-6000 1 · P XN-L 1 → 8 (C 이전설치는 단품에 안 넣음)
 const inst = IB.install, cnt = {}; inst.rows.forEach(r => cnt[r.series] = r.count);
-assert.deepStrictEqual(cnt, { 'XN-L Series': 3, 'XR-Series': 1, 'XN-Series': 1, 'CS-1600': 1, 'HLC-723 G11': 1, 'CN-6000': 1 });
-assert.deepStrictEqual([inst.total, inst.calUnits, inst.reExcluded, inst.moved, inst.partExcluded], [8, 2, 1, 1, 1], '총 8 · 캘린더 표기 2 · 중고 1 · 이전(I병원) 1 · 부품 1');
-assert.deepStrictEqual(IB.systems.list.map(s => [s.acct, s.model, s.gubun]), [['B병원', 'XN-9100', '설치']], 'System 1세트');
+assert.deepStrictEqual(cnt, { 'XN-L Series': 3, 'XR-Series': 2, 'XN-Series': 1, 'CS-1600': 1, 'HLC-723 G11': 1, 'CN-6000': 1 });
+assert.deepStrictEqual([inst.total, inst.calUnits, inst.reExcluded, inst.moved, inst.partExcluded], [9, 2, 1, 1, 1], '총 9 · 캘린더 표기 2 · 중고 1 · 이전(I병원) 1 · 부품 1');
+assert.deepStrictEqual(IB.systems.list.map(s => [s.acct, s.model, s.gubun]), [['B병원', 'XN-9100', '설치'], ['R병원', 'XR-9100', '이전설치'], ['S병원', 'UN-2000', '이전설치']], 'System 3세트(R병원 XR-9100 이전설치 포함)');
 
 // 팀별 실적 설치 칸(기관 수): EAST 신규 A·양병원·P·H(미등록) 4 + 이전 I 1 / WEST B 1 / SOUTH 신규 Q(미등록) 1 + 이전 C 1 / CENTRAL 신규 전주에코·담대한 2
 const tm = {}; rep.team.rows.forEach(r => tm[r.team] = r);
-assert.deepStrictEqual([tm['FS EAST'].instNew, tm['FS EAST'].instMove, tm['FS WEST'].instNew, tm['FS SOUTH'].instNew, tm['FS SOUTH'].instMove, tm['FS CENTRAL'].instNew], [4, 1, 1, 1, 1, 2]);
+assert.deepStrictEqual([tm['FS EAST'].instNew, tm['FS EAST'].instMove, tm['FS WEST'].instNew, tm['FS WEST'].instMove, tm['FS SOUTH'].instNew, tm['FS SOUTH'].instMove, tm['FS CENTRAL'].instNew, tm['FS CENTRAL'].instMove], [4, 1, 1, 1, 1, 1, 2, 1]);
 assert.strictEqual(tm['FS WEST'].instCrm, 1, 'CRM 활동 기준 설치(을 1건)'); assert.strictEqual(rep.team.instSource, '설치 공유캘린더');
 
 // 팀별 설치 실적 매트릭스
 const S = IB.summary, M = {}; S.mat.forEach(r => M[r[0] + '|' + r[1]] = r);
-assert.deepStrictEqual(M['전체|합계'].slice(2, 4), [10, 1], '기관 10 · System 1'); assert.strictEqual(M['전체|합계'][12], 10, '장비 합계 10(작업 7 + 미등록 3, 각 1대)');
+assert.deepStrictEqual(M['전체|합계'].slice(2, 4), [12, 3], '기관 12 · System 3'); assert.strictEqual(M['전체|합계'][12], 11, '장비 합계 11(작업 9 중 S병원 0대 + 미등록 3, 각 1대)');
 assert.deepStrictEqual(M['FS WEST|신규'].slice(2), [1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1], 'WEST 신규: B병원 System 1세트 · CN(Other) 1');
 assert(!M['(팀 미상)|신규']);
-assert.strictEqual(S.list.length, 7 + 3 + 1, '작업 7 + 미등록 3 + 예정 1'); assert.strictEqual(S.jobs.filter(j => j.status === '캘린더 미등록').length, 3);
+assert.strictEqual(S.list.length, 9 + 3 + 1, '작업 9 + 미등록 3 + 예정 1'); assert.strictEqual(S.jobs.filter(j => j.status === '캘린더 미등록').length, 3);
 assert(/CRM 미등록 2건 → 캘린더 장비 표기로 집계/.test(S.notes[0][1]) && /자동 연결한 짝 3건/.test(S.notes[0][1]), S.notes[0][1]);
 assert(/예정 1건 · 중고 2건 · Demo 1건 · 대리점 설치\(캘린더 없음\) 1대/.test(S.notes[1][1]), S.notes[1][1]);
 assert(/자동 연결 → 에코내과/.test(S.jobs.find(j => j.acct === '전주에코병원').note));
@@ -111,7 +118,7 @@ const rep2 = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-09', cut
 const D2 = rep2.installBlock.detail;
 assert.strictEqual(D2.rows.find(r => r.acct === 'B병원').status, '캘린더 표기(CRM 미등록)'); assert.strictEqual(D2.links.length, 3);
 assert.strictEqual(D2.dupOrphan.length, 2, 'B병원 본관 2대 중복 제외: ' + JSON.stringify(D2.orphan.map(o => o.acct))); assert(/기관명 연결·15일 차/.test(D2.dupOrphan[0].dupWhy), D2.dupOrphan[0].dupWhy);
-assert.strictEqual(D2.orphan.length, 3); assert.strictEqual(rep2.installBlock.install.total, 8, '중복 제외 장비는 설치 현황에도 안 들어감');
+assert.strictEqual(D2.orphan.length, 3); assert.strictEqual(rep2.installBlock.install.total, 9, '중복 제외 장비는 설치 현황에도 안 들어감');
 assert.strictEqual(D2.rows.find(r => r.acct === 'P의원').status, '캘린더 표기(CRM 미등록)', 'P: 같은 날 XN 후보가 둘(Q·B본관) → 단독 아님 → 연결 안 함');
 // 같은 설치가 ±7일 안(9/12)에 'B병원 본관'으로 오르면 자동 연결(포함 관계) → OK
 const serRows3 = serRows.concat([['사용', 'B병원 본관', 'XN-10', 'S-B1', '2026-09-12', '2026-09-12', ''], ['사용', 'B병원 본관', 'CN-6000', 'S-B2', '2026-09-12', '2026-09-12', '']]);
@@ -127,7 +134,7 @@ assert(rep4.installBlock.detail.claimedOutside['S-K1|' + T(2026, 9, 20)], '35일
 const cw = buildCheckWorkbook(rep2);
 ['정제_설치상세', '정제_설치현황', '정제_팀별설치실적', '자동연결'].forEach(n => assert(cw.SheetNames.includes(n), n));
 const det = XLSX.utils.sheet_to_json(cw.Sheets['정제_설치상세'], { header: 1 });
-assert.strictEqual(det.length, 1 + 7 + 3 + 2 + 1, '헤더 + 작업 7 + 미등록 3 + 중복 2 + 예정 1'); assert.strictEqual(det[det.length - 1][10], '예정(집계 제외)');
+assert.strictEqual(det.length, 1 + 9 + 3 + 2 + 1, '헤더 + 작업 9 + 미등록 3 + 중복 2 + 예정 1'); assert.strictEqual(det[det.length - 1][10], '예정(집계 제외)');
 assert(/자동 연결 → 서울양병원/.test(det.find(r => r[3] === '양병원')[10]));
 const tb = XLSX.utils.sheet_to_json(cw.Sheets['정제_팀별실적'], { header: 1 });
 assert.deepStrictEqual(tb[1].slice(0, 11).map(v => v === undefined ? '' : v), ['FS EAST', '', 1, 5, 2, 0, 7, 7, 4, 1, 0], 'EAST: 설치+이전 5 = 신규 4 + 이전 1 · PM 2(갑) · 합계 7 · 1인당 7');

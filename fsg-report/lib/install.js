@@ -249,11 +249,9 @@ function computeInstallDetail(cal, serial, period, acctTeam) {
   const outside = calJobs.filter(r => isInstall(r) && !inMonths(r.start, period.months) && !isTentative(r));
   const inside = calJobs.filter(r => isInstall(r) && inMonths(r.start, period.months));
   const jobWin = r => { const s = r.start, e = r.end != null ? r.end : s; return [s - tol * DAY, e + tol * DAY, s, e]; };
-  // 기간 밖(주로 지난달) 작업: ±7일 이름 매칭 → 그 뒤 35일까지는 같은 모델군이면 귀속(지난달 설치가 이달 CRM에 오른 경우 → 이달 '캘린더 미등록'으로 다시 세지 않음)
+  // 우선순위: 기간 밖 작업 ±7일 이름 매칭(시트 규칙) → 기간 안 작업 이름 매칭 → 기간 안 자동 연결 → 기간 밖 작업 35일 귀속(같은 모델군) → 기간 밖 자동 연결
+  // (35일 귀속을 이달 작업보다 먼저 돌리면 같은 기관에 지난달·이달 작업이 다 있을 때 이달 CRM 행을 지난달이 가져간다 — 2026-10-26 9월 실측에서 확인)
   outside.forEach(r => { const [lo, hi, s, e] = jobWin(r); claim(linkHits(serByAcct, r, lo, hi, usedSn, ctxExact).hits, claimedOutside); });
-  outside.forEach(r => { const [lo, hi, s, e] = jobWin(r); const fams = autoCalFamilies(r.equip); if (!Object.keys(fams).length) return;
-    claim(linkHits(serByAcct, r, lo, e + C.LINK.FORWARD_DAYS * DAY, usedSn, ctxExact).hits.filter(x => fams[modelFamily(x.model)]), claimedOutside); });
-  // 기간 안 작업: ① 이름 매칭을 전부 먼저 → ② ③ 자동 연결 → 기간 밖 작업의 자동 연결(가장 낮은 우선순위)
   const plan = [];
   inside.forEach(r => { const acct = r.acct, s = r.start, e = r.end != null ? r.end : s, gubun = r.gubun;
     const utJob = usedTokens(r.equip);
@@ -265,6 +263,9 @@ function computeInstallDetail(cal, serial, period, acctTeam) {
   plan.forEach(p => { if (p.hits.length) return; const got = linkHits(serByAcct, p.r, p.lo, p.hi, usedSn, ctxIn); if (!got.hits.length) return;
     claim(got.hits); p.hits = got.hits; p.link = got.why; p.linkedAcct = got.acct;
     links.push({ start: fmt(p.s), calAcct: p.r.acct, crmAcct: got.acct, why: got.why, sns: got.hits.map(x => x.sn).join(', '), models: got.hits.map(x => cleanModel(x.model)).join(', ') }); });
+  // 지난달 작업이 이달 CRM에 늦게 오른 경우: 이름 매칭 + 같은 모델군이면 35일까지 그 작업에 귀속(이달 '캘린더 미등록'으로 다시 세지 않음)
+  outside.forEach(r => { const [lo, hi, s, e] = jobWin(r); const fams = autoCalFamilies(r.equip); if (!Object.keys(fams).length) return;
+    claim(linkHits(serByAcct, r, lo, e + C.LINK.FORWARD_DAYS * DAY, usedSn, ctxExact).hits.filter(x => fams[modelFamily(x.model)]), claimedOutside); });
   outside.forEach(r => { const [lo, hi, s, e] = jobWin(r); const got = linkHits(serByAcct, r, lo, e + C.LINK.FORWARD_DAYS * DAY, usedSn, ctxOut); claim(got.hits, claimedOutside); });
   plan.forEach(p => { const { r, s, e, hits } = p, gubun = r.gubun, acct = r.acct;
     hits.forEach(x => { if (!inMonths(x.date, period.months)) claimedInside[x.sn + '|' + x.date] = true; });
@@ -276,9 +277,10 @@ function computeInstallDetail(cal, serial, period, acctTeam) {
     if (calBased) calBased.forEach(m => byModel[m.model] = (byModel[m.model] || 0) + m.qty); else hits.forEach(x => byModel[x.model] = (byModel[x.model] || 0) + 1);
     const detail = Object.keys(byModel).sort((a, b) => byModel[b] - byModel[a]).map(k => k + ' ' + byModel[k] + '대').join(' · ');
     const unitSum = expandItems(Object.keys(byModel).map(k => ({ model: k, qty: byModel[k] }))).total;
-    const status = hits.length ? 'OK' : (calBased.length ? (gubun === '이전설치' ? '캘린더 기준' : '캘린더 표기(CRM 미등록)') : 'CRM 미등록');
+    const calHas = !!calBased && (calBased.length > 0 || isSystemLabel(r.equip));   // 단품 토큰이 없어도 System 표기가 있으면 캘린더 기준(세트는 따로 센다)
+    const status = hits.length ? 'OK' : (calHas ? (gubun === '이전설치' ? '캘린더 기준' : '캘린더 표기(CRM 미등록)') : 'CRM 미등록');
     rows.push({ start: fmt(s), end: fmt(e), gubun, acct, team: r.team, owner: r.owner, calEquip: r.equip, merged: r.mergedCount || 1, units: unitSum, detail,
-      sns: calBased ? (calBased.length ? '(캘린더 표기)' : '') : hits.map(x => x.sn).join(', '), calBased: !!calBased, missing, status, link: p.link || '', linkedAcct: p.linkedAcct || '' }); });
+      sns: calBased ? (calHas ? '(캘린더 표기)' : '') : hits.map(x => x.sn).join(', '), calBased: !!calBased, missing, status, link: p.link || '', linkedAcct: p.linkedAcct || '' }); });
   const orphan = [], dealerOrphan = [], dealerKeys = {};
   Object.keys(serByAcct).forEach(k => serByAcct[k].forEach(x => { const key = x.sn + '|' + x.date; if (usedSn[key] || !inMonths(x.date, period.months)) return;
     if (x.dealer) { dealerOrphan.push({ date: fmt(x.date), acct: x.acct, model: x.model, sn: x.sn, dealer: x.dealer }); dealerKeys[key] = true; return; }
