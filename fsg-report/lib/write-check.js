@@ -104,7 +104,7 @@ function buildCheckWorkbook(rep) {
     add('정제_팀별설치실적', aoa);
     if (IB.links.length) add('자동연결', [['시작일', '캘린더 표기', 'CRM 표기', '근거', 'CRM 모델', 'S/N'], ...IB.links.map(l => [l.start, l.calAcct, l.crmAcct, l.why, l.models, l.sns])]);
   }
-  add('로스터미매핑', [['담당자', '건수', '거래처(예)', '구분'], ...rep.team.unmappedRows.map(u => [u.name, u.count, u.sample, u.other ? '타 부서(집계 제외)' : '확인 필요 — 새 인원이면 로스터에 추가'])]);
+  add('로스터미매핑', [['담당자', '건수', '거래처(예)'], ...rep.team.unmappedRows.map(u => [u.name, u.count, u.sample])]);
   const m = rep.meta;
   add('메타', [
     ['항목', '값'], ['기간', m.period.label], ['기간 키', m.period.key], ['CRM 추출일(cut)', m.cut || '(오늘)'],
