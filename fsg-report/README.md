@@ -43,7 +43,9 @@ npm install            # xlsx(SheetJS)·jsdom
 3. [Colab에서 열기](https://colab.research.google.com/github/balhm12/Sysmex-schedule/blob/claude/fsg-report-engine/fsg-report/colab_report.ipynb) → 런타임 › 모두 실행 → 권한 허용. 기간을 비우면 지난달.
 4. 결과는 Drive `FSG_report_out/<기간>/` — `report-data_<기간>.json`(PPT 빌더 입력) · `검산_<기간>.xlsx`(시트 정제 탭과 같은 배치 → 보고서 만들 때 이 파일을 올린다) · `요약_<기간>.txt`(이름 없는 요약, Claude가 Drive 커넥터로 읽음).
 
-PC에서 하려면 아래 CLI를 같은 폴더(Drive 데스크톱 동기화 경로)에 대고 돌리면 된다.
+5. (선택) 노트북 5번 칸이 같은 파일을 **KPI 대시보드**(fsg-kpi.html)에도 올린다 — 브라우저 ?admin 화면의 「CRM 데이터 올리기」와 같은 포맷(encodeAct·encodeSer)과 같은 암호화(gzip → PBKDF2 200,000회 + AES-GCM, 접근 코드)로 Firebase `kpi-dashboard/{act,ser,meta}`에 쓰고, 올리기 전 기존 데이터를 `backups/날짜/`에 복사한다(30일 보관). 접근 코드·관리자 계정은 실행 때 묻거나 Colab 보안 비밀(FSG_KPI_CODE·FSG_ADMIN_EMAIL·FSG_ADMIN_PW)에서 읽고 어디에도 기록하지 않는다. 기존 데이터의 접근 코드와 다르면 올리지 않는다(`--force-code`로만 바꿈). `tests/test_push_dashboard.js`가 fsg-kpi.html 안의 `open_`·`decodeEmbed`·`decodeSer`로 되읽어 포맷이 같은지 확인한다.
+
+PC에서 하려면 아래 CLI를 같은 폴더(Drive 데스크톱 동기화 경로)에 대고 돌리면 된다. 대시보드 올리기는 `node fsg-report/push-dashboard.js --dir "CRM_원본"` (환경변수 FSG_KPI_CODE·FSG_ADMIN_EMAIL·FSG_ADMIN_PW).
 
 ## 보고서 데이터 만들기 (PC, CLI)
 ```powershell
@@ -82,6 +84,6 @@ S/N 칸이 0이면 장비 없음(재방문 판정·반복 고장·가동 장비�
 ## 파일
 - `kpi-core.js` 생성 파일(수정 금지) ← `tools/extract-kpi-core.js`
 - `lib/read-crm.js` CRM xlsx 읽기(대시보드 parseActivity 포팅) · `lib/period.js` 기간 표기 · `lib/report-core.js` 집계 · `lib/write-check.js` 검산 워크북
-- `report-data.js` CLI · `compare-sheet.js` 시트 대조 · `colab_report.ipynb` Drive 폴더 → 보고 데이터(PC 없이) · `colab_compare.ipynb` 시트 검산(PC 없이)
+- `report-data.js` CLI · `push-dashboard.js` 대시보드 올리기 · `compare-sheet.js` 시트 대조 · `colab_report.ipynb` Drive 폴더 → 보고 데이터(PC 없이) · `colab_compare.ipynb` 시트 검산(PC 없이)
 - 테스트: `tests/test_kpi_core_sync.js` `tests/test_report_engine.js` `tests/test_report_tools.js` (`npm test`)
 - `out/`·`data/`·xlsx·csv는 커밋하지 않는다(.gitignore) — 거래처명·직원 실명이 들어간다
