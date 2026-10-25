@@ -77,7 +77,7 @@ const tr = {}; rep.team.rows.forEach(r => tr[r.team] = r);
 assert.deepStrictEqual([tr['FS EAST'].pm, tr['FS EAST'].as_, tr['FS EAST'].count, tr['FS EAST'].leader], [1, 4, 2, 'C']);
 assert.deepStrictEqual([tr['FS WEST'].pm, tr['FS WEST'].as_, tr['FS WEST'].count, tr['FS WEST'].leader], [2, 1, 1, '']);
 assert.strictEqual(tr['FS EAST'].perHead, 2.5); assert.strictEqual(rep.team.total, 8);
-assert.strictEqual(rep.team.unmapped, 1); assert.deepStrictEqual(rep.team.unmappedRows, [{ name: 'Z', count: 1, sample: 'H4' }]);
+assert.strictEqual(rep.team.unmapped, 1); assert.deepStrictEqual(rep.team.unmappedRows, [{ name: 'Z', count: 1, sample: 'H4', other: false }]); assert.strictEqual(rep.team.unmappedOther, 0);
 
 // 6. 케이스 분석
 const ca = rep.caseAnalysis, mr = {}; ca.monthRows.forEach(r => mr[r[0]] = r.slice(1));
