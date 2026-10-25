@@ -110,7 +110,8 @@ assert.deepStrictEqual(rep.errYear, { rows: [{ error: 'E1', count: 2 }, { error:
 assert.strictEqual(rep.errMonth.total, 7);
 const ER = {}; rep.errRate.months.forEach(r => ER[r[0]] = r.slice(1));
 assert.deepStrictEqual(ER['2026-09'], [83.3, 33.3, 100, 0], 'XN/XR 수리5/6 · SP 1/3 · CN 1/1'); assert.deepStrictEqual(ER['2026-08'], [100, 0, 0, 0]); assert.strictEqual(rep.errRate.months.length, 12);
-assert.strictEqual(rep.health, null); assert.strictEqual(rep.hospMonth.length, 0, 'Serial·케이스 없으면 비움');
+assert.strictEqual(rep.health, null);
+assert.strictEqual(rep.hospMonthSrc, '활동 기준'); assert.deepStrictEqual(rep.hospMonth.map(r => [r.account, r.count]), [['H1', 3], ['H2', 3], ['H3', 1], ['H4', 1], ['H5', 1]], '케이스 파일 없으면 당월 TOP5는 활동 기준(H5의 8월 1건 제외)');
 
 // 9. Serial·케이스 입력 — 가동 장비·운영건전성·집중관리·병원TOP5(케이스)
 const serial = R.parseSerialRows({ h: ['제품 상태', '거래처', 'Model', 'Serial No.', '초도설치', '설치일자'], rows: [
@@ -124,7 +125,8 @@ const Hh = rep2.health;
 assert.deepStrictEqual([Hh.activeCount, Hh.pmCoverage, Hh.pmCV, Hh.per100, Hh.chronicUnits, Hh.chronicRatio, Hh.nMonths], [4, 50, 332, 175, 0, 0, 1], 'PM 2/4 · 월별 PM [0×11, 2] CV · 7행/1개월/4대');
 assert.deepStrictEqual(Hh.teamCV, { 'FS EAST': null, 'FS WEST': null, 'FS SOUTH': null, 'FS CENTRAL': null }, '팀마다 1명 이하 → 편차 없음');
 assert.deepStrictEqual([rep2.focus.candidateCount, rep2.focus.totalFleet, rep2.focus.avgPerUnit, rep2.focus.rows.length], [0, 2, 1.5, 0]);
-assert.deepStrictEqual(rep2.hospMonth.map(r => [r.account, r.count]), [['H1', 2], ['H2', 1]], '케이스 기준 당월, 내부 계정·다음 달 제외');
+assert.deepStrictEqual(rep2.hospMonth.map(r => [r.account, r.count]), [['H1', 2], ['H2', 1]], '케이스 기준 당월, 내부 계정·다음 달 제외'); assert.strictEqual(rep2.hospMonthSrc, '케이스 기준');
+assert.strictEqual(XLSX.utils.sheet_to_json(buildCheckWorkbook(rep).Sheets['정제_병원TOP5'], { header: 1 })[6][0], '2026-09(활동 기준)', '검산 탭 기간 칸에 기준 표기');
 
 // 10. 검산 워크북
 const cw = buildCheckWorkbook(rep2);

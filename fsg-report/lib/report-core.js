@@ -205,12 +205,13 @@ function buildReport(opt) {
   };
   const engYear = engineer(inT12), engMonth = engineer(inPer);
 
-  /* ⑧ 병원 TOP5 — 최근 1년(활동 기준, 모든 목적) · 기간(케이스 기준), 내부 계정 제외 */
+  /* ⑧ 병원 TOP5 — 최근 1년(활동 기준, 모든 목적) · 기간(케이스 파일이 있으면 케이스 기준=시트와 같음, 없으면 활동 기준), 내부 계정 제외 */
   const topAcc = (list, pick) => { const acc = {}; list.forEach(it => { const a = pick(it); if (!a || INTERNAL_ACCOUNTS.includes(a)) return; acc[a] = (acc[a] || 0) + 1; });
     return Object.keys(acc).map(a => ({ account: a, count: acc[a] })).sort((x, y) => y.count - x.count).slice(0, N.HOSPITAL); };
   const hospYear = topAcc(rows.filter(inT12), x => x.acct);
   const cases = opt.cases || null;
-  const hospMonth = cases ? topAcc(cases.filter(c => c.created != null && inMonths(c.created, period.months)), c => c.acct) : [];
+  const hospMonth = cases ? topAcc(cases.filter(c => c.created != null && inMonths(c.created, period.months)), c => c.acct) : topAcc(rows.filter(inPer), x => x.acct);
+  const hospMonthSrc = cases ? '케이스 기준' : '활동 기준';
 
   /* ⑨ 반복 고장 장비 TOP5 — S/N 단위, 고장 수리 행 수 (최근 1년 · 기간) */
   const repeat = sel => { const rep = {};
@@ -291,7 +292,7 @@ function buildReport(opt) {
       rows: { raw: raw.length, afterCut: RAWC.length, counted: rows.length }, excluded,
       unmappedRows: rows.filter(x => !x.credits.length).length, eligibleAccounts: CORE.eligible.length },
     kpi, kpiTrend, team, caseAnalysis,
-    trendCompare, metro, engYear, engMonth, hospYear, hospMonth, repeatYear, repeatMonth, errYear, errMonth, errRate,
+    trendCompare, metro, engYear, engMonth, hospYear, hospMonth, hospMonthSrc, repeatYear, repeatMonth, errYear, errMonth, errRate,
     fleet: fleet ? { activeCount: fleet.activeCount, pmActiveCount: fleet.pmActiveCount } : null, health, focus,
     installBlock,
     inputs: { serial: !!serial, cases: !!cases, calendar: !!(opt.calendar && opt.calendar.length), acctMap: !!opt.acctMap, manual: !!opt.manualMap },

@@ -143,7 +143,7 @@ function compareWorkbook(wb, opt) {
   if (has('정제_수도권')) cells += compareTables('정제_수도권', aoa(wb, '정제_수도권').slice(1), E('정제_수도권').slice(1), r => r[0] === '' ? null : monthLabel(r[0]) + '|' + String(r[1] || '').trim(), [[2, 'PM건수'], [3, 'A/S건수']], tol, diffs);
   if (has('정제_엔지니어생산성')) cells += compareTables('정제_엔지니어생산성', aoa(wb, '정제_엔지니어생산성').slice(1), E('정제_엔지니어생산성').slice(1), rankKey, [[2, '담당자', true], [3, '팀'], [4, '건수'], [5, '직급'], [6, '고장수리%'], [7, 'PM%']], tol, diffs);
   if (has('정제_병원TOP5')) {
-    const eH = E('정제_병원TOP5').slice(1).filter(r => cases || !/케이스 기준/.test(String(r[0])));
+    const eH = E('정제_병원TOP5').slice(1).filter(r => cases || !/케이스 기준|활동 기준/.test(String(r[0])));
     cells += compareTables('정제_병원TOP5', aoa(wb, '정제_병원TOP5').slice(1), eH, rankKey, [[2, '기관명', true], [3, '건수']], tol, diffs);
   }
   if (has('정제_반복고장TOP5')) cells += compareTables('정제_반복고장TOP5', aoa(wb, '정제_반복고장TOP5').slice(1), E('정제_반복고장TOP5').slice(1), rankKey, [[2, 'S/N', true], [3, '장비'], [4, '기관명', true], [5, '건수']], tol, diffs);

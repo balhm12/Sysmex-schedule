@@ -51,7 +51,7 @@ function buildCheckWorkbook(rep) {
     ...rep.engMonth.map((r, i) => [pl, i + 1, r.name, r.team, r.count, r.grade, r.repairPct, r.pmPct])]);
   add('정제_병원TOP5', [['기간', '순위', '기관명', '건수'],
     ...rep.hospYear.map((r, i) => ['최근 1년(활동 기준)', i + 1, r.account, r.count]),
-    ...rep.hospMonth.map((r, i) => [pl + '(케이스 기준)', i + 1, r.account, r.count])]);
+    ...rep.hospMonth.map((r, i) => [pl + '(' + (rep.hospMonthSrc || '케이스 기준') + ')', i + 1, r.account, r.count])]);
   add('정제_반복고장TOP5', [['기간', '순위', 'S/N', '장비', '기관명', '건수'],
     ...rep.repeatYear.map((r, i) => ['최근 1년', i + 1, r.serial, r.model, r.account, r.count]),
     ...rep.repeatMonth.map((r, i) => [pl, i + 1, r.serial, r.model, r.account, r.count])]);
