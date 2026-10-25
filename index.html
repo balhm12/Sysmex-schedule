@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>시스템 설치 공유 캘린더 | FY26</title>
@@ -68,7 +68,7 @@
   .search-wrap{position:relative;flex:1 1 220px;min-width:180px;max-width:320px;}
   .search-input{
     width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;
-    font-size:13px;font-family:inherit;color:var(--ink);background:white;
+    font-size:16px;font-family:inherit;color:var(--ink);background:white; /* 16px 미만이면 iOS 가 입력 때 화면을 확대한다 */
   }
   .search-input:focus{outline:none;border-color:var(--blue);}
   .search-results{
@@ -353,6 +353,12 @@
   }
   .app-nav a:hover{border-color:var(--blue);color:var(--blue);}
   .app-nav a.active{background:var(--navy);color:white;border-color:var(--navy);}
+  a,button,input,select,textarea,[role=button]{touch-action:manipulation;}
+  /* 390px 폭에서 탭 4개가 한 줄에 들어가도록 — 줄바꿈되면 KPI 탭이 둘째 줄로 떨어진다 */
+  @media(max-width:600px){
+    .app-nav{gap:6px;}
+    .app-nav a{padding:8px 11px;font-size:12px;}
+  }
 </style>
 </head>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>

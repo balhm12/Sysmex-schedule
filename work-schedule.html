@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>FSG 근무일정표</title>
@@ -439,8 +439,6 @@
     .panel{padding:18px 16px;border-radius:14px;}
     .form-row input[type=text], .form-row input[type=date], .form-row select, .form-row textarea{font-size:16px;padding:12px 10px;}
     .form-grid2{grid-template-columns:1fr 1fr;}
-    .app-nav{gap:6px;}
-    .app-nav a{padding:7px 10px;font-size:11.5px;}
     .guide{padding:18px 16px;margin-top:12px;}
 
     .scroll-hint{display:block;}
@@ -475,6 +473,12 @@
   }
   .app-nav a:hover{border-color:var(--blue);color:var(--blue);}
   .app-nav a.active{background:var(--navy);color:white;border-color:var(--navy);}
+  a,button,input,select,textarea,[role=button]{touch-action:manipulation;}
+  /* 390px 폭에서 탭 4개가 한 줄에 들어가도록 — 줄바꿈되면 KPI 탭이 둘째 줄로 떨어진다 */
+  @media(max-width:600px){
+    .app-nav{gap:6px;}
+    .app-nav a{padding:8px 11px;font-size:12px;}
+  }
 </style>
 </head>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
