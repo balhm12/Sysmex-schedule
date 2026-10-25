@@ -16,6 +16,8 @@ const CORR_SERIES = [
   { name: 'CN-Series', prefixes: ['CN-3000', 'CN-6000'] },
 ];
 const EXCLUDED = ['김민결'];
+// 로스터에 없지만 CRM 활동에 담당자로 나오는 타 부서 인원 — 집계 제외(사용자 결정 2026-10-26). 새 이름이 나오면 ⚠로 알린다.
+const OTHER_DEPT = ['고신곤', '배점룡', '김상우', 'PMTeam'];
 const INTERNAL_ACCOUNTS = ['시스멕스코리아주식회사', '시스멕스코리아', '기타', '-', ''];
 const ERROR_EXCLUDE = ['기타', 'others', 'other', '-', ''];
 const METRO_TEAMS = ['FS WEST', 'FS EAST'];
@@ -107,13 +109,13 @@ function buildReport(opt) {
 
   /* ③ 팀별 실적 — computeTeamSummary_ (설치 칸은 CRM 활동 수. 캘린더 기준 설치는 2차 묶음에서) */
   const pm = {}, as_ = {}, inst = {}; teams.forEach(t => { pm[t] = 0; as_[t] = 0; inst[t] = 0; });
-  let unmapped = 0; const unmappedDetail = {};
+  let unmapped = 0, unmappedOther = 0; const unmappedDetail = {};
   rows.forEach(x => {
     if (!inMonths(x.t, period.months)) return;
     if (!R.map[x.own]) {
       unmapped++;
-      const key = x.own || '(공백)';
-      const u = unmappedDetail[key] = unmappedDetail[key] || { count: 0, sample: x.acct || '' };
+      const key = x.own || '(공백)', other = OTHER_DEPT.indexOf(key) >= 0; if (other) unmappedOther++;
+      const u = unmappedDetail[key] = unmappedDetail[key] || { count: 0, sample: x.acct || '', other };
       u.count++;
     }
     x.credits.forEach(c => {
@@ -129,8 +131,8 @@ function buildReport(opt) {
     total += sum;
     return { team: t, leader: ti.leader, count: ti.count, inst: inst[t], instCrm: inst[t], pm: pm[t], as_: as_[t], sum, perHead: ti.count ? round1(sum / ti.count) : 0 };
   });
-  const team = { rows: teamRows, total, unmapped, instSource: 'CRM 활동', instUnassigned: 0,
-    unmappedRows: Object.keys(unmappedDetail).map(n => ({ name: n, count: unmappedDetail[n].count, sample: unmappedDetail[n].sample })).sort((a, b) => b.count - a.count) };
+  const team = { rows: teamRows, total, unmapped, unmappedOther, instSource: 'CRM 활동', instUnassigned: 0,
+    unmappedRows: Object.keys(unmappedDetail).map(n => ({ name: n, count: unmappedDetail[n].count, sample: unmappedDetail[n].sample, other: unmappedDetail[n].other })).sort((a, b) => b.count - a.count) };
 
   /* ④ 케이스 분석 — computeCaseAnalysis_: 12개월 추이(수리·PM·Calibration, 인정 인원 수) + 시리즈 재방문율 상관표(기간 vs 직전 월) */
   const months12 = P.monthsBack(period, 12), labels12 = months12.map(ym => P.lab(ym.y, ym.m));
