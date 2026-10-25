@@ -189,6 +189,7 @@ function compareWorkbook(wb, opt) {
   const { diffs, cells } = diffReport(rep);
   return { diffs, cells, tol, notes, info: { periodRaw, period, cut, roster: roster.length, actRows: act.rows.length, counted: rep.meta.rows.counted, serial: serial ? serial.length : 0, cases: cases ? cases.length : 0, active: rep.fleet ? rep.fleet.activeCount : null,
     calendar: calendar ? calendar.length : 0, acctMap: acctMap ? Object.keys(acctMap.map).length : 0, manual: manualMap ? Object.keys(manualMap).length : 0, install: rep.installBlock ? rep.installBlock.detail.rows.length : null, autoFilled: rep.installBlock ? rep.installBlock.autoFilled.filter(a => a.to).length : 0,
+    partSkipped: rep.installBlock ? rep.installBlock.detail.partSkipped : 0,
     hasAtt: act.hasAtt, lastRun: lastRunLog(aoa(wb, '실행로그')) }, report: rep };
 }
 function main() {
@@ -198,6 +199,7 @@ function main() {
   const r = compareWorkbook(wb, o), i = r.info;
   console.log(`기간 ${i.period.label} (설정 B2 "${i.periodRaw}") · 추출일 ${i.cut || '(없음 → 오늘)'} · 로스터 ${i.roster}명 · 원본_활동 ${i.actRows}행 → 집계 ${i.counted}행 · Serial ${i.serial}행 · 케이스 ${i.cases}행` + (i.active != null ? ` · 가동 장비 ${i.active}대` : '') + (i.hasAtt ? '' : ' ⚠ 필수 참석자 열 없음'));
   if (i.install != null) console.log(`설치: 캘린더 ${i.calendar}행 · 기관명매핑 ${i.acctMap}건 · 수동입력 ${i.manual}건 → 이 기간 설치 작업 ${i.install}건` + (i.autoFilled ? ` · 자동 매핑 ${i.autoFilled}건(검산 xlsx 「기관명매핑_자동」)` : ''));
+  if (i.partSkipped) console.log(`※ 자산대장의 부품 행 ${i.partSkipped}개(이 기간 설치일자)는 설치 매칭·캘린더 미등록에서 뺐습니다 — 시트는 이 행을 '캘린더 미등록'으로 나열하고 기관 수에 넣으므로, 설치상세 행 수·팀별 기관 수가 그만큼 다를 수 있습니다(의도한 차이, 2026-10-26)`);
   r.notes.forEach(n => console.log('※ ' + n));
   if (i.lastRun) console.log(`시트 정제 탭의 마지막 실행: ${i.lastRun.at} (기준월 ${i.lastRun.period}, 활동 ${i.lastRun.actRows}행) — 원본 탭을 그 뒤에 바꿨다면 「데이터 정제 실행」 후 다시 내려받아야 비교가 맞습니다`);
   console.log(`비교 칸 ${r.cells}개 · 다른 칸 ${r.diffs.length}개 (허용 오차 ±${r.tol})`);

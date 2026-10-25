@@ -72,8 +72,9 @@ assert.deepStrictEqual([byAcct['A병원'].status, byAcct['A병원'].units, byAcc
 assert.deepStrictEqual([byAcct['B병원'].status, byAcct['B병원'].merged, byAcct['B병원'].units, byAcct['B병원'].detail, byAcct['B병원'].calEquip], ['수동 입력', 3, 4, 'XN-10 2대 · CN-6000 1대 · SP-50 1대', 'XN-9100 System / CN-6000 / XN-9100 마무리'], 'B: 3줄 병합 · 수동 입력 2+1+1');
 assert.deepStrictEqual([byAcct['C병원'].status, byAcct['C병원'].units, byAcct['C병원'].detail, byAcct['C병원'].calBased], ['캘린더 기준', 1, 'UF-5000 1대', true], 'C: 이전설치 캘린더 표기 기준');
 assert.strictEqual(D.tentative.length, 1); assert.strictEqual(D.usedCal, 1); assert.strictEqual(D.demoCal, 1);
-// 시트 규칙 그대로: 부품 행(L병원 VALVE_ASSY)도 '캘린더 미등록'으로 나열된다(대수는 0, 팀이 없어 팀별 합계엔 안 들어감) — 시트와 같은 결과를 내는 것이 1차 목표
-assert.deepStrictEqual(D.orphan.map(o => [o.acct, o.model, o.moved, o.team]), [['H병원', 'XN-10', false, 'FS EAST'], ['I병원', 'UC-3500', true, 'FS EAST'], ['L병원', 'VALVE_ASSY NO.49(XN-10)', false, '']], '캘린더 미등록 (강남차 S-K1은 8월 작업이 선점, 대리점·중고·10월 제외)');
+// 2026-10-26 수정: 부품 행(L병원 VALVE_ASSY)은 설치가 아니므로 '캘린더 미등록'에도, 팀별 기관 수에도 넣지 않는다(시트는 넣었음 → 검산 때 그만큼 차이)
+assert.deepStrictEqual(D.orphan.map(o => [o.acct, o.model, o.moved, o.team]), [['H병원', 'XN-10', false, 'FS EAST'], ['I병원', 'UC-3500', true, 'FS EAST']], '캘린더 미등록 (강남차 S-K1은 8월 작업이 선점, 대리점·중고·부품·10월 제외)');
+assert.strictEqual(D.partSkipped, 1, '이 기간 부품 행 1개 제외');
 assert.strictEqual(D.dealerOrphan.length, 1); assert(D.claimedOutside['S-K1|' + T(2026, 9, 1)], '8월 작업 선점 키');
 assert.strictEqual(IB.autoFilled.length, 1, 'B병원 자동 매핑 시도(후보 없음)'); assert.strictEqual(IB.autoFilled[0].to, '');
 assert.strictEqual(D.audit.length, 9, '9월 캘린더 줄 9개(8월 제외)'); assert.deepStrictEqual(D.audit.filter(a => /^제외/.test(a.result)).map(a => a.acct), ['D병원 (예정)', 'E병원', 'F병원', 'G병원']);
@@ -95,9 +96,9 @@ const S = IB.summary, M = {}; S.mat.forEach(r => M[r[0] + '|' + r[1]] = r);
 assert.deepStrictEqual(M['FS EAST|신규'].slice(2), [2, 0, 1, 1, 0, 0, 0, 0, 0, 0, 2], 'EAST 신규: 기관 2(A·H) · XR 1 · XN 1');
 assert.deepStrictEqual(M['FS WEST|신규'].slice(2), [1, 1, 0, 2, 1, 0, 0, 0, 0, 1, 4], 'WEST 신규: B병원 System 1세트 · XN 2 · SP-50 1 · CN(Other) 1 → 합계 4');
 assert.deepStrictEqual(M['FS EAST|이전설치'].slice(2), [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1], 'EAST 이전: I병원 UC-3500');
-assert.deepStrictEqual(M['전체|합계'].slice(2), [6, 1, 1, 3, 1, 0, 0, 2, 0, 1, 8], '기관 6(L병원 부품 행이 팀 미상 기관으로 1곳 — 시트 규칙) · 장비 8');
-assert(M['(팀 미상)|신규'] && M['(팀 미상)|신규'][2] === 1 && M['(팀 미상)|신규'][12] === 0);
-assert.strictEqual(S.list.length, 3 + 3 + 1, '작업 3 + 미등록 3 + 예정 1'); assert.strictEqual(S.jobs.filter(j => j.status === '캘린더 미등록').length, 3);
+assert.deepStrictEqual(M['전체|합계'].slice(2), [5, 1, 1, 3, 1, 0, 0, 2, 0, 1, 8], '기관 5(부품 행 기관은 세지 않음) · 장비 8');
+assert(!M['(팀 미상)|신규'], '부품 행 때문에 생기던 (팀 미상) 줄 없음');
+assert.strictEqual(S.list.length, 3 + 2 + 1, '작업 3 + 미등록 2 + 예정 1'); assert.strictEqual(S.jobs.filter(j => j.status === '캘린더 미등록').length, 2);
 assert(/CRM 미등록 0건/.test(S.notes[0][1]) && /예정 1건 · 중고 2건 · Demo 1건 · 대리점 설치\(캘린더 없음\) 1대/.test(S.notes[1][1]), S.notes[1][1]);
 
 // 중복 제외(v51): 수동 입력 B병원 작업과 같은 설치인데 CRM에는 'B병원 본관'으로 등록(정규화 키가 달라 매칭 안 됨) → 이름 포함 관계(점수 0.75)·±35일 → 중복
@@ -113,7 +114,7 @@ const rep3 = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-09', cut
 assert.deepStrictEqual(rep3.installBlock.autoFilled.map(a => [a.from, a.to, a.conf]), [['B병원', 'B병원 본관', '높음']], 'v49 자동 매핑(포함 관계 → 높음)');
 assert.deepStrictEqual([rep3.installBlock.detail.rows.find(r => r.acct === 'B병원').status, rep3.installBlock.detail.rows.find(r => r.acct === 'B병원').sns], ['OK', 'S-B1, S-B2']);
 assert.strictEqual(D2.dupOrphan.length, 2, 'B 병원 2대 중복 제외: ' + JSON.stringify(D2.orphan.map(o => o.acct)));
-assert.strictEqual(D2.orphan.length, 3); assert(/기관명 연결·2일 차/.test(D2.dupOrphan[0].dupWhy));
+assert.strictEqual(D2.orphan.length, 2); assert(/기관명 연결·2일 차/.test(D2.dupOrphan[0].dupWhy));
 assert.strictEqual(rep2.installBlock.install.total, 6, '중복 제외 장비는 설치 현황에도 안 들어감');
 
 // 검산 워크북 탭·행
@@ -121,7 +122,7 @@ const cw = buildCheckWorkbook(rep2);
 ['정제_설치상세', '정제_설치현황', '정제_팀별설치실적'].forEach(n => assert(cw.SheetNames.includes(n), n));
 assert(buildCheckWorkbook(rep3).SheetNames.includes('기관명매핑_자동'), '자동 매핑이 있으면 제안 탭');
 const det = XLSX.utils.sheet_to_json(cw.Sheets['정제_설치상세'], { header: 1 });
-assert.strictEqual(det.length, 1 + 3 + 3 + 2 + 1, '헤더 + 작업 3 + 미등록 3 + 중복 2 + 예정 1'); assert.strictEqual(det[det.length - 1][10], '예정(집계 제외)');
+assert.strictEqual(det.length, 1 + 3 + 2 + 2 + 1, '헤더 + 작업 3 + 미등록 2 + 중복 2 + 예정 1'); assert.strictEqual(det[det.length - 1][10], '예정(집계 제외)');
 const tb = XLSX.utils.sheet_to_json(cw.Sheets['정제_팀별실적'], { header: 1 });
 assert.deepStrictEqual(tb[1].slice(0, 11).map(v => v === undefined ? '' : v), ['FS EAST', '', 1, 3, 2, 0, 5, 5, 2, 1, 0], 'EAST: 설치+이전 3 = 신규 2 + 이전 1 · PM 2(갑) · 합계 5 · 1인당 5');
 console.log('test_install: OK (모델 분해·정규화·병합·매칭·수동·캘린더 기준·예정/중고/데모 제외·미등록·대리점·선점·중복 제외·설치 현황·팀별 실적·매트릭스·검산 탭)');

@@ -95,7 +95,7 @@ function main() {
     : '가동 장비 지표 없음 — Serial No 파일을 --serial 또는 --dir 로 주면 운영건전성·집중관리대상이 계산됩니다');
   if (!cases) console.log('병원 TOP5(당월, 케이스 기준) 없음 — 케이스 파일을 --cases 또는 --dir 로 주면 계산됩니다');
   const IB = rep.installBlock;
-  if (IB) { const D = IB.detail; console.log(`설치(캘린더 기준): 작업 ${D.rows.length}건 · 단품 ${IB.install.total}대(수동 ${IB.install.manualUnits}) · System ${IB.systems.list.length}세트 · 캘린더 미등록 ${D.orphan.length}대 · 중복 제외 ${(D.dupOrphan || []).length}대 · 예정 ${D.tentative.length}건` + (IB.autoFilled.filter(a => a.to).length ? ` · 자동 매핑 ${IB.autoFilled.filter(a => a.to).length}건` : '')); }
+  if (IB) { const D = IB.detail; console.log(`설치(캘린더 기준): 작업 ${D.rows.length}건 · 단품 ${IB.install.total}대(수동 ${IB.install.manualUnits}) · System ${IB.systems.list.length}세트 · 캘린더 미등록 ${D.orphan.length}대 · 중복 제외 ${(D.dupOrphan || []).length}대 · 예정 ${D.tentative.length}건` + (IB.autoFilled.filter(a => a.to).length ? ` · 자동 매핑 ${IB.autoFilled.filter(a => a.to).length}건` : '') + (D.partSkipped ? ` · 부품 행 제외 ${D.partSkipped}` : '')); }
   else console.log(serial ? '설치 현황 없음 — 설치 공유캘린더 내보내기를 --calendar 또는 --dir 로 주면 4장 설치 현황이 계산됩니다' : '설치 현황 없음 — Serial No 파일과 설치 공유캘린더가 모두 필요합니다');
   console.log(`출력: ${out}`);
 }

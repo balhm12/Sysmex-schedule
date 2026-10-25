@@ -114,6 +114,7 @@ function buildCheckWorkbook(rep) {
     ['활동 파일', (m.files && m.files.activity) || ''], ['Serial 파일', (m.files && m.files.serial) || (rep.inputs && rep.inputs.serial ? '(시트 사본)' : '(없음)')],
     ['케이스 파일', (m.files && m.files.cases) || (rep.inputs && rep.inputs.cases ? '(시트 사본)' : '(없음)')], ['가동 장비', rep.fleet ? rep.fleet.activeCount : ''],
     ['설치 캘린더', (m.files && m.files.calendar) || (rep.inputs && rep.inputs.calendar ? '(시트 사본)' : '(없음)')], ['기관명매핑 / 설치_수동입력', (rep.inputs && rep.inputs.acctMap ? '있음' : '없음') + ' / ' + (rep.inputs && rep.inputs.manual ? '있음' : '없음')],
+    ['자산대장 부품 행 제외(설치 아님)', rep.installBlock ? rep.installBlock.detail.partSkipped : ''],
     ['로스터', (m.files && m.files.roster) || ''], ['생성', new Date().toISOString()],
   ]);
   return wb;

@@ -228,8 +228,11 @@ function calendarAudit(cal, period) {
   return out;
 }
 function computeInstallDetail(cal, serial, period, acctMap, manualMap) {
-  const audit = calendarAudit(cal, period), tol = C.CAL_MATCH_TOLERANCE, serByAcct = {}; let usedCrm = 0;
+  const audit = calendarAudit(cal, period), tol = C.CAL_MATCH_TOLERANCE, serByAcct = {}; let usedCrm = 0, partSkipped = 0;
   serial.forEach(x => { const acct = x.acct, d = x.install; if (!acct || d == null) return;
+    // 2026-10-26 수정(시트와 다름): 자산대장의 부품·소모품 행(VALVE_ASSY 등)은 설치가 아니므로 매칭 후보·캘린더 미등록에서 뺀다.
+    // 시트는 이 행을 '캘린더 미등록'으로 나열하고 그 기관을 팀별 설치 기관 수에 1곳 넣었다(대수는 0). 설치 현황 대수는 원래 제외.
+    if (isPartName(x.model)) { if (inMonths(d, period.months)) partSkipped++; return; }
     if (isUsedSerial(x.sn)) { if (inMonths(d, period.months)) usedCrm++; return; }
     (serByAcct[normAcct(acct)] = serByAcct[normAcct(acct)] || []).push({ acct, model: x.model, sn: x.sn, date: d, first: x.first != null ? x.first : null, dealer: x.dealer || '' }); });
   const rows = [], usedSn = {}, tentative = [], claimedOutside = {}, claimedInside = {}, claimedUsed = {}, claimedDemo = {}; let usedCal = 0, demoCal = 0;
@@ -276,7 +279,7 @@ function computeInstallDetail(cal, serial, period, acctMap, manualMap) {
     if (x.dealer) { dealerOrphan.push({ date: fmt(x.date), acct: x.acct, model: x.model, sn: x.sn, dealer: x.dealer }); dealerKeys[key] = true; return; }
     orphan.push({ date: fmt(x.date), acct: x.acct, model: x.model, sn: x.sn, moved: !!(x.first != null && x.first !== x.date), key, t: x.date }); }));
   rows.sort((a, b) => a.start < b.start ? -1 : (a.start > b.start ? 1 : 0));
-  return { rows, orphan, tentative, usedCrm, usedCal, claimedOutside, claimedInside, claimedUsed, claimedDemo, demoCal, audit, dealerOrphan, dealerKeys, dupOrphan: [], claimedDup: {} };
+  return { rows, orphan, tentative, usedCrm, usedCal, partSkipped, claimedOutside, claimedInside, claimedUsed, claimedDemo, demoCal, audit, dealerOrphan, dealerKeys, dupOrphan: [], claimedDup: {} };
 }
 function dedupeOrphans(detail, acctMap) {
   detail.dupOrphan = []; detail.claimedDup = {}; acctMap = acctMap || {};
