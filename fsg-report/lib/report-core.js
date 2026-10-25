@@ -58,7 +58,10 @@ function cutEndMs(cut) {
 }
 
 function buildReport(opt) {
-  const raw = opt.raw, roster = opt.roster, period = typeof opt.period === 'string' ? P.parsePeriod(opt.period) : opt.period;
+  // zeroAsEmpty: 시트 Apps Script 방식 — S/N·거래처 칸이 숫자 0이면 빈칸으로 본다(String(v || '')). 대시보드·기본 엔진은 '0'을 값으로 둔다
+  const z = opt.zeroAsEmpty ? (v => (v === '0' || v === 0) ? '' : v) : (v => v);
+  const raw = opt.zeroAsEmpty ? opt.raw.map(r => Object.assign({}, r, { sn: z(r.sn), acct: z(r.acct) })) : opt.raw;
+  const roster = opt.roster, period = typeof opt.period === 'string' ? P.parsePeriod(opt.period) : opt.period;
   const teams = opt.teams || SHEET_TEAMS;
   const cutEnd = cutEndMs(opt.cut);
   const RAWC = raw.filter(r => r.t != null && r.t < cutEnd);
@@ -231,7 +234,7 @@ function buildReport(opt) {
     return { groups, months: labels12.map(l => [l].concat(groups.map(g => tot[g][l] ? round1(rp2[g][l] / tot[g][l] * 100) : 0))) }; })();
 
   /* 가동 장비(자산 '사용' ∩ 최근 12개월 서비스 이력) — buildActiveFleet_. Serial 파일이 없으면 null */
-  const serial = opt.serial || null;
+  const serial = opt.serial ? (opt.zeroAsEmpty ? opt.serial.map(s2 => Object.assign({}, s2, { sn: z(s2.sn), acct: z(s2.acct) })) : opt.serial) : null;
   let fleet = null, health = null, focus = null;
   if (serial) {
     const usedPairs = {};
@@ -286,7 +289,7 @@ function buildReport(opt) {
     kpi, kpiTrend, team, caseAnalysis,
     trendCompare, metro, engYear, engMonth, hospYear, hospMonth, repeatYear, repeatMonth, errYear, errMonth, errRate,
     fleet: fleet ? { activeCount: fleet.activeCount, pmActiveCount: fleet.pmActiveCount } : null, health, focus,
-    inputs: { serial: !!serial, cases: !!cases },
+    inputs: { serial: !!serial, cases: !!cases, zeroAsEmpty: !!opt.zeroAsEmpty },
   };
 }
 module.exports = { buildReport, rosterInfo, cutEndMs, errGroup, SHEET_TEAMS, PV, CORR_SERIES, METRO_TEAMS, N, round1 };

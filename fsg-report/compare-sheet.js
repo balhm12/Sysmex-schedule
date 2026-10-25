@@ -97,11 +97,14 @@ function compareWorkbook(wb, opt) {
   try { if (caseAoa && caseAoa.length > 1) cases = R.parseCasesRows({ h: caseAoa[0], rows: caseAoa.slice(1) }); else notes.push('원본_케이스 탭 없음 → 병원TOP5(케이스 기준) 비교 생략'); }
   catch (e) { notes.push('원본_케이스 읽기 실패(' + e.message + ') → 병원TOP5(케이스 기준) 비교 생략'); }
   const rep = buildReport({ raw: act.rows, roster, period, cut, serial, cases });
+  const zeroAct = act.rows.filter(r => r.sn === '0').length, zeroSer = serial ? serial.filter(x => x.sn === '0' && x.state === '사용').length : 0;
+  if (zeroAct || zeroSer) notes.push(`S/N 칸이 0인 행: 원본_활동 ${zeroAct}개 · 원본_Serial('사용') ${zeroSer}개 — 시트 Apps Script는 0을 빈칸으로 보고(S/N 없음), 엔진·대시보드는 '0'이라는 S/N으로 본다`);
   if (serAoa && serAoa.length > 1) {   // 진단: '사용' 글자에 공백이 붙은 행(Apps Script는 정확히 '사용'만 인정, 엔진은 공백을 지우고 봄)
     const h0 = serAoa[0].map(x => String(x).trim()), si = R.col(h0, ['상태'], 3);
     const loose = serAoa.slice(1).filter(r => { const v = r[si]; return v !== '사용' && String(v == null ? '' : v).trim() === '사용'; }).length;
     if (loose) notes.push(`원본_Serial에서 상태가 '사용'이지만 앞뒤 공백이 붙은 행 ${loose}개 — 시트 Apps Script는 이 행을 가동 장비에서 빼고, 엔진은 넣는다(가동 장비 수 차이의 후보)`);
   }
+  const diffReport = rep => {
   const eng = buildCheckWorkbook(rep);
   const E = name => XLSX.utils.sheet_to_json(eng.Sheets[name], { header: 1, raw: true, defval: '' });
   const diffs = []; let cells = 0;
@@ -142,7 +145,17 @@ function compareWorkbook(wb, opt) {
       [[0, '기관명', true], [1, '담당 팀'], [2, '보유'], [3, '반복 고장'], [4, '반복 고장 비율'], [5, '12개월 수리'], [6, '5년 이상'], [7, '5년 이상 비율'], [8, '필요 조치']], tol, diffs);
   }
 
-  return { diffs, cells, tol, notes, info: { periodRaw, period, cut, roster: roster.length, actRows: act.rows.length, counted: rep.meta.rows.counted, serial: serial ? serial.length : 0, cases: cases ? cases.length : 0, active: rep.fleet ? rep.fleet.activeCount : null, hasAtt: act.hasAtt, lastRun: lastRunLog(aoa(wb, '실행로그')) }, report: rep };
+  return { diffs, cells };
+  };
+  const { diffs, cells } = diffReport(rep);
+  let alt = null;
+  if (diffs.length && (zeroAct || zeroSer)) {   // 차이가 있고 S/N 0 행이 있으면 Apps Script 방식으로도 계산해 비교해 본다
+    const repZ = buildReport({ raw: act.rows, roster, period, cut, serial, cases, zeroAsEmpty: true });
+    const dz = diffReport(repZ);
+    alt = { diffs: dz.diffs.length, active: repZ.fleet ? repZ.fleet.activeCount : null };
+    notes.push(`Apps Script 방식(S/N 0 → 빈칸)으로 계산하면 다른 칸 ${dz.diffs.length}개` + (alt.active != null ? ` · 가동 장비 ${alt.active}대` : '') + ' (기본 엔진은 대시보드와 같은 방식)');
+  }
+  return { diffs, cells, tol, notes, alt, info: { periodRaw, period, cut, roster: roster.length, actRows: act.rows.length, counted: rep.meta.rows.counted, serial: serial ? serial.length : 0, cases: cases ? cases.length : 0, active: rep.fleet ? rep.fleet.activeCount : null, hasAtt: act.hasAtt, lastRun: lastRunLog(aoa(wb, '실행로그')) }, report: rep };
 }
 function main() {
   const o = args(process.argv.slice(2));

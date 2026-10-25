@@ -69,6 +69,19 @@ assert(bad.diffs.some(d => d[0] === '정제_운영건전성' && d[2] === '값'),
 // 원본_Serial 탭이 없는 사본 → 건전성·집중관리만 생략하고 나머지는 비교
 const loose = sheetCopy(); { const ws = loose.Sheets['원본_Serial']; const c = XLSX.utils.encode_cell({ r: 1, c: 0 }); ws[c].v = '사용 '; }
 const ls = compareWorkbook(loose); assert(ls.notes.some(n => /공백이 붙은 행 1개/.test(n)), '공백 사용 진단: ' + ls.notes.join(' / '));
+// S/N 0 행: 기본 엔진은 '0'을 S/N으로 보고, Apps Script 방식(zeroAsEmpty)은 빈칸으로 본다 → 재방문 판정 기록에서 빠진다
+{ const rowsZ = rows.concat([row('A', '고장 수리', 'H1', 0, 'XN-1000', T(2026, 9, 21, 10), T(2026, 9, 21, 11), 'E1')]);
+  const actZ = R.parseActivityRows({ h: H, rows: rowsZ });
+  assert.strictEqual(actZ.rows[actZ.rows.length - 1].sn, '0');
+  const a = buildReport({ raw: actZ.rows, roster: ROSTER, period: '2026-09', cut: '2026-09-30' }), b = buildReport({ raw: actZ.rows, roster: ROSTER, period: '2026-09', cut: '2026-09-30', zeroAsEmpty: true });
+  assert.strictEqual(a.meta.rows.counted, b.meta.rows.counted, '행 수는 같고');
+  assert(b.inputs.zeroAsEmpty && !a.inputs.zeroAsEmpty);
+  const recA = a.repeatMonth.find(r => r.serial === '0'), recB = b.repeatMonth.find(r => r.serial === '0');
+  assert(recA && !recB, "반복 고장 표: 기본은 S/N '0' 등장, Apps Script 방식은 없음");
+  const copyZ = sheetCopy(); const ws = copyZ.Sheets['원본_활동']; const last = XLSX.utils.decode_range(ws['!ref']).e.r + 1;
+  XLSX.utils.sheet_add_aoa(ws, [rowsZ[rowsZ.length - 1]], { origin: { r: last, c: 0 } });
+  const cz = compareWorkbook(copyZ);
+  assert(cz.notes.some(n => /S\/N 칸이 0인 행: 원본_활동 1개/.test(n)) && cz.alt && typeof cz.alt.diffs === 'number', 'S/N 0 진단 + Apps Script 방식 재계산: ' + cz.notes.join(' / ')); }
 const noSer = sheetCopy(); delete noSer.Sheets['원본_Serial']; noSer.SheetNames = noSer.SheetNames.filter(n => n !== '원본_Serial');
 const ns = compareWorkbook(noSer); assert.strictEqual(ns.diffs.length, 0); assert(ns.notes.length === 1 && /원본_Serial/.test(ns.notes[0]));
 assert.throws(() => compareWorkbook(XLSX.utils.book_new()), /탭이 없습니다/);
