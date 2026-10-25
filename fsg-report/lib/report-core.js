@@ -1,4 +1,5 @@
-/* 월간·분기 보고서 계산 — 2·3·5장 묶음 (정제_KPI · 정제_KPI월별추이 · 정제_팀별실적 · 정제_케이스분석).
+/* 월간·분기 보고서 계산 — 1차 묶음(2·3·5장: 정제_KPI · KPI월별추이 · 팀별실적 · 케이스분석)
+ *                    + 2차 묶음(6·7·8·10장: 트렌드비교 · 수도권 · 엔지니어생산성 · 병원TOP5 · 반복고장TOP5 · 장애요인TOP4 · 장비군에러율 · 운영건전성 · 집중관리대상).
  * 계산의 원본은 fsg-kpi.html의 kpiCore(= fsg-report/kpi-core.js)다. 여기서는 그 결과를 보고서 표 모양으로 집계만 한다.
  * 월간보고 시트 Apps Script(v45~v52)의 computeKPI_ · computeKpiTrend_ · computeTeamSummary_ · computeCaseAnalysis_ 와 같은 값을 내도록 맞췄다.
  * 입력 행은 read-crm.parseActivity 의 모양(t/e = 벽시계를 UTC ms로 둔 값). 기간 판정은 모두 UTC 게터로 한다. */
@@ -14,6 +15,24 @@ const CORR_SERIES = [
   { name: 'CN-Series', prefixes: ['CN-3000', 'CN-6000'] },
 ];
 const EXCLUDED = ['김민결'];
+const INTERNAL_ACCOUNTS = ['시스멕스코리아주식회사', '시스멕스코리아', '기타', '-', ''];
+const ERROR_EXCLUDE = ['기타', 'others', 'other', '-', ''];
+const METRO_TEAMS = ['FS WEST', 'FS EAST'];
+const N = { HOSPITAL: 5, REPEAT: 5, ERROR: 4, ENGINEER: 10, FOCUS: 10, CHRONIC: 3, FOCUS_MIN_FLEET: 10, FOCUS_MIN_CHRONIC_RATIO: 0.5 };
+const LOAD_CV_EXCLUDE_GRADES = ['팀장'], LOAD_CV_EXCLUDE_NAMES = ['심구'];   // 팀 내 업무량 편차에서 팀장·신입 제외(신입은 이름으로 관리, 매년 갱신)
+const REORG = { preFrom: { y: 2025, m: 4 }, preTo: { y: 2026, m: 3 }, postFrom: { y: 2026, m: 4 } };   // 조직개편 전 12개월 고정 · 후 = 2026-04~기준월
+const round0 = v => Math.round(v);
+const avgOf = a => a.reduce((x, y) => x + y, 0) / a.length;
+const stdev = a => { const m = avgOf(a); return Math.sqrt(a.reduce((s, x) => s + (x - m) * (x - m), 0) / a.length); };
+const topKeyOf = obj => { let best = '', bc = -1; Object.keys(obj).forEach(k => { if (obj[k] > bc) { best = k; bc = obj[k]; } }); return best; };
+function errGroup(model) {
+  const u = String(model || '').toUpperCase();
+  if (u.indexOf('XN-') === 0 || u.indexOf('XR-') === 0 || u.indexOf('XQ-') === 0) return 'XN/XR';
+  if (u.indexOf('SP-') === 0) return 'SP';
+  if (u.indexOf('CN-') === 0) return 'CN';
+  if (u.indexOf('HISCL') >= 0) return 'HISCL';
+  return null;
+}
 const round1 = v => Math.round(v * 10) / 10;                  // Apps Script round1_ (MTTR·예방정비지수·상관표 재방문율)
 const monthOf = ms => { const d = new Date(ms); return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 }; };
 const inMonths = (ms, months) => { const o = monthOf(ms); return months.some(x => x.y === o.y && x.m === o.m); };
@@ -141,11 +160,133 @@ function buildReport(opt) {
   corrRows.push(['(전체 평균)', cur.repair, cur.revisit, rate(cur), prv.den ? rate(prv) : '-', prv.den ? delta(rate(cur), rate(prv)) : '-']);
   const caseAnalysis = { monthRows: labels12.map(l => [l, rp[l], pmm[l], cal[l]]), corrRows, prevLabel: P.lab(prev.y, prev.m) };
 
+  /* ════════ 2차 묶음 ════════ 공통: 최근 12개월 = 기간 끝 달까지 12개월, 당월/기간 = period.months */
+  const inT12 = x => inMonths(x.t, months12), inPer = x => inMonths(x.t, period.months);
+  const endMk = P.mk(period.y, period.m), monthsAgo = ms => { const o = monthOf(ms); return endMk - P.mk(o.y, o.m); };
+  const gradeOf = name => (R.map[name] || {}).grade || '';
+
+  /* ⑬ 트렌드 비교 — computeTrendCompare_: 조직개편 전(2025-04~2026-03) vs 후(2026-04~기준월) 월평균, 인정 인원 수 */
+  const trendCompare = (() => {
+    const pmK = {}, rpK = {};
+    rows.forEach(x => { const o = monthOf(x.t), k = P.mk(o.y, o.m), n = x.credits.length;
+      if (x.purpose === PV.PM) pmK[k] = (pmK[k] || 0) + n; else if (x.purpose === PV.REPAIR) rpK[k] = (rpK[k] || 0) + n; });
+    const preKeys = [], postKeys = [];
+    for (let k = P.mk(REORG.preFrom.y, REORG.preFrom.m); k <= P.mk(REORG.preTo.y, REORG.preTo.m); k++) preKeys.push(k);
+    for (let k = P.mk(REORG.postFrom.y, REORG.postFrom.m); k <= endMk; k++) postKeys.push(k);
+    const av = (keys, o) => keys.length ? keys.reduce((s, k) => s + (o[k] || 0), 0) / keys.length : 0;
+    const prePM = av(preKeys, pmK), postPM = av(postKeys, pmK), preRP = av(preKeys, rpK), postRP = av(postKeys, rpK);
+    const preR = prePM / (prePM + preRP) * 100, postR = postPM / (postPM + postRP) * 100;
+    return { prePM: round1(prePM), postPM: round1(postPM), pmDelta: round1((postPM - prePM) / prePM * 100),
+      preRP: round1(preRP), postRP: round1(postRP), rpDelta: round1((postRP - preRP) / preRP * 100),
+      prePMRatio: round1(preR), postPMRatio: round1(postR), pmRatioDelta: round1(postR - preR),
+      postKeyLabels: postKeys.map(k => { const ym = P.toYM(k); return P.lab(ym.y, ym.m); }) };
+  })();
+
+  /* ⑭ 수도권(WEST·EAST) 최근 6개월 PM/A·S — computeMetro_ */
+  const metro = (() => {
+    const months6 = P.monthsBack(period, 6), labels = months6.map(ym => P.lab(ym.y, ym.m)), data = {};
+    METRO_TEAMS.forEach(t => labels.forEach(l => data[t + '|' + l] = { pm: 0, rp: 0 }));
+    rows.forEach(x => { const o = monthOf(x.t), l = P.lab(o.y, o.m);
+      x.credits.forEach(c => { const cell = data[teamOf(c) + '|' + l]; if (!cell) return; if (x.purpose === PV.PM) cell.pm++; else if (x.purpose === PV.REPAIR) cell.rp++; }); });
+    const out = []; METRO_TEAMS.forEach(t => labels.forEach(l => { const c = data[t + '|' + l]; out.push([l, t.replace('FS ', ''), c.pm, c.rp]); }));
+    return { rows: out, months: labels };
+  })();
+
+  /* ⑤ 엔지니어 생산성 — computeEngineerProductivity_ (최근 1년 · 기간), 담당자+필수 참석자 각각, 시간은 종료-시작(제한 없음) */
+  const engineer = sel => {
+    const per = {};
+    rows.forEach(x => { if (!sel(x)) return;
+      x.credits.forEach(c => { const v = per[c] = per[c] || { count: 0, hours: 0, repair: 0, pm: 0 }; v.count++;
+        if (x.e != null) v.hours += (x.e - x.t) / 3600000; if (x.purpose === PV.REPAIR) v.repair++; else if (x.purpose === PV.PM) v.pm++; }); });
+    return Object.keys(per).filter(n => !!R.map[n]).map(n => { const v = per[n], info = R.map[n];
+      return { name: n, team: info.team, grade: info.grade, count: v.count, hours: round1(v.hours), repairPct: round1(v.repair / v.count * 100), pmPct: round1(v.pm / v.count * 100) }; })
+      .sort((a, b) => b.count - a.count).slice(0, N.ENGINEER);
+  };
+  const engYear = engineer(inT12), engMonth = engineer(inPer);
+
+  /* ⑧ 병원 TOP5 — 최근 1년(활동 기준, 모든 목적) · 기간(케이스 기준), 내부 계정 제외 */
+  const topAcc = (list, pick) => { const acc = {}; list.forEach(it => { const a = pick(it); if (!a || INTERNAL_ACCOUNTS.includes(a)) return; acc[a] = (acc[a] || 0) + 1; });
+    return Object.keys(acc).map(a => ({ account: a, count: acc[a] })).sort((x, y) => y.count - x.count).slice(0, N.HOSPITAL); };
+  const hospYear = topAcc(rows.filter(inT12), x => x.acct);
+  const cases = opt.cases || null;
+  const hospMonth = cases ? topAcc(cases.filter(c => c.created != null && inMonths(c.created, period.months)), c => c.acct) : [];
+
+  /* ⑨ 반복 고장 장비 TOP5 — S/N 단위, 고장 수리 행 수 (최근 1년 · 기간) */
+  const repeat = sel => { const rep = {};
+    rows.forEach(x => { if (x.purpose !== PV.REPAIR || !sel(x) || !x.sn) return; const v = rep[x.sn] = rep[x.sn] || { count: 0, model: x.r.prod, account: x.acct }; v.count++; v.model = x.r.prod; v.account = x.acct; });
+    return Object.keys(rep).map(sn => ({ serial: sn, model: rep[sn].model, account: rep[sn].account, count: rep[sn].count })).sort((a, b) => b.count - a.count).slice(0, N.REPEAT); };
+  const repeatYear = repeat(inT12), repeatMonth = repeat(inPer);
+
+  /* ⑩ 장애 요인 TOP4 — 고장 수리 행의 Error 1~3, 기타·others·'-' 제외 */
+  const errorTop = sel => { const cnt = {}; let total = 0;
+    rows.forEach(x => { if (x.purpose !== PV.REPAIR || !sel(x)) return;
+      [x.r.err, x.r.err2, x.r.err3].forEach(e => { const s0 = String(e || '').trim(); if (!s0 || ERROR_EXCLUDE.includes(s0.toLowerCase())) return; cnt[s0] = (cnt[s0] || 0) + 1; total++; }); });
+    return { rows: Object.keys(cnt).map(e => ({ error: e, count: cnt[e] })).sort((a, b) => b.count - a.count).slice(0, N.ERROR), total }; };
+  const errYear = errorTop(inT12), errMonth = errorTop(inPer);
+
+  /* ⑪ 장비군별 월별 에러율(최근 12개월) = 고장 수리 행 ÷ 그 장비군 전체 활동 행 */
+  const errRate = (() => { const groups = ['XN/XR', 'SP', 'CN', 'HISCL'], tot = {}, rp2 = {};
+    groups.forEach(g => { tot[g] = {}; rp2[g] = {}; labels12.forEach(l => { tot[g][l] = 0; rp2[g][l] = 0; }); });
+    rows.forEach(x => { if (!inT12(x)) return; const g = errGroup(x.r.prod); if (!g) return; const o = monthOf(x.t), l = P.lab(o.y, o.m); tot[g][l]++; if (x.purpose === PV.REPAIR) rp2[g][l]++; });
+    return { groups, months: labels12.map(l => [l].concat(groups.map(g => tot[g][l] ? round1(rp2[g][l] / tot[g][l] * 100) : 0))) }; })();
+
+  /* 가동 장비(자산 '사용' ∩ 최근 12개월 서비스 이력) — buildActiveFleet_. Serial 파일이 없으면 null */
+  const serial = opt.serial || null;
+  let fleet = null, health = null, focus = null;
+  if (serial) {
+    const usedPairs = {};
+    serial.forEach(s2 => { if (s2.state !== '사용' || !s2.sn || !s2.acct) return; usedPairs[s2.sn + '|||' + s2.acct] = { model: s2.model, account: s2.acct, install: s2.first != null ? s2.first : s2.install }; });
+    const touched = {}, repairCount = {}, pmTouched = {}, pmRecent = {};
+    rows.forEach(x => { if (!inT12(x) || !x.sn || !x.acct) return; const key = x.sn + '|||' + x.acct; if (!usedPairs[key]) return; touched[key] = true;
+      if (x.purpose === PV.REPAIR) repairCount[key] = (repairCount[key] || 0) + 1;
+      if (x.purpose === PV.PM) { pmTouched[key] = true; if (monthsAgo(x.t) < 6) pmRecent[key] = true; } });
+    const activeKeys = Object.keys(usedPairs).filter(k => touched[k]), pmActiveKeys = activeKeys.filter(k => pmRecent[k]);
+    fleet = { usedPairs, activeKeys, activeCount: activeKeys.length, pmActiveKeys, pmActiveCount: pmActiveKeys.length, repairCount, pmTouched };
+
+    /* ⑦ 운영 건전성 5종 — computeHealthMetrics_ */
+    const activeCount = fleet.activeCount;
+    const pmCovered = activeKeys.filter(k => pmTouched[k]).length;
+    const pmByMonth = {}; labels12.forEach(l => pmByMonth[l] = 0);
+    rows.forEach(x => { if (x.purpose !== PV.PM || !inT12(x)) return; const o = monthOf(x.t); pmByMonth[P.lab(o.y, o.m)]++; });
+    const pmVals = labels12.map(l => pmByMonth[l]);
+    let lastMk = null; rows.forEach(x => { const o = monthOf(x.t), k = P.mk(o.y, o.m); if (lastMk == null || k > lastMk) lastMk = k; });
+    const nMonths = (lastMk == null ? period.months.length : period.months.filter(ym => P.mk(ym.y, ym.m) <= lastMk).length) || 1;   // monthsWithData_
+    const chronicUnits = activeKeys.filter(k => (repairCount[k] || 0) >= N.CHRONIC).length;
+    const perPerson = {}; rows.forEach(x => { if (!inT12(x)) return; x.credits.forEach(c => perPerson[c] = (perPerson[c] || 0) + 1); });
+    const teamCV = {}, teamStat = {};
+    teams.forEach(t => { const vals = [];
+      Object.keys(R.map).forEach(name => { const info = R.map[name]; if (info.team !== t || LOAD_CV_EXCLUDE_GRADES.includes(info.grade) || LOAD_CV_EXCLUDE_NAMES.includes(name)) return; if (perPerson[name] != null) vals.push(perPerson[name]); });
+      if (vals.length > 1) { teamCV[t] = round0(stdev(vals) / avgOf(vals) * 100); teamStat[t] = { avg: Math.round(avgOf(vals)), min: Math.min(...vals), max: Math.max(...vals), n: vals.length }; }
+      else { teamCV[t] = null; teamStat[t] = null; } });
+    health = { activeCount, pmCoverage: activeCount ? round1(pmCovered / activeCount * 100) : null,
+      pmCV: pmVals.length > 1 ? round0(stdev(pmVals) / avgOf(pmVals) * 100) : null,
+      per100: (activeCount && nMonths) ? round1(kpi.repairRows / nMonths / activeCount * 100) : null,
+      chronicUnits, chronicRatio: activeCount ? round1(chronicUnits / activeCount * 100) : null, teamCV, teamStat, nMonths };
+
+    /* ⑥ 집중관리 대상 — computeFocusAccounts_: PM 이력 장비 10대↑ & 반복 고장 비율 50%↑, 비율 → 수리 건수 순 상위 10 */
+    const byAccount = {}, endOfPeriod = Date.UTC(period.y, period.m, 0);
+    pmActiveKeys.forEach(key => { const acc = usedPairs[key].account, v = byAccount[acc] || { fleet: 0, chronic: 0, repairs: 0, oldUnits: 0 };
+      v.fleet++; const rc = repairCount[key] || 0; v.repairs += rc; if (rc >= N.CHRONIC) v.chronic++;
+      const inst = usedPairs[key].install; if (inst != null && (endOfPeriod - inst) / (365.25 * 86400000) >= 5) v.oldUnits++; byAccount[acc] = v; });
+    let totalFleet = 0, totalRepairs = 0; Object.keys(byAccount).forEach(a => { totalFleet += byAccount[a].fleet; totalRepairs += byAccount[a].repairs; });
+    const teamByAccount = {};
+    rows.forEach(x => { if (!byAccount[x.acct]) return; const info = R.map[x.own]; if (!info) return; const t = teamByAccount[x.acct] = teamByAccount[x.acct] || {}; t[info.team] = (t[info.team] || 0) + 1; });
+    const candidates = Object.keys(byAccount).filter(a => { const v = byAccount[a]; return v.fleet >= N.FOCUS_MIN_FLEET && v.chronic / v.fleet >= N.FOCUS_MIN_CHRONIC_RATIO; })
+      .sort((a, b) => { const ra = byAccount[a].chronic / byAccount[a].fleet, rb = byAccount[b].chronic / byAccount[b].fleet; return rb !== ra ? rb - ra : byAccount[b].repairs - byAccount[a].repairs; });
+    focus = { candidateCount: candidates.length, avgPerUnit: round1(totalFleet ? totalRepairs / totalFleet : 0), totalFleet,
+      rows: candidates.slice(0, N.FOCUS).map(a => { const v = byAccount[a], oldPct = v.fleet ? v.oldUnits / v.fleet : 0, ratio = v.chronic / v.fleet;
+        let action = oldPct >= 0.5 ? '반복 고장 + 교체 협의' : '반복 고장 집중 관리'; if (oldPct >= 0.7 && ratio < 0.75) action = '교체 협의 우선';
+        return { account: a, team: teamByAccount[a] ? topKeyOf(teamByAccount[a]) : '', fleet: v.fleet, chronic: v.chronic, chronicPct: round1(ratio * 100), repairs: v.repairs, oldUnits: v.oldUnits, oldPct: round1(oldPct * 100), action }; }) };
+  }
+
   return {
     meta: { period: { key: period.key, label: period.label, months: period.months.map(ym => P.lab(ym.y, ym.m)) }, cut: opt.cut || null, teams,
       rows: { raw: raw.length, afterCut: RAWC.length, counted: rows.length }, excluded,
       unmappedRows: rows.filter(x => !x.credits.length).length, eligibleAccounts: CORE.eligible.length },
     kpi, kpiTrend, team, caseAnalysis,
+    trendCompare, metro, engYear, engMonth, hospYear, hospMonth, repeatYear, repeatMonth, errYear, errMonth, errRate,
+    fleet: fleet ? { activeCount: fleet.activeCount, pmActiveCount: fleet.pmActiveCount } : null, health, focus,
+    inputs: { serial: !!serial, cases: !!cases },
   };
 }
-module.exports = { buildReport, rosterInfo, cutEndMs, SHEET_TEAMS, PV, CORR_SERIES, round1 };
+module.exports = { buildReport, rosterInfo, cutEndMs, errGroup, SHEET_TEAMS, PV, CORR_SERIES, METRO_TEAMS, N, round1 };

@@ -48,11 +48,22 @@ function lastRunLog(log) {                             // 실행로그에서 마
   const r = rows[rows.length - 1], t = typeof r[0] === 'number' ? (() => { const [y, m, d] = serialToYMD(r[0]); return y + '-' + pad(m) + '-' + pad(d); })() : String(r[0]);
   return { at: t, period: String(r[1]), actRows: r[2] };
 }
-const num = v => (v === '' || v === null || v === undefined) ? null : (typeof v === 'number' ? v : (isNaN(Number(v)) ? String(v).trim() : Number(v)));
-function same(a, b, tol) {
-  a = num(a); b = num(b);
+/* 값 정규화: '74.4%' '6.9건' '12곳' 같은 글자는 숫자로, 시트가 '74.4%'를 0.744로 자동 변환한 경우는 ×100으로 맞춘다 */
+const num = v => {
+  if (v === '' || v === null || v === undefined) return null;
+  if (typeof v === 'number') return v;
+  const t = String(v).trim(), m = t.match(/^([+-]?\d+(?:\.\d+)?)\s*(%|건|대|곳)?$/);
+  return m ? Number(m[1]) : t;
+};
+const isPct = v => typeof v === 'string' && /%$/.test(v.trim());           // '74.4%' (단, '+3.5%p'는 글자 그대로 비교)
+function same(a0, b0, tol) {
+  let a = num(a0), b = num(b0);
   if (a === null && b === null) return true;
-  if (typeof a === 'number' && typeof b === 'number') return Math.abs(a - b) <= tol;
+  if (typeof a === 'number' && typeof b === 'number') {
+    // 한쪽이 '74.4%' 글자이고 다른 쪽이 숫자면, 시트가 글자를 0.744로 바꿔 둔 것이므로 ×100
+    if (isPct(b0) && typeof a0 === 'number') a *= 100; else if (isPct(a0) && typeof b0 === 'number') b *= 100;
+    return Math.abs(a - b) <= tol;
+  }
   return String(a ?? '') === String(b ?? '');
 }
 /* 두 표(aoa)를 행 키로 맞춰 지정한 열만 비교. 시트에 없는 행은 '(행 없음)' */
@@ -63,7 +74,7 @@ function compareTables(name, sheetRows, engineRows, keyOf, cols, tol, diffs) {
     const k = keyOf(er); if (!k) return;
     const sr = idx.get(k);
     if (!sr) { diffs.push([name, k, '(행 없음)', '', '']); return; }
-    cols.forEach(([ci, label]) => { n++; if (!same(sr[ci], er[ci], tol)) diffs.push([name, k, label, sr[ci], er[ci]]); });
+    cols.forEach(([ci, label, hide]) => { n++; if (!same(sr[ci], er[ci], tol)) diffs.push([name, k, label, hide ? '(이름·비표시)' : sr[ci], hide ? '(이름·비표시)' : er[ci]]); });
   });
   return n;
 }
@@ -78,7 +89,14 @@ function compareWorkbook(wb, opt) {
   const roster = rosterFromSheet(aoa(wb, '로스터'));
   const actAoa = aoa(wb, '원본_활동');
   const act = R.parseActivityRows({ h: actAoa[0], rows: actAoa.slice(1), sheet: '원본_활동' });
-  const rep = buildReport({ raw: act.rows, roster, period, cut });
+  const notes = [];
+  const serAoa = aoa(wb, '원본_Serial'), caseAoa = aoa(wb, '원본_케이스');
+  let serial = null, cases = null;
+  try { if (serAoa && serAoa.length > 1) serial = R.parseSerialRows({ h: serAoa[0], rows: serAoa.slice(1) }); else notes.push('원본_Serial 탭 없음 → 운영건전성·집중관리대상 비교 생략'); }
+  catch (e) { notes.push('원본_Serial 읽기 실패(' + e.message + ') → 운영건전성·집중관리대상 비교 생략'); }
+  try { if (caseAoa && caseAoa.length > 1) cases = R.parseCasesRows({ h: caseAoa[0], rows: caseAoa.slice(1) }); else notes.push('원본_케이스 탭 없음 → 병원TOP5(케이스 기준) 비교 생략'); }
+  catch (e) { notes.push('원본_케이스 읽기 실패(' + e.message + ') → 병원TOP5(케이스 기준) 비교 생략'); }
+  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, cases });
   const eng = buildCheckWorkbook(rep);
   const E = name => XLSX.utils.sheet_to_json(eng.Sheets[name], { header: 1, raw: true, defval: '' });
   const diffs = []; let cells = 0;
@@ -94,14 +112,40 @@ function compareWorkbook(wb, opt) {
   const caseKey = r => { const g = String(r[0] || ''); if (!g) return null; return (g.startsWith('상관표') ? '상관표' : g) + '|' + (g === '월별추이' ? monthLabel(r[1]) : String(r[1] || '').trim()); };
   cells += compareTables('정제_케이스분석', sC.slice(1), eC.slice(1), caseKey, [[2, '고장수리'], [3, '재방문 또는PM'], [4, 'Cal또는재방문율'], [5, '전월 재방문율'], [6, '전월 대비']], tol, diffs);
 
-  return { diffs, cells, tol, info: { periodRaw, period, cut, roster: roster.length, actRows: act.rows.length, counted: rep.meta.counted || rep.meta.rows.counted, hasAtt: act.hasAtt, lastRun: lastRunLog(aoa(wb, '실행로그')) }, report: rep };
+  /* ── 2차 묶음 ── 이름(담당자·기관명·S/N)은 비교하되 화면에는 내지 않는다 */
+  const has = n => !!wb.Sheets[n];
+  const rankKey = r => (r[0] === '' || r[0] == null) ? null : String(r[0]).trim() + '|' + String(r[1]).trim();
+  if (has('정제_트렌드비교')) {
+    const sX = aoa(wb, '정제_트렌드비교'), eX = E('정제_트렌드비교');
+    cells += compareTables('정제_트렌드비교', sX.slice(1), eX.slice(1).filter(r => r[0] && !/^개편 후 반영 월/.test(String(r[0]))), r => String(r[0] || ''), [[1, '개편 전'], [2, '개편 후'], [3, '증감']], tol, diffs);
+    const sM = sX.find(r => /^개편 후 반영 월/.test(String(r[0] || ''))), eM = eX.find(r => /^개편 후 반영 월/.test(String(r[0] || '')));
+    cells++; if (String(sM ? sM[0] : '') !== String(eM ? eM[0] : '')) diffs.push(['정제_트렌드비교', '개편 후 반영 월', '목록', sM ? sM[0] : '(없음)', eM ? eM[0] : '(없음)']);
+  }
+  if (has('정제_수도권')) cells += compareTables('정제_수도권', aoa(wb, '정제_수도권').slice(1), E('정제_수도권').slice(1), r => r[0] === '' ? null : monthLabel(r[0]) + '|' + String(r[1] || '').trim(), [[2, 'PM건수'], [3, 'A/S건수']], tol, diffs);
+  if (has('정제_엔지니어생산성')) cells += compareTables('정제_엔지니어생산성', aoa(wb, '정제_엔지니어생산성').slice(1), E('정제_엔지니어생산성').slice(1), rankKey, [[2, '담당자', true], [3, '팀'], [4, '건수'], [5, '직급'], [6, '고장수리%'], [7, 'PM%']], tol, diffs);
+  if (has('정제_병원TOP5')) {
+    const eH = E('정제_병원TOP5').slice(1).filter(r => cases || !/케이스 기준/.test(String(r[0])));
+    cells += compareTables('정제_병원TOP5', aoa(wb, '정제_병원TOP5').slice(1), eH, rankKey, [[2, '기관명', true], [3, '건수']], tol, diffs);
+  }
+  if (has('정제_반복고장TOP5')) cells += compareTables('정제_반복고장TOP5', aoa(wb, '정제_반복고장TOP5').slice(1), E('정제_반복고장TOP5').slice(1), rankKey, [[2, 'S/N', true], [3, '장비'], [4, '기관명', true], [5, '건수']], tol, diffs);
+  if (has('정제_장애요인TOP4')) cells += compareTables('정제_장애요인TOP4', aoa(wb, '정제_장애요인TOP4').slice(1), E('정제_장애요인TOP4').slice(1), rankKey, [[2, '장애 요인'], [3, '건수'], [4, '전체 기재 건수']], tol, diffs);
+  if (has('정제_장비군에러율')) cells += compareTables('정제_장비군에러율', aoa(wb, '정제_장비군에러율').slice(1), E('정제_장비군에러율').slice(1), r => r[0] === '' ? null : monthLabel(r[0]), [[1, 'XN/XR'], [2, 'SP'], [3, 'CN'], [4, 'HISCL']], tol, diffs);
+  if (serial && has('정제_운영건전성')) cells += compareTables('정제_운영건전성', aoa(wb, '정제_운영건전성').slice(1), E('정제_운영건전성').slice(1), r => String(r[0] || ''), [[1, '값'], [2, '설명']], tol, diffs);
+  if (serial && has('정제_집중관리대상')) {
+    const fk = (rows) => rows.map((r, i) => Object.assign([], r, { __k: /^\(선정 조건/.test(String(r[0])) ? '선정 조건 충족' : '#' + (i + 1) }));
+    cells += compareTables('정제_집중관리대상', fk(aoa(wb, '정제_집중관리대상').slice(1)), fk(E('정제_집중관리대상').slice(1)), r => r[0] === '' ? null : r.__k,
+      [[0, '기관명', true], [1, '담당 팀'], [2, '보유'], [3, '반복 고장'], [4, '반복 고장 비율'], [5, '12개월 수리'], [6, '5년 이상'], [7, '5년 이상 비율'], [8, '필요 조치']], tol, diffs);
+  }
+
+  return { diffs, cells, tol, notes, info: { periodRaw, period, cut, roster: roster.length, actRows: act.rows.length, counted: rep.meta.rows.counted, serial: serial ? serial.length : 0, cases: cases ? cases.length : 0, active: rep.fleet ? rep.fleet.activeCount : null, hasAtt: act.hasAtt, lastRun: lastRunLog(aoa(wb, '실행로그')) }, report: rep };
 }
 function main() {
   const o = args(process.argv.slice(2));
   if (!o.sheet) { console.error('사용법: node fsg-report/compare-sheet.js --sheet "FSG_월_분기 보고 데이터.xlsx" [--period 2026-09] [--cut 2026-10-12]'); process.exit(2); }
   const wb = XLSX.read(fs.readFileSync(o.sheet), { type: 'buffer', cellDates: false, dense: true });
   const r = compareWorkbook(wb, o), i = r.info;
-  console.log(`기간 ${i.period.label} (설정 B2 "${i.periodRaw}") · 추출일 ${i.cut || '(없음 → 오늘)'} · 로스터 ${i.roster}명 · 원본_활동 ${i.actRows}행 → 집계 ${i.counted}행` + (i.hasAtt ? '' : ' ⚠ 필수 참석자 열 없음'));
+  console.log(`기간 ${i.period.label} (설정 B2 "${i.periodRaw}") · 추출일 ${i.cut || '(없음 → 오늘)'} · 로스터 ${i.roster}명 · 원본_활동 ${i.actRows}행 → 집계 ${i.counted}행 · Serial ${i.serial}행 · 케이스 ${i.cases}행` + (i.active != null ? ` · 가동 장비 ${i.active}대` : '') + (i.hasAtt ? '' : ' ⚠ 필수 참석자 열 없음'));
+  r.notes.forEach(n => console.log('※ ' + n));
   if (i.lastRun) console.log(`시트 정제 탭의 마지막 실행: ${i.lastRun.at} (기준월 ${i.lastRun.period}, 활동 ${i.lastRun.actRows}행) — 원본 탭을 그 뒤에 바꿨다면 「데이터 정제 실행」 후 다시 내려받아야 비교가 맞습니다`);
   console.log(`비교 칸 ${r.cells}개 · 다른 칸 ${r.diffs.length}개 (허용 오차 ±${r.tol})`);
   if (r.diffs.length) {

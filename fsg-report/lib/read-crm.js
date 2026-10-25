@@ -46,13 +46,15 @@ function parseActivityRows(t) {
   const h = t.h.map(x => String(x).trim());
   const ix = { st: col(h, ['상태'], 3), ft: col(h, ['양식 타입'], 4), t: col(h, ['시작 시간'], 5), e: col(h, ['종료 시간'], 6), own: col(h, ['담당자'], 7),
     subj: col(h, ['주제'], 8), err: col(h, ['Error 1'], 9), acct: col(h, ['거래처'], 12), sn: col(h, ['Serial No. (lookup)', 'Serial No'], 14),
-    prod: col(h, ['Product'], 15), purp: col(h, ['약속/활동 목적'], 16), att: col(h, ['필수 참석자'], -1), cr: col(h, ['만든 날짜'], -1) };
+    prod: col(h, ['Product'], 15), purp: col(h, ['약속/활동 목적'], 16), att: col(h, ['필수 참석자'], -1), cr: col(h, ['만든 날짜'], -1),
+    err2: col(h, ['Error 2', 'Error2'], -1), err3: col(h, ['Error 3', 'Error3'], -1) };   // err2·err3: 장애 요인 TOP4용(Apps Script ERROR2·ERROR3)
   const out = [];
   for (const r of t.rows) {
     if (!r.length || r.every(v => v === '')) continue;
     const g = k => { const v = r[ix[k]]; return v == null ? '' : String(v).trim(); };
     out.push({ st: g('st'), ft: g('ft'), t: toMs(r[ix.t]), e: toMs(r[ix.e]), own: g('own'), err: g('err'), acct: g('acct'), sn: g('sn'),
-      prod: g('prod'), purp: g('purp'), subj: g('subj'), att: g('att'), c: ix.cr >= 0 ? toMs(r[ix.cr]) : null });
+      prod: g('prod'), purp: g('purp'), subj: g('subj'), att: g('att'), c: ix.cr >= 0 ? toMs(r[ix.cr]) : null,
+      err2: ix.err2 >= 0 ? g('err2') : '', err3: ix.err3 >= 0 ? g('err3') : '' });
   }
   if (!out.length) throw new Error('읽을 수 있는 행이 없습니다.');
   return { rows: out, header: h, hasAtt: ix.att >= 0, hasFormType: h.includes('양식 타입'), sheet: t.sheet };
@@ -60,7 +62,11 @@ function parseActivityRows(t) {
 function parseSerial(buf) {
   const t = xlsxRows(buf, null);
   if (!t) throw new Error('시트를 읽지 못했습니다.');
-  const h = t.h;
+  return parseSerialRows(t);
+}
+/* Serial No 자산대장 {h, rows} → [{state, acct, sn, model, install, first, dealer}] */
+function parseSerialRows(t) {
+  const h = t.h.map(x => String(x).trim());
   const ix = { state: col(h, ['상태'], 3), acct: col(h, ['거래처'], 6), sn: col(h, ['Serial No.', 'Serial No', 'Serial'], 14), model: col(h, ['모델', 'Product', 'Model'], 13),
     install: col(h, ['설치일자', '설치 일자'], -1), first: col(h, ['초도설치', '초도 설치'], -1), dealer: col(h, ['대리점 명', '대리점명', '대리점'], -1) };
   const g = (r, i) => i >= 0 && r[i] != null ? String(r[i]).trim() : '';
@@ -68,6 +74,18 @@ function parseSerial(buf) {
     install: ix.install >= 0 ? toMs(r[ix.install]) : null, first: ix.first >= 0 ? toMs(r[ix.first]) : null, dealer: g(r, ix.dealer) }));
   if (!out.some(s => s.state === '사용')) throw new Error("상태가 '사용'인 장비를 찾지 못했습니다. Serial No 자산대장 내보내기인지 확인해 주세요.");
   return out;
+}
+/* 서비스 케이스 내보내기 → [{acct, created}] (병원 TOP5 당월은 케이스 건수 기준) */
+function parseCases(buf) {
+  const t = xlsxRows(buf, ['만든 날짜']) || xlsxRows(buf, null);
+  if (!t) throw new Error('케이스 시트를 읽지 못했습니다.');
+  return parseCasesRows(t);
+}
+function parseCasesRows(t) {
+  const h = t.h.map(x => String(x).trim());
+  const ix = { acct: col(h, ['거래처'], -1), created: col(h, ['만든 날짜', '만든날짜', '생성일'], -1) };
+  if (ix.acct < 0 || ix.created < 0) throw new Error("케이스 파일에 '거래처'·'만든 날짜' 열이 있어야 합니다.");
+  return t.rows.filter(r => r.length).map(r => ({ acct: r[ix.acct] == null ? '' : String(r[ix.acct]).trim(), created: toMs(r[ix.created]) }));
 }
 
 /* ── 폴더에서 종류별 최신 파일 고르기 (월간보고 시트 Apps Script v52와 같은 규칙) ── */
@@ -97,4 +115,4 @@ function pickLatest(dir) {
   }
   return picks;
 }
-module.exports = { xlsxRows, toMs, col, parseActivity, parseActivityRows, parseSerial, fileDateKey, classifyByName, pickLatest, DAY };
+module.exports = { xlsxRows, toMs, col, parseActivity, parseActivityRows, parseSerial, parseSerialRows, parseCases, parseCasesRows, fileDateKey, classifyByName, pickLatest, DAY };
