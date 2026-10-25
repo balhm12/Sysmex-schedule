@@ -67,11 +67,18 @@ export class HUD {
 
   /** 여정 목표 표시 (text 가 비면 숨김) */
   setObjective(text: string, done: number, total: number): void {
+    // 매 프레임 불리므로 바뀐 것만 DOM 에 쓴다 (같은 글자를 다시 써도 레이아웃이 다시 계산된다)
+    const progress = total > 0 ? `${done} / ${total}` : '';
+    if (this.objectiveText === text && this.objectiveProgress === progress) return;
+    this.objectiveText = text;
+    this.objectiveProgress = progress;
     const el = this.root.querySelector('#hud-objective') as HTMLElement;
     el.hidden = text === '';
     (this.root.querySelector('#hud-objective-text') as HTMLElement).textContent = text;
-    (this.root.querySelector('#hud-objective-progress') as HTMLElement).textContent = total > 0 ? `${done} / ${total}` : '';
+    (this.root.querySelector('#hud-objective-progress') as HTMLElement).textContent = progress;
   }
+  private objectiveText = '';
+  private objectiveProgress = '';
 
   /** 보스 체력바. null 이면 숨김 */
   setBoss(info: { name: string; hp: number; maxHp: number; phase2: boolean } | null): void {

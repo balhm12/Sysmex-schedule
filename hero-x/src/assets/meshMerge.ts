@@ -63,6 +63,77 @@ export function mergeStaticMeshes(root: THREE.Object3D): { before: number; after
   return { before, after };
 }
 
+/**
+ * 코드 모델(매끈한 주인공·적·보스) 부품 합치기: 같은 부모(관절 묶음) 아래에서 **같은 재질 객체**를 쓰는 메시를 하나로 합친다.
+ * - 재질 객체를 그대로 쓰므로 질감·발광·피격 번쩍임(재질 값을 바꾸는 코드)이 그대로 동작한다. 색을 굽지 않는다.
+ * - 건너뜀: userData.animated(매 프레임 직접 움직이는 메시: 눈·바퀴·포구 …), 뼈대 메시, 재질 배열, 자식이 있는 메시, 외곽선, 속성 구성이 다른 것.
+ * - 원래 메시의 지오메트리는 이 모델 전용이라 버린다(dispose). 툰 외곽선(addOutlines)보다 **먼저** 불러야 외곽선 수도 함께 준다.
+ * - 합친 메시는 userData.parts 에 원래 이름을 남긴다.
+ */
+export function mergeByMaterial(root: THREE.Object3D): { before: number; after: number } {
+  const parents: THREE.Object3D[] = [];
+  root.traverse((o) => {
+    if (o.children.some((c) => (c as THREE.Mesh).isMesh)) parents.push(o);
+  });
+  let before = 0;
+  let after = 0;
+  for (const parent of parents) {
+    const byMat = new Map<THREE.Material, THREE.Mesh[]>();
+    for (const c of parent.children) {
+      const mesh = c as THREE.Mesh;
+      if (!mesh.isMesh || (mesh as THREE.SkinnedMesh).isSkinnedMesh || Array.isArray(mesh.material) || mesh.children.length > 0) continue;
+      if (mesh.userData.animated || mesh.userData.outline) continue;
+      const list = byMat.get(mesh.material) ?? [];
+      list.push(mesh);
+      byMat.set(mesh.material, list);
+    }
+    for (const [material, meshes] of byMat) {
+      before += meshes.length;
+      if (meshes.length < 2 || !sameAttributeNames(meshes)) {
+        after += meshes.length;
+        continue;
+      }
+      // 인덱스 있는 것(구·고리)과 없는 것(둥근 상자)이 섞이면 모두 인덱스 없는 형태로 맞춘다
+      const mixedIndex = meshes.some((m) => !m.geometry.index);
+      const geos = meshes.map((m) => {
+        m.updateMatrix();
+        const g = m.geometry.clone().applyMatrix4(m.matrix);
+        if (mixedIndex && g.index) {
+          const ni = g.toNonIndexed();
+          g.dispose();
+          return ni;
+        }
+        return g;
+      });
+      const merged = mergeGeometries(geos, false);
+      geos.forEach((g) => g.dispose());
+      if (!merged) {
+        after += meshes.length;
+        continue;
+      }
+      const out = new THREE.Mesh(merged, material);
+      out.name = `merged:${meshes[0].name || material.name || 'part'}`;
+      out.userData.parts = meshes.map((m) => m.name);
+      out.castShadow = meshes.some((m) => m.castShadow);
+      out.receiveShadow = meshes.some((m) => m.receiveShadow);
+      for (const m of meshes) {
+        parent.remove(m);
+        m.geometry.dispose();
+      }
+      parent.add(out);
+      after += 1;
+    }
+  }
+  return { before, after };
+}
+
+/** 속성 이름만 같으면 된다 (인덱스 유무는 mergeByMaterial 이 맞춘다) */
+function sameAttributeNames(meshes: THREE.Mesh[]): boolean {
+  const key = (g: THREE.BufferGeometry) => Object.keys(g.attributes).sort().join(',');
+  const k0 = key(meshes[0].geometry);
+  return meshes.every((m) => key(m.geometry) === k0);
+}
+
 /** 모든 메시의 지오메트리 속성 이름·인덱스 유무가 같아야 합칠 수 있다 */
 function sameAttributes(meshes: THREE.Mesh[]): boolean {
   const key = (g: THREE.BufferGeometry) => `${Object.keys(g.attributes).sort().join(',')}|${g.index ? 'i' : 'n'}`;

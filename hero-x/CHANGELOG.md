@@ -2,6 +2,24 @@
 
 형식: 날짜 · 버전 · 변경 내용 · 수정 파일 · 테스트 결과 · 알려진 문제
 
+## 2026-10-25 · v1.31.1 · 끊김·느림 개선: 코드 모델 부품 합치기
+
+### 변경 내용
+- **원인**: 매끈한 코드 모델은 부품 하나가 메시 하나라 주인공이 162개, v1.29.0 의 툰 외곽선이 그 수만큼 더해져 **주인공만 295번** 그렸다(휴대폰 기본 '중간' 화질도 주인공 외곽선 포함). 적도 마리당 30~60번.
+- **합치기** `meshMerge.mergeByMaterial`(새): 같은 관절(부모 Group)·같은 재질 객체의 메시를 하나로 합친다(인덱스 유무가 섞이면 맞춰서). 재질 객체를 그대로 써서 피격 번쩍임·발광 변화가 그대로 동작. 주인공 162 → 60 메시(외곽선 포함 295 → 110), 적도 종류별로 1/2~1/4. 매 프레임 직접 움직이는 메시(눈·바퀴·포구·보스 예고 원 …)는 `shapes.live()` 로 표시해 제외.
+- 화질 프리셋 `rimLight`: 낮음에서는 림 라이트를 꺼 조명 계산을 줄인다.
+- HUD 목표 표시 `setObjective` 가 값이 바뀔 때만 DOM 에 쓴다(매 프레임 같은 글자를 다시 써서 레이아웃이 다시 계산되던 것).
+
+### 수정 파일
+`src/assets/meshMerge.ts`, `src/render/{shapes.ts,Quality.ts}`, `src/player/models/HeroModel.ts`, `src/enemies/{SmoothEnemyModels.ts,SmoothBossModels.ts}`, `src/dungeon/DungeonScene.ts`, `src/ui/HUD.ts`, `src/game/GameConfig.ts`, `tests/{meshMerge.test.ts,heroModel.test.ts,smoothEnemies.test.ts}`, `package.json`, `CHANGELOG.md`, `CLAUDE.md`, `GAME_GUIDE.md`
+
+### 테스트 결과
+- `npm run check` 통과(타입 검사·단위 테스트 255개·빌드). 새 테스트: 같은 재질 객체만 합치고 재질·그림자·모양 유지, animated 메시 제외.
+- Playwright `shots39`(주인공 메시 110, 장비 외형 정상)·`shots40`(적 10종·로봇·보스 줄 세우기, 눈·바퀴·날개 등 움직이는 부품 정상) 화면 확인.
+
+### 알려진 문제
+- 실제 휴대폰 FPS 는 측정하지 못했다(헤드리스는 소프트웨어 렌더링). 그래도 끊기면 설정에서 화질을 '낮음'으로.
+
 ## 2026-10-24 · v1.31.0 · 머리카락 정리 · 5연격 콤보 · 마무리 감전(번개)
 
 ### 변경 내용

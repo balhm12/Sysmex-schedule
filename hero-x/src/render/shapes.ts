@@ -43,6 +43,11 @@ export const strand = (parent: THREE.Object3D, x: number, y: number, z: number, 
   mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
   return mesh;
 };
+/** 매 프레임 직접 움직이는 메시 표시 (mergeByMaterial 이 합치지 않는다). 만든 자리에서 감싼다 */
+export const live = <T extends THREE.Object3D>(obj: T): T => {
+  obj.userData.animated = true;
+  return obj;
+};
 /** 트리 안 메시의 기하·재질 정리 */
 export const disposeTree = (root: THREE.Object3D): void => {
   root.traverse((obj) => {

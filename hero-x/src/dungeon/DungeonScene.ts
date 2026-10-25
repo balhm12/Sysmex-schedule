@@ -88,6 +88,7 @@ export class DungeonScene implements CollisionWorld {
       this.groundMaps.normalMap.needsUpdate = true;
     }
     this.floorMat?.normalScale.set(p.normalScale, p.normalScale);
+    if (this.rim) this.rim.visible = p.rimLight;
     if (this.decor && this.lastQuality !== q) this.decor.applyQuality(q);
     this.lastQuality = q;
   }

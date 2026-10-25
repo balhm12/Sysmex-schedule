@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
+import { mergeByMaterial } from '../src/assets/meshMerge';
+import { live } from '../src/render/shapes';
 import { mergeStaticMeshes, meshHasPart } from '../src/assets/meshMerge';
 
 function box(name: string, mat: THREE.Material, x: number, y: number, z: number, s = 1): THREE.Mesh {
@@ -92,5 +94,32 @@ describe('소품 전체 합치기 (mergeStaticProps / materialKey)', () => {
     expect(after.max.distanceTo(before.max)).toBeLessThan(1e-5);
     // 빈 소품 Group 은 치워진다
     expect(root.children.includes(a)).toBe(false);
+  });
+});
+
+describe('코드 모델 부품 합치기 (mergeByMaterial)', () => {
+  it('같은 부모·같은 재질 객체의 메시만 합치고, 재질 객체·모양·animated 메시는 그대로', () => {
+    const root = new THREE.Group();
+    const joint = new THREE.Group();
+    root.add(joint);
+    const matA = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+    const matB = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+    const mk = (m: THREE.Material, x: number) => { const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), m); mesh.position.x = x; mesh.castShadow = true; joint.add(mesh); return mesh; };
+    mk(matA, 0); mk(matA, 2); mk(matA, 4);
+    mk(matB, 6);
+    const eye = live(mk(matA, 8));
+    const before = new THREE.Box3().setFromObject(root);
+    const r = mergeByMaterial(root);
+    expect(r.before).toBe(4); // animated 제외
+    expect(r.after).toBe(2); // A 합침 1 + B 1
+    const meshes: THREE.Mesh[] = [];
+    root.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
+    expect(meshes.length).toBe(3); // merged A, B, eye
+    const merged = meshes.find((m) => m.name.startsWith('merged:'))!;
+    expect(merged.material).toBe(matA);
+    expect(merged.castShadow).toBe(true);
+    expect(merged.geometry.attributes.position.count).toBe(3 * 24);
+    expect(meshes).toContain(eye);
+    expect(new THREE.Box3().setFromObject(root)).toEqual(before);
   });
 });

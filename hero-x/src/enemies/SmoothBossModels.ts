@@ -3,7 +3,8 @@ import type { EnemyTypeConfig } from '../game/GameConfig';
 import type { BossPattern } from './BossAI';
 import { glow, pbr } from '../render/materials';
 import { addOutlines } from '../render/outline';
-import { add, blob, capsule, disposeTree, rbox, ring, sphere, strand } from '../render/shapes';
+import { add, blob, capsule, disposeTree, live, rbox, ring, sphere, strand } from '../render/shapes';
+import { mergeByMaterial } from '../assets/meshMerge';
 import type { EnemyModel, EnemyModelState } from './EnemyModels';
 
 /**
@@ -125,10 +126,11 @@ export function createSmoothBossModel(def: EnemyTypeConfig, kind: SmoothBossKind
     add(left, sphere(r * 0.34, 12, 10), light, 0, -r * 1.05, 0);
   }
   // 예고 바닥 원
-  const ringMesh = add(root, new THREE.RingGeometry(r * 0.9, r * 1.1, 32), ringMat, 0, 0.06, 0);
+  const ringMesh = live(add(root, new THREE.RingGeometry(r * 0.9, r * 1.1, 32), ringMat, 0, 0.06, 0));
   ringMesh.rotation.x = -Math.PI / 2;
   ringMesh.castShadow = false;
 
+  mergeByMaterial(root); // 같은 관절·같은 재질 부품 합치기 (외곽선보다 먼저)
   root.updateMatrixWorld(true);
   addOutlines(root, Math.max(0.02, r * 0.03), 'enemy', r * 0.1);
   let flashTimer = 0;

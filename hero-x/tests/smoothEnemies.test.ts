@@ -28,7 +28,7 @@ describe('매끈한 적 모델 (SmoothEnemyModels)', () => {
       expect(m.root.name).toBe(`Enemy-${def.name}`);
       let meshes = 0;
       m.root.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes++; });
-      expect(meshes, type).toBeGreaterThan(8);
+      expect(meshes, type).toBeGreaterThan(3);
       m.update(0.05, states[0]);
       const box = new THREE.Box3().setFromObject(m.root);
       const h = box.max.y - box.min.y;
@@ -51,7 +51,7 @@ describe('매끈한 보스 모델 (SmoothBossModels)', () => {
       expect(m.root.name).toBe(`Boss-${def.name}`);
       let meshes = 0;
       m.root.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes++; });
-      expect(meshes, kind).toBeGreaterThan(12);
+      expect(meshes, kind).toBeGreaterThan(5);
       const box = new THREE.Box3().setFromObject(m.root);
       expect(box.max.y - box.min.y).toBeGreaterThan(def.radius * 2);
       for (const pattern of ['charge', 'slam', 'barrage', 'summon', 'mortar', null] as const) {

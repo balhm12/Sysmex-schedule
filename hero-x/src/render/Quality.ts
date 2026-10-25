@@ -19,6 +19,8 @@ export interface QualityPreset {
   normalScale: number;
   /** 툰 외곽선: none(끔) / hero(주인공만) / all(주인공+적·보스) */
   outline: 'none' | 'hero' | 'all';
+  /** 림 라이트(태양 반대편 역광). 낮음에서는 꺼서 조명 계산을 줄인다 */
+  rimLight: boolean;
   /** 풀 포기 수 (숲) */
   grassCount: number;
   /** 떠다니는 입자 수 */
@@ -26,9 +28,9 @@ export interface QualityPreset {
 }
 
 export const QUALITY_PRESETS: Record<QualityLevel, QualityPreset> = {
-  low: { label: '낮음', bloom: false, msaa: 0, shadowMapSize: 1024, anisotropy: 1, normalScale: 0.4, outline: 'none', grassCount: 600, particleCount: 40 },
-  medium: { label: '중간', bloom: false, msaa: 0, shadowMapSize: 2048, anisotropy: 4, normalScale: 0.7, outline: 'hero', grassCount: 1800, particleCount: 90 },
-  high: { label: '높음', bloom: true, msaa: 4, shadowMapSize: 2048, anisotropy: 8, normalScale: 0.9, outline: 'all', grassCount: 3500, particleCount: 160 },
+  low: { label: '낮음', bloom: false, msaa: 0, shadowMapSize: 1024, anisotropy: 1, normalScale: 0.4, outline: 'none', rimLight: false, grassCount: 600, particleCount: 40 },
+  medium: { label: '중간', bloom: false, msaa: 0, shadowMapSize: 2048, anisotropy: 4, normalScale: 0.7, outline: 'hero', rimLight: true, grassCount: 1800, particleCount: 90 },
+  high: { label: '높음', bloom: true, msaa: 4, shadowMapSize: 2048, anisotropy: 8, normalScale: 0.9, outline: 'all', rimLight: true, grassCount: 3500, particleCount: 160 },
 };
 
 export const QUALITY_ORDER: QualityLevel[] = ['low', 'medium', 'high'];

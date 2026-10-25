@@ -16,7 +16,9 @@ describe('HeroModel (매끈한 카툰 아들 캐릭터)', () => {
       if ((o as THREE.Mesh).isMesh) meshes++;
       if (o.name === 'HeroSword') sword = o;
     });
-    expect(meshes).toBeGreaterThan(60);
+    // 같은 재질 부품을 합쳤으므로(mergeByMaterial) 메시 수가 적다. 외곽선 포함 100 미만
+    expect(meshes).toBeGreaterThan(20);
+    expect(meshes).toBeLessThan(130);
     expect(sword).not.toBeNull();
     const box = new THREE.Box3().setFromObject(m.root);
     expect(box.max.y - box.min.y).toBeGreaterThan(1.7);

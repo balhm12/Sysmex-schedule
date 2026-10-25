@@ -3,6 +3,7 @@ import type { EquipmentLooks } from '../EquipmentVisuals';
 import { fabricTexture } from '../../render/fabricTexture';
 import { glow, pbr } from '../../render/materials';
 import { addOutlines } from '../../render/outline';
+import { mergeByMaterial } from '../../assets/meshMerge';
 import { add, blob, capsule, rbox, ring, sphere, strand } from '../../render/shapes';
 import { createHeroAnimator, createHeroEquipment, disposeModelTree, type HeroRig } from './heroAnimator';
 import type { PlaceholderColors, PlayerModel } from './PlaceholderModel';
@@ -249,6 +250,8 @@ export function createHeroModel(colors: PlaceholderColors): PlayerModel {
   head.add(facePlane);
   root.add(head);
 
+  // 같은 관절·같은 재질의 부품(머리카락 가닥·단추·끈 …)을 합쳐 그리기 호출을 줄인다 (동작은 관절 그룹만 움직이므로 안전)
+  mergeByMaterial(root);
   // 툰 외곽선 (화질에 따라 보이기/숨기기)
   root.updateMatrixWorld(true);
   addOutlines(root, 0.022, 'hero');

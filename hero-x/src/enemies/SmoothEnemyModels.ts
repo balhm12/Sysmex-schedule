@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import type { EnemyTypeConfig } from '../game/GameConfig';
 import { glow, pbr } from '../render/materials';
 import { addOutlines } from '../render/outline';
-import { add, blob, capsule, cone, disposeTree, rbox, ring, sphere, strand } from '../render/shapes';
+import { add, blob, capsule, cone, disposeTree, live, rbox, ring, sphere, strand } from '../render/shapes';
+import { mergeByMaterial } from '../assets/meshMerge';
 import type { EnemyModel, EnemyModelState } from './EnemyModels';
 
 /**
@@ -41,6 +42,8 @@ function palette(def: EnemyTypeConfig, opts: { metal?: boolean } = {}): Palette 
 
 /** 공통 마무리: 사망·피격·갱신 틀 */
 function finish(root: THREE.Group, r: number, flashMats: THREE.MeshStandardMaterial[], animate: Animate): EnemyModel {
+  // 같은 관절·같은 재질의 부품을 합쳐 그리기 호출을 줄인다 (움직이는 부품은 live() 로 표시돼 제외). 외곽선보다 먼저
+  mergeByMaterial(root);
   root.updateMatrixWorld(true);
   addOutlines(root, Math.max(0.015, r * 0.035), 'enemy', r * 0.08);
   let flashTimer = 0;
@@ -192,21 +195,21 @@ function ghost(def: EnemyTypeConfig): EnemyModel {
   const hover = new THREE.Group();
   root.add(hover);
   blob(hover, r * 0.8, 1, 1.05, 0.95, p.main, 0, r * 1.6, 0);
-  const tail = add(hover, cone(r * 0.72, r * 1.3, 16), p.main, 0, r * 0.75, 0);
+  const tail = live(add(hover, cone(r * 0.72, r * 1.3, 16), p.main, 0, r * 0.75, 0));
   tail.rotation.x = Math.PI;
   blob(hover, r * 0.55, 1, 0.35, 1, p.dark, 0, r * 0.45, 0); // 치맛단
   add(hover, cone(r * 0.75, r * 1.1, 16), p.dark, 0, r * 2.75, 0); // 모자
   add(hover, ring(r * 0.8, r * 0.09), p.dark, 0, r * 2.25, 0).rotation.x = Math.PI / 2;
   add(hover, ring(r * 0.8, r * 0.04), p.accent, 0, r * 2.32, 0).rotation.x = Math.PI / 2;
-  const eyeL = blob(hover, r * 0.14, 1, 1.4, 0.5, eyeMat, -r * 0.28, r * 1.72, r * 0.72);
-  const eyeR = blob(hover, r * 0.14, 1, 1.4, 0.5, eyeMat, r * 0.28, r * 1.72, r * 0.72);
+  const eyeL = live(blob(hover, r * 0.14, 1, 1.4, 0.5, eyeMat, -r * 0.28, r * 1.72, r * 0.72));
+  const eyeR = live(blob(hover, r * 0.14, 1, 1.4, 0.5, eyeMat, r * 0.28, r * 1.72, r * 0.72));
   add(hover, ring(r * 0.12, r * 0.03, Math.PI), p.mouth, 0, r * 1.4, r * 0.78); // 'o' 입
   for (const sx of [-1, 1]) blob(hover, r * 0.2, 1, 0.8, 1, p.light, sx * r * 0.85, r * 1.35, r * 0.2); // 손
   const staff = new THREE.Group();
   staff.position.set(r * 0.85, r * 1.35, r * 0.2);
   hover.add(staff);
   add(staff, new THREE.CylinderGeometry(r * 0.05, r * 0.06, r * 2.2, 8), pbr({ color: 0x5a3a26, roughness: 0.8 }), 0, 0, 0);
-  const orb = add(staff, sphere(r * 0.22, 12, 10), orbMat, 0, r * 1.25, 0);
+  const orb = live(add(staff, sphere(r * 0.22, 12, 10), orbMat, 0, r * 1.25, 0));
   add(staff, ring(r * 0.3, r * 0.03), p.accent, 0, r * 1.25, 0).rotation.x = Math.PI / 2;
   let lastW = 0;
   let recoil = 0;
@@ -309,8 +312,8 @@ function bat(def: EnemyTypeConfig): EnemyModel {
     strand(hover, sx * r * 0.3, bodyY + r * 0.45, 0, new THREE.Vector3(sx * 0.5, 1, 0), r * 0.7, r * 0.18, p.main); // 큰 귀
     strand(hover, sx * r * 0.3, bodyY + r * 0.45, r * 0.02, new THREE.Vector3(sx * 0.5, 1, 0), r * 0.5, r * 0.1, p.light);
   }
-  const eyeL = blob(hover, r * 0.12, 1, 1.3, 0.5, eyeMat, -r * 0.22, bodyY + r * 0.08, r * 0.55);
-  const eyeR = blob(hover, r * 0.12, 1, 1.3, 0.5, eyeMat, r * 0.22, bodyY + r * 0.08, r * 0.55);
+  const eyeL = live(blob(hover, r * 0.12, 1, 1.3, 0.5, eyeMat, -r * 0.22, bodyY + r * 0.08, r * 0.55));
+  const eyeR = live(blob(hover, r * 0.12, 1, 1.3, 0.5, eyeMat, r * 0.22, bodyY + r * 0.08, r * 0.55));
   add(hover, ring(r * 0.14, r * 0.025, Math.PI), p.mouth, 0, bodyY - r * 0.18, r * 0.57).rotation.z = Math.PI;
   for (const sx of [-1, 1]) add(hover, cone(r * 0.04, r * 0.14, 5), p.white, sx * r * 0.08, bodyY - r * 0.28, r * 0.58).rotation.x = Math.PI;
   const wings: THREE.Group[] = [];
@@ -350,7 +353,7 @@ function golem(def: EnemyTypeConfig): EnemyModel {
   root.add(body);
   blob(body, r * 0.95, 1.05, 0.9, 0.95, rock, 0, r * 1.2, 0);
   add(body, new THREE.DodecahedronGeometry(r * 0.5, 0), rockDark, 0, r * 2.05, r * 0.1); // 머리 바위
-  const core = add(body, sphere(r * 0.28, 12, 10), coreMat, 0, r * 1.25, r * 0.78);
+  const core = live(add(body, sphere(r * 0.28, 12, 10), coreMat, 0, r * 1.25, r * 0.78));
   add(body, ring(r * 0.36, r * 0.05), rockDark, 0, r * 1.25, r * 0.8);
   const eyeMat = glow(0xffd36b, 1.8);
   for (const sx of [-1, 1]) blob(body, r * 0.09, 1, 0.8, 0.5, eyeMat, sx * r * 0.18, r * 2.12, r * 0.52);
@@ -378,7 +381,7 @@ function golem(def: EnemyTypeConfig): EnemyModel {
   }
   const cannon = add(arms[1], new THREE.CylinderGeometry(r * 0.16, r * 0.22, r * 0.8, 10), rockDark, 0, -r * 0.85, r * 0.45);
   cannon.rotation.x = Math.PI / 2;
-  const muzzle = add(arms[1], sphere(r * 0.16, 8, 6), coreMat, 0, -r * 0.85, r * 0.9);
+  const muzzle = live(add(arms[1], sphere(r * 0.16, 8, 6), coreMat, 0, -r * 0.85, r * 0.9));
   let lastW = 0;
   let recoil = 0;
   return finish(root, r, [rock], (dt, s, t) => {
@@ -409,7 +412,7 @@ function slime(def: EnemyTypeConfig): EnemyModel {
   jelly.opacity = 0.92;
   const squish = new THREE.Group();
   root.add(squish);
-  const dome = blob(squish, r * 1.0, 1, 0.8, 1, jelly, 0, r * 0.8, 0);
+  const dome = live(blob(squish, r * 1.0, 1, 0.8, 1, jelly, 0, r * 0.8, 0));
   blob(squish, r * 0.3, 1, 0.5, 0.6, p.light, -r * 0.3, r * 1.35, r * 0.35); // 반짝 하이라이트
   const pupils = eyes(squish, p, r, r * 0.3, r * 0.85, r * 0.72, 0.2);
   add(squish, ring(r * 0.14, r * 0.03, Math.PI), p.mouth, 0, r * 0.55, r * 0.9).rotation.z = Math.PI;
@@ -434,13 +437,13 @@ function beetle(def: EnemyTypeConfig): EnemyModel {
   root.add(body);
   blob(body, r * 0.8, 1, 0.7, 1.15, p.main, 0, r * 0.75, 0); // 등껍질
   add(body, rbox(r * 0.06, r * 0.4, r * 1.7, r * 0.02), p.dark, 0, r * 1.05, 0); // 등 갈라진 선
-  const abdomen = blob(body, r * 0.5, 1, 0.8, 1, glowMat, 0, r * 0.65, -r * 0.85);
+  const abdomen = live(blob(body, r * 0.5, 1, 0.8, 1, glowMat, 0, r * 0.65, -r * 0.85));
   blob(body, r * 0.45, 1, 0.9, 0.9, p.dark, 0, r * 0.7, r * 0.8); // 머리
   const pupils = eyes(body, p, r, r * 0.2, r * 0.8, r * 1.1, 0.14);
   for (const sx of [-1, 1]) strand(body, sx * r * 0.15, r * 1.05, r * 0.95, new THREE.Vector3(sx * 0.6, 1, 0.5), r * 0.6, r * 0.05, p.dark); // 더듬이
   const legs: THREE.Mesh[] = [];
   for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) {
-    const leg = add(body, capsule(r * 0.05, r * 0.45), p.dark, sx * r * 0.75, r * 0.35, -r * 0.5 + i * r * 0.5);
+    const leg = live(add(body, capsule(r * 0.05, r * 0.45), p.dark, sx * r * 0.75, r * 0.35, -r * 0.5 + i * r * 0.5));
     leg.rotation.z = sx * 1.1;
     legs.push(leg);
   }
@@ -527,7 +530,7 @@ function robot(def: EnemyTypeConfig, kind: string): EnemyModel {
   add(body, rbox(r * 0.7, r * 0.18, r * 0.2, r * 0.07), visorMat, 0, r * 0.18, r * (big ? 0.85 : 0.68)); // 바이저 눈
   add(body, rbox(r * 0.8, r * 0.26, r * 0.16, r * 0.06), dark, 0, r * 0.18, r * (big ? 0.8 : 0.63));
   const antenna = add(body, new THREE.CylinderGeometry(r * 0.03, r * 0.03, r * 0.6, 6), dark, r * 0.3, r * (big ? 1.05 : 0.9), 0);
-  const tip = add(body, sphere(r * 0.08, 8, 6), glow(def.color, 2.4), r * 0.3, r * (big ? 1.35 : 1.2), 0);
+  const tip = live(add(body, sphere(r * 0.08, 8, 6), glow(def.color, 2.4), r * 0.3, r * (big ? 1.35 : 1.2), 0));
   void antenna;
   const movers: THREE.Mesh[] = [];
   const arms: THREE.Group[] = [];
@@ -539,7 +542,7 @@ function robot(def: EnemyTypeConfig, kind: string): EnemyModel {
     const wheelMat = pbr({ color: 0x1a1d26, roughness: 0.7, metalness: 0.3 });
     const zs = big ? [-0.55, 0.55] : [0];
     for (const sx of [-1, 1]) for (const sz of zs) {
-      const w = add(hover, new THREE.CylinderGeometry(r * 0.3, r * 0.3, r * 0.22, 14), wheelMat, sx * r * (big ? 0.9 : 0.75), r * 0.3, sz * r);
+      const w = live(add(hover, new THREE.CylinderGeometry(r * 0.3, r * 0.3, r * 0.22, 14), wheelMat, sx * r * (big ? 0.9 : 0.75), r * 0.3, sz * r));
       w.rotation.z = Math.PI / 2;
       movers.push(w);
     }
@@ -573,12 +576,12 @@ function robot(def: EnemyTypeConfig, kind: string): EnemyModel {
   if (kind === 'shooter' || kind === 'artillery') {
     const barrel = add(body, new THREE.CylinderGeometry(r * 0.14, r * 0.18, r * 0.9, 10), dark, 0, -r * 0.1, r * 0.9);
     barrel.rotation.x = Math.PI / 2;
-    muzzle = add(body, sphere(r * 0.18, 8, 6), glow(0xff5577, 2.4), 0, -r * 0.1, r * 1.35);
+    muzzle = live(add(body, sphere(r * 0.18, 8, 6), glow(0xff5577, 2.4), 0, -r * 0.1, r * 1.35));
     if (kind === 'artillery') add(body, new THREE.CylinderGeometry(r * 0.22, r * 0.26, r * 0.5, 10), steel, 0, -r * 0.1, r * 0.55).rotation.x = Math.PI / 2;
   }
   if (kind === 'stalker') {
     for (const sx of [-1, 1]) {
-      const wing = add(body, rbox(r * 0.9, r * 0.06, r * 0.4, r * 0.03), steel, sx * r * 0.9, -r * 0.1, -r * 0.1);
+      const wing = live(add(body, rbox(r * 0.9, r * 0.06, r * 0.4, r * 0.03), steel, sx * r * 0.9, -r * 0.1, -r * 0.1));
       wing.rotation.z = sx * 0.2;
       movers.push(wing);
     }
