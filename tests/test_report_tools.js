@@ -25,9 +25,20 @@ const SER_H = ['제품 상태', '거래처', 'Model', 'Serial No.', '초도설�
 const serRows = ['H0', 'H1', 'H2', 'H3'].map((a, i) => ['사용', a, i % 2 ? 'XN-1000' : 'SP-50', 'S' + i, '2019-0' + (i + 1) + '-01', '']).concat([['폐기', 'H9', 'XN-1000', 'S9', '', '']]);
 const CASE_H = ['상태', '거래처', '만든 날짜'];
 const caseRows = [['해결됨', 'H1', '2026-09-03 10:00'], ['활성', 'H2', '2026-09-10 11:00'], ['해결됨', 'H1', '2026-09-15 09:00']];
+// 설치: 캘린더 작업 2건(매칭 1 · 수동 1) + 예정 1 + 캘린더 미등록 CRM 1
+const I = require('../fsg-report/lib/install');
+serRows.push(['사용', 'H1', 'XN-1000', 'S-N1', '2026-09-05', '2026-09-05', ''], ['사용', 'H5', 'UF-5000', 'S-N5', '2026-09-15', '2026-09-15', '']);
+const CAL_H = ['구분', '병원', '장비', '시작일', '종료일', '기간(일)', '담당팀', '담당자'];
+const calRows = [['설치', 'H1', 'XN-1000', ser(T(2026, 9, 4, 0)), ser(T(2026, 9, 4, 0)), 1, 'FS East', 'A'], ['설치', 'H7', 'XR-9100 System', ser(T(2026, 9, 10, 0)), ser(T(2026, 9, 11, 0)), 2, 'FS West', 'B'],
+  ['설치', 'H8 (예정)', 'XN-550', ser(T(2026, 9, 20, 0)), ser(T(2026, 9, 20, 0)), 1, 'FS East', 'A']];   // 이 파일의 T()는 시(h)를 꼭 넘겨야 한다
+const MAP_H = ['캘린더 표기', 'CRM 표기 (직접 입력)', '비고'], mapRows = [['H7', '-', '']];
+const MAN_H = ['시작일', '기관명', '캘린더 표기']; for (let i = 1; i <= 10; i++) MAN_H.push('모델' + i, '수량' + i); MAN_H.push('비고');
+const manRows = [['2026-09-10', 'H7', 'XR-9100 System', 'XR-20', 2, 'SP-50', 1].concat(Array(16).fill('')).concat(['CRM 미등록'])];
 const serial = R.parseSerialRows({ h: SER_H, rows: serRows }), cases = R.parseCasesRows({ h: CASE_H, rows: caseRows });
-const rep = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-09', cut: '2026-09-30', serial, cases });
-assert(rep.health && rep.fleet.activeCount === 4, '합성 자산대장으로 가동 장비 계산');
+const calendar = I.readCalendarRows({ h: CAL_H, rows: calRows }), acctMap = I.readAcctMapRows({ h: MAP_H, rows: mapRows }), manualMap = I.readManualRows({ h: MAN_H, rows: manRows });
+const rep = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-09', cut: '2026-09-30', serial, cases, calendar, acctMap, manualMap });
+assert(rep.health && rep.fleet.activeCount === 4, '합성 자산대장으로 가동 장비 계산(새 S/N 2대는 활동 이력 없음) ' + rep.fleet.activeCount);
+assert(rep.installBlock && rep.installBlock.detail.rows.length === 2 && rep.installBlock.detail.orphan.length === 1 && rep.installBlock.detail.tentative.length === 1, '설치 블록');
 const truth = buildCheckWorkbook(rep);
 const A = n => XLSX.utils.sheet_to_json(truth.Sheets[n], { header: 1, raw: true, defval: '' });
 function sheetCopy(mutate) {
@@ -36,17 +47,19 @@ function sheetCopy(mutate) {
   put('로스터', rosterRows);
   put('원본_활동', [H, ...rows]);
   put('원본_Serial', [SER_H, ...serRows]); put('원본_케이스', [CASE_H, ...caseRows]);
+  put('원본_설치캘린더', [CAL_H, ...calRows]); put('기관명매핑', [MAP_H, ...mapRows]); put('설치_수동입력', [MAN_H, ...manRows]);
   const kpi = A('정제_KPI'), tr = A('정제_KPI월별추이'), tm = A('정제_팀별실적'), ca = A('정제_케이스분석');
   // 2차 탭: 시트가 '50%'·'28.5%' 같은 글자를 숫자(0.5·0.285)로 바꿔 둔 모양까지 흉내 낸다
   const pctNum = v => { const m = String(v).match(/^([+-]?\d+(?:\.\d+)?)%$/); return m ? Number(m[1]) / 100 : v; };
   const hz = A('정제_운영건전성'); hz.slice(1).forEach(r => { r[1] = pctNum(r[1]); });
   const tcmp = A('정제_트렌드비교'); tcmp.slice(1, 4).forEach(r => { r[1] = pctNum(r[1]); r[2] = pctNum(r[2]); r[3] = pctNum(r[3]); });
-  const extra = { '정제_트렌드비교': tcmp, '정제_수도권': A('정제_수도권'), '정제_엔지니어생산성': A('정제_엔지니어생산성'), '정제_병원TOP5': A('정제_병원TOP5'), '정제_반복고장TOP5': A('정제_반복고장TOP5'),
+  const det = A('정제_설치상세'); det.slice(1).forEach(r => { if (/^\d{4}-\d{2}-\d{2}$/.test(String(r[0]))) r[0] = Math.round(Date.UTC(+r[0].slice(0, 4), +r[0].slice(5, 7) - 1, +r[0].slice(8, 10)) / 86400000) + 25569; });   // 시트가 날짜로 바꾼 시작일
+  const tsum = A('정제_팀별설치실적');
+  const extra = { '정제_설치상세': det, '정제_설치현황': A('정제_설치현황'), '정제_팀별설치실적': tsum, '정제_트렌드비교': tcmp, '정제_수도권': A('정제_수도권'), '정제_엔지니어생산성': A('정제_엔지니어생산성'), '정제_병원TOP5': A('정제_병원TOP5'), '정제_반복고장TOP5': A('정제_반복고장TOP5'),
     '정제_장애요인TOP4': A('정제_장애요인TOP4'), '정제_장비군에러율': A('정제_장비군에러율'), '정제_운영건전성': hz, '정제_집중관리대상': A('정제_집중관리대상') };
   tr[3][0] = '2025-12'.replace('-12', '-12'); tr[4][0] = '2026-1';                      // 시트가 바꿔 놓은 라벨
   ca[0][1] = '월/모델'; ca[4][1] = '2026-1';                                                 // 행 4 = 2026-01
-  tm[0] = ['팀', '리더', '인원', '설치+이전', 'PM', 'A/S', '합계', '1인당', '', '', ''];
-  tm.forEach((r, i) => { if (i > 0 && r[0] && r[0] !== '합계') { r[3] = 99; r[6] = 999; r[7] = 9.9; } });  // 캘린더 기준 설치 칸은 비교 안 함
+  tm[0] = ['팀', '리더', '인원', '설치+이전', 'PM', 'A/S', '합계', '1인당', '', '', ''];                 // 시트의 옛 헤더(설치 칸 이름 없음)
   extra['정제_엔지니어생산성'].forEach(r => { if (r[0] === '2026-09') r[0] = 46266; });            // 시트가 '2026-09'를 날짜(2026-09-01)로 바꾼 모양
   extra['정제_반복고장TOP5'].forEach(r => { if (r[0] === '2026-09') r[0] = 46266; });
   const tabs = Object.assign({ '정제_KPI': kpi, '정제_KPI월별추이': tr, '정제_팀별실적': tm.slice(0, 6), '정제_케이스분석': ca }, extra);
@@ -57,11 +70,12 @@ function sheetCopy(mutate) {
 }
 const ok = compareWorkbook(sheetCopy());
 assert.strictEqual(ok.diffs.length, 0, '왕복 일치: ' + JSON.stringify(ok.diffs.slice(0, 5)));
-assert(ok.cells > 200, '비교 칸 수 ' + ok.cells); assert.strictEqual(ok.notes.length, 0, ok.notes.join(' / '));
+assert(ok.cells > 300, '비교 칸 수 ' + ok.cells); assert.strictEqual(ok.notes.length, 0, ok.notes.join(' / ')); assert.strictEqual(ok.info.install, 2);
 assert(ok.info.serial === serRows.length && ok.info.cases === caseRows.length && ok.info.active === 4);
 assert.strictEqual(ok.info.cut, '2026-09-30'); assert.strictEqual(ok.info.period.key, '2026-09'); assert.strictEqual(ok.info.lastRun.period, '2026-09');
-const bad = compareWorkbook(sheetCopy(t => { t['정제_KPI'][1][1] = 12.3; t['정제_KPI월별추이'][12][5] += 1; t['정제_케이스분석'][2][2] = 'x'; t['정제_엔지니어생산성'][1][2] = '다른사람'; t['정제_운영건전성'][1][1] = 0.49; }));
-assert.strictEqual(bad.diffs.length, 5, '바꾼 칸 5개만 잡힘: ' + JSON.stringify(bad.diffs));
+const bad = compareWorkbook(sheetCopy(t => { t['정제_KPI'][1][1] = 12.3; t['정제_KPI월별추이'][12][5] += 1; t['정제_케이스분석'][2][2] = 'x'; t['정제_엔지니어생산성'][1][2] = '다른사람'; t['정제_운영건전성'][1][1] = 0.49; t['정제_설치상세'][1][7] = 9; t['정제_팀별실적'][1][3] = 7; }));
+assert.strictEqual(bad.diffs.length, 7, '바꾼 칸 7개만 잡힘: ' + JSON.stringify(bad.diffs));
+assert(bad.diffs.some(d => d[0] === '정제_설치상세' && d[2] === '실제 대수') && bad.diffs.some(d => d[0] === '정제_팀별실적' && d[2] === '설치+이전'), '설치 칸 차이 검출');
 assert.deepStrictEqual(bad.diffs[0].slice(0, 3), ['정제_KPI', 'KPI', 'FTFR']);
 const nameDiff = bad.diffs.find(d => d[0] === '정제_엔지니어생산성');
 assert.deepStrictEqual(nameDiff.slice(2), ['담당자', '(이름·비표시)', '(이름·비표시)'], '이름은 화면에 내지 않음');
@@ -107,4 +121,4 @@ assert.strictEqual(json2.meta.files.serial, 'Serial No 2026_09_30.xlsx'); assert
 const q = cp.spawnSync(process.execPath, [cli, '--period', 'FY2026Q2', '--activity', path.join(dir, '2. 모든 약속_활동 2026_08_01.xlsx'), '--out', out], { encoding: 'utf8' });
 assert.strictEqual(q.status, 0, q.stderr); assert(fs.existsSync(path.join(out, 'report-data_FY2026Q2.json')), '대시보드 ROSTER 기본값 + 분기');
 fs.rmSync(tmp, { recursive: true, force: true });
-console.log('test_report_tools: OK (시트 사본 대조 왕복 13탭·차이 검출·이름 비표시·Serial 없는 사본·CLI 폴더 선택·분기)');
+console.log('test_report_tools: OK (시트 사본 대조 왕복 16탭·차이 검출·이름 비표시·Serial 없는 사본·CLI 폴더 선택·분기)');

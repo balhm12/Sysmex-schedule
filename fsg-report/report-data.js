@@ -10,6 +10,9 @@
  *   --activity 「2. 모든 약속_활동 …xlsx」 직접 지정 (--dir 보다 우선)
  *   --serial   「Serial No …xlsx」 자산대장 (가동 장비 기준 지표: 운영건전성·집중관리대상). --dir 에 있으면 자동
  *   --cases    「1. 모든 서비스 케이스 …xlsx」 (병원 TOP5 당월). --dir 에 있으면 자동
+ *   --calendar 설치 공유캘린더 내보내기 「시스템설치_공유캘린더_YYYYMMDD.xlsx」 (4장 설치 현황). --dir 에 있으면 자동
+ *   --acct-map 기관명매핑 xlsx/csv (캘린더 표기 | CRM 표기 | 비고). --dir 의 '기관명매핑*' 자동
+ *   --manual   설치_수동입력 xlsx/csv (시작일 | 기관명 | 캘린더 표기 | 모델1 수량1 …). --dir 의 '*수동입력*' 자동
  *   --roster   로스터 CSV(fsg-roster 형식: 번호,팀,직급,성명,…). 없으면 ../fsg-kpi.html 의 ROSTER 상수(대시보드와 같은 명단)
  *   --cut      CRM 추출일 YYYY-MM-DD. 없으면 활동 파일명의 날짜, 그것도 없으면 오늘. 그 뒤로 잡힌 예정 약속을 뺀다
  *   --out      출력 폴더(기본 fsg-report/out). report-data_<기간>.json 과 검산_<기간>.xlsx 를 쓴다
@@ -22,6 +25,7 @@ const XLSX = require('xlsx');
 const R = require('./lib/read-crm');
 const { buildReport } = require('./lib/report-core');
 const { parsePeriod } = require('./lib/period');
+const INS = require('./lib/install');
 const { buildCheckWorkbook } = require('./lib/write-check');
 
 function args(argv) {
@@ -54,14 +58,24 @@ function main() {
       if (!casePath && picked.CASE) casePath = picked.CASE.path;
     }
   }
+  let calPath = o.calendar, mapPath = o['acct-map'], manPath = o.manual;
+  if (o.dir) { picked = picked || R.pickLatest(o.dir);
+    if (!calPath && picked.CAL) calPath = picked.CAL.path;
+    const byName = pat => { const f = fs.readdirSync(o.dir).filter(n => pat.test(n) && /\.(xlsx|xlsm|csv)$/i.test(n)).sort(); return f.length ? path.join(o.dir, f[f.length - 1]) : null; };
+    if (!mapPath) mapPath = byName(/기관명매핑/); if (!manPath) manPath = byName(/수동입력/); }
+  const table = p => { const t = R.xlsxRows(fs.readFileSync(p), null); if (!t) throw new Error('읽을 수 없습니다: ' + p); return t; };
   const rosterSrc = o.roster ? path.resolve(o.roster) : 'fsg-kpi.html ROSTER';
   const roster = o.roster ? loadRosterCsv(o.roster) : loadRosterFromDashboard();
   const cut = o.cut || R.fileDateKey(path.basename(actPath)) || null;
   const act = R.parseActivity(fs.readFileSync(actPath));
   const serial = serPath ? R.parseSerial(fs.readFileSync(serPath)) : null;
   const cases = casePath ? R.parseCases(fs.readFileSync(casePath)) : null;
-  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, cases });
+  const calendar = calPath ? INS.readCalendarRows(table(calPath), R.toMs) : null;
+  const acctMap = mapPath ? INS.readAcctMapRows(table(mapPath)) : null;
+  const manualMap = manPath ? INS.readManualRows(table(manPath), R.toMs) : null;
+  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, cases, calendar, acctMap, manualMap });
   rep.meta.files = { activity: path.basename(actPath), serial: serPath ? path.basename(serPath) : '', cases: casePath ? path.basename(casePath) : '',
+    calendar: calPath ? path.basename(calPath) : '', acctMap: mapPath ? path.basename(mapPath) : '', manual: manPath ? path.basename(manPath) : '',
     roster: path.basename(rosterSrc), header: { hasAtt: act.hasAtt, hasFormType: act.hasFormType } };
 
   const out = path.resolve(o.out || path.join(__dirname, 'out')); fs.mkdirSync(out, { recursive: true });
@@ -80,6 +94,9 @@ function main() {
   console.log(H ? `가동 장비 ${H.activeCount}대 · PM 커버리지 ${H.pmCoverage}% · 점검 고르기 ${H.pmCV}% · 100대당 고장 ${H.per100}건 · 반복 고장 장비 ${H.chronicRatio}% · 집중관리 후보 ${rep.focus.candidateCount}곳`
     : '가동 장비 지표 없음 — Serial No 파일을 --serial 또는 --dir 로 주면 운영건전성·집중관리대상이 계산됩니다');
   if (!cases) console.log('병원 TOP5(당월, 케이스 기준) 없음 — 케이스 파일을 --cases 또는 --dir 로 주면 계산됩니다');
+  const IB = rep.installBlock;
+  if (IB) { const D = IB.detail; console.log(`설치(캘린더 기준): 작업 ${D.rows.length}건 · 단품 ${IB.install.total}대(수동 ${IB.install.manualUnits}) · System ${IB.systems.list.length}세트 · 캘린더 미등록 ${D.orphan.length}대 · 중복 제외 ${(D.dupOrphan || []).length}대 · 예정 ${D.tentative.length}건` + (IB.autoFilled.filter(a => a.to).length ? ` · 자동 매핑 ${IB.autoFilled.filter(a => a.to).length}건` : '')); }
+  else console.log(serial ? '설치 현황 없음 — 설치 공유캘린더 내보내기를 --calendar 또는 --dir 로 주면 4장 설치 현황이 계산됩니다' : '설치 현황 없음 — Serial No 파일과 설치 공유캘린더가 모두 필요합니다');
   console.log(`출력: ${out}`);
 }
 if (require.main === module) { try { main(); } catch (e) { console.error('오류:', e.message); process.exit(1); } }

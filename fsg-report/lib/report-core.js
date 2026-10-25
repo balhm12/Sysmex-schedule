@@ -6,6 +6,7 @@
 'use strict';
 const { kpiCore } = require('../kpi-core');
 const P = require('./period');
+const INS = require('./install');
 
 const SHEET_TEAMS = ['FS EAST', 'FS WEST', 'FS SOUTH', 'FS CENTRAL'];   // 월간보고 시트의 팀 순서(정제 탭 행 순서)
 const PV = { PM: 'PM', REPAIR: '고장 수리', INSTALL: '장비 설치', MOVE_INSTALL: '장비 이전 설치', CAL: 'Calibration' };
@@ -128,7 +129,7 @@ function buildReport(opt) {
     total += sum;
     return { team: t, leader: ti.leader, count: ti.count, inst: inst[t], instCrm: inst[t], pm: pm[t], as_: as_[t], sum, perHead: ti.count ? round1(sum / ti.count) : 0 };
   });
-  const team = { rows: teamRows, total, unmapped, instSource: 'CRM 활동',
+  const team = { rows: teamRows, total, unmapped, instSource: 'CRM 활동', instUnassigned: 0,
     unmappedRows: Object.keys(unmappedDetail).map(n => ({ name: n, count: unmappedDetail[n].count, sample: unmappedDetail[n].sample })).sort((a, b) => b.count - a.count) };
 
   /* ④ 케이스 분석 — computeCaseAnalysis_: 12개월 추이(수리·PM·Calibration, 인정 인원 수) + 시리즈 재방문율 상관표(기간 vs 직전 월) */
@@ -279,6 +280,12 @@ function buildReport(opt) {
         return { account: a, team: teamByAccount[a] ? topKeyOf(teamByAccount[a]) : '', fleet: v.fleet, chronic: v.chronic, chronicPct: round1(ratio * 100), repairs: v.repairs, oldUnits: v.oldUnits, oldPct: round1(oldPct * 100), action }; }) };
   }
 
+  /* ════════ 3차 묶음 ════════ 4장 설치 현황 — 설치 공유캘린더 + 자산대장 + 기관명매핑 + 설치_수동입력 (lib/install.js) */
+  let installBlock = null;
+  if (opt.calendar && opt.calendar.length && serial) {
+    installBlock = INS.runInstall({ cal: opt.calendar, serial, period, rows, rosterMap: R.map, team, acctMap: opt.acctMap || { map: {}, pending: [] }, manualMap: opt.manualMap || {} });
+  }
+
   return {
     meta: { period: { key: period.key, label: period.label, months: period.months.map(ym => P.lab(ym.y, ym.m)) }, cut: opt.cut || null, teams,
       rows: { raw: raw.length, afterCut: RAWC.length, counted: rows.length }, excluded,
@@ -286,7 +293,8 @@ function buildReport(opt) {
     kpi, kpiTrend, team, caseAnalysis,
     trendCompare, metro, engYear, engMonth, hospYear, hospMonth, repeatYear, repeatMonth, errYear, errMonth, errRate,
     fleet: fleet ? { activeCount: fleet.activeCount, pmActiveCount: fleet.pmActiveCount } : null, health, focus,
-    inputs: { serial: !!serial, cases: !!cases },
+    installBlock,
+    inputs: { serial: !!serial, cases: !!cases, calendar: !!(opt.calendar && opt.calendar.length), acctMap: !!opt.acctMap, manual: !!opt.manualMap },
   };
 }
 module.exports = { buildReport, rosterInfo, cutEndMs, errGroup, SHEET_TEAMS, PV, CORR_SERIES, METRO_TEAMS, N, round1 };
