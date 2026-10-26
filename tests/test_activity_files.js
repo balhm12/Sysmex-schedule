@@ -29,4 +29,13 @@ const noT = [Object.assign(mk(null), { subj: 'a' }), Object.assign(mk(null), { s
 r = R.resolveActivity([{ name: 'u', mtime: 1, act: act(noT) }, { name: 'v', mtime: 2, act: act(noT.slice(0, 1)) }]); assert.deepStrictEqual([r.used.length, r.rows.length, r.dup], [2, 2, 1]);
 // 7. 한 파일이면 그대로
 r = R.resolveActivity([{ name: 'solo', mtime: 1, act: act(days(1, 3)) }]); assert.deepStrictEqual([r.used, r.superseded, r.rows.length, r.merged], [['solo'], [], 3, undefined]);
-console.log('test_activity_files: OK (분할 내보내기 합침 · 같은 기간 재내보내기 최신만 · 파일명 시각/mtime 순서 · 경계 겹침 허용 · 시각 없는 파일)');
+// 8. 이미 올라간 파일보다 오래됐는지 (대시보드 덮어쓰기 방지)
+const ol = (a, b) => R.isOlderSrc(a, b);
+assert.strictEqual(ol('2. 모든 약속_활동 2026_10_19 AM 8-54-47.xlsx', '2. 모든 약속_활동 2026_10_26 AM 12-34-04.xlsx'), true, '10/19 < 10/26');
+assert.strictEqual(ol('2. 모든 약속_활동 2026_10_26 AM 12-34-04.xlsx', '2. 모든 약속_활동 2026_10_19 AM 8-54-47.xlsx'), false);
+assert.strictEqual(ol('x 2026_10_26 AM 09-00-00.xlsx', 'x 2026_10_26 PM 03-00-00.xlsx'), true, '같은 날 이른 시각');
+assert.strictEqual(ol('x 2026_10_26 PM 03-00-00.xlsx', 'x 2026_10_26 PM 03-00-00.xlsx'), false, '같은 파일');
+assert.strictEqual(ol('x 2026_10_26.xlsx', 'x 2026_10_26 PM 03-00-00.xlsx'), false, '한쪽에 시각이 없으면 날짜만');
+assert.strictEqual(ol('no date.xlsx', 'x 2026_10_26.xlsx'), false); assert.strictEqual(ol('x 2026_10_26.xlsx', 'no date.xlsx'), false); assert.strictEqual(ol('x 2026_10_26.xlsx', ''), false, '비어 있으면 판정 안 함');
+assert.strictEqual(ol('x 2026_10_20.xlsx + y 2026_10_27.xlsx', 'z 2026_10_26.xlsx'), false, '이은 이름은 가장 새 날짜 기준'); assert.strictEqual(ol('x 2026_10_20.xlsx', 'a 2026_10_01.xlsx + b 2026_10_26.xlsx'), true);
+console.log('test_activity_files: OK (이미 올라간 것보다 오래된 파일 판정 · 분할 내보내기 합침 · 같은 기간 재내보내기 최신만 · 파일명 시각/mtime 순서 · 경계 겹침 허용 · 시각 없는 파일)');

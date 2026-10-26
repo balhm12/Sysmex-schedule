@@ -7,7 +7,8 @@
  *   환경변수  FSG_KPI_CODE(접근 코드)  FSG_ADMIN_EMAIL / FSG_ADMIN_PW(관리자 계정)  — 어디에도 기록하지 않는다
  *   --activity / --serial 파일 직접 지정 · --token 관리자 idToken 직접(로그인 생략) · --dry-run 올리지 않고 포맷만 만들어 --out 에 저장
  *   --firebase-url / --api-key / --data-path  기본값은 fsg-kpi.html 안의 상수(대시보드와 항상 같게)
- *   --force-code  기존 데이터의 접근 코드와 달라도 올린다(팀장들이 새 코드를 입력해야 함) */
+ *   --force-code  기존 데이터의 접근 코드와 달라도 올린다(팀장들이 새 코드를 입력해야 함)
+ *   --allow-older 대시보드에 이미 올라간 활동 파일보다 오래된 파일도 올린다(기본은 막는다 — 여러 PC를 번갈아 쓸 때 예전 다운로드 파일로 덮어쓰는 사고 방지) */
 'use strict';
 const fs = require('fs'), path = require('path');
 const R = require('./lib/read-crm');
@@ -97,6 +98,11 @@ async function main() {
   if (cur && !(await codeOk(code, cur))) {
     if (!o['force-code']) throw new Error('입력한 접근 코드가 기존 데이터의 코드와 다릅니다. 코드를 확인하거나, 코드를 바꾸려면 --force-code (팀장들도 새 코드를 입력해야 하고 연장근무·좌표 자료도 다시 올려야 합니다)');
     console.log('⚠ 접근 코드가 바뀝니다(--force-code)');
+  }
+  if (cur && cur.actSrc) console.log(`대시보드에 올라가 있는 활동 파일: ${cur.actSrc}` + (cur.updatedAt ? ` (올린 시각 ${cur.updatedAt})` : ''));
+  if (cur && cur.actSrc && R.isOlderSrc(actSrc, cur.actSrc)) {
+    if (!o['allow-older']) throw new Error(`올리려는 활동 파일(${actSrc})이 대시보드에 이미 올라가 있는 것(${cur.actSrc})보다 오래됐습니다. 예전 데이터로 덮어쓰지 않으려고 올리지 않았습니다. CRM에서 새로 내려받아 다시 시도하세요. (일부러 되돌리려면 --allow-older)`);
+    console.log('⚠ 더 오래된 파일로 덮어씁니다(--allow-older)');
   }
   // 하루 1회 백업 + 30일 지난 백업 정리 (대시보드와 같음)
   const today = nowStr().slice(0, 10), kinds = ['act'].concat(serPayload ? ['ser'] : []);

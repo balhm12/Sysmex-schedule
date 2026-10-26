@@ -1,6 +1,6 @@
 ﻿# FSG 대시보드 올리기 — 다운로드 폴더(또는 설정한 폴더)의 최신 CRM 파일을 대시보드에 올린다
 # 처음 한 번 setup.ps1(또는 setup.bat)을 실행해 두면, 이후에는 바탕화면 아이콘을 더블클릭하면 된다.
-param([switch]$DryRun, [switch]$NoGit, [switch]$NoOpen)
+param([switch]$DryRun, [switch]$NoGit, [switch]$NoOpen, [switch]$AllowOlder)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -46,6 +46,7 @@ try {
 
     $nodeArgs = @('fsg-report/push-dashboard.js', '--dir', $cfg.folder)
     if ($DryRun) { $nodeArgs += '--dry-run' }
+    if ($AllowOlder) { $nodeArgs += '--allow-older' }
     else {
         $saved = (-not [string]::IsNullOrEmpty($cfg.codeEnc)) -and (-not [string]::IsNullOrEmpty($cfg.pwEnc))
         if ($saved) {

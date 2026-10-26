@@ -88,6 +88,18 @@ const dash = { open_: ctx.open_, decodeEmbed: ctx.decodeEmbed, decodeSer: ctx.de
   // 토큰 없이는 쓰기 거부(401) → 오류 메시지
   const r5 = await run([], 'other', 'BAD');
   assert.strictEqual(r5.status, 1); assert(/쓰기 권한이 없습니다/.test(r5.stderr), r5.stderr);
+  // 6) 이미 올라간 것보다 오래된 활동 파일은 올리지 않는다(PC를 번갈아 쓸 때 예전 다운로드 파일로 덮어쓰는 사고 방지)
+  const runIn = (d, extra) => spawnP([cli, '--dir', d, '--firebase-url', base, '--token', 'TOKEN'].concat(extra || []), { FSG_KPI_CODE: 'other' });
+  const mkDir = (name, file) => { const d = path.join(tmp, name); fs.mkdirSync(d); wAct(d, file, rows); return d; };
+  const upBefore = store.meta.actSrc, actBefore = JSON.stringify(store.act);
+  const dOld = mkDir('older', '2. 모든 약속_활동 2026_09_01.xlsx');
+  const o1 = await runIn(dOld); assert.strictEqual(o1.status, 1, o1.stdout + o1.stderr); assert(/오래됐습니다/.test(o1.stderr) && /대시보드에 올라가 있는 활동 파일/.test(o1.stdout), o1.stdout + o1.stderr);
+  assert.strictEqual(store.meta.actSrc, upBefore); assert.strictEqual(JSON.stringify(store.act), actBefore, '막았으니 저장된 데이터는 그대로');
+  const o2 = await runIn(dOld, ['--allow-older']); assert.strictEqual(o2.status, 0, o2.stderr); assert(/더 오래된 파일로 덮어씁니다/.test(o2.stdout)); assert.strictEqual(store.meta.actSrc, '2. 모든 약속_활동 2026_09_01.xlsx');
+  const dNew = mkDir('newer', '2. 모든 약속_활동 2026_10_05.xlsx'); const o3 = await runIn(dNew); assert.strictEqual(o3.status, 0, o3.stderr); assert.strictEqual(store.meta.actSrc, '2. 모든 약속_활동 2026_10_05.xlsx', '새 파일은 통과');
+  const o4 = await runIn(dNew); assert.strictEqual(o4.status, 0, '같은 파일 다시 올리기는 통과');
+  const dT1 = mkDir('t1', '2. 모든 약속_활동 2026_10_05 PM 03-00-00.xlsx'); const dT2 = mkDir('t2', '2. 모든 약속_활동 2026_10_05 AM 09-00-00.xlsx');
+  assert.strictEqual((await runIn(dT1)).status, 0, '같은 날, 한쪽에만 시각이 있으면 날짜만 비교 → 통과'); const o5 = await runIn(dT2); assert.strictEqual(o5.status, 1, '같은 날 더 이른 시각은 막음'); assert(/오래됐습니다/.test(o5.stderr));
   srv.close(); fs.rmSync(tmp, { recursive: true, force: true });
   console.log('test_push_dashboard: OK (encodeAct/encodeSer/seal = 대시보드 decodeEmbed/decodeSer/open_ 왕복 · S/N 0 · 가짜 Firebase 올리기·백업·meta 병합·코드 검사·권한 오류)');
 })().catch(e => { console.error(e); process.exit(1); });

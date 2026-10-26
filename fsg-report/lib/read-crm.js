@@ -119,6 +119,18 @@ function fileTimeOfDay(name) {
   const m = String(name || '').match(/\b(AM|PM)\s*(\d{1,2})-(\d{2})-(\d{2})/i); if (!m) return null;
   let h = +m[2] % 12; if (m[1].toUpperCase() === 'PM') h += 12; return h * 3600 + (+m[3]) * 60 + (+m[4]);
 }
+/* 이미 올라간 활동 파일(들)보다 새로 올리려는 것이 더 오래됐는지 — 파일명의 날짜(와 같은 날이면 AM/PM 시각, 둘 다 있을 때만)로 판정한다.
+   src = 「a.xlsx + b.xlsx」 처럼 ' + '로 이은 이름들. 파일명에 날짜가 없으면 판정하지 않는다(false). 대시보드에 예전 파일을 덮어쓰는 사고를 막는 데 쓴다. */
+function latestStamp(src) {
+  let best = null;
+  String(src || '').split(' + ').forEach(n => { const d = fileDateKey(n); if (!d) return; const t = fileTimeOfDay(n); if (!best || d > best.d || (d === best.d && t != null && (best.t == null || t > best.t))) best = { d, t }; });
+  return best;
+}
+function isOlderSrc(newSrc, curSrc) {
+  const a = latestStamp(newSrc), b = latestStamp(curSrc); if (!a || !b) return false;
+  if (a.d !== b.d) return a.d < b.d;
+  return a.t != null && b.t != null && a.t < b.t;
+}
 /* 같은 날짜 활동 파일이 여럿일 때: ① 기간을 나눠 내보낸 것(시작 시간 범위가 이어 붙음 → 합친다) ② 같은 기간을 다시 내보낸 것(범위가 거의 겹침 → 가장 새 파일 하나만)
    겹침 = 두 파일 시작 시간 범위의 교집합 ÷ 짧은 쪽 범위가 OVERLAP 이상. ②를 합치면 그 사이 상태가 바뀐 행이 이중으로 잡히기 때문이다.
    items = [{name, mtime, act}] → {…합친 표, used:[이름], superseded:[이름], merged, dup} */
@@ -142,4 +154,4 @@ function resolveActivity(items) {
 function loadActivity(files) {
   return resolveActivity(files.map(f => ({ name: f.name, mtime: f.mtime, act: parseActivity(fs.readFileSync(f.path)) })));
 }
-module.exports = { xlsxRows, toMs, col, snOf, parseActivity, parseActivityRows, parseSerial, parseSerialRows, fileDateKey, classifyByName, pickLatest, mergeActivity, resolveActivity, loadActivity, fileTimeOfDay, DAY };
+module.exports = { xlsxRows, toMs, col, snOf, parseActivity, parseActivityRows, parseSerial, parseSerialRows, fileDateKey, classifyByName, pickLatest, mergeActivity, resolveActivity, loadActivity, fileTimeOfDay, latestStamp, isOlderSrc, DAY };
