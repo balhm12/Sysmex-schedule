@@ -107,7 +107,48 @@ def run(base, data, out):
     else:
         SKIP.append('4장 설치 표 — json 에 installBlock 없음(캘린더·Serial 필요)')
     REVIEW.append('4장 하단 각주(「모듈·구성 모델 중복 제외(v50) · 캘린더 미등록 N곳…」) — 수동입력 폐지 후 규칙(캘린더 장비 표기·자동 연결)으로 문구를 고칠 것')
-    SKIP.append('4장 「주요 기관 설치」·「다음 달 설치 예정」 두 표와 「포인트」 문장 — 엔진이 다음 달 일정을 내지 않아 사람이 확인')
+    if ib:
+        import datetime
+        WD = '월화수목금토일'
+        def md(iso): y, mo, dd = iso.split('-'); return f'{int(mo)}/{int(dd)}'
+        def when(j):
+            a_, b_ = j['start'], j['end']
+            if a_ == b_:
+                wd = datetime.date.fromisoformat(a_).weekday()
+                return md(a_) + (f' ({WD[wd]})' if wd >= 5 else '')
+            return f'{md(a_)}~{md(b_)}'
+        big = [j for j in ib['summary']['jobs'] if re.search(r'(XR|XN)-?9\d{3}', j.get('sys') or '')]
+        big.sort(key=lambda j: (j['start'], j['acct']))
+        rows_big = []
+        for j in big:
+            models = []
+            for tok in re.split(r'\s*,\s*', j['sys']):
+                nm = re.sub(r'\s*\(이전\)\s*', '', tok).strip()
+                if nm and nm not in models: models.append(nm)
+            equip = ' · '.join(models) + (' 재구성' if '재구성' in (j.get('cal') or '') else '')
+            moved = j['kind'] == '이전설치' or '(이전)' in j['sys'].split(',')[0]
+            rows_big.append([when(j), short_acct(j['acct']), equip, f"{TEAM_SHORT.get(j['team'], j['team'])} · {'이전' if moved else '신규'}"])
+        if rows_big:
+            fill_table(s[9].table, rows_big)
+            set_text(s[5], re.sub(r'— \d+월 \d+곳', f'— {m}월 {len(rows_big)}곳', s[5].text_frame.text))
+        else:
+            SKIP.append('4장 「주요 기관 설치」 표 — System급 설치 작업이 없음(표를 그대로 둠)')
+    np_ = d.get('nextPlan')
+    if np_:
+        nm_ = np_['month']
+        set_text(s[6], f'{nm_}월 설치 예정 (설치일정표 · 기관 수)')
+        sysbyteam = {}
+        for x in np_['systems']: sysbyteam.setdefault(x['team'], []).append(f"{re.sub(r'(의료재단|병원)$', '', short_acct(x['acct'])).strip()} {x['model']}" + (' 이전' if x['gubun'] == '이전설치' else ''))
+        rows_np = []
+        for t in ['FS EAST', 'FS WEST', 'FS SOUTH', 'FS CENTRAL']:
+            b_ = np_['byTeam'].get(t, {'inst': 0, 'move': 0})
+            rows_np.append([None, f"{b_['inst']}곳", f"{b_['move']}곳", ' · '.join(sysbyteam.get(t, [])[:2]) or '—'])
+        rows_np.append([None, f"{np_['total']['inst']}곳", f"{np_['total']['move']}곳", f"System급 {len(np_['systems'])}건"])
+        fill_table(s[10].table, rows_np)
+        REVIEW.append(f'4장 「{nm_}월 설치 예정」 표의 「주요 일정」 — System급만 자동 기재(팀당 최대 2건). 그 밖의 주요 기관은 사람이 보충')
+    else:
+        SKIP.append('4장 「다음 달 설치 예정」 표 — json 에 nextPlan 없음(캘린더 필요)')
+    REVIEW.append('4장 「포인트」 문장(설치 집중·집계 제외) — 새 숫자로 새로 써야 함')
 
     # ── 5. 케이스 분석
     s = S[4]

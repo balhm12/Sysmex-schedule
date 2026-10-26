@@ -147,4 +147,24 @@ assert.deepStrictEqual([hv[1][0], hv[1][1], hv[3][1]], ['PM 커버리지율', '5
 const kpiTab = XLSX.utils.sheet_to_json(cw.Sheets['정제_KPI'], { header: 1 });
 assert.deepStrictEqual(kpiTab[1], ['2026-09', 50, 75, 37.5, 5, 1, 3, 33.3]);
 assert.strictEqual(XLSX.utils.sheet_to_json(cw.Sheets['정제_KPI월별추이'], { header: 1 })[0].length, 20);
+// 엔지니어 표 직급 = 보고 기간 말일 기준 — A 는 2026-10-01 에 T1→T2 진급(현재 직급 T2). 9월 보고(9/30)에서는 T1, 10월 보고(10/31)에서는 T2
+const gh = [['A', '2026-10-01', 'T1']];
+const g9 = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-09', cut: '2026-09-30', prod: { office: {}, gradeHist: gh, newbie: [] } });
+assert.strictEqual(g9.engMonth.find(r => r.name === 'A').grade, 'T1', '9월 말일 기준'); assert.strictEqual(g9.engMonth.find(r => r.name === 'A').gradeNow, 'T2');
+assert.strictEqual(rep.engMonth.find(r => r.name === 'A').grade, 'T2', '이력을 안 주면 현재 직급');
+// 다음 달 설치 예정 — 캘린더에서 보고 기간 다음 달에 시작하는 작업만, 「예정」 표기는 포함, 미정·보류·중고는 제외
+const INSX = require('../fsg-report/lib/install');
+const calx = [
+  { gubun: '설치', acct: '가병원', equip: 'XR-9100', start: T(2026, 10, 5, 0), end: T(2026, 10, 9, 0), team: 'FS EAST', owner: 'A' },
+  { gubun: '이전설치', acct: '나병원 (예정)', equip: 'XN-9100 재구성', start: T(2026, 10, 12, 0), end: T(2026, 10, 12, 0), team: 'FS EAST', owner: 'A' },
+  { gubun: '설치', acct: '다병원', equip: 'UF-5000', start: T(2026, 10, 20, 0), end: T(2026, 10, 20, 0), team: 'FS WEST', owner: 'B' },
+  { gubun: '설치', acct: '라병원 보류', equip: 'XR-9000', start: T(2026, 10, 21, 0), end: T(2026, 10, 21, 0), team: 'FS WEST', owner: 'B' },
+  { gubun: '설치', acct: '마병원', equip: 'CN-6000 중고', start: T(2026, 10, 22, 0), end: T(2026, 10, 22, 0), team: 'FS WEST', owner: 'B' },
+  { gubun: '설치', acct: '바병원', equip: 'XR-9100', start: T(2026, 9, 30, 0), end: T(2026, 9, 30, 0), team: 'FS EAST', owner: 'A' },
+  { gubun: '설치', acct: '사병원', equip: 'XR-9100', start: T(2026, 11, 2, 0), end: T(2026, 11, 2, 0), team: 'FS EAST', owner: 'A' }];
+const np = INSX.nextMonthPlan(calx, { y: 2026, m: 9, label: '2026-09' });
+assert.strictEqual(np.month, 10); assert.deepStrictEqual(np.total, { inst: 2, move: 1 });
+assert.deepStrictEqual(np.byTeam, { 'FS EAST': { inst: 1, move: 1 }, 'FS WEST': { inst: 1, move: 0 } });
+assert.deepStrictEqual(np.systems.map(x => [x.team, x.acct, x.model, x.gubun]), [['FS EAST', '가병원', 'XR-9100', '설치'], ['FS EAST', '나병원', 'XN-9100', '이전설치']]);
+assert.deepStrictEqual(np.systems.map(x => x.start), ['2026-10-05', '2026-10-12']);
 console.log('test_report_engine: OK (리더·기간·KPI·추이·팀별·케이스 + 트렌드·수도권·엔지니어·병원·반복고장·장애요인·에러율·건전성·집중관리·검산 워크북)');

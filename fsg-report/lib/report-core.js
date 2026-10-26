@@ -239,13 +239,17 @@ function buildReport(opt) {
   })();
 
   /* ⑤ 엔지니어 생산성 — computeEngineerProductivity_ (최근 1년 · 기간), 담당자+필수 참석자 각각, 시간은 종료-시작(제한 없음) */
+  /* 엔지니어 표의 직급은 보고 기간 말일 기준(fsg-roster 규칙) — 진급 이력(opt.prod.gradeHist)이 있으면 그날 직급, 없으면 현재 직급 */
+  const periodEnd = Date.UTC(period.y, period.m, 0), histBy = {};
+  ((opt.prod && opt.prod.gradeHist) || []).forEach(h => { (histBy[h[0]] = histBy[h[0]] || []).push(h); });
+  const gradeAsOf = name => { let g = (R.map[name] || {}).grade || ''; (histBy[name] || []).slice().sort((a, b) => a[1] < b[1] ? 1 : -1).forEach(h => { if (periodEnd < Date.parse(h[1] + 'T00:00:00Z')) g = h[2]; }); return g; };
   const engineer = sel => {
     const per = {};
     rows.forEach(x => { if (!sel(x)) return;
       x.credits.forEach(c => { const v = per[c] = per[c] || { count: 0, hours: 0, repair: 0, pm: 0 }; v.count++;
         if (x.e != null) v.hours += (x.e - x.t) / 3600000; if (x.purpose === PV.REPAIR) v.repair++; else if (x.purpose === PV.PM) v.pm++; }); });
     return Object.keys(per).filter(n => !!R.map[n]).map(n => { const v = per[n], info = R.map[n];
-      return { name: n, team: info.team, grade: info.grade, count: v.count, hours: round1(v.hours), repairPct: round1(v.repair / v.count * 100), pmPct: round1(v.pm / v.count * 100) }; })
+      return { name: n, team: info.team, grade: gradeAsOf(n), gradeNow: info.grade, count: v.count, hours: round1(v.hours), repairPct: round1(v.repair / v.count * 100), pmPct: round1(v.pm / v.count * 100) }; })
       .sort((a, b) => b.count - a.count).slice(0, N.ENGINEER);
   };
   const engYear = engineer(inT12), engMonth = engineer(inPer);
@@ -333,6 +337,8 @@ function buildReport(opt) {
     installBlock = INS.runInstall({ cal: opt.calendar, serial, period, rows, rosterMap: R.map, team });
   }
 
+  const nextPlan = (opt.calendar && opt.calendar.length) ? INS.nextMonthPlan(opt.calendar, period) : null;
+
   return {
     meta: { period: { key: period.key, label: period.label, months: period.months.map(ym => P.lab(ym.y, ym.m)) }, cut: opt.cut || null, teams,
       rows: { raw: raw.length, afterCut: RAWC.length, counted: rows.length }, excluded,
@@ -340,7 +346,7 @@ function buildReport(opt) {
     kpi, kpiTrend, team, caseAnalysis,
     trendCompare, yoy, metro, metroDelta, peopleKpi, engYear, engMonth, hospYear, hospMonth, repeatYear, repeatMonth, errYear, errMonth, errRate,
     fleet: fleet ? { activeCount: fleet.activeCount, pmActiveCount: fleet.pmActiveCount } : null, health, focus,
-    installBlock,
+    installBlock, nextPlan,
     inputs: { serial: !!serial, calendar: !!(opt.calendar && opt.calendar.length) },
   };
 }

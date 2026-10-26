@@ -392,6 +392,22 @@ function installSummary(detail, period) {
   return { head, mat, notes, jobs, list, audit: detail.audit || [], title: '팀별 설치 실적 (' + period.label + ')' };
 }
 /* 전체 흐름: 기관→팀(CRM 활동) → detail(자동 연결 포함) → 미등록에 팀 붙이기 → 중복 제외 → 설치 현황 → 팀별 실적 설치 칸 → 요약 */
+/* 덱 4장 「다음 달 설치 예정」 — 보고 기간 다음 달에 시작하는 캘린더 작업(CRM 기록은 아직 없음): 팀별 기관 수(설치·이전설치)와 System급 일정.
+   과거 달 계산과 달리 「예정」 표기는 제외하지 않는다(미래 일정이니까). 미확정·미정·보류·TBD, 중고·Demo는 뺀다. */
+function nextMonthPlan(cal, period) {
+  const Pd = require('./period'), nx = Pd.toYM(Pd.mk(period.y, period.m) + 1), lo = Date.UTC(nx.y, nx.m - 1, 1), hi = Date.UTC(nx.y, nx.m, 1);
+  const dead = ['미확정', '미정', '보류', 'TBD'], strip = v => String(v || '').replace(/예정/g, '').replace(/[(（]\s*[)）]/g, '').replace(/\s+/g, ' ').trim();
+  const rows = (cal || []).filter(r => r.start != null && r.start >= lo && r.start < hi && (r.gubun === '설치' || r.gubun === '이전설치') && r.acct
+    && !dead.some(k => [r.acct, r.equip, r.gubun].join(' ').indexOf(k) >= 0))
+    .map(r => Object.assign({}, r, { acct: strip(r.acct), equip: strip(r.equip) }));
+  const jobs = mergeCalRows(rows).filter(j => j.start != null && j.start >= lo && j.start < hi && (j.gubun === '설치' || j.gubun === '이전설치' || j.gubun === '설치·이전설치')
+    && !isUsedLabel(j.acct + ' ' + j.equip) && !isDemoLabel(j.acct + ' ' + j.equip));
+  const teams = {}, tot = { inst: 0, move: 0 }, systems = [];
+  jobs.forEach(j => { const t = String(j.team || '').split('·')[0] || '(미정)', b = teams[t] = teams[t] || { inst: 0, move: 0 };
+    const isMove = j.gubun === '이전설치'; if (isMove) { b.move++; tot.move++; } else { b.inst++; tot.inst++; }
+    if (isSystemLabel(j.equip)) sysModelsFromText(j.equip).filter(m => /^(XR|XN)-/.test(m)).forEach(m => systems.push({ team: t, acct: j.acct, model: m, gubun: sysGubunFor(j.equip, m, j.gubun), start: new Date(j.start).toISOString().slice(0, 10) })); });
+  return { label: Pd.lab(nx.y, nx.m), month: nx.m, byTeam: teams, total: tot, jobs: jobs.length, systems };
+}
 function runInstall(opt) {
   const { cal, serial, period, rows, rosterMap, team } = opt;
   const acctTeam = buildAcctTeam(rows, rosterMap);
@@ -404,5 +420,5 @@ function runInstall(opt) {
   return { detail, install, summary, systems: collectSystems(detail), links: detail.links };
 }
 module.exports = { C, INSTALL_CATS, normAcct, normGubun, normTeam, cleanModel, expandModel, expandItems, detailItems, expandDetail, installCatOf, calModelTokens, modelFamily,
-  isSystemLabel, isSystemModel, sysModelsFromText, sysGubunFor, resolveCols, readCalendarRows, mergeCalRows, linkHits, computeInstallDetail, dedupeOrphans,
+  isSystemLabel, isSystemModel, sysModelsFromText, nextMonthPlan, sysGubunFor, resolveCols, readCalendarRows, mergeCalRows, linkHits, computeInstallDetail, dedupeOrphans,
   buildAcctTeam, orphanJobs, collectSystems, sysAcctsFor, applyCalendarInstalls, computeInstallStatus, installSummary, autoNameScore, runInstall, fmt, ymd };
