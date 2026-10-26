@@ -26,9 +26,9 @@ function summarizeVoc(data, months, opt) {
   const teams = TEAMS.map(t => Object.assign({ team: t }, stats(R.filter(r => r.team === t), visitsFor(t))));
   const kw = {}; const commented = R.filter(r => r.comment && String(r.comment).trim());
   keywords.forEach(k => { const c = commented.filter(r => String(r.comment).indexOf(k) >= 0).length; kw[k] = { n: c, pct: commented.length ? round(100 * c / commented.length, 0) : null }; });
-  const days = R.map(r => String(r.ts).slice(0, 10)).sort();
+  const days = R.map(r => String(r.ts).slice(0, 10)).sort(), allDays = recsAll.map(r => String(r.ts).slice(0, 10)).sort();
   const asOfs = months.map(asOf).filter(Boolean).sort();
-  return { months, ...all, teams, keywords: kw, commentTotal: commented.length, firstDay: days[0] || null, lastDay: days[days.length - 1] || null,
+  return { months, ...all, teams, keywords: kw, commentTotal: commented.length, firstDay: days[0] || null, lastDay: days[days.length - 1] || null, allFirstDay: allDays[0] || null, allLastDay: allDays[allDays.length - 1] || null,
     visitAsOf: asOfs.length ? asOfs[asOfs.length - 1] : null, updated: data.updated || null, startMonth: data.startMonth || null, totalRecs: recsAll.length };
 }
 module.exports = { summarizeVoc, DEFAULT_KEYWORDS, TEAMS };
