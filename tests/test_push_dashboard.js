@@ -100,6 +100,19 @@ const dash = { open_: ctx.open_, decodeEmbed: ctx.decodeEmbed, decodeSer: ctx.de
   const o4 = await runIn(dNew); assert.strictEqual(o4.status, 0, '같은 파일 다시 올리기는 통과');
   const dT1 = mkDir('t1', '2. 모든 약속_활동 2026_10_05 PM 03-00-00.xlsx'); const dT2 = mkDir('t2', '2. 모든 약속_활동 2026_10_05 AM 09-00-00.xlsx');
   assert.strictEqual((await runIn(dT1)).status, 0, '같은 날, 한쪽에만 시각이 있으면 날짜만 비교 → 통과'); const o5 = await runIn(dT2); assert.strictEqual(o5.status, 1, '같은 날 더 이른 시각은 막음'); assert(/오래됐습니다/.test(o5.stderr));
+  // 7) 자산대장(Serial)도 대시보드의 것보다 오래되면 활동만 올리고 자산대장은 기존 자료를 유지한다
+  const mkSer = (d, file, n) => { const sw = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(sw, XLSX.utils.aoa_to_sheet([SER_H, ...Array.from({ length: n }, (_, i) => ['사용', 'H' + i, 'XN-1000', 'S' + i, '', ''])]), 'Serial'); XLSX.writeFile(sw, path.join(d, file)); };
+  const dS1 = mkDir('s1', '2. 모든 약속_활동 2026_10_20.xlsx'); mkSer(dS1, 'Serial No 2026_10_26.xlsx', 3);
+  assert.strictEqual((await runIn(dS1)).status, 0); assert.strictEqual(store.meta.serSrc, 'Serial No 2026_10_26.xlsx');
+  const serBefore = JSON.stringify(store.ser);
+  const dS2 = mkDir('s2', '2. 모든 약속_활동 2026_10_21.xlsx'); mkSer(dS2, 'Serial No 2026_10_19.xlsx', 5);
+  const s2 = await runIn(dS2); assert.strictEqual(s2.status, 0, s2.stdout + s2.stderr); assert(/자산대장 .*오래돼 올리지 않고/.test(s2.stdout), s2.stdout);
+  assert.strictEqual(store.meta.actSrc, '2. 모든 약속_활동 2026_10_21.xlsx', '활동은 올라감'); assert.strictEqual(store.meta.serSrc, 'Serial No 2026_10_26.xlsx', '자산대장 이름 유지'); assert.strictEqual(JSON.stringify(store.ser), serBefore, '자산대장 데이터 그대로');
+  const s3 = await runIn(dS2, ['--allow-older']); assert.strictEqual(s3.status, 0, s3.stderr); assert(/더 오래된 자산대장으로 덮어씁니다/.test(s3.stdout)); assert.strictEqual(store.meta.serSrc, 'Serial No 2026_10_19.xlsx');
+  // 8) fetch 실패는 원인(e.cause)을 풀어 보여 준다 · 인증서 오류면 Node 버전별 안내
+  const ce = Object.assign(new Error('fetch failed'), { cause: { code: 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY', message: 'unable to get local issuer certificate' } });
+  assert(/UNABLE_TO_GET_ISSUER_CERT_LOCALLY/.test(require('../fsg-report/push-dashboard.js').explainError(ce)) && /HTTPS를 검사/.test(require('../fsg-report/push-dashboard.js').explainError(ce)));
+  assert.strictEqual(require('../fsg-report/push-dashboard.js').explainError(new Error('boom')), 'boom'); assert(/ECONNRESET/.test(require('../fsg-report/push-dashboard.js').explainError(Object.assign(new Error('fetch failed'), { cause: { code: 'ECONNRESET' } }))));
   srv.close(); fs.rmSync(tmp, { recursive: true, force: true });
   console.log('test_push_dashboard: OK (encodeAct/encodeSer/seal = 대시보드 decodeEmbed/decodeSer/open_ 왕복 · S/N 0 · 가짜 Firebase 올리기·백업·meta 병합·코드 검사·권한 오류)');
 })().catch(e => { console.error(e); process.exit(1); });

@@ -8,10 +8,27 @@
  *   --activity / --serial 파일 직접 지정 · --token 관리자 idToken 직접(로그인 생략) · --dry-run 올리지 않고 포맷만 만들어 --out 에 저장
  *   --firebase-url / --api-key / --data-path  기본값은 fsg-kpi.html 안의 상수(대시보드와 항상 같게)
  *   --force-code  기존 데이터의 접근 코드와 달라도 올린다(팀장들이 새 코드를 입력해야 함)
- *   --allow-older 대시보드에 이미 올라간 활동 파일보다 오래된 파일도 올린다(기본은 막는다 — 여러 PC를 번갈아 쓸 때 예전 다운로드 파일로 덮어쓰는 사고 방지) */
+ *   --allow-older 대시보드에 이미 올라간 활동 파일보다 오래된 파일도 올린다(기본은 막는다 — 여러 PC를 번갈아 쓸 때 예전 다운로드 파일로 덮어쓰는 사고 방지).
+ *                 자산대장(Serial)이 대시보드의 것보다 오래되면 활동만 올리고 자산대장은 건너뛴다(--allow-older 면 함께 올림)
+ *   회사 보안 프로그램이 HTTPS를 검사하는 PC: Windows 인증서 저장소의 회사 인증서를 자동으로 믿는다(Node 22.19 이상) */
 'use strict';
 const fs = require('fs'), path = require('path');
 const R = require('./lib/read-crm');
+/* 회사 보안 프로그램(HTTPS 검사)이 쓰는 인증서는 Windows 저장소에만 있고 Node 기본 목록에는 없다 → 시스템 인증서를 더해 준다. 지원 안 하는 Node 면 false. */
+function trustSystemCerts() {
+  try { const tls = require('tls'); if (typeof tls.getCACertificates !== 'function' || typeof tls.setDefaultCACertificates !== 'function') return false;
+    const sys = tls.getCACertificates('system'); if (!sys.length) return false; tls.setDefaultCACertificates(tls.getCACertificates('default').concat(sys)); return true; } catch (e) { return false; }
+}
+/* fetch 실패는 e.message 가 늘 "fetch failed" 뿐이라 원인(e.cause)을 풀어서 보여 준다 */
+function explainError(e) {
+  const msg = (e && e.message) || String(e), c = e && e.cause; if (!c) return msg;
+  const code = c.code || '', why = c.message || '';
+  if (/CERT|SELF_SIGNED|ISSUER|LEAF_SIGNATURE/.test(code)) {
+    const v = process.versions.node.split('.').map(Number), canTrust = v[0] > 22 || (v[0] === 22 && v[1] >= 19);
+    return msg + ' — 인증서를 믿을 수 없습니다(' + code + '). 회사 보안 프로그램이 HTTPS를 검사하는 환경으로 보입니다.' + (canTrust ? ' 이 PC의 인증서 저장소에 회사 인증서가 없는지 IT 담당에 확인하세요.' : ' Node ' + process.versions.node + ' 는 Windows 인증서 저장소를 쓰지 못합니다 — Node 를 22.19 이상으로 올리세요(README 「Node 업데이트」).');
+  }
+  return msg + (code || why ? ' — ' + [code, why].filter(Boolean).join(' ') : '');
+}
 const subtle = require('crypto').webcrypto.subtle, rnd = n => require('crypto').webcrypto.getRandomValues(new Uint8Array(n));
 
 function args(argv) { const o = {}; for (let i = 0; i < argv.length; i++) { const a = argv[i]; if (a.startsWith('--')) { const k = a.slice(2), v = argv[i + 1]; if (v === undefined || v.startsWith('--')) o[k] = true; else { o[k] = v; i++; } } } return o; }
@@ -68,6 +85,7 @@ function makeFb(baseUrl, dataPath, token) {
 
 async function main() {
   const o = args(process.argv.slice(2));
+  trustSystemCerts();
   if (o.help || (!o.dir && !o.activity)) { console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^\/\*|^ \* ?/gm, '')); process.exit(o.help ? 0 : 1); }
   const code = process.env.FSG_KPI_CODE || '', email = process.env.FSG_ADMIN_EMAIL || '', pw = process.env.FSG_ADMIN_PW || '';
   // 입력 파일 (report-data 와 같은 규칙)
@@ -104,6 +122,10 @@ async function main() {
     if (!o['allow-older']) throw new Error(`올리려는 활동 파일(${actSrc})이 대시보드에 이미 올라가 있는 것(${cur.actSrc})보다 오래됐습니다. 예전 데이터로 덮어쓰지 않으려고 올리지 않았습니다. CRM에서 새로 내려받아 다시 시도하세요. (일부러 되돌리려면 --allow-older)`);
     console.log('⚠ 더 오래된 파일로 덮어씁니다(--allow-older)');
   }
+  if (serPayload && cur && cur.serSrc && R.isOlderSrc(serSrc, cur.serSrc)) {
+    if (!o['allow-older']) { console.log(`⚠ 자산대장 ${serSrc} 는 대시보드에 올라가 있는 것(${cur.serSrc})보다 오래돼 올리지 않고 기존 자료를 유지합니다. 새 Serial 을 받으면 함께 올라갑니다.`); serPayload = null; }
+    else console.log('⚠ 더 오래된 자산대장으로 덮어씁니다(--allow-older)');
+  }
   // 하루 1회 백업 + 30일 지난 백업 정리 (대시보드와 같음)
   const today = nowStr().slice(0, 10), kinds = ['act'].concat(serPayload ? ['ser'] : []);
   try {
@@ -117,5 +139,5 @@ async function main() {
   await fb('meta', { method: 'PUT', body: JSON.stringify(meta) });
   console.log(`올리기 완료 ${now} — 대시보드는 새로고침하거나 5분 안에 자동 반영됩니다` + (serPayload ? '' : ' (자산대장은 올리지 않음 — 기존 자료 유지)'));
 }
-if (require.main === module) main().catch(e => { console.error('오류: ' + (e.message || e)); process.exit(1); });
-module.exports = { encodeAct, encodeSer, seal, open_, codeOk, nowStr };
+if (require.main === module) main().catch(e => { console.error('오류: ' + explainError(e)); process.exit(1); });
+module.exports = { encodeAct, encodeSer, seal, open_, codeOk, nowStr, explainError, trustSystemCerts };
