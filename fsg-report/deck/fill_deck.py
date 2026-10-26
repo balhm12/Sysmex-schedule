@@ -292,7 +292,41 @@ def run(base, data, out):
     else:
         SKIP.append('10장 운영 건전성 — json 에 health 없음(Serial 필요)')
     REVIEW.append('10장 Insight·「업무량 편차 진단」 문장 — 새로 써야 함')
-    SKIP.append('9장 FCA · 11장 만족도 · 12장 결과/Next Step — 별도 자료(FCA 발표 엑셀·VOC 월별보고)가 필요해 건드리지 않음')
+    # ── 11. 고객 만족도조사 — VOC 대시보드 월 집계(satisfaction)
+    sat = d.get('satisfaction')
+    if sat and sat.get('n'):
+        s = S[10]
+        set_text(s[1], f'고객 만족도조사 ({mo})')
+        y0, m0 = label[:4], label[5:7]
+        import calendar as _cal
+        last_day = _cal.monthrange(int(y0), int(m0))[1]
+        first_m = sat.get('startMonth') and sat['startMonth'][:7] == label
+        set_text(s[2], f"방문 서비스 만족도 조사{' — 정식 운영 첫 달' if first_m else ''} ({y0}-{m0}-01 ~ {m0}-{last_day} · 점검·A/S 방문 대상 · 데이터: VOC 대시보드)")
+        t4 = s[4].table; set_cell(t4.cell(0, 1), mo)
+        rr = f"{sat['responseRate']:.1f}%" if sat.get('responseRate') is not None else '-'
+        fill_table(t4, [[None, f"{sat['n']}건 · {rr}"], [None, f"{sat['avg']:.2f} / 5.0"], [None, ' · '.join(f"{x:.2f}" for x in sat['q']) + ' (신속·전문·응대)'],
+                        [None, f"{sat['perfectPct']:.1f}%"], [None, f"{sat['low']}건"]])
+        rows6 = []
+        for t in sat['teams']:
+            rr_t = f"{t['responseRate']:.1f}%" if t.get('responseRate') is not None else '-'
+            rows6.append([None, f"{t['n']}건 · {rr_t}", (f"{t['avg']:.2f}" if t.get('avg') is not None else '-')])
+        rows6.append([None, f"{sat['n']}건 · {rr}", f"{sat['avg']:.2f}"])
+        fill_table(s[6].table, rows6)
+        set_text(s[7], f"응답률 분모 = 고장수리·PM 방문 {sat['visits']:,}건 · 팀 단위 집계(개인 미포함)")
+        set_text(s[8], f"고객 VOC 포커스 — 서술형 {sat['commentTotal']}건 중 직접 언급 빈도")
+        for lab_i, val_i in ((9, 10), (11, 12), (13, 14), (15, 16)):
+            word = s[lab_i].text_frame.text.strip().strip('"“”')
+            k = sat['keywords'].get(word)
+            if k is None: SKIP.append(f'11장 키워드 「{word}」 — json 의 keywords 에 없음(voc-summary --keywords 로 추가)'); continue
+            desc = s[val_i].text_frame.text.split('·', 1)[1].strip() if '·' in s[val_i].text_frame.text else ''
+            set_text(s[val_i], f"{k['n']}건 ({k['pct']:.0f}%)" + (f' · {desc}' if desc else ''))
+        if sat.get('lastDay'):
+            ld = sat['lastDay'][5:].replace('-', '/').lstrip('0').replace('/0', '/')
+            set_text(s[17], re.sub(r'\(화면: [^)]*\)', f"(화면: {int(sat['firstDay'][5:7])}/{int(sat['firstDay'][8:10])}~{ld} 누적)", s[17].text_frame.text))
+        REVIEW.append('11장 응답률은 대시보드 규칙(같은 방문의 중복 응답은 한 번, 방문건수 집계 기준일까지) — 이전 덱의 「응답 수 ÷ 방문」과 정의가 달라 값이 다를 수 있으니 각주로 밝힐 것. 키워드 설명(· 뒤 문구)은 이전 달 그대로')
+    else:
+        SKIP.append('11장 만족도 — json 에 satisfaction 이 없거나 응답이 없음(voc-summary.js 를 먼저 실행)')
+    SKIP.append('9장 FCA · 12장 결과/Next Step — 별도 자료(FCA 현황 엑셀)가 필요하거나 문장이라 건드리지 않음')
 
     # 표지·12장 월 표기는 건드리지 않음 — 월이 바뀌면 사람이 확인
     prs.save(out)

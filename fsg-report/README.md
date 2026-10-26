@@ -82,6 +82,13 @@ Colab 연결이 불안하거나 Drive 데스크톱 앱을 못 쓰는 PC용이다
 - PowerShell 스크립트 실행이 회사 정책으로 막혀 있으면 오류가 나온다. 그때는 위 「대시보드 올리기」의 PowerShell 명령을 직접 입력해도 같은 결과다(`node fsg-report/push-dashboard.js --dir 폴더`).
 - 리눅스용 PowerShell로 파일 찾기·오래된 파일 경고·오류 안내까지는 시험했다. 암호화 저장(DPAPI)·바탕화면 아이콘·실제 업로드는 윈도우에서 처음 실행할 때 확인한다. 저장 안 함/저장 두 방식의 입력·환경변수 전달은 리눅스 PowerShell과 가짜 node로 시험했다.
 
+## 고객 만족도 집계 (`voc-summary.js`)
+VOC 공개 대시보드(`voc-dashboard.html`)가 읽는 Firebase `/voc-dashboard/data`를 같은 익명 로그인으로 내려받아 보고서 11장용 값(응답 수·응답률·종합·문항별·만점 비율·저점수·팀별·서술형 키워드)을 만든다. 응답률은 대시보드와 같은 규칙(같은 FSR·기관·날짜 응답은 한 방문, 방문건수 집계 기준일까지). 개인(FSR) 단위는 내지 않는다.
+```
+node fsg-report/voc-summary.js --period 2026-09 [--out 폴더] [--keywords 친절,신속,설명,꼼꼼] [--file data.json]
+```
+바탕화면 아이콘이 `report-data` 뒤에 이어서 실행해 같은 json에 `satisfaction`으로 합쳐 넣는다(실패해도 나머지는 정상). 시험은 합성 데이터로 했고, **실제 Firebase 읽기는 PC에서 처음 실행할 때 확인한다.**
+
 ## 월간 덱 자동 채움 (`deck/fill_deck.py`)
 `report-data_<기간>.json`과 **전월 확정 덱(베이스)** 을 넣으면 확정 12장 덱의 숫자·표·차트를 한 번에 바꾼다(python-pptx 필요, PC가 아니라 Claude 쪽에서 돌린다).
 ```
