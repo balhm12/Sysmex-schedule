@@ -32,7 +32,7 @@ def mnum(label): return int(label.split('-')[1])
 def yymm(label): return label[2:]
 
 
-def run(base, data, out):
+def run(base, data, out, fca=None):
     prs = Presentation(base)
     S = [list(s.shapes) for s in prs.slides]
     d = data
@@ -326,7 +326,38 @@ def run(base, data, out):
         REVIEW.append('11장 응답률은 대시보드 규칙(같은 방문의 중복 응답은 한 번, 방문건수 집계 기준일까지) — 이전 덱의 「응답 수 ÷ 방문」과 정의가 달라 값이 다를 수 있으니 각주로 밝힐 것. 키워드 설명(· 뒤 문구)은 이전 달 그대로')
     else:
         SKIP.append('11장 만족도 — json 에 satisfaction 이 없거나 응답이 없음(voc-summary.js 를 먼저 실행)')
-    SKIP.append('9장 FCA · 12장 결과/Next Step — 별도 자료(FCA 현황 엑셀)가 필요하거나 문장이라 건드리지 않음')
+    # ── 9. FCA — 사용자가 직접 관리하는 FCA 현황 엑셀(--fca)
+    if fca:
+        s = S[8]
+        import calendar as _c2
+        end_day = _c2.monthrange(int(label[:4]), m)[1]; asof_txt = f'{label[:4]}-{label[5:7]}-{end_day:02d}'
+        cn = fca['counts']
+        set_text(s[4], f"{fca['total']}건")
+        set_text(s[5], f"완료 {cn['완료']} · 진행 {cn['진행 중']} · 안내 {cn['안내문 발송']} · 필요 시 {cn['필요 시']}")
+        set_text(s[8], f"{fca['target']}대"); set_text(s[9], ' · '.join(f'{k} {v}' for k, v in fca['byModel'].items()))
+        set_text(s[12], f"{fca['done']}대 ({fca['donePct']}%)")
+        openi = [i for i in fca['items'] if i['status'] == '진행 중']
+        set_text(s[13], f"잔여 {fca['remain']}대" + (' — ' + ', '.join(f"{i['modelShort']} ({i['no']})" for i in openi) if openi else ''))
+        if fca['top']:
+            t_ = fca['top']; ttl = re.sub(r'\s*Incident', '', t_['title']); ttl = re.sub(r'\s+\(', '(', ttl)
+            set_text(s[16], f"{t_['modelShort']} {t_['no']}")
+            set_text(s[17], f"{ttl} · 잔여 {(t_['target'] or 0) - (t_['done'] or 0)}대" + (f" · ~{t_['end'].month}/{t_['end'].day}" if t_['end'] else ''))
+        def per(i):
+            f = lambda dt: f"{dt.year % 100:02d}.{dt.month:02d}.{dt.day:02d}"
+            if i['start'] and i['end']: return f"{f(i['start'])} ~ {f(i['end'])}"
+            if i['end']: return f"~ {f(i['end'])}"
+            return {'안내문 발송': '고객 안내', '필요 시': '필요 시 적용'}.get(i['status'], '-')
+        rows9 = [[i['no'], i['field'], i['model'], (i['title'] if len(i['title']) <= 26 else i['title'][:25] + '…'), per(i),
+                  (str(i['target']) if i['target'] else '—'), (str(i['done']) if i['done'] is not None else '—'), (f"{i['rate']}%" if i['rate'] is not None else '해당 없음'), i['status']] for i in fca['items']]
+        fill_table(s[19].table, rows9)
+        set_text(s[1], re.sub(r'\(\d{4}-\d{2}-\d{2} 기준\)', f'({asof_txt} 기준)', s[1].text_frame.text))
+        set_text(s[24], re.sub(r'FY26 1H FCA 현황\(\d+/\d+\)', f'FY26 1H FCA 현황({m}/{end_day})', s[24].text_frame.text))
+        for w in fca.get('warnings', []): SKIP.append('9장 FCA 엑셀 주의 — ' + w)
+        SKIP.append('9장 SP-50 부품 교체 표 — 별도 진행표(SP-50 팀별 Holder·Sensor)가 필요해 그대로 둠')
+        REVIEW.append('9장 「추진 계획」 문장 — 새 달 기준으로 새로 써야 함. 표의 제목은 26자를 넘으면 줄였으니 확인')
+    else:
+        SKIP.append('9장 FCA — FCA 현황 엑셀을 --fca 로 주지 않음')
+    SKIP.append('12장 결과/Next Step — 문장이라 건드리지 않음')
 
     # 표지·12장 월 표기는 건드리지 않음 — 월이 바뀌면 사람이 확인
     prs.save(out)
@@ -334,11 +365,15 @@ def run(base, data, out):
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument('base'); ap.add_argument('json'); ap.add_argument('-o', '--out')
+    ap = argparse.ArgumentParser(); ap.add_argument('base'); ap.add_argument('json'); ap.add_argument('-o', '--out'); ap.add_argument('--fca', help='FY26 FCA 현황 엑셀(9장)')
     a = ap.parse_args()
     data = json.load(open(a.json, encoding='utf8'))
     out = a.out or os.path.join(os.getcwd(), 'filled_' + os.path.basename(a.base))
-    run(a.base, data, out)
+    fca = None
+    if a.fca:
+        from fca import read_fca
+        fca = read_fca(a.fca)
+    run(a.base, data, out, fca)
     print('saved:', out)
     print('\n[건너뜀 — json 에 없거나 이 도구가 다루지 않음]'); [print(' -', x) for x in SKIP]
     print('\n[검토 필요 — 사람이 새로 써야 하는 문장]'); [print(' -', x) for x in REVIEW]
