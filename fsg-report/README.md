@@ -73,6 +73,9 @@ Colab 연결이 불안하거나 Drive 데스크톱 앱을 못 쓰는 PC용이다
 - PC를 번갈아 쓰면 PC마다 `setup.bat`을 한 번씩 실행한다. 설정은 PC·계정 사이에 옮겨지지 않는다. 비밀번호를 바꿨거나 저장 방식을 바꾸려면 `setup.bat`을 다시 실행한다. 저장한 값을 지우려면 `%LOCALAPPDATA%\fsg-kpi` 폴더를 삭제한다.
 - 활동 파일이 8일 넘게 오래됐으면 "그래도 올릴까요?"를 묻는다. 모르고 예전 파일을 올리는 일을 막는다.
 - **이미 올라간 것보다 오래된 파일은 올리지 않는다.** 올리기 전에 대시보드에 올라가 있는 활동 파일 이름(파일명 날짜, 같은 날이면 AM/PM 시각)과 비교해, 올리려는 파일이 더 오래됐으면 "예전 데이터로 덮어쓰지 않으려고 올리지 않았습니다"로 멈춘다. PC를 번갈아 쓰면 한쪽 다운로드 폴더에 예전 파일이 남아 있기 쉬워서다. 일부러 되돌릴 때만 `node fsg-report/push-dashboard.js --dir 폴더 --allow-older`(또는 `push-dashboard.ps1 -AllowOlder`). 대시보드에 올라가 있는 파일은 올리기 시작할 때 화면에 함께 나온다.
+- **자산대장(Serial)도 같은 규칙.** 다운로드 폴더의 Serial 이 대시보드에 올라가 있는 것보다 오래됐으면 활동 파일만 올리고 자산대장은 기존 자료를 유지한다(화면에 안내). 새 Serial 을 내려받으면 다음 올리기 때 함께 올라간다. `--allow-older` 면 함께 덮어쓴다.
+- **회사 보안 프로그램이 HTTPS를 검사하는 PC**(브라우저는 되는데 "오류: fetch failed"): Node 는 Windows 인증서 저장소의 회사 인증서를 기본으로 모른다. `push-dashboard.js` 가 시작할 때 시스템 인증서를 자동으로 더해 믿는다(**Node 22.19 이상**). 그래도 안 되면 오류 문장 뒤에 원인 코드(예: `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`)가 함께 나온다.
+- **Node 업데이트(git·Node 없는 PC)**: PowerShell 에 `(irm https://raw.githubusercontent.com/balhm12/Sysmex-schedule/main/fsg-report/windows/bootstrap.ps1).TrimStart([char]0xFEFF) | iex` 한 줄을 붙여 넣으면 엔진 코드를 최신으로 덮어쓰고, 같이 깔린 설치 불필요 Node(`tools\node`)가 22.19 미만이면 22.22.2 로 올린다(체크섬 확인). 설정·저장한 코드는 건드리지 않는다. (다시 실행해도 안전하다.)
 - 실행할 때마다 `git pull`로 엔진을 최신으로 맞춘다(실패하면 현재 버전으로 진행).
 - 같은 날 다시 내보낸 파일 처리(최신 하나만)는 위 규칙 그대로다.
 - PowerShell 스크립트 실행이 회사 정책으로 막혀 있으면 오류가 나온다. 그때는 위 「대시보드 올리기」의 PowerShell 명령을 직접 입력해도 같은 결과다(`node fsg-report/push-dashboard.js --dir 폴더`).
