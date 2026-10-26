@@ -137,8 +137,13 @@ def run(base, data, out, fca=None, fsr=None):
     if np_:
         nm_ = np_['month']
         set_text(s[6], f'{nm_}월 설치 예정 (설치일정표 · 기관 수)')
-        sysbyteam = {}
-        for x in np_['systems']: sysbyteam.setdefault(x['team'], []).append(f"{re.sub(r'(의료재단|병원)$', '', short_acct(x['acct'])).strip()} {x['model']}" + (' 이전' if x['gubun'] == '이전설치' else ''))
+        sysbyteam = {}; merged_ = {}
+        for x in np_['systems']:
+            nm = re.sub(r'\s+', ' ', re.sub(r'(의료재단|병원|센터)', '', short_acct(x['acct']))).strip()
+            merged_.setdefault((x['team'], nm, x['model']), set()).add(x['gubun'])
+        for (t_, nm, model), gs in merged_.items():
+            tag = ' 설치·이전' if len(gs) > 1 else (' 이전' if '이전설치' in gs else '')
+            sysbyteam.setdefault(t_, []).append(f"{nm} {model}{tag}")
         rows_np = []
         for t in ['FS EAST', 'FS WEST', 'FS SOUTH', 'FS CENTRAL']:
             b_ = np_['byTeam'].get(t, {'inst': 0, 'move': 0})
@@ -328,9 +333,11 @@ def run(base, data, out, fca=None, fsr=None):
             if k is None: SKIP.append(f'11장 키워드 「{word}」 — json 의 keywords 에 없음(voc-summary --keywords 로 추가)'); continue
             desc = s[val_i].text_frame.text.split('·', 1)[1].strip() if '·' in s[val_i].text_frame.text else ''
             set_text(s[val_i], f"{k['n']}건 ({k['pct']:.0f}%)" + (f' · {desc}' if desc else ''))
-        if sat.get('lastDay'):
-            ld = sat['lastDay'][5:].replace('-', '/').lstrip('0').replace('/0', '/')
-            set_text(s[17], re.sub(r'\(화면: [^)]*\)', f"(화면: {int(sat['firstDay'][5:7])}/{int(sat['firstDay'][8:10])}~{ld} 누적)", s[17].text_frame.text))
+        if sat.get('allFirstDay') and sat.get('allLastDay'):
+            f_, l_ = sat['allFirstDay'], sat['allLastDay']
+            set_text(s[17], re.sub(r'\(화면: [^)]*\)', f"(화면: {int(f_[5:7])}/{int(f_[8:10])}~{int(l_[5:7])}/{int(l_[8:10])} 누적)", s[17].text_frame.text))
+        else:
+            REVIEW.append('11장 맨 아래 「화면: …누적」 날짜는 이전 달 그대로 — 대시보드에서 확인해 고칠 것')
         REVIEW.append('11장 응답률은 대시보드 규칙(같은 방문의 중복 응답은 한 번, 방문건수 집계 기준일까지) — 이전 덱의 「응답 수 ÷ 방문」과 정의가 달라 값이 다를 수 있으니 각주로 밝힐 것. 키워드 설명(· 뒤 문구)은 이전 달 그대로')
     else:
         SKIP.append('11장 만족도 — json 에 satisfaction 이 없거나 응답이 없음(voc-summary.js 를 먼저 실행)')
