@@ -11,6 +11,13 @@ function Plain([string]$enc) {
     try { return [Runtime.InteropServices.Marshal]::PtrToStringAuto($b) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($b) }
 }
 
+function Read-Secret([string]$label) {   # 저장하지 않는 PC: 올릴 때마다 입력(화면에 보이지 않음)
+    if ($env:FSG_LAUNCHER_PLAINTEXT -eq '1') { return (Read-Host $label) }   # 시험용
+    $ss = Read-Host $label -AsSecureString
+    $b = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($ss)
+    try { return [Runtime.InteropServices.Marshal]::PtrToStringAuto($b) } finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($b) }
+}
+
 try {
     $cfgPath = $env:FSG_LAUNCHER_CONFIG   # 시험용 지정. 운영에서는 비어 있다
     if (-not $cfgPath) { $cfgPath = Join-Path (Join-Path $env:LOCALAPPDATA 'fsg-kpi') 'config.json' }
@@ -40,9 +47,17 @@ try {
     $nodeArgs = @('fsg-report/push-dashboard.js', '--dir', $cfg.folder)
     if ($DryRun) { $nodeArgs += '--dry-run' }
     else {
-        $env:FSG_KPI_CODE = Plain $cfg.codeEnc
-        $env:FSG_ADMIN_EMAIL = $cfg.email
-        $env:FSG_ADMIN_PW = Plain $cfg.pwEnc
+        $saved = (-not [string]::IsNullOrEmpty($cfg.codeEnc)) -and (-not [string]::IsNullOrEmpty($cfg.pwEnc))
+        if ($saved) {
+            $env:FSG_KPI_CODE = Plain $cfg.codeEnc
+            $env:FSG_ADMIN_PW = Plain $cfg.pwEnc
+        } else {
+            Write-Host '이 PC는 접근 코드·비밀번호를 저장하지 않는 설정입니다. 입력해 주세요(화면에 보이지 않습니다).'
+            $env:FSG_KPI_CODE = Read-Secret '대시보드 접근 코드'
+            $env:FSG_ADMIN_PW = Read-Secret '관리자 비밀번호'
+        }
+        $mail = $cfg.email; if ([string]::IsNullOrWhiteSpace($mail)) { $mail = Read-Host '관리자 이메일' }
+        $env:FSG_ADMIN_EMAIL = $mail
     }
     & node @nodeArgs
     $rc = $LASTEXITCODE

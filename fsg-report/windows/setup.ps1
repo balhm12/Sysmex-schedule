@@ -1,12 +1,14 @@
 ﻿# FSG 대시보드 올리기 — 한 번만 하는 설정
-# 접근 코드·관리자 비밀번호는 이 PC의 이 Windows 계정으로만 풀 수 있게 암호화(DPAPI)해 저장한다.
+# 접근 코드·관리자 비밀번호를 이 PC에 저장할지 고른다.
+#  - 저장(y): 이 PC의 이 Windows 계정으로만 풀 수 있게 암호화(DPAPI)해 저장 → 이후 아이콘만 누르면 된다. 본인만 쓰는 PC에서만.
+#  - 저장 안 함(N, 기본): 올릴 때마다 입력한다. 여러 사람이 쓰는 PC·번갈아 쓰는 PC에서는 이쪽을 권한다.
 # 저장 위치: %LOCALAPPDATA%\fsg-kpi\config.json  (저장소·Drive·채팅 어디에도 올라가지 않는다)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent   # fsg-report\windows → 저장소 루트
-$cfgDir = Join-Path $env:LOCALAPPDATA 'fsg-kpi'
-$cfgPath = Join-Path $cfgDir 'config.json'
-New-Item -ItemType Directory -Force $cfgDir | Out-Null
+$cfgPath = $env:FSG_LAUNCHER_CONFIG   # 시험용 지정. 운영에서는 비어 있다
+if (-not $cfgPath) { $cfgPath = Join-Path (Join-Path $env:LOCALAPPDATA 'fsg-kpi') 'config.json' }
+New-Item -ItemType Directory -Force (Split-Path $cfgPath -Parent) | Out-Null
 $old = $null
 if (Test-Path -LiteralPath $cfgPath) { $old = Get-Content -LiteralPath $cfgPath -Raw -Encoding UTF8 | ConvertFrom-Json }
 
@@ -18,6 +20,9 @@ function Ask([string]$label, [string]$default) {
 }
 function Ask-Secret([string]$label, [string]$oldEnc) {
     $hint = ''; if ($oldEnc) { $hint = ' (그대로 두려면 Enter)' }
+    if ($env:FSG_LAUNCHER_PLAINTEXT -eq '1') {   # 시험용(리눅스에는 DPAPI가 없음)
+        $v = Read-Host "$label$hint"; if ([string]::IsNullOrEmpty($v)) { return $oldEnc }; return $v
+    }
     $ss = Read-Host "$label$hint" -AsSecureString
     if ($ss.Length -eq 0) { return $oldEnc }
     return (ConvertFrom-SecureString $ss)
@@ -25,16 +30,24 @@ function Ask-Secret([string]$label, [string]$oldEnc) {
 
 Write-Host ''
 Write-Host '=== FSG 대시보드 올리기 설정 (한 번만) ===' -ForegroundColor Cyan
-Write-Host '입력한 값은 이 PC의 이 Windows 계정으로만 풀 수 있게 암호화되어 저장됩니다.'
+Write-Host '접근 코드와 관리자 비밀번호를 이 PC에 저장할까요?'
+Write-Host '  y = 본인만 쓰는 PC. 이 Windows 계정으로만 풀 수 있게 암호화해 저장 → 이후 아이콘만 누르면 됩니다.'
+Write-Host '  n = 여러 사람이 쓰거나 번갈아 쓰는 PC. 저장하지 않고 올릴 때마다 입력합니다. (기본)'
+$saveAns = Read-Host '저장할까요? (y/N)'
+$save = ($saveAns -match '^[yY]')
 Write-Host ''
-$codeEnc = Ask-Secret '대시보드 접근 코드' $old.codeEnc
-$email   = Ask '관리자 이메일' $old.email
-$pwEnc   = Ask-Secret '관리자 비밀번호' $old.pwEnc
-if (-not $codeEnc -or -not $email -or -not $pwEnc) { throw '접근 코드·관리자 이메일·비밀번호는 모두 필요합니다.' }
+$email = Ask '관리자 이메일' $old.email
+if (-not $email) { throw '관리자 이메일이 필요합니다.' }
+$codeEnc = ''; $pwEnc = ''
+if ($save) {
+    $codeEnc = Ask-Secret '대시보드 접근 코드' $old.codeEnc
+    $pwEnc   = Ask-Secret '관리자 비밀번호' $old.pwEnc
+    if (-not $codeEnc -or -not $pwEnc) { throw '저장하려면 접근 코드와 비밀번호가 모두 필요합니다.' }
+} else { Write-Host '접근 코드·비밀번호는 저장하지 않습니다. 올릴 때마다 물어봅니다.' }
 
 $dl = $null
 try { $dl = (New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path } catch {}
-if (-not $dl) { $dl = Join-Path $env:USERPROFILE 'Downloads' }
+if (-not $dl) { $dl = Join-Path ([Environment]::GetFolderPath('UserProfile')) 'Downloads' }
 $defFolder = $dl; if ($old.folder) { $defFolder = $old.folder }
 Write-Host ''
 Write-Host 'CRM에서 내려받은 파일이 저장되는 폴더입니다. 보통 다운로드 폴더 그대로 두면 됩니다.'
@@ -50,6 +63,7 @@ $cfg = [ordered]@{ codeEnc = $codeEnc; email = $email; pwEnc = $pwEnc; folder = 
 ($cfg | ConvertTo-Json) | Set-Content -LiteralPath $cfgPath -Encoding UTF8
 Write-Host ''
 Write-Host "설정을 저장했습니다: $cfgPath" -ForegroundColor Green
+if ($save) { Write-Host '접근 코드·비밀번호를 암호화해 저장했습니다(이 PC의 이 Windows 계정으로만 사용 가능).' } else { Write-Host '접근 코드·비밀번호는 저장하지 않았습니다.' }
 
 try {
     $desk = [Environment]::GetFolderPath('Desktop')
