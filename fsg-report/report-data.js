@@ -6,7 +6,7 @@
  *
  * 옵션
  *   --period   2026-09 | 2026-07~2026-09 | FY2026Q2   (필수)
- *   --dir      CRM 파일 폴더. 파일명으로 종류를 구분해 가장 최신(파일명 날짜 → 수정 시각)을 쓴다. 활동 파일이 같은 날짜로 여럿이면(40,000행 상한 → 기간 나눠 내보내기) 합친다
+ *   --dir      CRM 파일 폴더. 파일명으로 종류를 구분해 가장 최신(파일명 날짜 → 수정 시각)을 쓴다. 활동 파일이 같은 날짜로 여럿이면 시작 시간 범위로 판정한다 — 이어 붙으면(40,000행 상한 → 기간 나눠 내보내기) 합치고, 같은 기간을 다시 내보낸 것이면 가장 새 파일 하나만 쓴다
  *   --activity 「2. 모든 약속_활동 …xlsx」 직접 지정 (--dir 보다 우선)
  *   --serial   「Serial No …xlsx」 자산대장 (가동 장비 기준 지표: 운영건전성·집중관리대상). --dir 에 있으면 자동
  *   --calendar 설치 공유캘린더 내보내기 「시스템설치_공유캘린더_YYYYMMDD.xlsx」 (4장 설치 현황). --dir 에 있으면 자동
@@ -62,12 +62,12 @@ function main() {
   const rosterSrc = o.roster ? path.resolve(o.roster) : 'fsg-kpi.html ROSTER';
   const roster = o.roster ? loadRosterCsv(o.roster) : loadRosterFromDashboard();
   const cut = o.cut || R.fileDateKey(path.basename(actPath)) || null;
-  const actFiles = (!o.activity && picked && picked.ACT_ALL && picked.ACT_ALL.length > 1) ? picked.ACT_ALL.map(c => c.path) : [actPath];
-  const act = R.mergeActivity(actFiles.map(p => R.parseActivity(fs.readFileSync(p))));
+  const actFiles = (!o.activity && picked && picked.ACT_ALL && picked.ACT_ALL.length > 1) ? picked.ACT_ALL : [{ path: actPath, name: path.basename(actPath), mtime: fs.statSync(actPath).mtimeMs }];
+  const act = R.loadActivity(actFiles);
   const serial = serPath ? R.parseSerial(fs.readFileSync(serPath)) : null;
   const calendar = calPath ? INS.readCalendarRows(table(calPath), R.toMs) : null;
   const rep = buildReport({ raw: act.rows, roster, period, cut, serial, calendar });
-  rep.meta.files = { activity: actFiles.map(p => path.basename(p)).join(' + '), serial: serPath ? path.basename(serPath) : '',
+  rep.meta.files = { activity: (act.used || [path.basename(actPath)]).join(' + '), serial: serPath ? path.basename(serPath) : '',
     calendar: calPath ? path.basename(calPath) : '',
     roster: path.basename(rosterSrc), header: { hasAtt: act.hasAtt, hasFormType: act.hasFormType } };
 
@@ -77,7 +77,7 @@ function main() {
   XLSX.writeFile(buildCheckWorkbook(rep), path.join(out, '검산_' + stem + '.xlsx'));
 
   const k = rep.kpi, m = rep.meta;
-  console.log(`[${m.period.label}] 활동 ${rep.meta.files.activity} · 추출일 ${cut || '(오늘)'} · 로스터 ${path.basename(rosterSrc)}` + (act.merged ? ` · 활동 파일 ${act.merged}개 합침(똑같은 행 ${act.dup}개 제외)` : ''));
+  console.log(`[${m.period.label}] 활동 ${rep.meta.files.activity} · 추출일 ${cut || '(오늘)'} · 로스터 ${path.basename(rosterSrc)}` + (act.merged ? ` · 활동 파일 ${act.merged}개 합침(똑같은 행 ${act.dup}개 제외)` : '') + (act.superseded && act.superseded.length ? ` · ⚠ 같은 기간을 다시 내보낸 파일 ${act.superseded.length}개는 쓰지 않음(최신 파일만 사용): ${act.superseded.join(', ')}` : ''));
   console.log(`행 ${m.rows.raw} → 예정 제외 ${m.excluded.future} · 시각 없음 ${m.excluded.notime} · 취소 ${m.excluded.cancel} · 온라인 정기점검 ${m.excluded.online} → 집계 ${m.rows.counted}` + (act.hasAtt ? '' : '  ⚠ 필수 참석자 열 없음(담당자만 인정)'));
   console.log(`FSG  FTFR ${k.ftfr}% · 재방문율 ${k.revisitRate}% · MTTR ${k.mttr}분 · 예방정비지수 ${k.pmRatio}% · 고장수리 ${k.repairCount} · PM ${k.pmCount} · 재방문(FTFR 실패) ${k.revisitCount}`);
   k.teams.forEach(t => console.log(`  ${t.team.padEnd(10)} FTFR ${t.ftfr ?? '-'} · 재방문율 ${t.revisit ?? '-'} · MTTR ${t.mttr ?? '-'}`));

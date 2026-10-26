@@ -70,16 +70,16 @@ async function main() {
   if (o.help || (!o.dir && !o.activity)) { console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^\/\*|^ \* ?/gm, '')); process.exit(o.help ? 0 : 1); }
   const code = process.env.FSG_KPI_CODE || '', email = process.env.FSG_ADMIN_EMAIL || '', pw = process.env.FSG_ADMIN_PW || '';
   // 입력 파일 (report-data 와 같은 규칙)
-  let actPaths = o.activity ? [o.activity] : null, serPath = o.serial || null;
+  let actFiles = o.activity ? [{ path: o.activity, name: path.basename(o.activity), mtime: fs.statSync(o.activity).mtimeMs }] : null, serPath = o.serial || null;
   if (o.dir) { const picked = R.pickLatest(o.dir);
-    if (!actPaths) { if (!picked.ACT) throw new Error('폴더에서 활동 파일(이름에 "약속_활동")을 찾지 못했습니다: ' + o.dir); actPaths = (picked.ACT_ALL || [picked.ACT]).map(c => c.path); }
+    if (!actFiles) { if (!picked.ACT) throw new Error('폴더에서 활동 파일(이름에 "약속_활동")을 찾지 못했습니다: ' + o.dir); actFiles = picked.ACT_ALL || [picked.ACT]; }
     if (!serPath && picked.SER) serPath = picked.SER.path; }
-  const act = R.mergeActivity(actPaths.map(p => R.parseActivity(fs.readFileSync(p))));
-  const actSrc = actPaths.map(p => path.basename(p)).join(' + ');
+  const act = R.loadActivity(actFiles);
+  const actSrc = (act.used || actFiles.map(f => f.name)).join(' + ');
   const actPayload = encodeAct(act.rows, actSrc);
   let serPayload = null, serSrc = '', serAll = 0;
   if (serPath) { const all = R.parseSerial(fs.readFileSync(serPath)); serAll = all.length; serPayload = encodeSer(all.filter(x => x.state === '사용')); serSrc = path.basename(serPath); }
-  console.log(`활동 ${actSrc}: ${act.rows.length.toLocaleString()}행` + (act.merged ? ` (파일 ${act.merged}개 합침, 똑같은 행 ${act.dup}개 제외)` : '') + (act.hasAtt ? '' : ' ⚠ 필수 참석자 열 없음'));
+  console.log(`활동 ${actSrc}: ${act.rows.length.toLocaleString()}행` + (act.merged ? ` (파일 ${act.merged}개 합침, 똑같은 행 ${act.dup}개 제외)` : '') + (act.superseded && act.superseded.length ? `\n⚠ 같은 기간을 다시 내보낸 파일 ${act.superseded.length}개는 쓰지 않음(최신 파일만 사용): ${act.superseded.join(', ')}` : '') + (act.hasAtt ? '' : ' ⚠ 필수 참석자 열 없음'));
   if (serPayload) console.log(`자산대장 ${serSrc}: 장비 ${serAll.toLocaleString()}대 중 '사용' ${serPayload.used.length.toLocaleString()}대`);
 
   if (o['dry-run']) {
