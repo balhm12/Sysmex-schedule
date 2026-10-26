@@ -4,7 +4,7 @@
  * 월간보고 시트 Apps Script(v45~v52)의 computeKPI_ · computeKpiTrend_ · computeTeamSummary_ · computeCaseAnalysis_ 와 같은 값을 내도록 맞췄다.
  * 입력 행은 read-crm.parseActivity 의 모양(t/e = 벽시계를 UTC ms로 둔 값). 기간 판정은 모두 UTC 게터로 한다. */
 'use strict';
-const { kpiCore } = require('../kpi-core');
+const { kpiCore, buildProdData } = require('../kpi-core');
 const P = require('./period');
 const INS = require('./install');
 
@@ -217,6 +217,27 @@ function buildReport(opt) {
       out[g] = { visit: pct(postPM + postRP, prePM + preRP), repair: pct(postRP, preRP), pm: pct(postPM, prePM), ratio: round1(postR - preR) }; });
     return out; })();
 
+  /* 덱 8장 「FSE KPI 종합점수 TOP 10」 — 대시보드 부서원 KPI 탭과 같은 계산(buildProdData): 행 점수 = 업무 가중치 + 직급 가중치(활동일 기준),
+     담당자+필수 참석자 각각. 기간 vs 직전 같은 길이 기간. 직급 표시는 현재 직급(2026-10-07 결정). opt.prod = { office, gradeHist, newbie } */
+  const peopleKpi = (() => {
+    if (!opt.prod) return null;
+    const pr = opt.prod, office = pr.office || {}, mk = ym => ym.y + '-' + String(ym.m).padStart(2, '0');
+    const units = ['FS WEST', 'FS EAST', 'FS CENTRAL 대전', 'FS CENTRAL 광주', 'FS SOUTH 부산', 'FS SOUTH 대구'];
+    const groups = { 'FS CENTRAL': ['FS CENTRAL 대전', 'FS CENTRAL 광주'], 'FS SOUTH': ['FS SOUTH 부산', 'FS SOUTH 대구'] };
+    const prodRoster = roster.map(r => [r[0], office[r[0]] ? r[1] + ' ' + office[r[0]] : r[1], r[2]]);
+    const len = period.months.length, sel = period.months.map(mk), cmp = [];
+    for (let k = endMk - 2 * len + 1; k <= endMk - len; k++) cmp.push(mk(P.toYM(k)));
+    const gradeNow = {}; roster.forEach(r => gradeNow[r[0]] = r[2]);
+    const newbie = pr.newbie || [];
+    const prod = buildProdData(RAWC, prodRoster, { teams: units, teamGroups: groups, gradeNow, exclAvg: roster.filter(r => r[2] === '팀장' || newbie.indexOf(r[0]) >= 0).map(r => r[0]),
+      gradeHist: pr.gradeHist || [], sel, cmp, labels: { '이번 년도': period.label, '직전 년도': '직전 기간', '전체 누적': '전체 기간' } });
+    const label = u => { const m = String(u || '').match(/^FS (\S+)(?: (\S+))?$/); return m ? (m[2] ? m[1][0] + m[1].slice(1).toLowerCase() + '·' + m[2] : m[1][0] + m[1].slice(1).toLowerCase()) : u; };
+    const list = Object.keys(prod.person).map(n => { const p = prod.person[n], cur = p.score['이번 년도'] || 0, prev = p.score['직전 년도'] || 0;
+      return { name: n, unit: p.team, unitLabel: label(p.team), grade: gradeNow[n] || '', newbie: newbie.indexOf(n) >= 0, score: cur, count: p.total_case['이번 년도'] || 0, prevScore: prev, deltaPct: prev > 0 ? round1((cur / prev - 1) * 100) : null }; })
+      .filter(x => x.score > 0 && !EXCLUDED.includes(x.name)).sort((a, b) => b.score - a.score);
+    return { top: list.slice(0, 10), people: list.length, sel, cmp };
+  })();
+
   /* ⑤ 엔지니어 생산성 — computeEngineerProductivity_ (최근 1년 · 기간), 담당자+필수 참석자 각각, 시간은 종료-시작(제한 없음) */
   const engineer = sel => {
     const per = {};
@@ -317,7 +338,7 @@ function buildReport(opt) {
       rows: { raw: raw.length, afterCut: RAWC.length, counted: rows.length }, excluded,
       unmappedRows: rows.filter(x => !x.credits.length).length, eligibleAccounts: CORE.eligible.length },
     kpi, kpiTrend, team, caseAnalysis,
-    trendCompare, yoy, metro, metroDelta, engYear, engMonth, hospYear, hospMonth, repeatYear, repeatMonth, errYear, errMonth, errRate,
+    trendCompare, yoy, metro, metroDelta, peopleKpi, engYear, engMonth, hospYear, hospMonth, repeatYear, repeatMonth, errYear, errMonth, errRate,
     fleet: fleet ? { activeCount: fleet.activeCount, pmActiveCount: fleet.pmActiveCount } : null, health, focus,
     installBlock,
     inputs: { serial: !!serial, calendar: !!(opt.calendar && opt.calendar.length) },

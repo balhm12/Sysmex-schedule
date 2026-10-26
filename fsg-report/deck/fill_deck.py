@@ -203,7 +203,20 @@ def run(base, data, out):
     er = d['errMonth']['rows'][:4][::-1]
     short = lambda e: re.sub(r' is required| detected', '', e)[:24]
     replace_chart(s[6].chart, [short(r['error']) for r in er], [('건수', [r['count'] for r in er])])
-    SKIP.append('8장 「FSE KPI 종합점수 TOP 10」 표 — 엔진이 부서원 KPI 점수를 내지 않음(대시보드 부서원 KPI 탭에서 가져와야 함)')
+    pk = d.get('peopleKpi')
+    if pk and pk['top']:
+        set_text(s[7], f'FSE KPI 종합점수 TOP 10 ({mo})')
+        rows8 = []
+        for x in pk['top']:
+            dp = x['deltaPct']
+            rows8.append([x['name'], x['unitLabel'], x['grade'], f1(x['score']), str(x['count']), (f"{arrow(dp)}{abs(dp):.1f}%" if dp is not None else '-')])
+        fill_table(s[8].table, rows8)
+        tb8 = s[8].table
+        for i, x in enumerate(pk['top'], start=1):
+            dp = x['deltaPct']
+            if dp is not None and dp != 0: set_cell(tb8.cell(i, 5), f"{arrow(dp)}{abs(dp):.1f}%", color=(GREEN if dp > 0 else RED))
+    else:
+        SKIP.append('8장 「FSE KPI 종합점수 TOP 10」 표 — json 에 peopleKpi 없음(엔진 최신판 필요)')
     REVIEW.append('8장 「분석」 문장 — 병원·장애 요인 순위가 바뀌었으니 새로 써야 함')
     REVIEW.append('8장 표의 「담당」 — 확정 덱은 「FSR 담당자 리스트」의 FSR 이름까지 적었으나 엔진은 방문이 가장 많은 팀만 낸다. FSR 이름이 필요하면 담당자 리스트로 채울 것')
 

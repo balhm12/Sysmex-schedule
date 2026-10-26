@@ -104,6 +104,11 @@ assert.deepStrictEqual([rep.yoy.cur.repair, rep.yoy.cur.pm, rep.yoy.cur.cal], [5
 assert.deepStrictEqual([rep.yoy.prev.repair, rep.yoy.prev.pm, rep.yoy.prev.ratio], [0, 0, null], '1년 전 데이터 없음');
 assert.deepStrictEqual(Object.keys(rep.metroDelta), ['FS WEST', 'FS EAST', 'WEST+EAST', 'FSG']);
 assert.strictEqual(rep.metroDelta.FSG.repair, TC.rpDelta, 'FSG 전체 수리 변화 = 트렌드 비교와 같음'); assert.strictEqual(rep.metroDelta.FSG.pm, TC.pmDelta);
+// 부서원 KPI(대시보드 buildProdData 와 같은 계산) — 합성 데이터로 모양과 정렬만 확인
+const rp = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-09', cut: '2026-09-30', prod: { office: {}, gradeHist: [], newbie: [] } });
+assert(rp.peopleKpi && rp.peopleKpi.top.length >= 1, '부서원 KPI 상위 목록');
+rp.peopleKpi.top.forEach((x, i, arr) => { assert(x.score > 0 && typeof x.unitLabel === 'string' && typeof x.count === 'number'); if (i) assert(arr[i - 1].score >= x.score, '점수 내림차순'); });
+assert.strictEqual(rep.peopleKpi, null, 'prod 상수를 주지 않으면 계산하지 않음');
 rep.hospMonth.forEach(h => assert(typeof h.team === 'string')); rep.repeatMonth.forEach(r => assert(typeof r.team === 'string'));
 assert.deepStrictEqual(TC.postKeyLabels, ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09']);
 const M = rep.metro; assert.strictEqual(M.rows.length, 12);
