@@ -74,7 +74,10 @@ try {
         & node 'fsg-report/report-data.js' '--period' $per '--dir' $cfg.folder '--out' $outDir
         if ($LASTEXITCODE -eq 0) {
             Write-Host "보고서 데이터: $outDir  (report-data_$per.json · 검산_$per.xlsx)" -ForegroundColor Green
-            Write-Host '보고서를 만들 때 이 두 파일을 Claude에 올리세요. 다른 기간(분기 등)은 README의 report-data 명령을 쓰세요.'
+            # 고객 만족도(VOC 대시보드) 월 집계도 같은 json 에 합쳐 넣는다 — 실패해도 나머지는 정상
+            & node 'fsg-report/voc-summary.js' '--period' $per '--out' $outDir
+            if ($LASTEXITCODE -ne 0) { Write-Host '만족도 집계는 건너뜀(보고 데이터는 정상). 위 메시지를 확인하세요.' -ForegroundColor Yellow }
+            Write-Host '보고서를 만들 때 report-data 파일(과 검산 xlsx)을 Claude에 올리세요. 다른 기간(분기 등)은 README의 report-data 명령을 쓰세요.'
         } else {
             Write-Host '보고서 데이터 만들기는 실패했습니다(대시보드 올리기는 정상 완료). 위 메시지를 확인하세요.' -ForegroundColor Yellow
         }

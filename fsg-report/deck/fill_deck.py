@@ -32,7 +32,7 @@ def mnum(label): return int(label.split('-')[1])
 def yymm(label): return label[2:]
 
 
-def run(base, data, out):
+def run(base, data, out, fca=None):
     prs = Presentation(base)
     S = [list(s.shapes) for s in prs.slides]
     d = data
@@ -107,7 +107,48 @@ def run(base, data, out):
     else:
         SKIP.append('4장 설치 표 — json 에 installBlock 없음(캘린더·Serial 필요)')
     REVIEW.append('4장 하단 각주(「모듈·구성 모델 중복 제외(v50) · 캘린더 미등록 N곳…」) — 수동입력 폐지 후 규칙(캘린더 장비 표기·자동 연결)으로 문구를 고칠 것')
-    SKIP.append('4장 「주요 기관 설치」·「다음 달 설치 예정」 두 표와 「포인트」 문장 — 엔진이 다음 달 일정을 내지 않아 사람이 확인')
+    if ib:
+        import datetime
+        WD = '월화수목금토일'
+        def md(iso): y, mo, dd = iso.split('-'); return f'{int(mo)}/{int(dd)}'
+        def when(j):
+            a_, b_ = j['start'], j['end']
+            if a_ == b_:
+                wd = datetime.date.fromisoformat(a_).weekday()
+                return md(a_) + (f' ({WD[wd]})' if wd >= 5 else '')
+            return f'{md(a_)}~{md(b_)}'
+        big = [j for j in ib['summary']['jobs'] if re.search(r'(XR|XN)-?9\d{3}', j.get('sys') or '')]
+        big.sort(key=lambda j: (j['start'], j['acct']))
+        rows_big = []
+        for j in big:
+            models = []
+            for tok in re.split(r'\s*,\s*', j['sys']):
+                nm = re.sub(r'\s*\(이전\)\s*', '', tok).strip()
+                if nm and nm not in models: models.append(nm)
+            equip = ' · '.join(models) + (' 재구성' if '재구성' in (j.get('cal') or '') else '')
+            moved = j['kind'] == '이전설치' or '(이전)' in j['sys'].split(',')[0]
+            rows_big.append([when(j), short_acct(j['acct']), equip, f"{TEAM_SHORT.get(j['team'], j['team'])} · {'이전' if moved else '신규'}"])
+        if rows_big:
+            fill_table(s[9].table, rows_big)
+            set_text(s[5], re.sub(r'— \d+월 \d+곳', f'— {m}월 {len(rows_big)}곳', s[5].text_frame.text))
+        else:
+            SKIP.append('4장 「주요 기관 설치」 표 — System급 설치 작업이 없음(표를 그대로 둠)')
+    np_ = d.get('nextPlan')
+    if np_:
+        nm_ = np_['month']
+        set_text(s[6], f'{nm_}월 설치 예정 (설치일정표 · 기관 수)')
+        sysbyteam = {}
+        for x in np_['systems']: sysbyteam.setdefault(x['team'], []).append(f"{re.sub(r'(의료재단|병원)$', '', short_acct(x['acct'])).strip()} {x['model']}" + (' 이전' if x['gubun'] == '이전설치' else ''))
+        rows_np = []
+        for t in ['FS EAST', 'FS WEST', 'FS SOUTH', 'FS CENTRAL']:
+            b_ = np_['byTeam'].get(t, {'inst': 0, 'move': 0})
+            rows_np.append([None, f"{b_['inst']}곳", f"{b_['move']}곳", ' · '.join(sysbyteam.get(t, [])[:2]) or '—'])
+        rows_np.append([None, f"{np_['total']['inst']}곳", f"{np_['total']['move']}곳", f"System급 {len(np_['systems'])}건"])
+        fill_table(s[10].table, rows_np)
+        REVIEW.append(f'4장 「{nm_}월 설치 예정」 표의 「주요 일정」 — System급만 자동 기재(팀당 최대 2건). 그 밖의 주요 기관은 사람이 보충')
+    else:
+        SKIP.append('4장 「다음 달 설치 예정」 표 — json 에 nextPlan 없음(캘린더 필요)')
+    REVIEW.append('4장 「포인트」 문장(설치 집중·집계 제외) — 새 숫자로 새로 써야 함')
 
     # ── 5. 케이스 분석
     s = S[4]
@@ -251,7 +292,72 @@ def run(base, data, out):
     else:
         SKIP.append('10장 운영 건전성 — json 에 health 없음(Serial 필요)')
     REVIEW.append('10장 Insight·「업무량 편차 진단」 문장 — 새로 써야 함')
-    SKIP.append('9장 FCA · 11장 만족도 · 12장 결과/Next Step — 별도 자료(FCA 발표 엑셀·VOC 월별보고)가 필요해 건드리지 않음')
+    # ── 11. 고객 만족도조사 — VOC 대시보드 월 집계(satisfaction)
+    sat = d.get('satisfaction')
+    if sat and sat.get('n'):
+        s = S[10]
+        set_text(s[1], f'고객 만족도조사 ({mo})')
+        y0, m0 = label[:4], label[5:7]
+        import calendar as _cal
+        last_day = _cal.monthrange(int(y0), int(m0))[1]
+        first_m = sat.get('startMonth') and sat['startMonth'][:7] == label
+        set_text(s[2], f"방문 서비스 만족도 조사{' — 정식 운영 첫 달' if first_m else ''} ({y0}-{m0}-01 ~ {m0}-{last_day} · 점검·A/S 방문 대상 · 데이터: VOC 대시보드)")
+        t4 = s[4].table; set_cell(t4.cell(0, 1), mo)
+        rr = f"{sat['responseRate']:.1f}%" if sat.get('responseRate') is not None else '-'
+        fill_table(t4, [[None, f"{sat['n']}건 · {rr}"], [None, f"{sat['avg']:.2f} / 5.0"], [None, ' · '.join(f"{x:.2f}" for x in sat['q']) + ' (신속·전문·응대)'],
+                        [None, f"{sat['perfectPct']:.1f}%"], [None, f"{sat['low']}건"]])
+        rows6 = []
+        for t in sat['teams']:
+            rr_t = f"{t['responseRate']:.1f}%" if t.get('responseRate') is not None else '-'
+            rows6.append([None, f"{t['n']}건 · {rr_t}", (f"{t['avg']:.2f}" if t.get('avg') is not None else '-')])
+        rows6.append([None, f"{sat['n']}건 · {rr}", f"{sat['avg']:.2f}"])
+        fill_table(s[6].table, rows6)
+        set_text(s[7], f"응답률 분모 = 고장수리·PM 방문 {sat['visits']:,}건 · 팀 단위 집계(개인 미포함)")
+        set_text(s[8], f"고객 VOC 포커스 — 서술형 {sat['commentTotal']}건 중 직접 언급 빈도")
+        for lab_i, val_i in ((9, 10), (11, 12), (13, 14), (15, 16)):
+            word = s[lab_i].text_frame.text.strip().strip('"“”')
+            k = sat['keywords'].get(word)
+            if k is None: SKIP.append(f'11장 키워드 「{word}」 — json 의 keywords 에 없음(voc-summary --keywords 로 추가)'); continue
+            desc = s[val_i].text_frame.text.split('·', 1)[1].strip() if '·' in s[val_i].text_frame.text else ''
+            set_text(s[val_i], f"{k['n']}건 ({k['pct']:.0f}%)" + (f' · {desc}' if desc else ''))
+        if sat.get('lastDay'):
+            ld = sat['lastDay'][5:].replace('-', '/').lstrip('0').replace('/0', '/')
+            set_text(s[17], re.sub(r'\(화면: [^)]*\)', f"(화면: {int(sat['firstDay'][5:7])}/{int(sat['firstDay'][8:10])}~{ld} 누적)", s[17].text_frame.text))
+        REVIEW.append('11장 응답률은 대시보드 규칙(같은 방문의 중복 응답은 한 번, 방문건수 집계 기준일까지) — 이전 덱의 「응답 수 ÷ 방문」과 정의가 달라 값이 다를 수 있으니 각주로 밝힐 것. 키워드 설명(· 뒤 문구)은 이전 달 그대로')
+    else:
+        SKIP.append('11장 만족도 — json 에 satisfaction 이 없거나 응답이 없음(voc-summary.js 를 먼저 실행)')
+    # ── 9. FCA — 사용자가 직접 관리하는 FCA 현황 엑셀(--fca)
+    if fca:
+        s = S[8]
+        import calendar as _c2
+        end_day = _c2.monthrange(int(label[:4]), m)[1]; asof_txt = f'{label[:4]}-{label[5:7]}-{end_day:02d}'
+        cn = fca['counts']
+        set_text(s[4], f"{fca['total']}건")
+        set_text(s[5], f"완료 {cn['완료']} · 진행 {cn['진행 중']} · 안내 {cn['안내문 발송']} · 필요 시 {cn['필요 시']}")
+        set_text(s[8], f"{fca['target']}대"); set_text(s[9], ' · '.join(f'{k} {v}' for k, v in fca['byModel'].items()))
+        set_text(s[12], f"{fca['done']}대 ({fca['donePct']}%)")
+        openi = [i for i in fca['items'] if i['status'] == '진행 중']
+        set_text(s[13], f"잔여 {fca['remain']}대" + (' — ' + ', '.join(f"{i['modelShort']} ({i['no']})" for i in openi) if openi else ''))
+        if fca['top']:
+            t_ = fca['top']; ttl = re.sub(r'\s*Incident', '', t_['title']); ttl = re.sub(r'\s+\(', '(', ttl)
+            set_text(s[16], f"{t_['modelShort']} {t_['no']}")
+            set_text(s[17], f"{ttl} · 잔여 {(t_['target'] or 0) - (t_['done'] or 0)}대" + (f" · ~{t_['end'].month}/{t_['end'].day}" if t_['end'] else ''))
+        def per(i):
+            f = lambda dt: f"{dt.year % 100:02d}.{dt.month:02d}.{dt.day:02d}"
+            if i['start'] and i['end']: return f"{f(i['start'])} ~ {f(i['end'])}"
+            if i['end']: return f"~ {f(i['end'])}"
+            return {'안내문 발송': '고객 안내', '필요 시': '필요 시 적용'}.get(i['status'], '-')
+        rows9 = [[i['no'], i['field'], i['model'], (i['title'] if len(i['title']) <= 26 else i['title'][:25] + '…'), per(i),
+                  (str(i['target']) if i['target'] else '—'), (str(i['done']) if i['done'] is not None else '—'), (f"{i['rate']}%" if i['rate'] is not None else '해당 없음'), i['status']] for i in fca['items']]
+        fill_table(s[19].table, rows9)
+        set_text(s[1], re.sub(r'\(\d{4}-\d{2}-\d{2} 기준\)', f'({asof_txt} 기준)', s[1].text_frame.text))
+        set_text(s[24], re.sub(r'FY26 1H FCA 현황\(\d+/\d+\)', f'FY26 1H FCA 현황({m}/{end_day})', s[24].text_frame.text))
+        for w in fca.get('warnings', []): SKIP.append('9장 FCA 엑셀 주의 — ' + w)
+        SKIP.append('9장 SP-50 부품 교체 표 — 별도 진행표(SP-50 팀별 Holder·Sensor)가 필요해 그대로 둠')
+        REVIEW.append('9장 「추진 계획」 문장 — 새 달 기준으로 새로 써야 함. 표의 제목은 26자를 넘으면 줄였으니 확인')
+    else:
+        SKIP.append('9장 FCA — FCA 현황 엑셀을 --fca 로 주지 않음')
+    SKIP.append('12장 결과/Next Step — 문장이라 건드리지 않음')
 
     # 표지·12장 월 표기는 건드리지 않음 — 월이 바뀌면 사람이 확인
     prs.save(out)
@@ -259,11 +365,15 @@ def run(base, data, out):
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument('base'); ap.add_argument('json'); ap.add_argument('-o', '--out')
+    ap = argparse.ArgumentParser(); ap.add_argument('base'); ap.add_argument('json'); ap.add_argument('-o', '--out'); ap.add_argument('--fca', help='FY26 FCA 현황 엑셀(9장)')
     a = ap.parse_args()
     data = json.load(open(a.json, encoding='utf8'))
     out = a.out or os.path.join(os.getcwd(), 'filled_' + os.path.basename(a.base))
-    run(a.base, data, out)
+    fca = None
+    if a.fca:
+        from fca import read_fca
+        fca = read_fca(a.fca)
+    run(a.base, data, out, fca)
     print('saved:', out)
     print('\n[건너뜀 — json 에 없거나 이 도구가 다루지 않음]'); [print(' -', x) for x in SKIP]
     print('\n[검토 필요 — 사람이 새로 써야 하는 문장]'); [print(' -', x) for x in REVIEW]

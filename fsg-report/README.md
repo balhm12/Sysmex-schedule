@@ -82,15 +82,23 @@ Colab 연결이 불안하거나 Drive 데스크톱 앱을 못 쓰는 PC용이다
 - PowerShell 스크립트 실행이 회사 정책으로 막혀 있으면 오류가 나온다. 그때는 위 「대시보드 올리기」의 PowerShell 명령을 직접 입력해도 같은 결과다(`node fsg-report/push-dashboard.js --dir 폴더`).
 - 리눅스용 PowerShell로 파일 찾기·오래된 파일 경고·오류 안내까지는 시험했다. 암호화 저장(DPAPI)·바탕화면 아이콘·실제 업로드는 윈도우에서 처음 실행할 때 확인한다. 저장 안 함/저장 두 방식의 입력·환경변수 전달은 리눅스 PowerShell과 가짜 node로 시험했다.
 
+## 고객 만족도 집계 (`voc-summary.js`)
+VOC 공개 대시보드(`voc-dashboard.html`)가 읽는 Firebase `/voc-dashboard/data`를 같은 익명 로그인으로 내려받아 보고서 11장용 값(응답 수·응답률·종합·문항별·만점 비율·저점수·팀별·서술형 키워드)을 만든다. 응답률은 대시보드와 같은 규칙(같은 FSR·기관·날짜 응답은 한 방문, 방문건수 집계 기준일까지). 개인(FSR) 단위는 내지 않는다.
+```
+node fsg-report/voc-summary.js --period 2026-09 [--out 폴더] [--keywords 친절,신속,설명,꼼꼼] [--file data.json]
+```
+바탕화면 아이콘이 `report-data` 뒤에 이어서 실행해 같은 json에 `satisfaction`으로 합쳐 넣는다(실패해도 나머지는 정상). 시험은 합성 데이터로 했고, **실제 Firebase 읽기는 PC에서 처음 실행할 때 확인한다.**
+
 ## 월간 덱 자동 채움 (`deck/fill_deck.py`)
 `report-data_<기간>.json`과 **전월 확정 덱(베이스)** 을 넣으면 확정 12장 덱의 숫자·표·차트를 한 번에 바꾼다(python-pptx 필요, PC가 아니라 Claude 쪽에서 돌린다).
 ```
-python fsg-report/deck/fill_deck.py 전월확정덱.pptx report-data_2026-10.json -o 결과.pptx
+python fsg-report/deck/fill_deck.py 전월확정덱.pptx report-data_2026-10.json --fca FY26_FCA_현황.xlsx -o 결과.pptx
 ```
-- 바꾸는 곳: 2 핵심 요약 카드 · 3 팀 표·KPI 카드·차트 · 4 설치 표 · 5 케이스 분석 · 6 트렌드 비교(전년 대비 포함) · 7 수도권(개편 전 대비 포함) · 8 병원·반복 고장·장애 요인·FSE KPI TOP10 · 10 에러율·운영 건전성(전월 대비 포함).
-- 안 바꾸는 곳: 9 FCA · 11 만족도 · 12 Next Step(별도 자료), 이슈·대책·분석 같은 **판단 문장**. 실행 끝에 「건너뜀」(json에 없는 값)과 「검토 필요」(사람이 새로 써야 하는 문장) 목록이 나온다.
-- 엔진이 덱을 위해 내는 값: `peopleKpi`(8장 FSE KPI TOP10 — 대시보드 부서원 KPI 와 같은 계산) · `yoy`(전년 동월) · `metroDelta`(수도권 개편 전후 팀별) · `prev`(전월 건전성·KPI) · 병원/반복 고장 TOP5의 `team`·`modelAlt`.
-- 아직 엔진이 못 내는 것: 8장 표의 FSR 이름(FSR 담당자 리스트), 4장 「주요 기관 설치」·「다음 달 설치 예정」 표.
+`--fca`는 사용자가 직접 관리하는 FY26 FCA 현황 엑셀(`FCA` 시트: No·분야·제목·적용 Model·Start/End Day·장비 대수·진행 완료)이다. 머리글을 키워드로 찾아 읽고(`deck/fca.py`), 못 찾은 열은 실행 끝에 알려 준다.
+- 바꾸는 곳: 2 핵심 요약 카드 · 3 팀 표·KPI 카드·차트 · 4 설치 표(주요 기관 System·다음 달 설치 예정 포함) · 5 케이스 분석 · 6 트렌드 비교(전년 대비 포함) · 7 수도권(개편 전 대비 포함) · 8 병원·반복 고장·장애 요인·FSE KPI TOP10 · 10 에러율·운영 건전성(전월 대비 포함).
+- 안 바꾸는 곳: 12 Next Step, 9장 SP-50 부품 교체 표(별도 진행표), 이슈·대책·분석·추진 계획 같은 **판단 문장**. 9장 FCA는 `--fca`, 11장 만족도는 json 의 `satisfaction`(voc-summary)으로 채운다. 실행 끝에 「건너뜀」(json에 없는 값)과 「검토 필요」(사람이 새로 써야 하는 문장) 목록이 나온다.
+- 엔진이 덱을 위해 내는 값: `peopleKpi`(8장 FSE KPI TOP10 — 대시보드 부서원 KPI 와 같은 계산) · `yoy`(전년 동월) · `metroDelta`(수도권 개편 전후 팀별) · `prev`(전월 건전성·KPI) · `nextPlan`(다음 달 설치 예정) · 병원/반복 고장 TOP5의 `team`·`modelAlt`.
+- 아직 엔진이 못 내는 것: 8장 표의 FSR 이름(FSR 담당자 리스트).
 
 ## 시트와 같은 숫자가 나오는지 검산
 ```powershell
