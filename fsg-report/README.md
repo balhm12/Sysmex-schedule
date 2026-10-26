@@ -62,6 +62,19 @@ node fsg-report/report-data.js --period FY2026Q2 --activity "2. 모든 약속_�
 - `--cut` CRM 추출일. 없으면 활동 파일명의 날짜. 그 뒤로 잡힌 예정 약속을 뺀다(대시보드·시트와 같은 규칙)
 - 출력: `fsg-report/out/report-data_<기간>.json`(PPT 빌더 입력), `검산_<기간>.xlsx`(시트 정제 탭과 같은 배치), 콘솔 요약
 
+## Windows에서 더블클릭으로 올리기 (Drive 데스크톱 앱 없이)
+Colab 연결이 불안하거나 Drive 데스크톱 앱을 못 쓰는 PC용이다. CRM에서 내려받은 파일이 쌓이는 **다운로드 폴더를 그대로** 읽는다.
+1. 최신 코드로 맞춘다(한 번): `cd $HOME\Sysmex-engine` → `git fetch origin` → `git checkout main` → `git pull` → `npm install`
+2. `fsg-report\windows\setup.bat` 을 더블클릭한다(한 번). 접근 코드 · 관리자 이메일 · 관리자 비밀번호 · CRM 파일 폴더(기본: 다운로드) · (선택) Drive `CRM_원본` 폴더 주소를 묻고, 바탕화면에 **「FSG 대시보드 올리기」** 아이콘을 만든다.
+3. 평소에는 CRM에서 「2. 모든 약속/활동」(필요하면 「Serial No」도)을 내려받고 → 바탕화면 아이콘을 더블클릭한다. 끝나면 파일 위치와 Drive 폴더가 함께 열리니, 같은 파일을 Drive 창으로 끌어다 놓으면 만족도 시트가 2시간 안에 자동 반영한다.
+
+- 접근 코드·비밀번호는 이 PC의 이 Windows 계정으로만 풀 수 있게 암호화(DPAPI)해 `%LOCALAPPDATA%\fsg-kpi\config.json`에 저장한다. 저장소·Drive에는 올라가지 않는다. 비밀번호를 바꿨으면 `setup.bat`을 다시 실행한다.
+- 활동 파일이 8일 넘게 오래됐으면 "그래도 올릴까요?"를 묻는다. 모르고 예전 파일을 올리는 일을 막는다.
+- 실행할 때마다 `git pull`로 엔진을 최신으로 맞춘다(실패하면 현재 버전으로 진행).
+- 같은 날 다시 내보낸 파일 처리(최신 하나만)는 위 규칙 그대로다.
+- PowerShell 스크립트 실행이 회사 정책으로 막혀 있으면 오류가 나온다. 그때는 위 「대시보드 올리기」의 PowerShell 명령을 직접 입력해도 같은 결과다(`node fsg-report/push-dashboard.js --dir 폴더`).
+- 리눅스용 PowerShell로 파일 찾기·오래된 파일 경고·오류 안내까지는 시험했다. 암호화 저장·아이콘 만들기·실제 업로드는 윈도우에서 처음 실행할 때 확인한다.
+
 ## 시트와 같은 숫자가 나오는지 검산
 ```powershell
 # Google 시트에서 「FSG 보고서 › 데이터 정제 실행」을 돌린 직후, 파일 › 다운로드 › Microsoft Excel(.xlsx)
@@ -86,6 +99,6 @@ S/N 칸이 0이면 장비 없음(재방문 판정·반복 고장·가동 장비�
 ## 파일
 - `kpi-core.js` 생성 파일(수정 금지) ← `tools/extract-kpi-core.js`
 - `lib/read-crm.js` CRM xlsx 읽기(대시보드 parseActivity 포팅) · `lib/period.js` 기간 표기 · `lib/report-core.js` 집계 · `lib/write-check.js` 검산 워크북
-- `report-data.js` CLI · `push-dashboard.js` 대시보드 올리기 · `compare-sheet.js` 시트 대조 · `colab_report.ipynb` Drive 폴더 → 보고 데이터(PC 없이) · `colab_compare.ipynb` 시트 검산(PC 없이)
+- `report-data.js` CLI · `push-dashboard.js` 대시보드 올리기(`windows/`는 Windows 더블클릭 도구) · `compare-sheet.js` 시트 대조 · `colab_report.ipynb` Drive 폴더 → 보고 데이터(PC 없이) · `colab_compare.ipynb` 시트 검산(PC 없이)
 - 테스트: `tests/test_kpi_core_sync.js` `tests/test_report_engine.js` `tests/test_report_tools.js` (`npm test`)
 - `out/`·`data/`·xlsx·csv는 커밋하지 않는다(.gitignore) — 거래처명·직원 실명이 들어간다
