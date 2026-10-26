@@ -98,6 +98,13 @@ assert.strictEqual(q.caseAnalysis.prevLabel, '2026-08', '상관표 비교는 기
 const TC = rep.trendCompare;
 assert.deepStrictEqual([TC.prePM, TC.preRP, TC.postPM, TC.postRP], [0.1, 0.1, 0.5, 1], '개편 전 1/12 · 후(2026-04~09) PM 3/6, 수리 6/6');
 assert.deepStrictEqual([TC.pmDelta, TC.rpDelta, TC.prePMRatio, TC.postPMRatio, TC.pmRatioDelta], [500, 1100, 50, 33.3, -16.7]);
+// 덱용 추가 값 — 전년 동월 · 수도권 개편 전후 팀별 변화 · TOP5 담당 팀
+assert.deepStrictEqual([rep.yoy.prevLabel, rep.yoy.curLabel], ['2025-09', '2026-09']);
+assert.deepStrictEqual([rep.yoy.cur.repair, rep.yoy.cur.pm, rep.yoy.cur.cal], [5, 3, 1], '당월 = 케이스분석 2026-09 행과 같음');
+assert.deepStrictEqual([rep.yoy.prev.repair, rep.yoy.prev.pm, rep.yoy.prev.ratio], [0, 0, null], '1년 전 데이터 없음');
+assert.deepStrictEqual(Object.keys(rep.metroDelta), ['FS WEST', 'FS EAST', 'WEST+EAST', 'FSG']);
+assert.strictEqual(rep.metroDelta.FSG.repair, TC.rpDelta, 'FSG 전체 수리 변화 = 트렌드 비교와 같음'); assert.strictEqual(rep.metroDelta.FSG.pm, TC.pmDelta);
+rep.hospMonth.forEach(h => assert(typeof h.team === 'string')); rep.repeatMonth.forEach(r => assert(typeof r.team === 'string'));
 assert.deepStrictEqual(TC.postKeyLabels, ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09']);
 const M = rep.metro; assert.strictEqual(M.rows.length, 12);
 assert.deepStrictEqual(M.rows[5], ['2026-09', 'WEST', 2, 1]); assert.deepStrictEqual(M.rows[11], ['2026-09', 'EAST', 1, 4]); assert.deepStrictEqual(M.rows[10], ['2026-08', 'EAST', 0, 1]);

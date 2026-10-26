@@ -82,6 +82,16 @@ Colab 연결이 불안하거나 Drive 데스크톱 앱을 못 쓰는 PC용이다
 - PowerShell 스크립트 실행이 회사 정책으로 막혀 있으면 오류가 나온다. 그때는 위 「대시보드 올리기」의 PowerShell 명령을 직접 입력해도 같은 결과다(`node fsg-report/push-dashboard.js --dir 폴더`).
 - 리눅스용 PowerShell로 파일 찾기·오래된 파일 경고·오류 안내까지는 시험했다. 암호화 저장(DPAPI)·바탕화면 아이콘·실제 업로드는 윈도우에서 처음 실행할 때 확인한다. 저장 안 함/저장 두 방식의 입력·환경변수 전달은 리눅스 PowerShell과 가짜 node로 시험했다.
 
+## 월간 덱 자동 채움 (`deck/fill_deck.py`)
+`report-data_<기간>.json`과 **전월 확정 덱(베이스)** 을 넣으면 확정 12장 덱의 숫자·표·차트를 한 번에 바꾼다(python-pptx 필요, PC가 아니라 Claude 쪽에서 돌린다).
+```
+python fsg-report/deck/fill_deck.py 전월확정덱.pptx report-data_2026-10.json -o 결과.pptx
+```
+- 바꾸는 곳: 2 핵심 요약 카드 · 3 팀 표·KPI 카드·차트 · 4 설치 표 · 5 케이스 분석 · 6 트렌드 비교(전년 대비 포함) · 7 수도권(개편 전 대비 포함) · 8 병원·반복 고장·장애 요인 · 10 에러율·운영 건전성(전월 대비 포함).
+- 안 바꾸는 곳: 9 FCA · 11 만족도 · 12 Next Step(별도 자료), 이슈·대책·분석 같은 **판단 문장**. 실행 끝에 「건너뜀」(json에 없는 값)과 「검토 필요」(사람이 새로 써야 하는 문장) 목록이 나온다.
+- 엔진이 덱을 위해 내는 값: `yoy`(전년 동월) · `metroDelta`(수도권 개편 전후 팀별) · `prev`(전월 건전성·KPI) · 병원/반복 고장 TOP5의 `team`·`modelAlt`.
+- 아직 엔진이 못 내는 것: 8장 「FSE KPI 종합점수 TOP 10」(대시보드 부서원 KPI), 8장 표의 FSR 이름(FSR 담당자 리스트), 4장 「주요 기관 설치」·「다음 달 설치 예정」 표.
+
 ## 시트와 같은 숫자가 나오는지 검산
 ```powershell
 # Google 시트에서 「FSG 보고서 › 데이터 정제 실행」을 돌린 직후, 파일 › 다운로드 › Microsoft Excel(.xlsx)
