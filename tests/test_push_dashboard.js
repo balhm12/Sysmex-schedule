@@ -42,6 +42,18 @@ const dash = { open_: ctx.open_, decodeEmbed: ctx.decodeEmbed, decodeSer: ctx.de
   assert.strictEqual(recs[3].sn, '', 'S/N 0 → 장비 없음'); assert.strictEqual(recs[4].att, 'C');
   assert.deepStrictEqual(JSON.parse(JSON.stringify(dash.decodeSer(J.ser))), [{ state: '사용', acct: 'H1', sn: 'S1', model: 'XN-1000' }, { state: '사용', acct: 'H3', sn: '', model: 'CN-3000' }]);
 
+  // 1-b) 같은 날 다시 내보낸 활동 파일은 최신 하나만 올린다(이중 계산 방지) · 이어 붙은 분할 파일은 합친다
+  const wAct = (d, name, list) => { const w = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(w, XLSX.utils.aoa_to_sheet([H, ...list]), '약속'); XLSX.writeFile(w, path.join(d, name)); };
+  const dRe = path.join(tmp, 're'); fs.mkdirSync(dRe);
+  wAct(dRe, '2. 모든 약속_활동 2026_09_30 AM 09-00-00.xlsx', rows.map((r, i) => i === 2 ? Object.assign(r.slice(), { 0: '시작됨' }) : r)); wAct(dRe, '2. 모든 약속_활동 2026_09_30 PM 03-00-00.xlsx', rows);
+  const dryRe = cp.spawnSync(process.execPath, [cli, '--dir', dRe, '--dry-run', '--out', path.join(tmp, 're.json')], { encoding: 'utf8' });
+  assert.strictEqual(dryRe.status, 0, dryRe.stderr); assert(/다시 내보낸 파일 1개는 쓰지 않음/.test(dryRe.stdout), dryRe.stdout);
+  const jRe = JSON.parse(fs.readFileSync(path.join(tmp, 're.json'), 'utf8')); assert.strictEqual(jRe.act.n, 12, '최신 파일의 12행만'); assert.strictEqual(jRe.meta.actSrc, '2. 모든 약속_활동 2026_09_30 PM 03-00-00.xlsx');
+  const dSp = path.join(tmp, 'sp'); fs.mkdirSync(dSp);
+  wAct(dSp, '2. 모든 약속_활동 2026_09_30 AM 10-00-00 (1).xlsx', rows.slice(0, 6)); wAct(dSp, '2. 모든 약속_활동 2026_09_30 AM 10-00-01 (2).xlsx', rows.slice(5));
+  const drySp = cp.spawnSync(process.execPath, [cli, '--dir', dSp, '--dry-run', '--out', path.join(tmp, 'sp.json')], { encoding: 'utf8' });
+  assert.strictEqual(drySp.status, 0, drySp.stderr); assert(/파일 2개 합침, 똑같은 행 1개 제외/.test(drySp.stdout), drySp.stdout); assert.strictEqual(JSON.parse(fs.readFileSync(path.join(tmp, 'sp.json'), 'utf8')).act.n, 12, '12행 합침');
+
   // 2) 가짜 Firebase 에 올리기: 경로·백업·meta·코드 검사
   const store = {}, log = [];
   const srv = http.createServer((req, res) => {

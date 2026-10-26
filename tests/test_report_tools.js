@@ -111,16 +111,35 @@ assert(fs.existsSync(path.join(out, '검산_2026-09.xlsx')));
 assert(/가동 장비 지표 없음/.test(res.stdout), 'Serial 없으면 안내');
 const swb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(swb, XLSX.utils.aoa_to_sheet([SER_H, ...serRows]), 'Serial'); XLSX.writeFile(swb, path.join(dir, 'Serial No 2026_09_30.xlsx'));
 const cwb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(cwb, XLSX.utils.aoa_to_sheet([CASE_H, ...caseRows]), 'case'); XLSX.writeFile(cwb, path.join(dir, '1. 모든 서비스 케이스 2026_09_30.xlsx')); // 폴더에 있어도 무시
-// CRM 내보내기 상한(40,000행) 대비: 같은 추출일 파일이 여럿이면 합치고 똑같은 행은 한 번만 — 절반 중복 + 새 행 1개
-const extra = row('B', 'PM', 'H9', 'S9', 'SP-50', T(2026, 9, 27, 10), T(2026, 9, 27, 11), 'E1');
-const awb2 = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(awb2, XLSX.utils.aoa_to_sheet([H, ...rows.slice(0, 10), extra]), '약속');
-XLSX.writeFile(awb2, path.join(dir, '2. 모든 약속_활동 2026_09_30 AM 10-05-00 (2).xlsx'));
 const res2 = cp.spawnSync(process.execPath, [cli, '--period', '2026-09', '--dir', dir, '--roster', path.join(tmp, 'roster.csv'), '--out', out], { encoding: 'utf8' });
 assert.strictEqual(res2.status, 0, res2.stderr); assert(/가동 장비 4대/.test(res2.stdout), '폴더의 Serial 자동 사용: ' + res2.stdout);
 const json2 = JSON.parse(fs.readFileSync(path.join(out, 'report-data_2026-09.json'), 'utf8'));
 assert.strictEqual(json2.meta.files.serial, 'Serial No 2026_09_30.xlsx'); assert.strictEqual(json2.meta.files.cases, undefined, '케이스 파일은 쓰지 않음'); assert(json2.hospMonth.length >= 1);
-assert.strictEqual(json2.meta.rows.raw, json.meta.rows.raw + 1, '활동 파일 2개 합치기: 중복 10행 제외 + 새 행 1'); assert(/\+ 2\. 모든 약속_활동 2026_09_30 AM 10-05-00 \(2\)\.xlsx/.test(json2.meta.files.activity), json2.meta.files.activity); assert(/활동 파일 2개 합침/.test(res2.stdout));
+
+// 같은 날짜 활동 파일이 여럿일 때 (CRM 내보내기 40,000행 상한 ↔ 같은 날 다시 내보내기)
+const writeAct = (d, name, list) => { const w = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(w, XLSX.utils.aoa_to_sheet([H, ...list]), '약속'); XLSX.writeFile(w, path.join(d, name)); };
+const runDir = d => cp.spawnSync(process.execPath, [cli, '--period', '2026-09', '--dir', d, '--roster', path.join(tmp, 'roster.csv'), '--out', out], { encoding: 'utf8' });
+const readJson = () => JSON.parse(fs.readFileSync(path.join(out, 'report-data_2026-09.json'), 'utf8'));
+// (1) 기간을 나눠 내보낸 경우: 시작 시간 범위가 이어 붙고 경계 행 하나가 겹침 → 둘 다 쓰고 합침(중복 1행 제외) — 한 파일로 낸 결과와 같아야 한다
+const dirSplit = path.join(tmp, 'split'); fs.mkdirSync(dirSplit);
+const cutAt = T(2026, 9, 14, 10), early = rows.filter(r => r[2] <= ser(cutAt)), late = rows.filter(r => r[2] >= ser(cutAt));
+writeAct(dirSplit, '2. 모든 약속_활동 2026_09_30 AM 10-00-00 (1).xlsx', early); writeAct(dirSplit, '2. 모든 약속_활동 2026_09_30 AM 10-00-01 (2).xlsx', late);
+const rs = runDir(dirSplit); assert.strictEqual(rs.status, 0, rs.stderr + rs.stdout);
+const js = readJson(); assert.strictEqual(js.meta.rows.raw, json.meta.rows.raw, '분할 내보내기 합침 = 한 파일과 같은 행 수'); assert.deepStrictEqual(js.kpi, json.kpi, '분할 합침 KPI = 한 파일 KPI');
+assert(/활동 파일 2개 합침\(똑같은 행 1개 제외\)/.test(rs.stdout) && !/다시 내보낸/.test(rs.stdout), rs.stdout.split('\n')[0]);
+// (2) 같은 기간을 같은 날 다시 내보낸 경우: 범위가 거의 겹침 → 가장 새 파일 하나만. 그 사이 상태가 바뀐 행이 이중으로 잡히면 안 된다
+const dirRe = path.join(tmp, 'reexport'); fs.mkdirSync(dirRe);
+const oldRows = rows.map((r, i) => i === 3 ? Object.assign(r.slice(), { 0: '시작됨' }) : r), newRows = rows;   // 오전에는 시작됨 → 오후에 완료됨
+writeAct(dirRe, '2. 모든 약속_활동 2026_09_30 AM 09-00-00.xlsx', oldRows); writeAct(dirRe, '2. 모든 약속_활동 2026_09_30 PM 03-00-00.xlsx', newRows);
+const rr = runDir(dirRe); assert.strictEqual(rr.status, 0, rr.stderr + rr.stdout);
+const jr = readJson(); assert.strictEqual(jr.meta.rows.raw, json.meta.rows.raw, '재내보내기: 새 파일 행 수 그대로(이중 계산 없음)'); assert.deepStrictEqual(jr.kpi, json.kpi, '재내보내기 KPI = 새 파일 KPI');
+assert.strictEqual(jr.meta.files.activity, '2. 모든 약속_활동 2026_09_30 PM 03-00-00.xlsx', '최신(오후 3시) 파일만 사용'); assert(/다시 내보낸 파일 1개는 쓰지 않음/.test(rr.stdout), rr.stdout);
+// (3) 파일명에 시각이 없으면 수정 시각으로 최신을 고른다
+const dirMt = path.join(tmp, 'mtime'); fs.mkdirSync(dirMt);
+writeAct(dirMt, '2. 모든 약속_활동 2026_09_30 (a).xlsx', oldRows); writeAct(dirMt, '2. 모든 약속_활동 2026_09_30 (b).xlsx', newRows);
+const now = Date.now() / 1000; fs.utimesSync(path.join(dirMt, '2. 모든 약속_활동 2026_09_30 (a).xlsx'), now - 7200, now - 7200); fs.utimesSync(path.join(dirMt, '2. 모든 약속_활동 2026_09_30 (b).xlsx'), now, now);
+const rm = runDir(dirMt); assert.strictEqual(rm.status, 0, rm.stderr + rm.stdout); assert.strictEqual(readJson().meta.files.activity, '2. 모든 약속_활동 2026_09_30 (b).xlsx', '시각이 이름에 없으면 mtime');
 const q = cp.spawnSync(process.execPath, [cli, '--period', 'FY2026Q2', '--activity', path.join(dir, '2. 모든 약속_활동 2026_08_01.xlsx'), '--out', out], { encoding: 'utf8' });
 assert.strictEqual(q.status, 0, q.stderr); assert(fs.existsSync(path.join(out, 'report-data_FY2026Q2.json')), '대시보드 ROSTER 기본값 + 분기');
 fs.rmSync(tmp, { recursive: true, force: true });
-console.log('test_report_tools: OK (시트 사본 대조 왕복 16탭·차이 검출·이름 비표시·Serial 없는 사본·CLI 폴더 선택·분기)');
+console.log('test_report_tools: OK (시트 사본 대조 왕복 16탭·차이 검출·이름 비표시·Serial 없는 사본·CLI 폴더 선택·같은 날 활동 파일 분할/재내보내기 판정·분기)');

@@ -114,4 +114,32 @@ function mergeActivity(parsed) {
   parsed.forEach(a => a.rows.forEach(r => { const k = [r.t, r.e, r.own, r.acct, r.sn, r.subj, r.purp, r.st, r.ft, r.err, r.att].join('|'); if (seen[k]) { dup++; return; } seen[k] = 1; rows.push(r); }));
   return { rows, header: parsed[0].header, hasAtt: parsed.every(a => a.hasAtt), hasFormType: parsed.every(a => a.hasFormType), sheet: parsed.map(a => a.sheet).join('+'), merged: parsed.length, dup };
 }
-module.exports = { xlsxRows, toMs, col, snOf, parseActivity, parseActivityRows, parseSerial, parseSerialRows, fileDateKey, classifyByName, pickLatest, mergeActivity, DAY };
+/* CRM 파일명 「… 2026_10_26 AM 12-34-04.xlsx」의 시각 → 하루 중 초 (12시간제, AM 12 = 0시). 없으면 null */
+function fileTimeOfDay(name) {
+  const m = String(name || '').match(/\b(AM|PM)\s*(\d{1,2})-(\d{2})-(\d{2})/i); if (!m) return null;
+  let h = +m[2] % 12; if (m[1].toUpperCase() === 'PM') h += 12; return h * 3600 + (+m[3]) * 60 + (+m[4]);
+}
+/* 같은 날짜 활동 파일이 여럿일 때: ① 기간을 나눠 내보낸 것(시작 시간 범위가 이어 붙음 → 합친다) ② 같은 기간을 다시 내보낸 것(범위가 거의 겹침 → 가장 새 파일 하나만)
+   겹침 = 두 파일 시작 시간 범위의 교집합 ÷ 짧은 쪽 범위가 OVERLAP 이상. ②를 합치면 그 사이 상태가 바뀐 행이 이중으로 잡히기 때문이다.
+   items = [{name, mtime, act}] → {…합친 표, used:[이름], superseded:[이름], merged, dup} */
+const OVERLAP = 0.5;
+function rangeOf(rows) { let lo = Infinity, hi = -Infinity; rows.forEach(r => { if (r.t != null) { if (r.t < lo) lo = r.t; if (r.t > hi) hi = r.t; } }); return hi >= lo ? { lo, hi } : null; }
+function overlapRatio(a, b) {
+  if (!a || !b) return 0; const inter = Math.min(a.hi, b.hi) - Math.max(a.lo, b.lo); if (inter <= 0) return 0;
+  const shorter = Math.min(a.hi - a.lo, b.hi - b.lo); return shorter > 0 ? inter / shorter : 1;
+}
+function resolveActivity(items) {
+  const withMeta = items.map(it => Object.assign({ tod: fileTimeOfDay(it.name), range: rangeOf(it.act.rows) }, it));
+  const newer = (a, b) => (a.tod != null && b.tod != null && a.tod !== b.tod) ? a.tod > b.tod : (a.mtime || 0) > (b.mtime || 0);
+  const sorted = withMeta.slice().sort((a, b) => newer(a, b) ? -1 : newer(b, a) ? 1 : 0);   // 새 파일부터
+  const kept = [], superseded = [];
+  sorted.forEach(f => { if (kept.some(k => overlapRatio(k.range, f.range) >= OVERLAP)) superseded.push(f.name); else kept.push(f); });
+  const order = kept.slice().sort((a, b) => items.findIndex(i => i.name === a.name) - items.findIndex(i => i.name === b.name));   // 읽은 순서 유지
+  const merged = mergeActivity(order.map(k => k.act));
+  return Object.assign({}, merged, { used: order.map(k => k.name), superseded, files: items.length });
+}
+/* 폴더에서 고른 활동 파일들([{path, name, mtime}])을 읽어 겹침을 판정하고 합친다 */
+function loadActivity(files) {
+  return resolveActivity(files.map(f => ({ name: f.name, mtime: f.mtime, act: parseActivity(fs.readFileSync(f.path)) })));
+}
+module.exports = { xlsxRows, toMs, col, snOf, parseActivity, parseActivityRows, parseSerial, parseSerialRows, fileDateKey, classifyByName, pickLatest, mergeActivity, resolveActivity, loadActivity, fileTimeOfDay, DAY };
