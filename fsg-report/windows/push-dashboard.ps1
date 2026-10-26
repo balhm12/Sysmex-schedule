@@ -1,6 +1,6 @@
 ﻿# FSG 대시보드 올리기 — 다운로드 폴더(또는 설정한 폴더)의 최신 CRM 파일을 대시보드에 올린다
 # 처음 한 번 setup.ps1(또는 setup.bat)을 실행해 두면, 이후에는 바탕화면 아이콘을 더블클릭하면 된다.
-param([switch]$DryRun, [switch]$NoGit, [switch]$NoOpen, [switch]$AllowOlder)
+param([switch]$DryRun, [switch]$NoGit, [switch]$NoOpen, [switch]$AllowOlder, [switch]$NoReport, [string]$Period = '')
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -63,6 +63,22 @@ try {
     & node @nodeArgs
     $rc = $LASTEXITCODE
     if ($rc -ne 0) { throw "올리기에 실패했습니다(종료 코드 $rc). 위 메시지를 확인하세요." }
+
+    # 같은 파일로 월간·분기 보고서 데이터도 만든다(Colab 없이, 수 초). 실패해도 대시보드 올리기는 이미 끝난 상태다.
+    if (-not $NoReport -and -not $DryRun) {
+        $per = $Period
+        if ([string]::IsNullOrWhiteSpace($per)) { $per = (Get-Date).AddMonths(-1).ToString('yyyy-MM', [Globalization.CultureInfo]::InvariantCulture) }
+        $outDir = Join-Path $cfg.folder 'FSG_report_out'
+        Write-Host ''
+        Write-Host "보고서 데이터를 만듭니다(기간 $per)..." -ForegroundColor Cyan
+        & node 'fsg-report/report-data.js' '--period' $per '--dir' $cfg.folder '--out' $outDir
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "보고서 데이터: $outDir  (report-data_$per.json · 검산_$per.xlsx)" -ForegroundColor Green
+            Write-Host '보고서를 만들 때 이 두 파일을 Claude에 올리세요. 다른 기간(분기 등)은 README의 report-data 명령을 쓰세요.'
+        } else {
+            Write-Host '보고서 데이터 만들기는 실패했습니다(대시보드 올리기는 정상 완료). 위 메시지를 확인하세요.' -ForegroundColor Yellow
+        }
+    }
 
     if (-not $DryRun) {
         Write-Host ''
