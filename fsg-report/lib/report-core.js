@@ -4,7 +4,7 @@
  * 월간보고 시트 Apps Script(v45~v52)의 computeKPI_ · computeKpiTrend_ · computeTeamSummary_ · computeCaseAnalysis_ 와 같은 값을 내도록 맞췄다.
  * 입력 행은 read-crm.parseActivity 의 모양(t/e = 벽시계를 UTC ms로 둔 값). 기간 판정은 모두 UTC 게터로 한다. */
 'use strict';
-const { kpiCore } = require('../kpi-core');
+const { kpiCore, buildProdData } = require('../kpi-core');
 const P = require('./period');
 const INS = require('./install');
 
@@ -193,6 +193,51 @@ function buildReport(opt) {
     return { rows: out, months: labels };
   })();
 
+  /* 덱 6장 「전년 대비」 — 기간 끝 달과 1년 전 같은 달의 수리·PM·Calibration 건수(인정 인원 수), 예방정비 지수 */
+  const monthCounts = mk => { const c = { repair: 0, pm: 0, cal: 0 };
+    rows.forEach(x => { const o = monthOf(x.t); if (P.mk(o.y, o.m) !== mk) return; const n = x.credits.length;
+      if (x.purpose === PV.PM) c.pm += n; else if (x.purpose === PV.REPAIR) c.repair += n; else if (x.purpose === PV.CAL) c.cal += n; });
+    c.ratio = (c.pm + c.repair) ? round1(c.pm / (c.pm + c.repair) * 100) : null; return c; };
+  const yoy = (() => { const a = P.toYM(endMk - 12), b = P.toYM(endMk);
+    return { prevLabel: P.lab(a.y, a.m), curLabel: P.lab(b.y, b.m), prev: monthCounts(endMk - 12), cur: monthCounts(endMk) }; })();
+
+  /* 덱 7장 두 번째 표 — 조직개편 전(2025-04~2026-03) → 후(2026-04~기준월) 월평균 변화(FS WEST · FS EAST · 둘 합계 · FSG 전체), 방문건수 = PM + A/S */
+  const metroDelta = (() => {
+    const preKeys = [], postKeys = [];
+    for (let k = P.mk(REORG.preFrom.y, REORG.preFrom.m); k <= P.mk(REORG.preTo.y, REORG.preTo.m); k++) preKeys.push(k);
+    for (let k = P.mk(REORG.postFrom.y, REORG.postFrom.m); k <= endMk; k++) postKeys.push(k);
+    const groups = { 'FS WEST': ['FS WEST'], 'FS EAST': ['FS EAST'], 'WEST+EAST': ['FS WEST', 'FS EAST'], 'FSG': null };
+    const acc = {}; Object.keys(groups).forEach(g => acc[g] = { pm: {}, rp: {} });
+    rows.forEach(x => { const o = monthOf(x.t), k = P.mk(o.y, o.m); if (x.purpose !== PV.PM && x.purpose !== PV.REPAIR) return;
+      x.credits.forEach(c => { const t = teamOf(c); Object.keys(groups).forEach(g => { if (groups[g] && groups[g].indexOf(t) < 0) return; const b = x.purpose === PV.PM ? acc[g].pm : acc[g].rp; b[k] = (b[k] || 0) + 1; }); }); });
+    const av = (keys, o) => keys.length ? keys.reduce((a, k) => a + (o[k] || 0), 0) / keys.length : 0;
+    const pct = (a, b) => b ? round1((a - b) / b * 100) : null;
+    const out = {}; Object.keys(groups).forEach(g => { const a = acc[g], prePM = av(preKeys, a.pm), postPM = av(postKeys, a.pm), preRP = av(preKeys, a.rp), postRP = av(postKeys, a.rp);
+      const preR = (prePM + preRP) ? prePM / (prePM + preRP) * 100 : 0, postR = (postPM + postRP) ? postPM / (postPM + postRP) * 100 : 0;
+      out[g] = { visit: pct(postPM + postRP, prePM + preRP), repair: pct(postRP, preRP), pm: pct(postPM, prePM), ratio: round1(postR - preR) }; });
+    return out; })();
+
+  /* 덱 8장 「FSE KPI 종합점수 TOP 10」 — 대시보드 부서원 KPI 탭과 같은 계산(buildProdData): 행 점수 = 업무 가중치 + 직급 가중치(활동일 기준),
+     담당자+필수 참석자 각각. 기간 vs 직전 같은 길이 기간. 직급 표시는 현재 직급(2026-10-07 결정). opt.prod = { office, gradeHist, newbie } */
+  const peopleKpi = (() => {
+    if (!opt.prod) return null;
+    const pr = opt.prod, office = pr.office || {}, mk = ym => ym.y + '-' + String(ym.m).padStart(2, '0');
+    const units = ['FS WEST', 'FS EAST', 'FS CENTRAL 대전', 'FS CENTRAL 광주', 'FS SOUTH 부산', 'FS SOUTH 대구'];
+    const groups = { 'FS CENTRAL': ['FS CENTRAL 대전', 'FS CENTRAL 광주'], 'FS SOUTH': ['FS SOUTH 부산', 'FS SOUTH 대구'] };
+    const prodRoster = roster.map(r => [r[0], office[r[0]] ? r[1] + ' ' + office[r[0]] : r[1], r[2]]);
+    const len = period.months.length, sel = period.months.map(mk), cmp = [];
+    for (let k = endMk - 2 * len + 1; k <= endMk - len; k++) cmp.push(mk(P.toYM(k)));
+    const gradeNow = {}; roster.forEach(r => gradeNow[r[0]] = r[2]);
+    const newbie = pr.newbie || [];
+    const prod = buildProdData(RAWC, prodRoster, { teams: units, teamGroups: groups, gradeNow, exclAvg: roster.filter(r => r[2] === '팀장' || newbie.indexOf(r[0]) >= 0).map(r => r[0]),
+      gradeHist: pr.gradeHist || [], sel, cmp, labels: { '이번 년도': period.label, '직전 년도': '직전 기간', '전체 누적': '전체 기간' } });
+    const label = u => { const m = String(u || '').match(/^FS (\S+)(?: (\S+))?$/); return m ? (m[2] ? m[1][0] + m[1].slice(1).toLowerCase() + '·' + m[2] : m[1][0] + m[1].slice(1).toLowerCase()) : u; };
+    const list = Object.keys(prod.person).map(n => { const p = prod.person[n], cur = p.score['이번 년도'] || 0, prev = p.score['직전 년도'] || 0;
+      return { name: n, unit: p.team, unitLabel: label(p.team), grade: gradeNow[n] || '', newbie: newbie.indexOf(n) >= 0, score: cur, count: p.total_case['이번 년도'] || 0, prevScore: prev, deltaPct: prev > 0 ? round1((cur / prev - 1) * 100) : null }; })
+      .filter(x => x.score > 0 && !EXCLUDED.includes(x.name)).sort((a, b) => b.score - a.score);
+    return { top: list.slice(0, 10), people: list.length, sel, cmp };
+  })();
+
   /* ⑤ 엔지니어 생산성 — computeEngineerProductivity_ (최근 1년 · 기간), 담당자+필수 참석자 각각, 시간은 종료-시작(제한 없음) */
   const engineer = sel => {
     const per = {};
@@ -208,14 +253,17 @@ function buildReport(opt) {
   /* ⑧ 병원 TOP5 — 최근 1년(활동 기준, 모든 목적) · 기간(활동 기준 — 2026-10-26부터 케이스 파일을 쓰지 않는다. 시트는 케이스 기준이었음), 내부 계정 제외 */
   const topAcc = (list, pick) => { const acc = {}; list.forEach(it => { const a = pick(it); if (!a || INTERNAL_ACCOUNTS.includes(a)) return; acc[a] = (acc[a] || 0) + 1; });
     return Object.keys(acc).map(a => ({ account: a, count: acc[a] })).sort((x, y) => y.count - x.count).slice(0, N.HOSPITAL); };
+  const teamTop = list => { const t = {}; list.forEach(x => x.credits.forEach(c => { const tm = teamOf(c); if (tm) t[tm] = (t[tm] || 0) + 1; })); return topKeyOf(t); };
+  const withTeam = (top, list, pick) => top.map(h => Object.assign(h, { team: teamTop(list.filter(x => pick(x) === h.account)) }));
   const hospYear = topAcc(rows.filter(inT12), x => x.acct);
-  const hospMonth = topAcc(rows.filter(inPer), x => x.acct);
+  const hospPer = rows.filter(inPer), hospMonth = withTeam(topAcc(hospPer, x => x.acct), hospPer, x => x.acct);
 
   /* ⑨ 반복 고장 장비 TOP5 — S/N 단위, 고장 수리 행 수 (최근 1년 · 기간) */
   const repeat = sel => { const rep = {};
-    rows.forEach(x => { if (x.purpose !== PV.REPAIR || !sel(x) || !x.sn) return; const v = rep[x.sn] = rep[x.sn] || { count: 0, model: x.r.prod, account: x.acct }; v.count++; v.model = x.r.prod; v.account = x.acct; });
-    return Object.keys(rep).map(sn => ({ serial: sn, model: rep[sn].model, account: rep[sn].account, count: rep[sn].count })).sort((a, b) => b.count - a.count).slice(0, N.REPEAT); };
+    rows.forEach(x => { if (x.purpose !== PV.REPAIR || !sel(x) || !x.sn) return; const v = rep[x.sn] = rep[x.sn] || { count: 0, model: x.r.prod, account: x.acct, alt: '' }; v.count++; v.model = x.r.prod; v.account = x.acct; if (x.r.prod) v.alt = x.r.prod; });
+    return Object.keys(rep).map(sn => ({ serial: sn, model: rep[sn].model, modelAlt: rep[sn].alt, account: rep[sn].account, count: rep[sn].count })).sort((a, b) => b.count - a.count).slice(0, N.REPEAT); };
   const repeatYear = repeat(inT12), repeatMonth = repeat(inPer);
+  repeatMonth.forEach(r => { r.team = teamTop(rows.filter(x => inPer(x) && x.purpose === PV.REPAIR && x.sn === r.serial)); });
 
   /* ⑩ 장애 요인 TOP4 — 고장 수리 행의 Error 1~3, 기타·others·'-' 제외 */
   const errorTop = sel => { const cnt = {}; let total = 0;
@@ -290,7 +338,7 @@ function buildReport(opt) {
       rows: { raw: raw.length, afterCut: RAWC.length, counted: rows.length }, excluded,
       unmappedRows: rows.filter(x => !x.credits.length).length, eligibleAccounts: CORE.eligible.length },
     kpi, kpiTrend, team, caseAnalysis,
-    trendCompare, metro, engYear, engMonth, hospYear, hospMonth, repeatYear, repeatMonth, errYear, errMonth, errRate,
+    trendCompare, yoy, metro, metroDelta, peopleKpi, engYear, engMonth, hospYear, hospMonth, repeatYear, repeatMonth, errYear, errMonth, errRate,
     fleet: fleet ? { activeCount: fleet.activeCount, pmActiveCount: fleet.pmActiveCount } : null, health, focus,
     installBlock,
     inputs: { serial: !!serial, calendar: !!(opt.calendar && opt.calendar.length) },

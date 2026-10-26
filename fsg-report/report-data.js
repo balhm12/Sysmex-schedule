@@ -41,6 +41,12 @@ function loadRosterFromDashboard() {
   if (!m) throw new Error('fsg-kpi.html 에서 ROSTER 상수를 찾지 못했습니다');
   return JSON.parse(m[1]);
 }
+/* 대시보드 부서원 KPI 탭과 같은 점수를 내기 위한 상수(거점·진급 이력·신입) — fsg-kpi.html 에서 그대로 읽는다 */
+function loadProdConsts() {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'fsg-kpi.html'), 'utf8'), grab = re => { const m = src.match(re); return m ? m[1] : null; };
+  const office = grab(/const OFFICE = (\{[\s\S]*?\});/), gh = grab(/const GRADE_HIST=(\[[\s\S]*?\]\]);/), nb = grab(/const NEWBIE=(\[[^\]]*\]);/);
+  return { office: office ? eval('(' + office + ')') : {}, gradeHist: gh ? eval('(' + gh + ')') : [], newbie: nb ? eval(nb) : [] };
+}
 function main() {
   const o = args(process.argv.slice(2));
   if (!o.period || o.help) { console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^\/\*|^ \* ?/gm, '')); process.exit(o.period ? 0 : 1); }
@@ -66,7 +72,14 @@ function main() {
   const act = R.loadActivity(actFiles);
   const serial = serPath ? R.parseSerial(fs.readFileSync(serPath)) : null;
   const calendar = calPath ? INS.readCalendarRows(table(calPath), R.toMs) : null;
-  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, calendar });
+  const prod = o.roster ? null : loadProdConsts();
+  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, calendar, prod });
+  /* 덱 10장 「8월 대비」 등 전월 비교용: 같은 입력으로 전월(한 달) 기준을 한 번 더 계산해 필요한 부분만 붙인다 */
+  if (period.months.length === 1) {
+    const pm = require('./lib/period').prevMonth(period), pp = parsePeriod(pm.y + '-' + String(pm.m).padStart(2, '0'));
+    const pr = buildReport({ raw: act.rows, roster, period: pp, cut, serial, calendar: null });
+    rep.prev = { label: pr.meta.period.label, kpi: pr.kpi, health: pr.health, fleet: pr.fleet, team: pr.team.rows.map(r => ({ team: r.team, pm: r.pm, as_: r.as_, sum: r.sum })) };
+  }
   rep.meta.files = { activity: (act.used || [path.basename(actPath)]).join(' + '), serial: serPath ? path.basename(serPath) : '',
     calendar: calPath ? path.basename(calPath) : '',
     roster: path.basename(rosterSrc), header: { hasAtt: act.hasAtt, hasFormType: act.hasFormType } };

@@ -106,6 +106,7 @@ const res = cp.spawnSync(process.execPath, [cli, '--period', '2026-09', '--dir',
 assert.strictEqual(res.status, 0, res.stderr + res.stdout);
 assert(/추출일 2026-09-30/.test(res.stdout), '파일명 날짜가 추출일: ' + res.stdout.split('\n')[0]);
 const json = JSON.parse(fs.readFileSync(path.join(out, 'report-data_2026-09.json'), 'utf8'));
+assert(json.prev && json.prev.label === '2026-08' && json.prev.kpi && Array.isArray(json.prev.team), '단월 보고에는 전월 값(prev)이 붙는다'); assert(json.inputs.serial ? (json.prev.health && json.prev.health.pmCoverage != null) : json.prev.health === null, '전월 건전성은 Serial 이 있을 때만');
 assert.strictEqual(json.kpi.repairCount, rep.kpi.repairCount); assert.strictEqual(json.meta.files.activity, '2. 모든 약속_활동 2026_09_30 AM 10-00-00.xlsx');
 assert(fs.existsSync(path.join(out, '검산_2026-09.xlsx')));
 assert(/가동 장비 지표 없음/.test(res.stdout), 'Serial 없으면 안내');

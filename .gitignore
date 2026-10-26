@@ -5,3 +5,4 @@ fsg-report/out/
 fsg-report/data/
 fsg-report/**/*.xlsx
 fsg-report/**/*.csv
+__pycache__/
