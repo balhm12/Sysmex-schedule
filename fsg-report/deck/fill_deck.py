@@ -32,7 +32,7 @@ def mnum(label): return int(label.split('-')[1])
 def yymm(label): return label[2:]
 
 
-def run(base, data, out, fca=None):
+def run(base, data, out, fca=None, fsr=None):
     prs = Presentation(base)
     S = [list(s.shapes) for s in prs.slides]
     d = data
@@ -234,13 +234,21 @@ def run(base, data, out, fca=None):
     set_text(s[0], f'주요 고객 및 장애 분석 ({mo})'); set_text(s[1], f"{label[:4]}년 {m}월 단월 기준 — 당월 집중 발생 지점 확인")
     set_text(s[2], f'병원 TOP 5 ({mo} 활동 기준)'); set_text(s[3], f'반복 고장 장비 TOP 5 ({mo})'); set_text(s[5], f'주요 장애 요인 ({mo} Top 4) – 장비 구분 없음')
     set_text(s[11], s[11].text_frame.text.replace('서비스 케이스 건수', '활동(방문) 건수'))
+    miss_fsr = []
+    def owner_cell(account, eng_team):
+        hit = fsr(account) if fsr else None
+        if hit:
+            t = TEAM_SHORT.get(hit[0].upper(), hit[0].replace('FS ', '')); return f'{t} · {hit[1]}'
+        if fsr: miss_fsr.append(account)
+        return TEAM_SHORT.get(eng_team, eng_team) if eng_team else None
     hm = d['hospMonth']
     if all('team' in h for h in hm):
-        fill_table(s[12].table, [[str(i + 1), short_acct(h['account']), TEAM_SHORT.get(h['team'], h['team']), str(h['count'])] for i, h in enumerate(hm)])
+        fill_table(s[12].table, [[str(i + 1), short_acct(h['account']), owner_cell(h['account'], h['team']), str(h['count'])] for i, h in enumerate(hm)])
     else:
-        fill_table(s[12].table, [[str(i + 1), h['account'], None, str(h['count'])] for i, h in enumerate(hm)]); SKIP.append('8장 병원 TOP5 「담당」 열 — json 에 team 없음')
+        fill_table(s[12].table, [[str(i + 1), short_acct(h['account']), owner_cell(h['account'], None), str(h['count'])] for i, h in enumerate(hm)]); SKIP.append('8장 병원 TOP5 「담당」 열 — json 에 team 없음')
     rm = d['repeatMonth']
-    fill_table(s[13].table, [[r['serial'], short_model(r.get('model') or r.get('modelAlt') or ''), short_acct(r['account'], True), (TEAM_SHORT.get(r.get('team'), r.get('team')) if r.get('team') else None), str(r['count'])] for r in rm])
+    fill_table(s[13].table, [[r['serial'], short_model(r.get('model') or r.get('modelAlt') or ''), short_acct(r['account'], True), owner_cell(r['account'], r.get('team')), str(r['count'])] for r in rm])
+    if fsr and miss_fsr: SKIP.append(f'8장 담당 FSR — 관리표에서 못 찾은 기관 {len(miss_fsr)}곳(팀만 표시): ' + ', '.join(short_acct(a) for a in miss_fsr))
     er = d['errMonth']['rows'][:4][::-1]
     short = lambda e: re.sub(r' is required| detected', '', e)[:24]
     replace_chart(s[6].chart, [short(r['error']) for r in er], [('건수', [r['count'] for r in er])])
@@ -259,7 +267,7 @@ def run(base, data, out, fca=None):
     else:
         SKIP.append('8장 「FSE KPI 종합점수 TOP 10」 표 — json 에 peopleKpi 없음(엔진 최신판 필요)')
     REVIEW.append('8장 「분석」 문장 — 병원·장애 요인 순위가 바뀌었으니 새로 써야 함')
-    REVIEW.append('8장 표의 「담당」 — 확정 덱은 「FSR 담당자 리스트」의 FSR 이름까지 적었으나 엔진은 방문이 가장 많은 팀만 낸다. FSR 이름이 필요하면 담당자 리스트로 채울 것')
+    if not fsr: REVIEW.append('8장 표의 「담당」 — 확정 덱은 「FSR 담당기관 관리표」의 FSR 이름까지 적었으나 이번에는 --fsr 를 주지 않아 방문이 가장 많은 팀만 적었다')
 
     # ── 10. 에러율 · 운영 건전성
     s = S[9]
@@ -365,7 +373,7 @@ def run(base, data, out, fca=None):
 
 
 def main():
-    ap = argparse.ArgumentParser(); ap.add_argument('base'); ap.add_argument('json'); ap.add_argument('-o', '--out'); ap.add_argument('--fca', help='FY26 FCA 현황 엑셀(9장)')
+    ap = argparse.ArgumentParser(); ap.add_argument('base'); ap.add_argument('json'); ap.add_argument('-o', '--out'); ap.add_argument('--fca', help='FY26 FCA 현황 엑셀(9장)'); ap.add_argument('--fsr', help='FSR 담당기관 관리표 엑셀(8장 담당)')
     a = ap.parse_args()
     data = json.load(open(a.json, encoding='utf8'))
     out = a.out or os.path.join(os.getcwd(), 'filled_' + os.path.basename(a.base))
@@ -373,7 +381,11 @@ def main():
     if a.fca:
         from fca import read_fca
         fca = read_fca(a.fca)
-    run(a.base, data, out, fca)
+    fsr = None
+    if a.fsr:
+        from fsr import load_fsr_master
+        fsr = load_fsr_master(a.fsr)
+    run(a.base, data, out, fca, fsr)
     print('saved:', out)
     print('\n[건너뜀 — json 에 없거나 이 도구가 다루지 않음]'); [print(' -', x) for x in SKIP]
     print('\n[검토 필요 — 사람이 새로 써야 하는 문장]'); [print(' -', x) for x in REVIEW]

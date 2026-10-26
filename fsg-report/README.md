@@ -92,13 +92,13 @@ node fsg-report/voc-summary.js --period 2026-09 [--out 폴더] [--keywords 친�
 ## 월간 덱 자동 채움 (`deck/fill_deck.py`)
 `report-data_<기간>.json`과 **전월 확정 덱(베이스)** 을 넣으면 확정 12장 덱의 숫자·표·차트를 한 번에 바꾼다(python-pptx 필요, PC가 아니라 Claude 쪽에서 돌린다).
 ```
-python fsg-report/deck/fill_deck.py 전월확정덱.pptx report-data_2026-10.json --fca FY26_FCA_현황.xlsx -o 결과.pptx
+python fsg-report/deck/fill_deck.py 전월확정덱.pptx report-data_2026-10.json --fca FY26_FCA_현황.xlsx --fsr FSR_담당기관_관리표.xlsx -o 결과.pptx
 ```
-`--fca`는 사용자가 직접 관리하는 FY26 FCA 현황 엑셀(`FCA` 시트: No·분야·제목·적용 Model·Start/End Day·장비 대수·진행 완료)이다. 머리글을 키워드로 찾아 읽고(`deck/fca.py`), 못 찾은 열은 실행 끝에 알려 준다.
+`--fca`는 사용자가 직접 관리하는 FY26 FCA 현황 엑셀(`FCA` 시트: No·분야·제목·적용 Model·Start/End Day·장비 대수·진행 완료)이다. 머리글을 키워드로 찾아 읽고(`deck/fca.py`), 못 찾은 열은 실행 끝에 알려 준다. `--fsr`는 FSR 담당기관 관리표(`담당기관 마스터` 시트)로, 8장 병원·반복 고장 표의 「담당」을 `팀 · FSR 이름`으로 적는다(`deck/fsr.py`; 못 찾은 기관은 팀만 적고 목록으로 알려 준다).
 - 바꾸는 곳: 2 핵심 요약 카드 · 3 팀 표·KPI 카드·차트 · 4 설치 표(주요 기관 System·다음 달 설치 예정 포함) · 5 케이스 분석 · 6 트렌드 비교(전년 대비 포함) · 7 수도권(개편 전 대비 포함) · 8 병원·반복 고장·장애 요인·FSE KPI TOP10 · 10 에러율·운영 건전성(전월 대비 포함).
 - 안 바꾸는 곳: 12 Next Step, 9장 SP-50 부품 교체 표(별도 진행표), 이슈·대책·분석·추진 계획 같은 **판단 문장**. 9장 FCA는 `--fca`, 11장 만족도는 json 의 `satisfaction`(voc-summary)으로 채운다. 실행 끝에 「건너뜀」(json에 없는 값)과 「검토 필요」(사람이 새로 써야 하는 문장) 목록이 나온다.
 - 엔진이 덱을 위해 내는 값: `peopleKpi`(8장 FSE KPI TOP10 — 대시보드 부서원 KPI 와 같은 계산) · `yoy`(전년 동월) · `metroDelta`(수도권 개편 전후 팀별) · `prev`(전월 건전성·KPI) · `nextPlan`(다음 달 설치 예정) · 병원/반복 고장 TOP5의 `team`·`modelAlt`.
-- 아직 엔진이 못 내는 것: 8장 표의 FSR 이름(FSR 담당자 리스트).
+- FSR 이름은 엔진이 아니라 관리표(`--fsr`)에서 가져온다.
 
 ## 시트와 같은 숫자가 나오는지 검산
 ```powershell
