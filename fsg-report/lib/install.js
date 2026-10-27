@@ -60,16 +60,22 @@ function sysModelsFromText(text) {
 }
 /* 2026-10-27: System 표기(XR/XN 9xxx·3xxx)인 작업인데 CRM 에 연결된 XR/XN 모듈이 1대 이하면 CRM 자산 등록 지연이 의심된다.
  * 캘린더 장비 표기에는 대수가 없어(예: "XR-9100") 엔진이 모자란 대수를 채울 수 없고, 같은 모델에서 대수가 모자란 경우는 missing(모델 누락)에도 걸리지 않는다.
- * 대수는 바꾸지 않고 "확인 필요"로만 알린다 — CRM 에 나머지가 등록된 뒤 다시 실행하면 자동 반영된다. */
+ * 대수는 바꾸지 않고 "확인 필요"로만 알린다 — CRM 에 나머지가 등록된 뒤 다시 실행하면 자동 반영된다.
+ * 재구성·재배치·위치이동이 적힌 System 은 기존 장비를 옮기기만 한 것일 수도, 장비를 추가한 것일 수도 있어(사용자 확인) 제외하지 않고
+ * 「재구성 — 장비 추가가 있었다면 CRM 등록 확인」으로 따로 안내한다. 구분이 이전설치인 작업은 옮기는 작업이라 대상이 아니다. */
 function systemShortfall(equip, hits, gubun) {
-  if (gubun === '이전설치') return '';   // 옮기는 작업은 새 자산이 없을 수 있다
+  if (gubun === '이전설치') return '';
   const segs = String(equip || '').split(/[,\/]/);
-  // 같은 줄에 재구성·재배치·위치이동·이전이 적힌 System 은 새 모듈이 없는 게 정상 — 제외(2026-10-27 West 재구성 작업이 의심으로 잘못 걸렸다)
   const isReconf = m => { const re = new RegExp(m.replace('-', '-?')), mine = segs.filter(x => re.test(x.toUpperCase())); return mine.length > 0 && mine.every(x => /(재구성|재배치|위치이동|이전)/.test(x)); };
-  const sys = sysModelsFromText(equip).filter(m => /^(XR|XN)-/.test(m) && !isReconf(m));
+  const sys = sysModelsFromText(equip).filter(m => /^(XR|XN)-/.test(m));
   if (!sys.length || !hits || !hits.length) return '';
   const mods = hits.filter(x => /^(XR|XN)-?\d{1,2}$/.test(cleanModel(x.model))).length;
-  return mods <= 1 ? sys.join(', ') + ' System 표기인데 CRM 모듈 ' + mods + '대만 연결' : '';
+  if (mods > 1) return '';
+  const fresh = sys.filter(m => !isReconf(m)), reconf = sys.filter(isReconf);
+  const out = [];
+  if (fresh.length) out.push(fresh.join(', ') + ' System 표기인데 CRM 모듈 ' + mods + '대만 연결');
+  if (reconf.length) out.push(reconf.join(', ') + ' 재구성 — 장비 추가가 있었다면 CRM 모듈 등록 확인(CRM 모듈 ' + mods + '대)');
+  return out.join(' · ');
 }
 function sysGubunFor(text, model, jobGubun) {
   const key = / System$/.test(model) ? '\\b' + model.split(' ')[0] + '\\b' : model.replace('-', '-?'), re = new RegExp(key);
@@ -402,7 +408,7 @@ function installSummary(detail, period) {
     ['집계 제외', '예정 ' + tent.length + '건 · 중고 ' + ((detail.usedCrm || 0) + (detail.usedCal || 0)) + '건 · Demo ' + (detail.demoCal || 0) + '건 · 대리점 설치(캘린더 없음) ' + (detail.dealerOrphan || []).length + '대' +
       ((detail.dealerOrphan || []).length ? ' — ' + detail.dealerOrphan.map(x => x.acct + ' ' + cleanModel(x.model) + '(' + x.dealer + ')').join(', ') : '') +
       ((detail.dupOrphan || []).length ? ' · 캘린더 작업과 중복 ' + detail.dupOrphan.length + '대 — ' + dupSummary(detail.dupOrphan) : '')]];
-  if (susp.length) notes.push(['확인 필요(대수)', 'System 작업 ' + susp.length + '건에서 CRM 연결 모듈이 1대 이하 — CRM 자산 등록 지연 의심(대수는 CRM에 연결된 만큼만 셈, 등록 후 다시 실행하면 자동 반영): ' + susp.map(r => r.acct + ' ' + r.suspect).join(' · ')]);
+  if (susp.length) notes.push(['확인 필요(대수)', 'System 작업 ' + susp.length + '건에서 CRM 연결 모듈이 1대 이하 — CRM 자산 등록 지연 의심(재구성은 장비 추가가 있었는지 확인). 대수는 CRM에 연결된 만큼만 셈, 등록 후 다시 실행하면 자동 반영: ' + susp.map(r => r.acct + ' ' + r.suspect).join(' · ')]);
   const list = jobs.concat(tent.map(t => ({ start: t.start, end: t.end, team: t.team, owner: t.owner, acct: t.acct, kind: '예정', sys: '', cal: t.calEquip, equip: '', units: '', src: '—', sn: '', status: '예정(집계 제외)', note: '' })));
   return { head, mat, notes, jobs, list, audit: detail.audit || [], title: '팀별 설치 실적 (' + period.label + ')' };
 }
