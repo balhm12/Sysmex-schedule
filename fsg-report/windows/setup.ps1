@@ -59,7 +59,17 @@ Write-Host '(선택) 만족도 시트용 Drive 폴더 주소: 브라우저에서
 Write-Host '올리기가 끝나면 이 폴더와 방금 파일이 함께 열려 드래그만 하면 됩니다. 필요 없으면 Enter.'
 $driveUrl = Ask 'Drive 폴더 주소' $old.driveUrl
 
-$cfg = [ordered]@{ codeEnc = $codeEnc; email = $email; pwEnc = $pwEnc; folder = $folder; driveUrl = $driveUrl; repo = $repo }
+Write-Host ''
+Write-Host '(선택) 만족도 시트로 CRM 파일 자동 업로드: 만족도 시트의 Apps Script 를 웹 앱으로 배포한 주소(…/exec)와,'
+Write-Host '시트 메뉴 「CRM 업로드 입구: 토큰 새로 만들기」에서 받은 토큰을 넣으면 아이콘이 파일을 Drive CRM_원본 폴더로 올려 줍니다. 필요 없으면 Enter.'
+$driveUp = Ask 'Drive 업로드 주소 (…/exec)' $old.driveUploadUrl
+$driveTokEnc = ''
+if ($driveUp) {
+    if ($save) { $driveTokEnc = Ask-Secret 'Drive 업로드 토큰' $old.driveTokEnc }
+    else { Write-Host '토큰은 저장하지 않습니다. 올릴 때마다 물어봅니다.' }
+}
+
+$cfg = [ordered]@{ codeEnc = $codeEnc; email = $email; pwEnc = $pwEnc; folder = $folder; driveUrl = $driveUrl; driveUploadUrl = $driveUp; driveTokEnc = $driveTokEnc; repo = $repo }
 ($cfg | ConvertTo-Json) | Set-Content -LiteralPath $cfgPath -Encoding UTF8
 Write-Host ''
 Write-Host "설정을 저장했습니다: $cfgPath" -ForegroundColor Green
