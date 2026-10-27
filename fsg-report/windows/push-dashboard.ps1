@@ -1,6 +1,6 @@
 ﻿# FSG 대시보드 올리기 — 다운로드 폴더(또는 설정한 폴더)의 최신 CRM 파일을 대시보드에 올린다
 # 처음 한 번 setup.ps1(또는 setup.bat)을 실행해 두면, 이후에는 바탕화면 아이콘을 더블클릭하면 된다.
-param([switch]$DryRun, [switch]$NoGit, [switch]$NoOpen, [switch]$AllowOlder, [switch]$NoReport, [string]$Period = '')
+param([switch]$DryRun, [switch]$NoGit, [switch]$NoOpen, [switch]$AllowOlder, [switch]$NoReport, [switch]$NoDrive, [string]$Period = '')
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -83,11 +83,33 @@ try {
         }
     }
 
+    # 만족도 시트용: 같은 CRM 파일(같은 날짜의 활동 파일 + 최근 Serial No)을 Drive 「CRM_원본」 폴더로 올린다(설정했을 때만).
+    # 실패해도 대시보드 올리기는 이미 끝난 상태다. 토큰은 환경변수로만 넘기고 화면에 쓰지 않는다.
+    $driveDone = $false
+    if (-not $NoDrive -and -not $DryRun -and -not [string]::IsNullOrWhiteSpace($cfg.driveUploadUrl)) {
+        $day = [regex]::Match($latest.Name, '\d{4}_\d{2}_\d{2}').Value
+        $files = @($acts | Where-Object { $day -and $_.Name.Contains($day) } | ForEach-Object { $_.FullName })
+        if ($files.Count -eq 0) { $files = @($latest.FullName) }
+        $ser = @(Get-ChildItem -LiteralPath $cfg.folder -File -Filter '*.xlsx' -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'Serial' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
+        if ($ser.Count -gt 0 -and ((Get-Date) - $ser[0].LastWriteTime).TotalDays -lt 8) { $files += $ser[0].FullName }
+        Write-Host ''
+        Write-Host '만족도 시트용 CRM 파일을 Drive 로 올립니다...' -ForegroundColor Cyan
+        $env:FSG_DRIVE_URL = $cfg.driveUploadUrl
+        if (-not [string]::IsNullOrEmpty($cfg.driveTokEnc)) { $env:FSG_DRIVE_TOKEN = Plain $cfg.driveTokEnc }
+        else { $env:FSG_DRIVE_TOKEN = Read-Secret 'Drive 업로드 토큰' }
+        $upArgs = @('fsg-report/upload-drive.js')
+        foreach ($f in $files) { $upArgs += '--file'; $upArgs += $f }
+        & node @upArgs
+        if ($LASTEXITCODE -eq 0) { $driveDone = $true }
+        else { Write-Host 'Drive 업로드는 실패했습니다(대시보드 올리기는 정상 완료). 아래에서 열리는 Drive 폴더에 파일을 직접 끌어다 놓으세요.' -ForegroundColor Yellow }
+    }
+
     if (-not $DryRun) {
         Write-Host ''
         Write-Host '대시보드에 올렸습니다. 팀장 화면은 새로고침하거나 5분 안에 자동 반영됩니다.' -ForegroundColor Green
-        Write-Host '만족도 시트는 같은 파일을 Drive의 CRM_원본 폴더에 올리면 2시간 안에 자동 반영됩니다.'
-        if (-not $NoOpen -and $cfg.driveUrl) {
+        if ($driveDone) { Write-Host '만족도 시트용 파일도 Drive 로 올렸습니다 — 2시간 안에 자동 반영됩니다.' -ForegroundColor Green }
+        else { Write-Host '만족도 시트는 같은 파일을 Drive의 CRM_원본 폴더에 올리면 2시간 안에 자동 반영됩니다.' }
+        if (-not $driveDone -and -not $NoOpen -and $cfg.driveUrl) {
             Write-Host '파일 위치와 Drive 폴더를 엽니다 — 파일을 Drive 창으로 끌어다 놓으세요.'
             Start-Process explorer.exe -ArgumentList "/select,`"$($latest.FullName)`""
             Start-Process $cfg.driveUrl
@@ -95,4 +117,4 @@ try {
     }
 }
 catch { Write-Host ''; Write-Host "오류: $($_.Exception.Message)" -ForegroundColor Red; $global:LASTEXITCODE = 1 }
-finally { Remove-Item Env:FSG_KPI_CODE, Env:FSG_ADMIN_EMAIL, Env:FSG_ADMIN_PW -ErrorAction SilentlyContinue }
+finally { Remove-Item Env:FSG_KPI_CODE, Env:FSG_ADMIN_EMAIL, Env:FSG_ADMIN_PW, Env:FSG_DRIVE_TOKEN, Env:FSG_DRIVE_URL -ErrorAction SilentlyContinue }
