@@ -58,6 +58,15 @@ function sysModelsFromText(text) {
   if (!out.length && /SYSTEM/.test(u)) add('System');
   return out;
 }
+/* 2026-10-27: System 표기(XR/XN 9xxx·3xxx)인 작업인데 CRM 에 연결된 XR/XN 모듈이 1대 이하면 CRM 자산 등록 지연이 의심된다.
+ * 캘린더 장비 표기에는 대수가 없어(예: "XR-9100") 엔진이 모자란 대수를 채울 수 없고, 같은 모델에서 대수가 모자란 경우는 missing(모델 누락)에도 걸리지 않는다.
+ * 대수는 바꾸지 않고 "확인 필요"로만 알린다 — CRM 에 나머지가 등록된 뒤 다시 실행하면 자동 반영된다. */
+function systemShortfall(equip, hits) {
+  const sys = sysModelsFromText(equip).filter(m => /^(XR|XN)-/.test(m));
+  if (!sys.length || !hits || !hits.length) return '';
+  const mods = hits.filter(x => /^(XR|XN)-?\d{1,2}$/.test(cleanModel(x.model))).length;
+  return mods <= 1 ? sys.join(', ') + ' System 표기인데 CRM 모듈 ' + mods + '대만 연결' : '';
+}
 function sysGubunFor(text, model, jobGubun) {
   const key = / System$/.test(model) ? '\\b' + model.split(' ')[0] + '\\b' : model.replace('-', '-?'), re = new RegExp(key);
   const moved = String(text || '').toUpperCase().split(/[,\/]/).some(seg => re.test(seg) && /(재구성|이전|재배치)/.test(seg));
@@ -280,7 +289,7 @@ function computeInstallDetail(cal, serial, period, acctTeam) {
     const calHas = !!calBased && (calBased.length > 0 || isSystemLabel(r.equip));   // 단품 토큰이 없어도 System 표기가 있으면 캘린더 기준(세트는 따로 센다)
     const status = hits.length ? 'OK' : (calHas ? (gubun === '이전설치' ? '캘린더 기준' : '캘린더 표기(CRM 미등록)') : 'CRM 미등록');
     rows.push({ start: fmt(s), end: fmt(e), gubun, acct, team: r.team, owner: r.owner, calEquip: r.equip, merged: r.mergedCount || 1, units: unitSum, detail,
-      sns: calBased ? (calHas ? '(캘린더 표기)' : '') : hits.map(x => x.sn).join(', '), calBased: !!calBased, missing, status, link: p.link || '', linkedAcct: p.linkedAcct || '' }); });
+      sns: calBased ? (calHas ? '(캘린더 표기)' : '') : hits.map(x => x.sn).join(', '), calBased: !!calBased, missing, suspect: calBased ? '' : systemShortfall(r.equip, hits), status, link: p.link || '', linkedAcct: p.linkedAcct || '' }); });
   const orphan = [], dealerOrphan = [], dealerKeys = {};
   Object.keys(serByAcct).forEach(k => serByAcct[k].forEach(x => { const key = x.sn + '|' + x.date; if (usedSn[key] || !inMonths(x.date, period.months)) return;
     if (x.dealer) { dealerOrphan.push({ date: fmt(x.date), acct: x.acct, model: x.model, sn: x.sn, dealer: x.dealer }); dealerKeys[key] = true; return; }
@@ -365,7 +374,7 @@ function installSummary(detail, period) {
     jobs.push({ start: r.start, end: r.end, team: r.team, owner: r.owner, acct: r.acct, kind: r.gubun === '이전설치' ? '이전설치' : '신규', sys: sysTxt, cal: r.calEquip, equip: exp.text, units: exp.total, agg: exp.agg,
       src: r.calBased ? '캘린더 표기' : (r.status === 'OK' ? 'CRM' : '—'), sn: r.sns,
       status: r.status === 'OK' ? (r.missing && r.missing.length ? '일부 CRM 미확인' : '정상') : r.status,
-      note: [r.merged > 1 ? '캘린더 ' + r.merged + '줄 병합' : '', r.missing && r.missing.length ? '미확인: ' + r.missing.join(', ') : '', r.link ? '자동 연결 → ' + r.linkedAcct + ' (' + r.link + ')' : ''].filter(String).join(' · ') }); });
+      note: [r.merged > 1 ? '캘린더 ' + r.merged + '줄 병합' : '', r.missing && r.missing.length ? '미확인: ' + r.missing.join(', ') : '', r.suspect ? '확인: ' + r.suspect : '', r.link ? '자동 연결 → ' + r.linkedAcct + ' (' + r.link + ')' : ''].filter(String).join(' · ') }); });
   orphanJobs(detail).forEach(j => { const exp = expandDetail(j.detail), sysM = Object.keys(j.models).filter(m => isSystemModel(m)).map(cleanModel);
     jobs.push({ start: j.date, end: '', team: j.team, owner: '', acct: j.acct, kind: j.gubun === '이전설치' ? '이전설치' : '신규', sys: sysM.join(', '), cal: '', equip: exp.text, units: exp.total, agg: exp.agg, src: 'CRM', sn: '', status: '캘린더 미등록', note: '캘린더에 일정 입력 필요', crmSys: sysM }); });
   jobs.sort((a, b) => a.start < b.start ? -1 : (a.start > b.start ? 1 : 0));
@@ -383,11 +392,13 @@ function installSummary(detail, period) {
   KINDS.forEach(kd => mat.push(line('전체', kd, teams.map(t => M[t + '|' + kd]))));
   const allCells = []; teams.forEach(t => KINDS.forEach(kd => allCells.push(M[t + '|' + kd]))); mat.push(line('전체', '합계', allCells));
   const need = jobs.filter(j => /CRM 미등록|일부 CRM 미확인/.test(j.status)).length, calMiss = jobs.filter(j => j.status === '캘린더 미등록').length, tent = detail.tentative || [];
+  const susp = detail.rows.filter(r => r.suspect);
   const notes = [
     ['확인 필요', 'CRM 미등록 ' + need + '건 → 캘린더 장비 표기로 집계(CRM 등록 여부 확인) · 캘린더 미등록 ' + calMiss + '건 → 캘린더 입력 (둘 다 실적에는 포함)' + ((detail.links || []).length ? ' · 이름이 달라 자동 연결한 짝 ' + detail.links.length + '건 → 「자동연결」 탭' : '')],
     ['집계 제외', '예정 ' + tent.length + '건 · 중고 ' + ((detail.usedCrm || 0) + (detail.usedCal || 0)) + '건 · Demo ' + (detail.demoCal || 0) + '건 · 대리점 설치(캘린더 없음) ' + (detail.dealerOrphan || []).length + '대' +
       ((detail.dealerOrphan || []).length ? ' — ' + detail.dealerOrphan.map(x => x.acct + ' ' + cleanModel(x.model) + '(' + x.dealer + ')').join(', ') : '') +
       ((detail.dupOrphan || []).length ? ' · 캘린더 작업과 중복 ' + detail.dupOrphan.length + '대 — ' + dupSummary(detail.dupOrphan) : '')]];
+  if (susp.length) notes.push(['확인 필요(대수)', 'System 작업 ' + susp.length + '건에서 CRM 연결 모듈이 1대 이하 — CRM 자산 등록 지연 의심(대수는 CRM에 연결된 만큼만 셈, 등록 후 다시 실행하면 자동 반영): ' + susp.map(r => r.acct + ' ' + r.suspect).join(' · ')]);
   const list = jobs.concat(tent.map(t => ({ start: t.start, end: t.end, team: t.team, owner: t.owner, acct: t.acct, kind: '예정', sys: '', cal: t.calEquip, equip: '', units: '', src: '—', sn: '', status: '예정(집계 제외)', note: '' })));
   return { head, mat, notes, jobs, list, audit: detail.audit || [], title: '팀별 설치 실적 (' + period.label + ')' };
 }
@@ -420,5 +431,5 @@ function runInstall(opt) {
   return { detail, install, summary, systems: collectSystems(detail), links: detail.links };
 }
 module.exports = { C, INSTALL_CATS, normAcct, normGubun, normTeam, cleanModel, expandModel, expandItems, detailItems, expandDetail, installCatOf, calModelTokens, modelFamily,
-  isSystemLabel, isSystemModel, sysModelsFromText, nextMonthPlan, sysGubunFor, resolveCols, readCalendarRows, mergeCalRows, linkHits, computeInstallDetail, dedupeOrphans,
+  isSystemLabel, isSystemModel, sysModelsFromText, systemShortfall, nextMonthPlan, sysGubunFor, resolveCols, readCalendarRows, mergeCalRows, linkHits, computeInstallDetail, dedupeOrphans,
   buildAcctTeam, orphanJobs, collectSystems, sysAcctsFor, applyCalendarInstalls, computeInstallStatus, installSummary, autoNameScore, runInstall, fmt, ymd };

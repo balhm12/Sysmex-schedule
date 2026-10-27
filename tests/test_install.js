@@ -73,6 +73,15 @@ const ROSTER = [['갑', 'FS EAST', 'T2'], ['을', 'FS WEST', 'T1'], ['병', 'FS 
 const rep = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-09', cut: '2026-09-30', serial, calendar: cal });
 const IB = rep.installBlock; assert(IB, '설치 블록 생성');
 const D = IB.detail, byAcct = {}; D.rows.forEach(r => byAcct[r.acct] = r);
+// 2026-10-27: System 표기인데 CRM 모듈이 1대 이하면 등록 지연 의심 표시(대수는 그대로)
+assert(/XR-9100 System 표기인데 CRM 모듈 1대만 연결/.test(byAcct['R병원'].suspect || ''), 'R병원: XR-9100 인데 XR-10 1대만 연결 → 의심: ' + byAcct['R병원'].suspect);
+assert.strictEqual(byAcct['R병원'].units, 1, '대수는 바꾸지 않는다(CRM 연결만큼)');
+assert(!byAcct['A병원'].suspect && !byAcct['B병원'].suspect, 'System 표기가 아니거나 CRM 이 없으면 의심 아님');
+assert(IB.summary.notes.some(n => n[0] === '확인 필요(대수)' && /R병원/.test(n[1])), '요약 확인 필요(대수) 줄');
+const H = n => Array.from({ length: n }, (_, i) => ({ model: 'XR-20 COMPLETE', sn: 'X' + i }));
+assert.strictEqual(I.systemShortfall('XR-9100', H(3)), '', '모듈 3대 → 정상'); assert.strictEqual(I.systemShortfall('XR-9100', H(2)), '', '모듈 2대 → 정상');
+assert(/CRM 모듈 1대만/.test(I.systemShortfall('XR-9100', H(1))) && /CRM 모듈 0대만/.test(I.systemShortfall('XN-9100', [{ model: 'CS-1600' }])), '1대·0대 → 의심');
+assert.strictEqual(I.systemShortfall('UN-2000', H(1)), '', 'UN 시스템은 대상 아님'); assert.strictEqual(I.systemShortfall('XR-1000', H(1)), '', 'System 표기 아님'); assert.strictEqual(I.systemShortfall('XR-9100', []), '', 'CRM 없으면 해당 없음(캘린더 표기 경로)');
 
 // 작업별 상세
 assert.deepStrictEqual(D.rows.map(r => r.acct), ['A병원', 'B병원', '양병원', '전주에코병원', 'C병원', '담대한내과의원', 'R병원', 'P의원', 'S병원'], '설치 작업 9 — 예정·중고·데모·평가·8월 제외');
