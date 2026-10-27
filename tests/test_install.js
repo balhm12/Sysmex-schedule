@@ -74,12 +74,18 @@ const rep = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-09', cut:
 const IB = rep.installBlock; assert(IB, '설치 블록 생성');
 const D = IB.detail, byAcct = {}; D.rows.forEach(r => byAcct[r.acct] = r);
 // 2026-10-27: System 표기인데 CRM 모듈이 1대 이하면 등록 지연 의심 표시(대수는 그대로)
-assert(/XR-9100 System 표기인데 CRM 모듈 1대만 연결/.test(byAcct['R병원'].suspect || ''), 'R병원: XR-9100 인데 XR-10 1대만 연결 → 의심: ' + byAcct['R병원'].suspect);
+assert(!byAcct['R병원'].suspect, 'R병원은 이전설치(옮기는 작업) → 새 자산이 없을 수 있어 의심 아님');
 assert.strictEqual(byAcct['R병원'].units, 1, '대수는 바꾸지 않는다(CRM 연결만큼)');
 assert(!byAcct['A병원'].suspect && !byAcct['B병원'].suspect, 'System 표기가 아니거나 CRM 이 없으면 의심 아님');
-assert(IB.summary.notes.some(n => n[0] === '확인 필요(대수)' && /R병원/.test(n[1])), '요약 확인 필요(대수) 줄');
+assert(!IB.summary.notes.some(n => n[0] === '확인 필요(대수)'), '이 시나리오에는 의심 작업이 없다');
 const H = n => Array.from({ length: n }, (_, i) => ({ model: 'XR-20 COMPLETE', sn: 'X' + i }));
 assert.strictEqual(I.systemShortfall('XR-9100', H(3)), '', '모듈 3대 → 정상'); assert.strictEqual(I.systemShortfall('XR-9100', H(2)), '', '모듈 2대 → 정상');
+assert.strictEqual(I.systemShortfall('XR-9100', H(1), '이전설치'), '', '이전설치는 의심 아님');
+const wRe = I.systemShortfall('SP-50 (with WG) 설치 / XN-9100 (2LINE) 재구성, 위치이동, CN-6000 설치 / XN-9100 재구성', [{ model: 'CN-6000' }, { model: 'SP-50' }], '설치');
+assert(/XN-9100 재구성 — 장비 추가가 있었다면 CRM 모듈 등록 확인\(CRM 모듈 0대\)/.test(wRe) && !/System 표기인데/.test(wRe), '재구성은 제외하지 않고 「장비 추가 확인」으로 따로 안내(실제 West 작업): ' + wRe);
+const mix = I.systemShortfall('XR-9100 설치, XN-9100 재구성', H(1), '설치');
+assert(/XR-9100 System 표기인데 CRM 모듈 1대만 연결/.test(mix) && /XN-9100 재구성 — 장비 추가/.test(mix), '같은 작업의 신규 System 과 재구성 System 을 각각 안내: ' + mix);
+assert.strictEqual(I.systemShortfall('XN-9100 재구성', H(2), '설치'), '', '재구성이어도 CRM 모듈이 2대 이상 연결되면 안내 없음');
 assert(/CRM 모듈 1대만/.test(I.systemShortfall('XR-9100', H(1))) && /CRM 모듈 0대만/.test(I.systemShortfall('XN-9100', [{ model: 'CS-1600' }])), '1대·0대 → 의심');
 assert.strictEqual(I.systemShortfall('UN-2000', H(1)), '', 'UN 시스템은 대상 아님'); assert.strictEqual(I.systemShortfall('XR-1000', H(1)), '', 'System 표기 아님'); assert.strictEqual(I.systemShortfall('XR-9100', []), '', 'CRM 없으면 해당 없음(캘린더 표기 경로)');
 
