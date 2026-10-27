@@ -19,7 +19,7 @@ function summarizeVoc(data, months, opt) {
     const n = R.length, q = [1, 2, 3].map(i => mean(R.map(r => r['q' + i]).filter(x => x != null)));
     const perfect = R.filter(r => r.avg === 5).length, low = R.filter(r => Math.min(r.q1, r.q2, r.q3) <= 2).length;
     const resp = visitCount(R);
-    return { n, visits: v, responseRate: v ? round(100 * resp / v, 1) : null, avg: round(mean(R.map(r => r.avg).filter(x => x != null)), 2), q: q.map(x => round(x, 2)),
+    return { n, visits: v, respondedVisits: resp, responseRate: v ? round(100 * resp / v, 1) : null, avg: round(mean(R.map(r => r.avg).filter(x => x != null)), 2), q: q.map(x => round(x, 2)),
       perfect, perfectPct: n ? round(100 * perfect / n, 1) : null, low, comments: R.filter(r => r.comment && String(r.comment).trim()).length, flag: R.filter(r => r.flag).length };
   };
   const R = recsAll.filter(inRange), all = stats(R, visitsFor('ALL'));
@@ -28,7 +28,7 @@ function summarizeVoc(data, months, opt) {
   keywords.forEach(k => { const c = commented.filter(r => String(r.comment).indexOf(k) >= 0).length; kw[k] = { n: c, pct: commented.length ? round(100 * c / commented.length, 0) : null }; });
   const days = R.map(r => String(r.ts).slice(0, 10)).sort(), allDays = recsAll.map(r => String(r.ts).slice(0, 10)).sort();
   const asOfs = months.map(asOf).filter(Boolean).sort();
-  return { months, ...all, teams, keywords: kw, commentTotal: commented.length, firstDay: days[0] || null, lastDay: days[days.length - 1] || null, allFirstDay: allDays[0] || null, allLastDay: allDays[allDays.length - 1] || null,
+  return { months, rateBasis: '응답률 = 같은 FSR·기관·날짜 응답을 한 방문으로 묶은 고유 방문 응답 수(respondedVisits, visitAsOf 날짜까지) ÷ 그 달 방문건수(visits, CRM 고장 수리·PM). n 은 응답 건수라 respondedVisits 보다 클 수 있다', ...all, teams, keywords: kw, commentTotal: commented.length, firstDay: days[0] || null, lastDay: days[days.length - 1] || null, allFirstDay: allDays[0] || null, allLastDay: allDays[allDays.length - 1] || null,
     visitAsOf: asOfs.length ? asOfs[asOfs.length - 1] : null, updated: data.updated || null, startMonth: data.startMonth || null, totalRecs: recsAll.length };
 }
 module.exports = { summarizeVoc, DEFAULT_KEYWORDS, TEAMS };
