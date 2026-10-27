@@ -17,11 +17,13 @@ const data = {
 const s = summarizeVoc(data, ['2026-09']);
 assert.strictEqual(s.n, 6); assert.strictEqual(s.visits, 50);
 assert.strictEqual(s.responseRate, 8, '방문 4곳(A·H1, B·H2, C·H3, D·H4)만 · 50 중 4 = 8%');
+assert.strictEqual(s.respondedVisits, 4, '응답률 분자 = 고유 방문 응답 수(응답 건수 n=6 과 다르다)'); assert(s.respondedVisits <= s.n);
+assert(/고유 방문 응답 수/.test(s.rateBasis) && /respondedVisits/.test(s.rateBasis), 'rateBasis 설명');
 assert.strictEqual(s.low, 1); assert.strictEqual(s.perfect, 3, 'A 2건 + E'); assert.strictEqual(s.perfectPct, 50);
 assert.strictEqual(s.comments, 5, '서술형 있는 응답'); assert.strictEqual(s.flag, 1);
 assert.deepStrictEqual(s.q, [4.33, 4.67, 4.5]); assert.strictEqual(s.avg, 4.5);
 const east = s.teams.find(t => t.team === 'FS EAST'), west = s.teams.find(t => t.team === 'FS WEST');
-assert.deepStrictEqual([east.n, east.visits, east.responseRate], [3, 20, 10], 'EAST 방문 2곳 / 20'); assert.deepStrictEqual([west.n, west.visits, west.responseRate], [3, 30, 6.7]);
+assert.deepStrictEqual([east.n, east.visits, east.responseRate], [3, 20, 10], 'EAST 방문 2곳 / 20'); assert.strictEqual(east.respondedVisits, 2, 'EAST 분자 2'); assert.strictEqual(Math.round(1000 * east.respondedVisits / east.visits) / 10, east.responseRate, '분자 ÷ 분모 = 응답률'); assert.deepStrictEqual([west.n, west.visits, west.responseRate], [3, 30, 6.7]);
 assert.deepStrictEqual(s.keywords['친절'], { n: 2, pct: 40 }, '서술형 5건 중 2건'); assert.strictEqual(s.keywords['설명'].n, 2); assert.strictEqual(s.keywords['꼼꼼'].n, 1);
 assert.strictEqual(s.visitAsOf, '2026-09-20'); assert.strictEqual(s.firstDay, '2026-09-01');
 assert.strictEqual(summarizeVoc(data, ['2026-07']).n, 0, '응답 없는 기간');

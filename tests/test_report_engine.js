@@ -110,6 +110,14 @@ assert(rp.peopleKpi && rp.peopleKpi.top.length >= 1, '부서원 KPI 상위 목�
 rp.peopleKpi.top.forEach((x, i, arr) => { assert(x.score > 0 && typeof x.unitLabel === 'string' && typeof x.count === 'number'); if (i) assert(arr[i - 1].score >= x.score, '점수 내림차순'); });
 assert.strictEqual(rep.peopleKpi, null, 'prod 상수를 주지 않으면 계산하지 않음');
 rep.hospMonth.forEach(h => assert(typeof h.team === 'string')); rep.repeatMonth.forEach(r => assert(typeof r.team === 'string'));
+// 2026-10-27: 팀 기준 내역(teamCredits)과 기준 설명(meta.basis) — 덱을 쓰는 쪽이 "왜 이 팀인가·왜 전월 덱과 다른가"를 json 만 보고 알 수 있게
+[rep.hospMonth, rep.repeatMonth].forEach(list => list.forEach(h => {
+  assert(h.teamCredits && typeof h.teamCredits === 'object', 'teamCredits 있음');
+  const mx = Math.max(0, ...Object.values(h.teamCredits)); if (mx > 0) assert.strictEqual(h.teamCredits[h.team], mx, 'team 은 teamCredits 최대 팀: ' + JSON.stringify(h.teamCredits) + ' ' + h.team);
+  Object.keys(h.teamCredits).forEach(t => assert(/^FS /.test(t) && h.teamCredits[t] > 0));
+}));
+['hospital', 'hospitalTeam', 'repeat', 'repeatTeam', 'install'].forEach(k => assert(typeof rep.meta.basis[k] === 'string' && rep.meta.basis[k].length > 10, 'meta.basis.' + k));
+assert(/활동\(방문\) 기준/.test(rep.meta.basis.hospital) && /케이스 파일/.test(rep.meta.basis.hospital) && /--fsr/.test(rep.meta.basis.repeatTeam), 'basis 문구');
 assert.deepStrictEqual(TC.postKeyLabels, ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09']);
 const M = rep.metro; assert.strictEqual(M.rows.length, 12);
 assert.deepStrictEqual(M.rows[5], ['2026-09', 'WEST', 2, 1]); assert.deepStrictEqual(M.rows[11], ['2026-09', 'EAST', 1, 4]); assert.deepStrictEqual(M.rows[10], ['2026-08', 'EAST', 0, 1]);

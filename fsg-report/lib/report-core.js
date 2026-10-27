@@ -257,8 +257,10 @@ function buildReport(opt) {
   /* ⑧ 병원 TOP5 — 최근 1년(활동 기준, 모든 목적) · 기간(활동 기준 — 2026-10-26부터 케이스 파일을 쓰지 않는다. 시트는 케이스 기준이었음), 내부 계정 제외 */
   const topAcc = (list, pick) => { const acc = {}; list.forEach(it => { const a = pick(it); if (!a || INTERNAL_ACCOUNTS.includes(a)) return; acc[a] = (acc[a] || 0) + 1; });
     return Object.keys(acc).map(a => ({ account: a, count: acc[a] })).sort((x, y) => y.count - x.count).slice(0, N.HOSPITAL); };
-  const teamTop = list => { const t = {}; list.forEach(x => x.credits.forEach(c => { const tm = teamOf(c); if (tm) t[tm] = (t[tm] || 0) + 1; })); return topKeyOf(t); };
-  const withTeam = (top, list, pick) => top.map(h => Object.assign(h, { team: teamTop(list.filter(x => pick(x) === h.account)) }));
+  // 팀별 크레딧 = 행(방문)에 참석한 엔지니어를 팀별로 센 값(한 행에 다른 팀 엔지니어가 함께 있으면 각 팀에 1씩). team = 가장 큰 팀. teamCredits 는 그 내역(보고서가 "왜 이 팀인가"를 설명할 때 쓴다).
+  const teamCreditsOf = list => { const t = {}; list.forEach(x => x.credits.forEach(c => { const tm = teamOf(c); if (tm) t[tm] = (t[tm] || 0) + 1; })); return t; };
+  const teamTop = list => topKeyOf(teamCreditsOf(list));
+  const withTeam = (top, list, pick) => top.map(h => { const sub = list.filter(x => pick(x) === h.account); return Object.assign(h, { team: teamTop(sub), teamCredits: teamCreditsOf(sub) }); });
   const hospYear = topAcc(rows.filter(inT12), x => x.acct);
   const hospPer = rows.filter(inPer), hospMonth = withTeam(topAcc(hospPer, x => x.acct), hospPer, x => x.acct);
 
@@ -267,7 +269,7 @@ function buildReport(opt) {
     rows.forEach(x => { if (x.purpose !== PV.REPAIR || !sel(x) || !x.sn) return; const v = rep[x.sn] = rep[x.sn] || { count: 0, model: x.r.prod, account: x.acct, alt: '' }; v.count++; v.model = x.r.prod; v.account = x.acct; if (x.r.prod) v.alt = x.r.prod; });
     return Object.keys(rep).map(sn => ({ serial: sn, model: rep[sn].model, modelAlt: rep[sn].alt, account: rep[sn].account, count: rep[sn].count })).sort((a, b) => b.count - a.count).slice(0, N.REPEAT); };
   const repeatYear = repeat(inT12), repeatMonth = repeat(inPer);
-  repeatMonth.forEach(r => { r.team = teamTop(rows.filter(x => inPer(x) && x.purpose === PV.REPAIR && x.sn === r.serial)); });
+  repeatMonth.forEach(r => { const sub = rows.filter(x => inPer(x) && x.purpose === PV.REPAIR && x.sn === r.serial); r.team = teamTop(sub); r.teamCredits = teamCreditsOf(sub); });
 
   /* ⑩ 장애 요인 TOP4 — 고장 수리 행의 Error 1~3, 기타·others·'-' 제외 */
   const errorTop = sel => { const cnt = {}; let total = 0;
@@ -342,7 +344,15 @@ function buildReport(opt) {
   return {
     meta: { period: { key: period.key, label: period.label, months: period.months.map(ym => P.lab(ym.y, ym.m)) }, cut: opt.cut || null, teams,
       rows: { raw: raw.length, afterCut: RAWC.length, counted: rows.length }, excluded,
-      unmappedRows: rows.filter(x => !x.credits.length).length, eligibleAccounts: CORE.eligible.length },
+      unmappedRows: rows.filter(x => !x.credits.length).length, eligibleAccounts: CORE.eligible.length,
+      // 숫자의 기준 설명(보고서·덱을 쓰는 쪽이 "왜 전월 덱과 다른가"를 json 만 보고 알 수 있게). 값이 아니라 정의다.
+      basis: {
+        hospital: '활동(방문) 기준 — 모든 목적, 내부 계정 제외. 2026-10-26부터 서비스 케이스 파일을 쓰지 않는다(2026-09 덱까지는 케이스 파일 기준이라 순위·건수가 다를 수 있음)',
+        hospitalTeam: 'team = 그 기관 활동의 팀 크레딧이 가장 많은 팀, teamCredits = 팀별 크레딧(한 행에 다른 팀 엔지니어가 함께 있으면 각 팀에 1씩)',
+        repeat: '반복 고장 장비 = S/N 단위 고장 수리 행 수',
+        repeatTeam: 'team = 그 S/N 고장 수리 행의 팀 크레딧이 가장 많은 팀. FSR 담당기관 관리표의 담당(팀)과 다를 수 있다(관리표 기준이 필요하면 fill_deck.py --fsr)',
+        install: '설치 = 설치 공유캘린더 작업(CRM 설치 기록과 자동 연결). team.rows.inst 는 팀별 (신규+이전설치) 기관 수의 합이라 한 기관이 둘 다면 2로 세고, installBlock.summary.mat 전체 합계는 기관을 한 번만 센다'
+      } },
     kpi, kpiTrend, team, caseAnalysis,
     trendCompare, yoy, metro, metroDelta, peopleKpi, engYear, engMonth, hospYear, hospMonth, repeatYear, repeatMonth, errYear, errMonth, errRate,
     fleet: fleet ? { activeCount: fleet.activeCount, pmActiveCount: fleet.pmActiveCount } : null, health, focus,
