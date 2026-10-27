@@ -61,8 +61,12 @@ function sysModelsFromText(text) {
 /* 2026-10-27: System 표기(XR/XN 9xxx·3xxx)인 작업인데 CRM 에 연결된 XR/XN 모듈이 1대 이하면 CRM 자산 등록 지연이 의심된다.
  * 캘린더 장비 표기에는 대수가 없어(예: "XR-9100") 엔진이 모자란 대수를 채울 수 없고, 같은 모델에서 대수가 모자란 경우는 missing(모델 누락)에도 걸리지 않는다.
  * 대수는 바꾸지 않고 "확인 필요"로만 알린다 — CRM 에 나머지가 등록된 뒤 다시 실행하면 자동 반영된다. */
-function systemShortfall(equip, hits) {
-  const sys = sysModelsFromText(equip).filter(m => /^(XR|XN)-/.test(m));
+function systemShortfall(equip, hits, gubun) {
+  if (gubun === '이전설치') return '';   // 옮기는 작업은 새 자산이 없을 수 있다
+  const segs = String(equip || '').split(/[,\/]/);
+  // 같은 줄에 재구성·재배치·위치이동·이전이 적힌 System 은 새 모듈이 없는 게 정상 — 제외(2026-10-27 West 재구성 작업이 의심으로 잘못 걸렸다)
+  const isReconf = m => { const re = new RegExp(m.replace('-', '-?')), mine = segs.filter(x => re.test(x.toUpperCase())); return mine.length > 0 && mine.every(x => /(재구성|재배치|위치이동|이전)/.test(x)); };
+  const sys = sysModelsFromText(equip).filter(m => /^(XR|XN)-/.test(m) && !isReconf(m));
   if (!sys.length || !hits || !hits.length) return '';
   const mods = hits.filter(x => /^(XR|XN)-?\d{1,2}$/.test(cleanModel(x.model))).length;
   return mods <= 1 ? sys.join(', ') + ' System 표기인데 CRM 모듈 ' + mods + '대만 연결' : '';
@@ -289,7 +293,7 @@ function computeInstallDetail(cal, serial, period, acctTeam) {
     const calHas = !!calBased && (calBased.length > 0 || isSystemLabel(r.equip));   // 단품 토큰이 없어도 System 표기가 있으면 캘린더 기준(세트는 따로 센다)
     const status = hits.length ? 'OK' : (calHas ? (gubun === '이전설치' ? '캘린더 기준' : '캘린더 표기(CRM 미등록)') : 'CRM 미등록');
     rows.push({ start: fmt(s), end: fmt(e), gubun, acct, team: r.team, owner: r.owner, calEquip: r.equip, merged: r.mergedCount || 1, units: unitSum, detail,
-      sns: calBased ? (calHas ? '(캘린더 표기)' : '') : hits.map(x => x.sn).join(', '), calBased: !!calBased, missing, suspect: calBased ? '' : systemShortfall(r.equip, hits), status, link: p.link || '', linkedAcct: p.linkedAcct || '' }); });
+      sns: calBased ? (calHas ? '(캘린더 표기)' : '') : hits.map(x => x.sn).join(', '), calBased: !!calBased, missing, suspect: calBased ? '' : systemShortfall(r.equip, hits, gubun), status, link: p.link || '', linkedAcct: p.linkedAcct || '' }); });
   const orphan = [], dealerOrphan = [], dealerKeys = {};
   Object.keys(serByAcct).forEach(k => serByAcct[k].forEach(x => { const key = x.sn + '|' + x.date; if (usedSn[key] || !inMonths(x.date, period.months)) return;
     if (x.dealer) { dealerOrphan.push({ date: fmt(x.date), acct: x.acct, model: x.model, sn: x.sn, dealer: x.dealer }); dealerKeys[key] = true; return; }
