@@ -26,6 +26,10 @@ const { okUrl } = require('../fsg-report/upload-drive.js');
   let r = await go(['--file', f1, '--file', f2]);
   assert.strictEqual(r.s, 0, r.o + r.e); assert(/약속_활동 2026_10_27/.test(r.o) && /완료/.test(r.o) && /2시간 안에/.test(r.o), r.o);
   assert.strictEqual(seen.length, 2); assert.strictEqual(seen[0].name, path.basename(f1)); assert.strictEqual(seen[0].size, 300000); assert(/^[0-9a-f]{64}$/.test(seen[0].sha256));
+  // 1-b) 한글 파일명(검산_…xlsx)과 json 도 이름 그대로 전달
+  const f3 = path.join(tmp, '검산_2026-10.xlsx'), f4 = path.join(tmp, 'report-data_2026-10.json'); fs.writeFileSync(f3, Buffer.from('x1')); fs.writeFileSync(f4, Buffer.from('{"a":1}'));
+  r = await go(['--file', f3, '--file', f4]); assert.strictEqual(r.s, 0, r.o + r.e);
+  assert(seen.slice(-2).map(x => x.name).join() === '검산_2026-10.xlsx,report-data_2026-10.json', '한글 이름 전달: ' + seen.slice(-2).map(x => x.name));
   // 2) 같은 파일 다시 → 서버가 중복으로 알림(건너뜀 표시), 실패 아님
   r = await go(['--file', f1]); assert.strictEqual(r.s, 0); assert(/이미 올라가 있음/.test(r.o), r.o);
   // 3) 토큰이 틀리면 실패(종료 코드 1), 안내문구, 토큰 값은 어디에도 출력되지 않음

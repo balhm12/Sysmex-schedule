@@ -92,8 +92,12 @@ try {
         if ($files.Count -eq 0) { $files = @($latest.FullName) }
         $ser = @(Get-ChildItem -LiteralPath $cfg.folder -File -Filter '*.xlsx' -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'Serial' } | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
         if ($ser.Count -gt 0 -and ((Get-Date) - $ser[0].LastWriteTime).TotalDays -lt 8) { $files += $ser[0].FullName }
+        # 보고 데이터도 올린다 → Drive 「FSG_report_out/<기간>」 (프로젝트 채팅이 Drive 커넥터로 읽거나 내려받아 쓴다)
+        if (-not $NoReport -and $per) {
+            foreach ($rn in @("report-data_$per.json", "검산_$per.xlsx")) { $rp = Join-Path $outDir $rn; if (Test-Path -LiteralPath $rp) { $files += $rp } }
+        }
         Write-Host ''
-        Write-Host '만족도 시트용 CRM 파일을 Drive 로 올립니다...' -ForegroundColor Cyan
+        Write-Host '만족도 시트용 CRM 파일과 보고 데이터를 Drive 로 올립니다...' -ForegroundColor Cyan
         $env:FSG_DRIVE_URL = $cfg.driveUploadUrl
         if (-not [string]::IsNullOrEmpty($cfg.driveTokEnc)) { $env:FSG_DRIVE_TOKEN = Plain $cfg.driveTokEnc }
         else { $env:FSG_DRIVE_TOKEN = Read-Secret 'Drive 업로드 토큰' }
@@ -107,7 +111,7 @@ try {
     if (-not $DryRun) {
         Write-Host ''
         Write-Host '대시보드에 올렸습니다. 팀장 화면은 새로고침하거나 5분 안에 자동 반영됩니다.' -ForegroundColor Green
-        if ($driveDone) { Write-Host '만족도 시트용 파일도 Drive 로 올렸습니다 — 2시간 안에 자동 반영됩니다.' -ForegroundColor Green }
+        if ($driveDone) { Write-Host '만족도 시트용 파일과 보고 데이터도 Drive 로 올렸습니다 — 만족도 시트는 2시간 안에 자동 반영됩니다. 보고 데이터는 Drive 「FSG_report_out」 폴더에 있습니다.' -ForegroundColor Green }
         else { Write-Host '만족도 시트는 같은 파일을 Drive의 CRM_원본 폴더에 올리면 2시간 안에 자동 반영됩니다.' }
         if (-not $driveDone -and -not $NoOpen -and $cfg.driveUrl) {
             Write-Host '파일 위치와 Drive 폴더를 엽니다 — 파일을 Drive 창으로 끌어다 놓으세요.'
