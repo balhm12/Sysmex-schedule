@@ -89,6 +89,15 @@ td.good{color:var(--good-t);font-weight:700}td.bad{color:var(--bad-t);font-weigh
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px 18px;min-width:0}
 .panel h3{font-size:15px;margin:0 0 2px;color:var(--primary)}
 .panel .d{font-size:12px;color:var(--muted);margin:0 0 12px}
+.lifeGuide{border:1px solid var(--border);border-radius:6px;background:var(--card);padding:10px 14px;margin:0 0 14px;font-size:12.5px;line-height:1.55}
+.lifeGuide summary{cursor:pointer;font-weight:600;color:var(--text)}
+.lg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.lg-card{border:1px solid var(--border);border-radius:6px;background:var(--surface,#fff);padding:10px 12px}
+.lg-card p{margin:6px 0 0}
+.lg-card em{font-style:normal;font-weight:600;color:var(--muted);margin-right:6px}
+.lg-terms{margin:4px 0 2px;padding-left:18px}
+.lg-terms li{margin:3px 0}
+@media (max-width:720px){.lg-grid{grid-template-columns:1fr}}
 .cv{position:relative;height:290px}
 .cv.tall{height:400px}
 .tw{overflow:auto}
@@ -484,10 +493,31 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 
   <h2 class="sec">장비 수명 <small id="lifeSub"></small></h2>
   <section class="panel">
-    <div class="thead"><div><h3>사용 연수별 고장률</h3><p class="d" style="margin:0" id="lifeNote"></p></div>
-      <div class="f"><label for="fLifeFam">장비군</label><select id="fLifeFam"></select></div></div>
+    <details class="lifeGuide" open>
+      <summary>두 표 읽는 법 — 사용 연수별 vs 설치 연도별</summary>
+      <div class="lg-grid">
+        <div class="lg-card"><b>사용 연수별 고장률</b>
+          <p><em>묶는 기준</em> 설치 후 몇 년째에 고장이 났는가 (고장 방문일 − 설치일자)</p>
+          <p><em>알 수 있는 것</em> 장비가 오래될수록 고장이 늘어나는가 — 초기 불량(0~1년) → 안정기 → 노후 증가</p>
+          <p><em>주의</em> 같은 장비도 시간이 지나면 다음 구간으로 넘어가 두 구간에 걸쳐 잡힙니다. 그래서 장비 수가 아니라 <b>1년 환산 대수</b>로 나눕니다.</p></div>
+        <div class="lg-card"><b>설치 연도별</b>
+          <p><em>묶는 기준</em> 장비를 설치한 해 (같은 해에 설치한 장비를 한 묶음으로)</p>
+          <p><em>알 수 있는 것</em> 어느 해에 설치한 장비가 고장이 잦은가 — 모델·제조 시기·설치 환경 차이 점검</p>
+          <p><em>주의</em> 같은 기간(최근 12개월)의 고장이라 묶음마다 사용 연수가 다릅니다(예: 2016년 설치분은 9~10년차, 2025년 설치분은 1~2년차). 해마다 우열을 가리는 표가 아니라, 이상하게 높은 묶음을 찾는 표입니다.</p></div>
+      </div>
+      <ul class="lg-terms">
+        <li><b>1년 환산 대수</b> 장비가 그 구간에 머문 기간을 모두 더해 1년 기준으로 환산한 대수. 58 = 58대를 꼬박 1년 지켜본 것과 같은 양 (실제 장비 수보다 작을 수 있음)</li>
+        <li><b>연 고장/대수</b> 장비 1대가 1년에 몇 번 고장 났는가 = 고장 수리 ÷ 1년 환산 대수 (방문이 없던 장비도 분모에 포함)</li>
+        <li><b>MTBF(일)</b> 평균 고장 간격 = 365.25 ÷ 연 고장/대수. 클수록 오래 버팀</li>
+        <li><b>'-'</b> 1년 환산 대수가 10 미만이라 표본이 적은 칸</li>
+        <li><b>한계</b> 같은 고장의 재방문도 건수에 들어가고, 폐기·철수 장비는 포함되지 않아 오래된 구간의 고장률이 낮게 보일 수 있습니다.</li>
+      </ul>
+    </details>
+    <div class="thead"><div><h3>사용 연수별 고장률</h3><p class="d" style="margin:0">설치 후 몇 년째에 고장이 났는지로 묶음 · 오래될수록 고장이 늘어나는지 확인</p></div>
+      <div class="f"><label for="fLifeFam">장비군 (두 표 공통)</label><select id="fLifeFam"></select></div></div>
+    <p class="d" id="lifeNote" style="margin:0 0 8px"></p>
     <div class="tw"><table id="tLife"></table></div>
-    <div class="thead" style="margin-top:18px"><div><h3 style="font-size:14px">설치 연도별</h3><p class="d" style="margin:0">같은 해에 설치한 장비끼리 · 관측 기간 안의 고장</p></div></div>
+    <div class="thead" style="margin-top:18px"><div><h3 style="font-size:14px">설치 연도별</h3><p class="d" style="margin:0">같은 해에 설치한 장비끼리 묶음 · 어느 해 설치분이 고장이 잦은지 확인 (같은 최근 12개월의 고장이라 묶음마다 사용 연수가 다름)</p></div></div>
     <div class="tw"><table id="tLifeCoh"></table></div>
   </section>
 
@@ -2717,7 +2747,7 @@ function drawLife(){
   if(!LIFE) return; const L=LIFE, F=$('fLifeFam').value||'전체', T=F==='전체'?L.all:L.byFam[F]; if(!T) return;
   const ym=ms=>mkey(ms).replace('-','.'), MIN_EXP=10;   /* 1년 환산 대수(장비·년)가 10 미만인 칸은 표본이 적어 '-' */
   $('lifeSub').textContent=`${ym(L.ws)} ~ ${ym(L.we)} · 전사 기준`;
-  $('lifeNote').textContent=`설치일자 있는 장비 ${fmt(L.withInst)}대 / 자산대장 '사용' ${fmt(L.used)}대 · 사용 연수 = 방문일 − 설치일자 · 연 고장/대수 = 고장 수리 ÷ 1년 환산 대수(방문이 없던 장비 포함) · MTBF = 365.25 ÷ 연 고장/대수 · 1년 환산 대수 ${MIN_EXP} 미만은 '-'`+
+  $('lifeNote').textContent=`설치일자 있는 장비 ${fmt(L.withInst)}대 / 자산대장 '사용' ${fmt(L.used)}대`+
     (L.preInstall?` · 설치일보다 앞선 방문 ${fmt(L.preInstall)}건 제외`:'')+(L.noMatch?` · 설치일을 알 수 없는 장비의 고장 ${fmt(L.noMatch)}건은 이 표에 없음`:'');
   const rate=c=>c.exp>=MIN_EXP?c.fail/c.exp:null, mtbf=r=>r?Math.round(365.25/r):null;
   const errs=c=>{ const e=Object.entries(c.err).sort((a,b)=>b[1]-a[1]).slice(0,3); return e.length?e.map(([k,n])=>`${esc((D.errDisp&&D.errDisp[k])||k)} ${fmt(n)}`).join(' · '):'-'; };
