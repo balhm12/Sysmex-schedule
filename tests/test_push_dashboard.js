@@ -12,7 +12,7 @@ function grab(startRe) {   // HTML 안 함수 본문을 중괄호 짝으로 잘�
 const line = re => { const m = html.match(re); assert(m, 'not found ' + re); return m[0]; };
 const wc = require('crypto').webcrypto;
 const ctx = vm.createContext({ crypto: wc, TextEncoder, TextDecoder, atob, btoa, Blob, Response, CompressionStream, DecompressionStream, Uint8Array, JSON, Math, console, Array, Map, String, Number });
-vm.runInContext([line(/const b64=.*?;\n/), line(/const unb64=.*?;\n/), grab(/async function streamThrough\(/), grab(/async function deriveKey\(/), grab(/async function open_\(/), grab(/async function codeOk\(/),
+vm.runInContext(['const DAY = 86400000;', line(/const b64=.*?;\n/), line(/const unb64=.*?;\n/), grab(/async function streamThrough\(/), grab(/async function deriveKey\(/), grab(/async function open_\(/), grab(/async function codeOk\(/),
   grab(/function decodeEmbed\(/), grab(/function decodeSer\(/), 'function snOf(v){ v=String(v==null?\'\':v).trim(); return v===\'0\'?\'\':v; }'].join('\n'), ctx);
 const dash = { open_: ctx.open_, decodeEmbed: ctx.decodeEmbed, decodeSer: ctx.decodeSer, codeOk: ctx.codeOk };
 
@@ -33,7 +33,7 @@ const dash = { open_: ctx.open_, decodeEmbed: ctx.decodeEmbed, decodeSer: ctx.de
   const dry = cp.spawnSync(process.execPath, [cli, '--dir', dir, '--dry-run', '--out', outJ], { encoding: 'utf8', env: Object.assign({}, process.env, { FSG_KPI_CODE: 'test-code' }) });
   assert.strictEqual(dry.status, 0, dry.stderr + dry.stdout); assert(!/test-code/.test(dry.stdout + dry.stderr), '코드를 출력하지 않음');
   const J = JSON.parse(fs.readFileSync(outJ, 'utf8'));
-  assert.strictEqual(J.act.n, 12); assert.deepStrictEqual(J.ser.used, [['H1', 'S1', 'XN-1000'], ['H3', '', 'CN-3000']], "'사용'만 · S/N 0 → 빈칸");
+  assert.strictEqual(J.act.n, 12); assert.strictEqual(J.ser.v, 3); assert.deepStrictEqual(J.ser.used, [['H1', 'S1', 'XN-1000', 18262], ['H3', '', 'CN-3000', null]], "'사용'만 · S/N 0 → 빈칸 · 4번째 = 설치일자(일수, 2020-01-01=18262)");
   const actBack = await dash.open_(J.sealed.act, 'test-code'); assert.deepStrictEqual(actBack, J.act, 'seal → open_ 왕복');
   assert.strictEqual(await dash.open_(J.sealed.check, 'test-code'), 'FSG-KPI'); assert(await dash.codeOk('test-code', { check: J.sealed.check })); assert(!(await dash.codeOk('wrong', { check: J.sealed.check })));
   const recs = JSON.parse(JSON.stringify(dash.decodeEmbed(actBack)));   // vm 영역 배열 → 평범한 객체
@@ -41,7 +41,8 @@ const dash = { open_: ctx.open_, decodeEmbed: ctx.decodeEmbed, decodeSer: ctx.de
   assert.deepStrictEqual([recs[0].st, recs[0].ft, recs[0].own, recs[0].acct, recs[0].sn, recs[0].prod, recs[0].purp, recs[0].subj, recs[0].err, recs[0].att, recs[0].t, recs[0].e, recs[0].c],
     ['완료됨', '서비스 요청', 'A', 'H1', 'S1', 'XN-1000', '고장 수리', '주제1', 'E1', '', T(2026, 9, 1, 10), T(2026, 9, 1, 11), T(2026, 8, 30, 9)], '대시보드 decodeEmbed 로 읽은 행 = 원본');
   assert.strictEqual(recs[3].sn, '', 'S/N 0 → 장비 없음'); assert.strictEqual(recs[4].att, 'C');
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(dash.decodeSer(J.ser))), [{ state: '사용', acct: 'H1', sn: 'S1', model: 'XN-1000' }, { state: '사용', acct: 'H3', sn: '', model: 'CN-3000' }]);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(dash.decodeSer(J.ser))), [{ state: '사용', acct: 'H1', sn: 'S1', model: 'XN-1000', install: Date.UTC(2020, 0, 1) }, { state: '사용', acct: 'H3', sn: '', model: 'CN-3000', install: null }]);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(dash.decodeSer({ v: 2, used: [['H1', 'S1', 'XN-1000']] }))), [{ state: '사용', acct: 'H1', sn: 'S1', model: 'XN-1000', install: null }], 'v2(3칸)도 읽는다');
 
   // 1-b) 같은 날 다시 내보낸 활동 파일은 최신 하나만 올린다(이중 계산 방지) · 이어 붙은 분할 파일은 합친다
   const wAct = (d, name, list) => { const w = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(w, XLSX.utils.aoa_to_sheet([H, ...list]), '약속'); XLSX.writeFile(w, path.join(d, name)); };
