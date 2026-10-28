@@ -482,6 +482,15 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
     <div class="tw"><table id="tFamTrend"></table></div>
   </section>
 
+  <h2 class="sec">장비 수명 <small id="lifeSub"></small></h2>
+  <section class="panel">
+    <div class="thead"><div><h3>사용 연수별 고장률</h3><p class="d" style="margin:0" id="lifeNote"></p></div>
+      <div class="f"><label for="fLifeFam">장비군</label><select id="fLifeFam"></select></div></div>
+    <div class="tw"><table id="tLife"></table></div>
+    <div class="thead" style="margin-top:18px"><div><h3 style="font-size:14px">설치 연도별</h3><p class="d" style="margin:0">같은 해에 설치한 장비끼리 · 관측 기간 안의 고장</p></div></div>
+    <div class="tw"><table id="tLifeCoh"></table></div>
+  </section>
+
   <h2 class="sec">설치 <small id="insSub"></small></h2>
   <section class="kpis" id="insKpis"></section>
   <div class="grid" style="margin-top:16px">
@@ -2488,6 +2497,7 @@ function render(){
   renderHealth(end, p);
   renderErrors(p, team);
   renderFamTrend(p, team);
+  renderLife(end);
   renderInstall(p, team);
   renderInst(p, team);
   renderDQ(p);
@@ -2522,6 +2532,30 @@ function serStats(months, team, sn){
     if(o.rec) d++;
     if(o.purp==='고장 수리'){ n++; if(o.rec){ f+=o.rv; units.add(o.sn+'|'+o.acct);} } }
   return {n,f,u:units.size,r:d?f/d*100:null};
+}
+/* 사용 연수별 고장률 (2026-10-28 사용자 요청, 설치일자 기준).
+   각 장비(자산대장 '사용' + 설치일자 있음)의 나이 구간별 관측 기간(장비·년)을 센다: 구간 [시작나이, 끝나이)가 관측 창 [ws, we]와 겹친 길이.
+   고장 수리 방문은 S/N+기관이 맞는 장비의 (방문일 − 설치일) 나이 구간에 넣는다. 분모는 방문이 없던 장비까지 모두 포함(서비스 이력이 있는 장비만 세지 않는다).
+   연 고장/대 = 고장 수리 ÷ 장비·년, MTBF(일) = 365.25 ÷ 연 고장/대. 설치일이 방문일보다 늦은 기록은 세지 않고 preInstall 로 센다. 전사 기준. */
+const LIFE_EDGES=[0,1,3,5,7,Infinity], LIFE_LABELS=['0~1년','1~3년','3~5년','5~7년','7년 이상'], YR=365.25*DAY;
+function lifeCalc(rows, serial, ws, we){
+  const nB=LIFE_LABELS.length, mk=()=>({n:0,exp:0,fail:0,err:{}});
+  const byFam={}, all={b:LIFE_LABELS.map(mk),cohort:{}}; let withInst=0, used=0, preInstall=0, noMatch=0;
+  const unit={};   // sn|acct → {fam, inst}
+  for(const u of serial){ if(u.state!=='사용'||!u.sn||!u.acct) continue; used++; if(u.install==null) continue; withInst++;
+    unit[u.sn+'|'+u.acct]={fam:famOf(u.model), inst:u.install}; }
+  const fam=f=>byFam[f]||(byFam[f]={b:LIFE_LABELS.map(mk),cohort:{}});
+  const coh=(T,cy)=>T.cohort[cy]||(T.cohort[cy]={n:0,exp:0,fail:0});
+  for(const k in unit){ const {fam:f, inst}=unit[k]; if(inst>we) continue; const F=fam(f), cy=new Date(inst).getUTCFullYear(); coh(F,cy).n++; coh(all,cy).n++;
+    for(let i=0;i<nB;i++){ const a=inst+LIFE_EDGES[i]*YR, b=LIFE_EDGES[i+1]===Infinity?Infinity:inst+LIFE_EDGES[i+1]*YR;
+      const ov=Math.min(b,we)-Math.max(a,ws); if(ov<=0) continue; const y=ov/YR;
+      for(const T of [F,all]){ T.b[i].n++; T.b[i].exp+=y; coh(T,cy).exp+=y; } } }
+  for(const o of rows){ if(o.purp!=='고장 수리'||o.t==null||o.t<ws||o.t>we||!o.sn||!o.acct) continue; const u=unit[o.sn+'|'+o.acct]; if(!u){ noMatch++; continue; }
+    const age=(o.t-u.inst)/YR; if(age<0){ preInstall++; continue; }
+    let i=0; while(i<nB-1&&age>=LIFE_EDGES[i+1]) i++;
+    const F=fam(u.fam), cy=new Date(u.inst).getUTCFullYear();
+    for(const T of [F,all]){ T.b[i].fail++; if(o.ek&&o.ek!=='미기재'&&o.ek!=='others') T.b[i].err[o.ek]=(T.b[i].err[o.ek]||0)+1; coh(T,cy).fail++; } }
+  return {byFam, all, withInst, used, preInstall, noMatch, ws, we};
 }
 /* 시리즈 가동 대수 — 자산대장(모델 포함)이 있으면 '사용' ∩ 12개월 서비스 이력(S/N+기관),
    없으면 CRM 기준 최근 12개월 서비스 이력이 있는 장비 수 */
@@ -2664,6 +2698,34 @@ function famBuckets(p, unit){
   if(unit==='q'){ const order=[], by={}; for(let i=0;i<30;i++){ const m=shiftMonth(end,-i); const q=fyQ(m); if(!by[q]){ if(order.length>=8) break; by[q]=[]; order.unshift(q); } by[q].unshift(m); }
     return order.map(q=>({label:q, months:by[q]})); }
   const out=[]; for(let i=11;i>=0;i--){ const m=shiftMonth(end,-i); out.push({label:m.slice(2).replace('-','.'), months:[m]}); } return out;
+}
+/* 장비 수명 — 사용 연수별 고장률·설치 연도별 (설치일자 기준). 계산은 lifeCalc */
+let LIFE=null;
+function renderLife(end){
+  const note=$('lifeNote'), sub=$('lifeSub');
+  const msg=t=>{ sub.textContent=''; note.textContent=t; $('tLife').innerHTML=''; $('tLifeCoh').innerHTML=''; $('fLifeFam').innerHTML=''; LIFE=null; };
+  if(!SERIAL||!SERIAL.length) return msg('자산대장(Serial No)이 필요합니다.');
+  if(!SERIAL.some(s=>s.install!=null)) return msg('자산대장에 설치일자 정보가 없습니다. 설치일자 열이 있는 Serial No 파일로 다시 올려 주세요(올리기 형식 v3).');
+  const first=D.months[0], wsM=shiftMonth(end,-11), ws0=Date.UTC(+wsM.slice(0,4),+wsM.slice(5)-1,1);
+  const dataStart=Date.UTC(+first.slice(0,4),+first.slice(5)-1,1), ws=Math.max(ws0,dataStart), we=Math.min(monthEnd(end),D.maxT);
+  LIFE=lifeCalc(D.rows,SERIAL,ws,we);
+  const fams=FAM_ORDER.filter(f=>LIFE.byFam[f]&&LIFE.byFam[f].b.some(b=>b.exp>0));
+  const sel=$('fLifeFam'), cur=sel.value; sel.innerHTML='<option value="전체">전체 장비</option>'+fams.map(f=>`<option>${esc(f)}</option>`).join(''); sel.value=fams.includes(cur)?cur:'전체';
+  drawLife();
+}
+function drawLife(){
+  if(!LIFE) return; const L=LIFE, F=$('fLifeFam').value||'전체', T=F==='전체'?L.all:L.byFam[F]; if(!T) return;
+  const ym=ms=>mkey(ms).replace('-','.'), MIN_EXP=10;   /* 장비·년이 10 미만인 칸은 표본이 적어 '-' */
+  $('lifeSub').textContent=`${ym(L.ws)} ~ ${ym(L.we)} · 전사 기준`;
+  $('lifeNote').textContent=`설치일자 있는 장비 ${fmt(L.withInst)}대 / 자산대장 '사용' ${fmt(L.used)}대 · 나이 = 방문일 − 설치일자 · 연 고장/대 = 고장 수리 ÷ 장비·년(방문이 없던 장비 포함) · MTBF = 365.25 ÷ 연 고장/대 · 장비·년 ${MIN_EXP} 미만은 '-'`+
+    (L.preInstall?` · 설치일보다 앞선 방문 ${fmt(L.preInstall)}건 제외`:'')+(L.noMatch?` · 설치일을 알 수 없는 장비의 고장 ${fmt(L.noMatch)}건은 이 표에 없음`:'');
+  const rate=c=>c.exp>=MIN_EXP?c.fail/c.exp:null, mtbf=r=>r?Math.round(365.25/r):null;
+  const errs=c=>{ const e=Object.entries(c.err).sort((a,b)=>b[1]-a[1]).slice(0,3); return e.length?e.map(([k,n])=>`${esc((D.errDisp&&D.errDisp[k])||k)} ${fmt(n)}`).join(' · '):'-'; };
+  $('tLife').innerHTML='<thead><tr><th>사용 연수</th><th class="num">장비 수</th><th class="num">장비·년</th><th class="num">고장 수리</th><th class="num">연 고장/대</th><th class="num">MTBF(일)</th><th>에러 TOP3 (건)</th></tr></thead><tbody>'+
+    T.b.map((c,i)=>{ const r=rate(c); return `<tr><td>${LIFE_LABELS[i]}</td><td class="num">${fmt(c.n)}</td><td class="num">${fmt(Math.round(c.exp))}</td><td class="num">${fmt(c.fail)}</td><td class="num">${r==null?'-':r.toFixed(2)}</td><td class="num">${r?fmt(mtbf(r)):'-'}</td><td>${errs(c)}</td></tr>`; }).join('')+'</tbody>';
+  const years=Object.keys(T.cohort).map(Number).sort((a,b)=>b-a);
+  $('tLifeCoh').innerHTML='<thead><tr><th>설치 연도</th><th class="num">장비 수</th><th class="num">장비·년</th><th class="num">고장 수리</th><th class="num">연 고장/대</th><th class="num">MTBF(일)</th></tr></thead><tbody>'+
+    years.map(y=>{ const c=T.cohort[y], r=rate(c); return `<tr><td>${y}년</td><td class="num">${fmt(c.n)}</td><td class="num">${fmt(Math.round(c.exp))}</td><td class="num">${fmt(c.fail)}</td><td class="num">${r==null?'-':r.toFixed(2)}</td><td class="num">${r?fmt(mtbf(r)):'-'}</td></tr>`; }).join('')+'</tbody>';
 }
 function renderFamTrend(p, team){
   const unit=$('fFtUnit').value||'m', B=famBuckets(p, unit);
@@ -2882,8 +2944,8 @@ function parseHr(buf, fname){
 }
 function parseSerial(buf){
   const t=xlsxRows(buf,null); if(!t) throw new Error('시트를 읽지 못했습니다.');
-  const h=t.h; const ix={state:col(h,['상태'],3),acct:col(h,['거래처'],6),sn:col(h,['Serial No.','Serial No','Serial'],14),model:col(h,['모델','Product','Model'],13)};
-  const out=t.rows.filter(r=>r.length).map(r=>({state:String(r[ix.state]??'').trim(),acct:String(r[ix.acct]??'').trim(),sn:snOf(r[ix.sn]),model:String(r[ix.model]??'').trim()}));
+  const h=t.h; const ix={state:col(h,['상태'],3),acct:col(h,['거래처'],6),sn:col(h,['Serial No.','Serial No','Serial'],14),model:col(h,['모델','Product','Model'],13),install:col(h,['설치일자','설치 일자'],-1)};
+  const out=t.rows.filter(r=>r.length).map(r=>({state:String(r[ix.state]??'').trim(),acct:String(r[ix.acct]??'').trim(),sn:snOf(r[ix.sn]),model:String(r[ix.model]??'').trim(),install:ix.install>=0?toMs(r[ix.install]):null}));
   if(!out.some(s=>s.state==='사용')) throw new Error("상태가 '사용'인 장비를 찾지 못했습니다. Serial No 자산대장 내보내기인지 확인해 주세요.");
   return out;
 }
@@ -3003,8 +3065,8 @@ function encodeAct(recs, src){
     keys.forEach(k=>{const v=r[k]||''; let j=idx[k].get(v); if(j===undefined){j=d[k].length;d[k].push(v);idx[k].set(v,j);} c[k][i]=j;}); });
   const o={v:1,n:recs.length,t,e,d,c,src}; if(hasCr) o.cr=cr; return o;
 }
-function encodeSer(list){ return {v:2,used:list.map(s=>[s.acct,s.sn,s.model||''])}; }
-function decodeSer(o){ return o.used.map(([acct,sn,model])=>({state:'사용',acct,sn,model:model||''})); }
+function encodeSer(list){ return {v:3,used:list.map(s=>[s.acct,s.sn,s.model||'',s.install==null?null:Math.floor(s.install/DAY)])}; }   /* v3: 4번째 = 설치일자(1970-01-01부터의 일수). v2(3칸)도 읽는다 */
+function decodeSer(o){ return o.used.map(([acct,sn,model,inst])=>({state:'사용',acct,sn,model:model||'',install:inst==null?null:inst*DAY})); }
 
 /* --- 올리기 (관리자) --- */
 const today=()=>nowStr().slice(0,10);
@@ -3094,6 +3156,7 @@ const pickTeam=el=>{ const c=el.closest('.tc[data-team]'); if(!c) return; $('fTe
 $('teams').addEventListener('click',e=>pickTeam(e.target));
 $('teams').addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pickTeam(e.target); } });
 ['fFtFam','fFtUnit','fFtMet'].forEach(id=>$(id).addEventListener('change',()=>renderFamTrend(curPeriod(), $('fTeam').value||null)));
+$('fLifeFam').addEventListener('change',drawLife);
 
 $('fSearch').addEventListener('input',drawInst);
 document.querySelectorAll('#tInst th.s').forEach(th=>{const go=()=>{const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=['name','team','fam'].includes(k)?1:-1;}

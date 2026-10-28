@@ -46,7 +46,8 @@ function encodeAct(recs, src) {
     keys.forEach(k => { const v = r[k] || ''; let j = idx[k].get(v); if (j === undefined) { j = d[k].length; d[k].push(v); idx[k].set(v, j); } c[k][i] = j; }); });
   const o = { v: 1, n: recs.length, t, e, d, c, src }; if (hasCr) o.cr = cr; return o;
 }
-function encodeSer(list) { return { v: 2, used: list.map(s => [s.acct, s.sn, s.model || '']) }; }
+// v3: 4번째 칸 = 설치일자(1970-01-01부터의 일수, 없으면 null). 대시보드 decodeSer 는 v2(3칸)도 읽는다
+function encodeSer(list) { return { v: 3, used: list.map(s => [s.acct, s.sn, s.model || '', s.install == null ? null : Math.floor(s.install / 86400000)]) }; }
 const b64 = u8 => Buffer.from(u8).toString('base64'), unb64 = s => new Uint8Array(Buffer.from(s, 'base64'));
 async function streamThrough(u8, ts) { return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(ts)).arrayBuffer()); }
 async function deriveKey(code, salt) {
