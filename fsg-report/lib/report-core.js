@@ -315,6 +315,8 @@ function buildReport(opt) {
     health = { activeCount, pmCoverage: activeCount ? round1(pmCovered / activeCount * 100) : null,
       pmCV: pmVals.length > 1 ? round0(stdev(pmVals) / avgOf(pmVals) * 100) : null,
       per100: (activeCount && nMonths) ? round1(kpi.repairRows / nMonths / activeCount * 100) : null,
+      // MTBF(일) = 30.44일 × 가동 장비 ÷ 월평균 고장 수리 (2026-10-28 사용자 결정). 서비스 방문 기록 기준이라 재방문도 건수에 들어가고, 가동 장비 = 12개월 내 서비스 이력이 있는 '사용' 장비(100대당 고장과 같은 모수)
+      mtbfDays: (activeCount && nMonths && kpi.repairRows) ? round0(30.44 * activeCount * nMonths / kpi.repairRows) : null,
       chronicUnits, chronicRatio: activeCount ? round1(chronicUnits / activeCount * 100) : null, teamCV, teamStat, nMonths };
 
     /* ⑥ 집중관리 대상 — computeFocusAccounts_: PM 이력 장비 10대↑ & 반복 고장 비율 50%↑, 비율 → 수리 건수 순 상위 10 */

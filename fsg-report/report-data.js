@@ -97,7 +97,7 @@ function main() {
   rep.team.rows.forEach(r => console.log(`  ${r.team.padEnd(10)} 인원 ${r.count} · PM ${r.pm} · A/S ${r.as_} · 설치 ${r.inst}` + (rep.team.instSource === 'CRM 활동' ? '(CRM 활동)' : `(캘린더 기준 기관 수 · 참고 CRM 활동 ${r.instCrm})`) + ` · 합계 ${r.sum} · 1인당 ${r.perHead}`));
   if (rep.team.unmapped) console.log(`  로스터에 없는 담당자 ${rep.team.unmappedPeople}명 · 활동 ${rep.team.unmapped}건 — 팀별 합계에서 제외 (이름은 검산 xlsx 「로스터미매핑」 탭 — 새 입사자면 로스터에 추가)`);
   const H = rep.health;
-  console.log(H ? `가동 장비 ${H.activeCount}대 · PM 커버리지 ${H.pmCoverage}% · 점검 고르기 ${H.pmCV}% · 100대당 고장 ${H.per100}건 · 반복 고장 장비 ${H.chronicRatio}% · 집중관리 후보 ${rep.focus.candidateCount}곳`
+  console.log(H ? `가동 장비 ${H.activeCount}대 · PM 커버리지 ${H.pmCoverage}% · 점검 고르기 ${H.pmCV}% · 100대당 고장 ${H.per100}건 · MTBF ${H.mtbfDays == null ? '-' : H.mtbfDays + '일'} · 반복 고장 장비 ${H.chronicRatio}% · 집중관리 후보 ${rep.focus.candidateCount}곳`
     : '가동 장비 지표 없음 — Serial No 파일을 --serial 또는 --dir 로 주면 운영건전성·집중관리대상이 계산됩니다');
   const IB = rep.installBlock;
   if (IB) { const D = IB.detail; console.log(`설치(캘린더 기준): 작업 ${D.rows.length}건 · 단품 ${IB.install.total}대(캘린더 표기 ${IB.install.calUnits}) · System ${IB.systems.list.length}세트 · 캘린더 미등록 ${D.orphan.length}대 · 중복 제외 ${(D.dupOrphan || []).length}대 · 예정 ${D.tentative.length}건` + (IB.links.length ? ` · 이름 다른 짝 자동 연결 ${IB.links.length}건(검산 xlsx 「자동연결」)` : '') + (D.partSkipped ? ` · 부품 행 제외 ${D.partSkipped}` : '')); }
