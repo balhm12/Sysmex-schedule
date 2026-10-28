@@ -2556,7 +2556,10 @@ function renderHealth(end, p){
     const cov=A?[...pmPairs].filter(k=>aset.has(k)).length/A*100:null;
     const nM=p.months.filter(m=>D.months.includes(m)).length||1; const curRep=stats(p.months,null).repRows/nM; /* 월평균 — 데이터가 있는 달 수로 나눔(월간보고 v48과 같음) */
     const chronic=chronicAll.filter(k=>aset.has(k)).length;
-    h.push(hc('가동 장비(모수)', fmt(A)+'대', ''));
+    /* 모수 진단 — 자산대장 '사용' 중 12개월 이력과 맞은 수. S/N만 맞고 기관이 다르면 표기 불일치, 크게 모자라면 자산대장·활동 파일 확인 */
+    const snUsed=new Set([...used].map(k=>k.split('|')[0])), snTouched=new Set([...touched].map(k=>k.split('|')[0]));
+    let snOnly=0; for(const x of snTouched) if(snUsed.has(x)) snOnly++;
+    h.push(hc('가동 장비(모수)', fmt(A)+'대', `자산대장 ${fmt(used.size)}대 중 일치 ${fmt(A)}대 · S/N만 일치 ${fmt(snOnly)}대 · 이력 장비 ${fmt(touched.size)}대`));
     h.push(hc('PM 커버리지율', f1(cov)+'%', ''));
     h.push(hc('100대당 고장 발생률', f1(A?curRep/A*100:null)+'건', ''));
     /* MTBF(일) = 30.44일 × 가동 장비 ÷ 월평균 고장 수리 (2026-10-28 사용자 결정, 월간보고 엔진 health.mtbfDays 와 같은 식). 서비스 방문 기록 기준이라 같은 고장의 재방문도 건수에 들어간다 */
