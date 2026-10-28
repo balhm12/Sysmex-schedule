@@ -376,7 +376,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
     </div>
     <div class="drop" id="dropSer" tabindex="0" role="button" aria-label="자산대장 파일 선택">
       <b>Serial No 자산대장 (선택)</b>
-      <p>넣으면 PM 커버리지율, 100대당 고장 발생률, 반복 고장 장비 비율, 폐업 추정 기관 제외가 추가 계산됩니다.</p>
+      <p>넣으면 PM 커버리지율, MTBF(100대당 월 고장), 반복 고장 장비 비율, 폐업 추정 기관 제외가 추가 계산됩니다.</p>
       <div class="st" id="stSer">선택된 파일 없음</div>
     </div>
     <div class="drop" id="dropHr" tabindex="0" role="button" aria-label="연장근무현황 파일 선택">
@@ -2561,14 +2561,14 @@ function renderHealth(end, p){
     let snOnly=0; for(const x of snTouched) if(snUsed.has(x)) snOnly++;
     h.push(hc('가동 장비(모수)', fmt(A)+'대', `자산대장 ${fmt(used.size)}대 중 일치 ${fmt(A)}대 · S/N만 일치 ${fmt(snOnly)}대 · 이력 장비 ${fmt(touched.size)}대`));
     h.push(hc('PM 커버리지율', f1(cov)+'%', ''));
-    h.push(hc('100대당 고장 발생률', f1(A?curRep/A*100:null)+'건', ''));
-    /* MTBF(일) = 30.44일 × 가동 장비 ÷ 월평균 고장 수리 (2026-10-28 사용자 결정, 월간보고 엔진 health.mtbfDays 와 같은 식). 서비스 방문 기록 기준이라 같은 고장의 재방문도 건수에 들어간다 */
+    /* MTBF (100대당 월 고장) — 한 카드. 100대당 월 고장 = 월평균 고장 수리 ÷ 가동 장비 × 100, 평균 고장 간격(일) = 30.44일 × 가동 장비 ÷ 월평균 고장 수리 (2026-10-28 사용자 결정, 월간보고 엔진 health.mtbfDays 와 같은 식).
+       서비스 방문 기록 기준이라 같은 고장의 재방문도 건수에 들어간다 */
     const mtbf=(A&&curRep)?Math.round(30.44*A/curRep):null;
-    h.push(hc('MTBF (평균 고장 간격)', A?(mtbf==null?'—':fmt(mtbf)+'일'):null, mtbf==null?'고장 수리 기록 없음':`약 ${f1(mtbf/30.44)}개월 · 방문 기록 기준(재방문 포함)`));
+    h.push(hc('MTBF (100대당 월 고장)', A?f1(curRep/A*100)+'건':null, mtbf==null?'고장 수리 기록 없음':`평균 고장 간격 약 ${fmt(mtbf)}일 (${f1(mtbf/30.44)}개월) · 방문 기록 기준(재방문 포함)`));
     h.push(hc('반복 고장 장비 비율', f1(A?chronic/A*100:null)+'%', `${fmt(chronic)}대`));
   } else {
     h.push(hc('반복 고장 장비', fmt(chronicAll.length)+'대', '12개월 내 3회 이상 고장'));
-    ['PM 커버리지율','100대당 고장 발생률','MTBF (평균 고장 간격)'].forEach(l=>h.push(hc(l,null,'')));
+    ['PM 커버리지율','MTBF (100대당 월 고장)'].forEach(l=>h.push(hc(l,null,'')));
   }
   $('health').innerHTML=h.join('');
 }
