@@ -2559,10 +2559,13 @@ function renderHealth(end, p){
     h.push(hc('가동 장비(모수)', fmt(A)+'대', ''));
     h.push(hc('PM 커버리지율', f1(cov)+'%', ''));
     h.push(hc('100대당 고장 발생률', f1(A?curRep/A*100:null)+'건', ''));
+    /* MTBF(일) = 30.44일 × 가동 장비 ÷ 월평균 고장 수리 (2026-10-28 사용자 결정, 월간보고 엔진 health.mtbfDays 와 같은 식). 서비스 방문 기록 기준이라 같은 고장의 재방문도 건수에 들어간다 */
+    const mtbf=(A&&curRep)?Math.round(30.44*A/curRep):null;
+    h.push(hc('MTBF (평균 고장 간격)', A?(mtbf==null?'—':fmt(mtbf)+'일'):null, mtbf==null?'고장 수리 기록 없음':`약 ${f1(mtbf/30.44)}개월 · 방문 기록 기준(재방문 포함)`));
     h.push(hc('반복 고장 장비 비율', f1(A?chronic/A*100:null)+'%', `${fmt(chronic)}대`));
   } else {
     h.push(hc('반복 고장 장비', fmt(chronicAll.length)+'대', '12개월 내 3회 이상 고장'));
-    ['PM 커버리지율','100대당 고장 발생률'].forEach(l=>h.push(hc(l,null,'')));
+    ['PM 커버리지율','100대당 고장 발생률','MTBF (평균 고장 간격)'].forEach(l=>h.push(hc(l,null,'')));
   }
   $('health').innerHTML=h.join('');
 }
