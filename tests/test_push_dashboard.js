@@ -1,6 +1,7 @@
 // 대시보드 올리기 — 엔진이 만든 act/ser 를 fsg-kpi.html 의 복호화·디코드 함수로 그대로 읽을 수 있는지(포맷 동일) + 가짜 Firebase 로 올리기 흐름 검증
 const assert = require('assert'), fs = require('fs'), os = require('os'), path = require('path'), cp = require('child_process'), http = require('http'), vm = require('vm');
 const XLSX = require('xlsx');
+process.env.FSG_MIN_SERIAL = '0';   // 테스트용 자산대장은 몇 행뿐 — 일부만 담긴 파일 방어(기본 200대)는 아래에서 따로 확인
 const P = require('../fsg-report/push-dashboard');
 const html = fs.readFileSync(path.join(__dirname, '..', 'fsg-kpi.html'), 'utf8');
 function grab(startRe) {   // HTML 안 함수 본문을 중괄호 짝으로 잘라 온다 (test_kpi_sn_zero 와 같은 방식)
@@ -113,6 +114,12 @@ const dash = { open_: ctx.open_, decodeEmbed: ctx.decodeEmbed, decodeSer: ctx.de
   const ce = Object.assign(new Error('fetch failed'), { cause: { code: 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY', message: 'unable to get local issuer certificate' } });
   assert(/UNABLE_TO_GET_ISSUER_CERT_LOCALLY/.test(require('../fsg-report/push-dashboard.js').explainError(ce)) && /HTTPS를 검사/.test(require('../fsg-report/push-dashboard.js').explainError(ce)));
   assert.strictEqual(require('../fsg-report/push-dashboard.js').explainError(new Error('boom')), 'boom'); assert(/ECONNRESET/.test(require('../fsg-report/push-dashboard.js').explainError(Object.assign(new Error('fetch failed'), { cause: { code: 'ECONNRESET' } }))));
+  // 9) 일부만 담긴 자산대장은 대시보드를 덮어쓰지 않는다(직전 '사용' 수의 절반 미만, 직전 수를 모르면 FSG_MIN_SERIAL 미만)
+  assert.strictEqual(require('../fsg-report/push-dashboard.js').serialLooksPartial(20, 5031), true); assert.strictEqual(require('../fsg-report/push-dashboard.js').serialLooksPartial(2600, 5031), false);
+  const dG = mkDir('g1', '2. 모든 약속_활동 2026_10_21.xlsx'); mkSer(dG, 'Serial No 2026_10_27.xlsx', 1); const serKeep = JSON.stringify(store.ser);   // 직전 5대 → 1대
+  const g1 = await runIn(dG); assert.strictEqual(g1.status, 0, g1.stdout + g1.stderr); assert(/일부만 담긴 파일/.test(g1.stdout) && /자산대장은 올리지 않음/.test(g1.stdout), g1.stdout);
+  assert.strictEqual(JSON.stringify(store.ser), serKeep, '자산대장 유지'); assert.strictEqual(store.meta.serUsed, 5);
+  const g2 = await runIn(dG, ['--allow-small-serial']); assert.strictEqual(g2.status, 0, g2.stderr); assert.strictEqual(store.meta.serUsed, 1); assert.strictEqual(store.meta.serSrc, 'Serial No 2026_10_27.xlsx');
   srv.close(); fs.rmSync(tmp, { recursive: true, force: true });
   console.log('test_push_dashboard: OK (encodeAct/encodeSer/seal = 대시보드 decodeEmbed/decodeSer/open_ 왕복 · S/N 0 · 가짜 Firebase 올리기·백업·meta 병합·코드 검사·권한 오류)');
 })().catch(e => { console.error(e); process.exit(1); });

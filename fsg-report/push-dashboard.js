@@ -83,6 +83,9 @@ function makeFb(baseUrl, dataPath, token) {
   };
 }
 
+/* 일부만 담긴 자산대장(필터 뷰·테스트 내보내기)이 전체 대장을 덮어쓰지 않게: 직전 '사용' 수의 절반 미만이거나(직전 수를 모르면 200대 미만) */
+function serialLooksPartial(newUsed, curUsed) { return curUsed > 0 ? newUsed < curUsed * 0.5 : newUsed < Number(process.env.FSG_MIN_SERIAL || 200); }
+
 async function main() {
   const o = args(process.argv.slice(2));
   trustSystemCerts();
@@ -126,6 +129,11 @@ async function main() {
     if (!o['allow-older']) { console.log(`⚠ 자산대장 ${serSrc} 는 대시보드에 올라가 있는 것(${cur.serSrc})보다 오래돼 올리지 않고 기존 자료를 유지합니다. 새 Serial 을 받으면 함께 올라갑니다.`); serPayload = null; }
     else console.log('⚠ 더 오래된 자산대장으로 덮어씁니다(--allow-older)');
   }
+  if (serPayload && serialLooksPartial(serPayload.used.length, cur && cur.serUsed ? cur.serUsed : 0)) {
+    const prev = cur && cur.serUsed ? `대시보드의 ${cur.serUsed.toLocaleString()}대` : '정상 자산대장(수천 대)';
+    if (!o['allow-small-serial']) { console.log(`⚠ 자산대장 ${serSrc} 는 '사용' ${serPayload.used.length.toLocaleString()}대뿐이라 ${prev}보다 훨씬 적습니다. 일부만 담긴 파일로 보고 올리지 않습니다. CRM_원본 폴더에서 이 파일을 치우거나, CRM 「Serial No」 전체 목록을 새로 내려받으세요. (일부러 올리려면 --allow-small-serial)`); serPayload = null; }
+    else console.log('⚠ 적은 수의 자산대장을 올립니다(--allow-small-serial)');
+  }
   // 하루 1회 백업 + 30일 지난 백업 정리 (대시보드와 같음)
   const today = nowStr().slice(0, 10), kinds = ['act'].concat(serPayload ? ['ser'] : []);
   try {
@@ -135,9 +143,9 @@ async function main() {
   } catch (e) { console.warn('백업 건너뜀: ' + e.message); }
   await fb('act', { method: 'PUT', body: JSON.stringify(await seal(actPayload, code)) });
   const now = nowStr(), meta = Object.assign({}, cur || {}, { actSrc, actRows: act.rows.length, updatedAt: now, actAt: now, check: await seal('FSG-KPI', code) });
-  if (serPayload) { await fb('ser', { method: 'PUT', body: JSON.stringify(await seal(serPayload, code)) }); meta.serSrc = serSrc; meta.serAt = now; }
+  if (serPayload) { await fb('ser', { method: 'PUT', body: JSON.stringify(await seal(serPayload, code)) }); meta.serSrc = serSrc; meta.serAt = now; meta.serUsed = serPayload.used.length; }
   await fb('meta', { method: 'PUT', body: JSON.stringify(meta) });
   console.log(`올리기 완료 ${now} — 대시보드는 새로고침하거나 5분 안에 자동 반영됩니다` + (serPayload ? '' : ' (자산대장은 올리지 않음 — 기존 자료 유지)'));
 }
 if (require.main === module) main().catch(e => { console.error('오류: ' + explainError(e)); process.exit(1); });
-module.exports = { encodeAct, encodeSer, seal, open_, codeOk, nowStr, explainError, trustSystemCerts };
+module.exports = { serialLooksPartial, encodeAct, encodeSer, seal, open_, codeOk, nowStr, explainError, trustSystemCerts };
