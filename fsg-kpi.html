@@ -478,7 +478,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
       </div></div>
     <div class="cv"><canvas id="cFamTrend"></canvas></div>
     <div class="thead" style="margin-top:18px"><div><h3 style="font-size:14px">장비군 비교</h3><p class="d" style="margin:0" id="ftTblNote"></p></div>
-      <div class="f"><label for="fFtMet">지표</label><select id="fFtMet"><option value="rev">재방문율 (%)</option><option value="rate">100대당 월 고장 (건)</option><option value="n">고장 수리 (건)</option></select></div></div>
+      <div class="f"><label for="fFtMet">지표</label><select id="fFtMet"><option value="rev">재방문율 (%)</option><option value="rate">MTBF (100대당 월 고장)</option><option value="n">고장 수리 (건)</option></select></div></div>
     <div class="tw"><table id="tFamTrend"></table></div>
   </section>
 
@@ -2674,19 +2674,19 @@ function renderFamTrend(p, team){
   const val=(b,f,k)=>{ const x=b.st[f]; if(!x||!b.have.length) return null;
     if(k==='n') return x.n; if(k==='rev') return x.s>=5?+(x.f/x.s*100).toFixed(1):null;
     const fl=b.fl[f]; return fl>=10?+(x.n/b.have.length/fl*100).toFixed(2):null; };
-  $('ftNote').textContent=`${team||'FSG 전체'} · ${unit==='q'?'회계연도 분기(4월 시작)':'최근 12개월'} · 100대당 월 고장 = 고장 수리 ÷ 달 수 ÷ 가동 대수 × 100 · 재방문율 목표 ${TARGET_REV}% 이하${B.some(b=>b.prov)?' · ◆ = 재방문 확인 기간이 남은 잠정치':''}`;
+  $('ftNote').textContent=`${team||'FSG 전체'} · ${unit==='q'?'회계연도 분기(4월 시작)':'최근 12개월'} · MTBF(100대당 월 고장) = 고장 수리 ÷ 달 수 ÷ 가동 대수 × 100 (건수가 적을수록 고장 간격이 긺) · 재방문율 목표 ${TARGET_REV}% 이하${B.some(b=>b.prov)?' · ◆ = 재방문 확인 기간이 남은 잠정치':''}`;
   const lab=B.map(b=>b.label), revV=B.map(b=>val(b,F,'rev')), rateV=B.map(b=>val(b,F,'rate'));
   const GOOD=css('--good')||'#3FBA46', BAD=css('--bad')||'#E7413E';
   upsert('cFamTrend',{data:{labels:lab,datasets:[
     {type:'bar',label:'고장 수리(건)',data:B.map(b=>val(b,F,'n')),backgroundColor:'#9DC3E6',yAxisID:'y',order:3},
     {type:'line',label:'재방문율(%)',data:revV,borderColor:'#E7413E',backgroundColor:'#E7413E',pointBackgroundColor:revV.map(v=>v==null?BAD:v>TARGET_REV?BAD:GOOD),pointBorderColor:'#fff',pointBorderWidth:1.5,
       pointRadius:B.map(b=>b.prov?6:4.5),pointStyle:B.map(b=>b.prov?'rectRot':'circle'),tension:.25,yAxisID:'y2',order:1,spanGaps:true},
-    {type:'line',label:'100대당 월 고장(건)',data:rateV,borderColor:'#005BAC',backgroundColor:'#005BAC',pointRadius:4,pointStyle:'rectRounded',tension:.25,yAxisID:'y2',order:2,spanGaps:true},
+    {type:'line',label:'MTBF (100대당 월 고장)',data:rateV,borderColor:'#005BAC',backgroundColor:'#005BAC',pointRadius:4,pointStyle:'rectRounded',tension:.25,yAxisID:'y2',order:2,spanGaps:true},
     {type:'line',label:`재방문율 목표 ${TARGET_REV}%`,data:B.map(()=>TARGET_REV),borderColor:'#E7413E',borderDash:[6,4],borderWidth:1,pointRadius:0,yAxisID:'y2',order:4}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}},tooltip:{callbacks:{afterTitle:it=>{const b=B[it[0].dataIndex]; return (b.months.length>1?b.months[0]+' ~ '+b.months[b.months.length-1]:'')+(b.prov?' (잠정)':'')+(b.fl[F]?` · 가동 ${fmt(b.fl[F])}대`:'');}}}},
       scales:{x:axis({grid:{display:false}}),y:axis({beginAtZero:true,title:{display:true,text:'고장 수리(건)',color:css('--muted')}}),
-        y2:axis({position:'right',beginAtZero:true,grid:{display:false},title:{display:true,text:'재방문율(%) · 100대당 월 고장(건)',color:css('--muted')}})}}});
+        y2:axis({position:'right',beginAtZero:true,grid:{display:false},title:{display:true,text:'재방문율(%) · MTBF (100대당 월 고장)',color:css('--muted')}})}}});
   const k=$('fFtMet').value||'rev', fmtV=v=>v==null?'-':k==='n'?fmt(v):k==='rev'?f1(v)+'%':v.toFixed(2);
   const list=['전체'].concat(fams);
   $('ftTblNote').textContent=k==='rev'?`빨강 = 목표 ${TARGET_REV}% 초과 · 기록이 5건 미만인 칸은 '-'`:k==='rate'?'가동 10대 미만 장비군은 \'-\'':'';
