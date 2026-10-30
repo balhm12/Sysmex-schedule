@@ -349,6 +349,30 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 #prod .delta-up{color:var(--bad-t)}#prod .delta-down{color:var(--good-t)}
 
 @media(max-width:767px){select,input[type=text],input[type=password]{font-size:16px}}
+
+/* 서비스 탭 — 팀별 1인당 생산성 */
+.tp{padding:14px 16px}.tpw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tpt{width:100%;border-collapse:collapse;min-width:720px;font-size:13.5px}
+.tpt th,.tpt td{padding:8px 10px;border-bottom:1px solid var(--border,#DDDDDD);text-align:left;white-space:nowrap}
+.tpt thead th{font-size:12px;color:#9E9E9E;font-weight:600}.tpt td.num{text-align:right;font-variant-numeric:tabular-nums}
+.tpt tbody th{font-weight:700;color:#005BAC}.tpt tr.sub th{font-weight:500;color:#9E9E9E;padding-left:22px}.tpt tr.sub td{opacity:.85;font-size:12.5px}
+.tpt tr.on{background:rgba(0,91,172,.07)}.tpt tr.tot th,.tpt tr.tot td{border-bottom:0;font-weight:700;color:inherit}
+.tpb{display:flex;align-items:center;gap:8px;min-width:210px;height:22px}
+.tpb .trk{position:relative;flex:0 0 120px;height:12px;border-radius:6px;background:rgba(158,158,158,.15)}
+.tpb .trk i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:#00B8EE}
+.tpt tr.sub .tpb .trk i{background:#9E9E9E;opacity:.6}.tpt tr.tot .tpb .trk{background:none}
+.tpb .trk u{position:absolute;top:-4px;bottom:-4px;width:0;border-left:2px dashed #005BAC;opacity:.75}
+.tpt tr.tot th,.tpt tr.tot td{background:none!important}
+.tpb b{font-weight:600;font-variant-numeric:tabular-nums}.tpb b.best,.tpt .best{color:#005BAC;font-weight:800}
+.tpd{font-size:11px;font-weight:700;margin-left:4px}.tpd.up{color:#3FBA46}.tpd.dn{color:#E7413E}
+.tpt .ok{color:#3FBA46}.tpt .ng{color:#E7413E}.tpm{color:#9E9E9E}
+.tpn{margin:10px 0 0;font-size:12px;color:#9E9E9E;line-height:1.5}
+.tpseg{display:inline-flex;gap:2px;background:rgba(158,158,158,.15);border-radius:10px;padding:3px;margin-bottom:8px}
+.tpseg button{border:0;background:none;padding:5px 12px;border-radius:8px;font:inherit;font-size:12.5px;color:#9E9E9E;cursor:pointer}
+.tpseg button.on{background:var(--surface,#fff);color:#005BAC;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+@media (prefers-color-scheme:dark){.tpt tbody th,.tpb b.best,.tpt .best{color:#5AA9F0}}
+[data-theme=dark] .tpt tbody th,[data-theme=dark] .tpb b.best,[data-theme=dark] .tpt .best{color:#5AA9F0}
+[data-theme=light] .tpt tbody th,[data-theme=light] .tpb b.best,[data-theme=light] .tpt .best{color:#005BAC}
 </style>
 </head>
 <body>
@@ -436,6 +460,9 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
   <h2 class="sec">핵심 KPI <small id="kpiSub"></small></h2>
   <section class="kpis" id="kpis"></section>
   <div class="na" id="na"></div>
+
+  <h2 class="sec">사무소·팀별 1인당 생산성 <small id="tpSub"></small></h2>
+  <section class="panel tp" id="tpBox"></section>
 
   <h2 class="sec">12개월 추이 <small id="trendSub"></small></h2>
   <div class="grid">
@@ -2453,7 +2480,48 @@ let charts={};
 function upsert(id,cfg){ if(charts[id]) charts[id].destroy(); charts[id]=new Chart($(id),cfg); }
 function axis(extra){return Object.assign({grid:{color:css('--grid')},ticks:{color:css('--text')}},extra||{});}
 
+/* ===== 서비스 탭: 팀별 1인당 생산성 (2026-10-30 사용자 요청) =====
+   부서원 KPI 탭 buildProdData 결과를 그대로 씀 — 팀장·신입 제외 1인당 값(score_avg_core·case_avg_core), 직급 보정 지수(index_avg),
+   재방문율·FTFR = revisit[팀].team_total(서비스 탭 팀 값과 같음). 비교는 팀 4개, 사무소(대전·광주·부산·대구)는 팀 안 참고 */
+function drawTeamProd(){
+  const box=$('tpBox'); if(!box) return;
+  // 서비스 탭에서 처음 그릴 때 부서원 계산이 필요(4만 행 약 0.3초) — 화면을 먼저 그리고 다음 틈에 계산
+  if(PROD_DIRTY||!PROD){ box.innerHTML='<p class="tpn">계산 중…</p>'; clearTimeout(drawTeamProd._t);
+    drawTeamProd._t=setTimeout(()=>{ ensureProd(); drawTeamProd(); },30); return; }
+  const P=PROD, PR='이번 년도', PV='직전 년도', top=P.team_top||P.teams||[], sel=($('fTeam').value||'').toUpperCase();
+  const g=(o,k,pr)=>o&&o[k]&&o[k][pr]!=null?o[k][pr]:null;
+  // 1인당 값은 인원 수와 무관 → 기본은 사무소 단위 6개(사용자 결정 2026-10-30), 「팀별」로 4팀
+  let mode='office'; try{ mode=localStorage.getItem('fsg-kpi-tpunit')||'office'; }catch(e){}
+  const rows=[]; top.forEach(t=>{const us=(P.team[t]||{}).units||[]; if(mode==='team'||!us.length) rows.push([t,0]); else us.forEach(u=>rows.push([u,1]));});
+  const R=rows.map(([k,sub])=>{const o=P.team[k]||{}, rv=((P.revisit||{})[k]||{}).team_total||{};
+    const m=(o.mttr||{})[PR]||{}; let a=0,n=0; Object.keys(m).forEach(x=>{a+=m[x].avg*m[x].n; n+=m[x].n;});
+    return {k,sub,name:sub?k.replace(/^FS\s*\S+\s*/,'')+' ('+k.replace(/^FS\s*/,'').split(' ')[0].slice(0,3)+')':(P.team_short||{})[k]||k.replace(/^FS\s*/,''),
+      n:(o.members||[]).length, nc:o.n_core, sc:g(o,'score_avg_core',PR), scP:g(o,'score_avg_core',PV), cs:g(o,'case_avg_core',PR), csP:g(o,'case_avg_core',PV),
+      gi:g(o,'index_avg',PR), rev:rv['이번년도재방문율'], ft:rv['이번년도FTFR'], mttr:n?a/n:null};});
+  const T=top.map(t=>{const o=P.team[t]||{};return {nc:o.n_core||0,sc:g(o,'score_avg_core',PR),cs:g(o,'case_avg_core',PR)};}).filter(r=>r.nc), V=R.filter(r=>r.nc), W=f=>{let a=0,b=0;T.forEach(r=>{if(r[f]!=null){a+=r[f]*r.nc;b+=r.nc;}});return b?a/b:null;};
+  const fsg={sc:W('sc'),cs:W('cs')}, mx={sc:Math.max(...R.map(r=>r.sc||0),1), cs:Math.max(...R.map(r=>r.cs||0),1)};
+  const best=f=>{const v=V.map(r=>r[f]).filter(v=>v!=null);return v.length?Math.max(...v):null;}, bS=best('sc'), bC=best('cs'), bG=best('gi');
+  const d=(c,p)=>c==null||p==null||Math.abs(c-p)<0.05?'':`<span class="tpd ${c>p?'up':'dn'}">${c>p?'▲':'▼'}${f1(Math.abs(c-p))}</span>`;
+  const bar=(v,m,avg,b,dl)=>v==null?'—':`<div class="tpb"><span class="trk"><i style="width:${Math.max(2,v/m*100).toFixed(1)}%"></i>${avg!=null?`<u style="left:${(avg/m*100).toFixed(1)}%" title="FSG 1인당 평균 ${f1(avg)}"></u>`:''}</span><b${b?' class="best"':''}>${f1(v)}</b>${dl||''}</div>`;
+  const pc=(v,good)=>v==null?'—':`<span class="${good?'ok':'ng'}">${f1(v)}%</span>`;
+  $('tpSub').textContent=`${P.period_label?P.period_label[PR]||'':''}${P.cmp_short?' · ▲▼ '+P.cmp_short:''} · 팀장·신입 제외 1인당`;
+  box.innerHTML=`<div class="tpseg"><button data-m="office"${mode==='office'?' class="on"':''}>사무소별</button><button data-m="team"${mode==='team'?' class="on"':''}>팀별</button></div>
+    <div class="tpw"><table class="tpt"><thead><tr><th>${mode==='team'?'팀':'사무소'}</th><th title="전체 인원 (비교 인원 = 팀장·신입 제외)">인원</th>
+    <th>1인당 처리 건수</th><th>1인당 KPI 점수</th><th title="개인 점수 ÷ FSG 같은 직급 중앙값 × 100 의 팀 평균 — 직급 구성 차이를 보정">직급 보정 지수</th><th>재방문율</th><th>FTFR</th><th>MTTR</th></tr></thead><tbody>${
+    R.map(r=>`<tr class="${sel&&r.k.toUpperCase().startsWith(sel)?'on':''}"><th>${esc(r.name)}</th>
+      <td class="num">${r.n}${r.nc!=null&&r.nc!==r.n?` <span class="tpm">(${r.nc})</span>`:''}</td>
+      <td>${bar(r.cs,mx.cs,fsg.cs,r.cs===bC,d(r.cs,r.csP))}</td>
+      <td>${bar(r.sc,mx.sc,fsg.sc,r.sc===bS,d(r.sc,r.scP))}</td>
+      <td class="num">${r.gi==null?'—':`<span class="${r.gi>=100?'ok':'ng'}${r.gi===bG?' best':''}">${f1(r.gi)}</span>`}</td>
+      <td class="num">${pc(r.rev,r.rev!=null&&r.rev<=TARGET_REV)}</td><td class="num">${pc(r.ft,r.ft!=null&&r.ft>=TARGET_FTFR)}</td>
+      <td class="num">${r.mttr==null?'—':f1(r.mttr)+'분'}</td></tr>`).join('')}
+    <tr class="tot"><th>FSG 1인당 평균</th><td class="num">(${T.reduce((a,r)=>a+r.nc,0)})</td><td><div class="tpb"><span class="trk"></span><b>${f1(fsg.cs)}</b></div></td><td><div class="tpb"><span class="trk"></span><b>${f1(fsg.sc)}</b></div></td><td class="num">100 기준</td><td></td><td></td><td></td></tr>
+    </tbody></table></div>
+    <p class="tpn">1인당 값은 인원 수와 무관해 기본은 사무소별(CENTRAL = 대전+광주, SOUTH = 부산+대구) · 부서원 KPI 탭과 같은 계산 · 1인당 = 팀장·신입을 뺀 비교 인원 평균 · 막대의 세로선 = FSG 1인당 평균 · 직급 보정 지수 100 = 같은 직급 FSG 중앙값 · 사무소 재방문율·FTFR은 사무소 거래처 기준 · 재방문율·FTFR = 팀 거래처 평균(위 KPI 카드와 같은 기준)</p>`;
+  box.querySelectorAll('.tpseg button').forEach(b=>b.onclick=()=>{ try{ localStorage.setItem('fsg-kpi-tpunit', b.dataset.m); }catch(e){} drawTeamProd(); });
+}
 function render(){
+  try{ drawTeamProd(); }catch(e){ console.error('팀별 1인당 생산성', e); }
   const p=curPeriod(); const team=$('fTeam').value||null;
   const pp=prevPeriod(p); const cur=stats(p.months,team), prv=stats(pp.months,team);
   const prov=isProvisional(p.months), provPrev=isProvisional(pp.months);
@@ -3244,8 +3312,16 @@ function prodSelection(){
   return {sel,cmp,label:p.label,cmpLabel:`${rng(cmp)} (${pp.label})`,short:pp.label+' 대비',end,
     trend:rangeMk(shiftMonth(end,-11),end),prov:inData.length?isProvisional(inData):false};
 }
+let PROD_SHOWN=false;
 function renderProd(){
   if(!RAW||!D) return;
+  if(ensureProd()||!PROD_SHOWN){
+    $('prod').innerHTML=PROD_SKELETON; window.initProdDashboard(PROD); PROD_SHOWN=true;
+  } else if(window.__prodRender) window.__prodRender();
+}
+/* 부서원 계산(buildProdData)을 한 번만 — 서비스 탭 「팀별 1인당 생산성」과 부서원 탭이 같은 결과를 씀 */
+function ensureProd(){
+  if(!RAW||!D) return false;
   if(PROD_DIRTY||!PROD){
     const S=prodSelection();
     PROD=buildProdData(D.raw, PROD_ROSTER, {hr:HRDATA, teams:PROD_UNITS, teamGroups:PROD_GROUPS, gradeNow:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), exclAvg:ROSTER.filter(r=>r[2]==='팀장'||NEWBIE.includes(r[0])).map(r=>r[0]), otEndHour:PROD_END_H, gradeHist:GRADE_HIST, holidays:KR_HOLIDAYS, shift:SHIFT, shiftInfo:SHIFT_INFO, sel:S.sel, cmp:S.cmp, trend:S.trend,
@@ -3257,8 +3333,9 @@ function renderProd(){
       move:GEO?moveData():null, sel_months:S.sel, cmp_months:S.cmp, trend_months:S.trend,
       grade:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), promoted:Object.fromEntries(GRADE_HIST.filter(([n,d])=>S.sel.includes(d.slice(0,7))).map(([n,d,prev])=>[n,prev+'→'+rosterMap[n].grade+' ('+d.slice(5).replace('-','/')+')'])), newbie:NEWBIE, ex_lead:$('pExLead').checked});
     $('pCmp').innerHTML=`비교 기간: ${esc(S.cmpLabel)}<br>직급 표시: 현재 · 직급 가중치: 진급자는 시행일부터 새 직급`;
-    $('prod').innerHTML=PROD_SKELETON; window.initProdDashboard(PROD); PROD_DIRTY=false;
-  } else if(window.__prodRender) window.__prodRender();
+    PROD_DIRTY=false; PROD_SHOWN=false; return true;
+  }
+  return false;
 }
 /* 두 탭 보고 기간 동기화 */
 $('pPeriod').addEventListener('change',()=>{ $('fPeriod').value=$('pPeriod').value; syncRange(); PROD_DIRTY=true; renderProd(); });
