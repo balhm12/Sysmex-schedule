@@ -361,6 +361,11 @@
   .notes-table tr.is-carried td{background:#FFFBEB;}
   .notes-table tr.is-carried:hover td{background:#FEF6DC;}
   .notes-date.is-red{color:#DC2626;}
+  .notes-origin{font-size:10px;font-weight:600;color:var(--ink-soft);margin-top:2px;}
+  .notes-donetag{
+    display:inline-block;font-size:9.5px;font-weight:800;color:#15803D;background:#DCFCE7;
+    border:1px solid #BBF7D0;border-radius:5px;padding:0 4px;margin-right:5px;vertical-align:1px;
+  }
   .notes-inst{font-weight:700;}
   .notes-dev{color:var(--ink-soft);white-space:nowrap;}
   .notes-text{white-space:pre-wrap;word-break:break-word;}
@@ -879,7 +884,7 @@ const INSTITUTION_LIST = ["(사)부산의료선교회세계로병원", "(사)한
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 40; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
+const BUILD_VERSION = 41; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1416,6 +1421,12 @@ function noteCatStyle(k){
   const c = NOTE_CAT.find(x=>x.key===k);
   return c ? ('--nc:' + c.color + ';--nbg:' + c.bg + ';') : '--nc:#6B7280;--nbg:#F3F4F6;';
 }
+// 목록에서 그 건이 '언제 것'으로 잡히는지 — 완료된 건은 끝낸 날(완료일) 기준입니다.
+// 10월에 생긴 일을 11월에 끝냈다면 "11월에 끝낸 일"로 잡혀야 그 달에 무엇을 마무리했는지
+// 한눈에 보입니다. 아직 끝나지 않은 건은 발생일 기준이고, 기간이 지나면 이월로 남습니다.
+function noteEffDate(n){
+  return (n && n.status === '완료' && n.doneAt) ? n.doneAt : (n ? n.date : '');
+}
 let notesFilter = null;    // null이면 전체, 아니면 그 상태만 표시
 let notesCatFilter = null; // null이면 전체, '장비'·'고객', 또는 '미분류'
 
@@ -1458,11 +1469,10 @@ function getScheduleNotes(teams, from, to){
     Object.keys(bucket).forEach(id=>{
       const n = bucket[id];
       if(!n || !n.date) return;
-      if(from && n.date < from) return;
-      if(to && n.date > to) return;
-      out.push({
+      const rec = {
         team: tk, id: id,
         date: String(n.date),
+        doneAt: String(n.doneAt || ''),
         inst: String(n.inst || ''),
         device: String(n.device || ''),
         author: String(n.author || ''),
@@ -1470,10 +1480,18 @@ function getScheduleNotes(teams, from, to){
         status: noteStatusOf(n.status),
         cat: noteCatOf(n.cat),
         ts: n.ts || 0
-      });
+      };
+      // 기간 판정은 '그 건이 언제 것인가'로 합니다 — 완료된 건은 끝낸 날 기준.
+      const eff = noteEffDate(rec);
+      if(from && eff < from) return;
+      if(to && eff > to) return;
+      out.push(rec);
     });
   });
-  out.sort((a,b)=> a.date===b.date ? (a.ts - b.ts) : (a.date < b.date ? -1 : 1));
+  out.sort((a,b)=>{
+    const ea = noteEffDate(a), eb = noteEffDate(b);
+    return ea === eb ? (a.ts - b.ts) : (ea < eb ? -1 : 1);
+  });
   return out;
 }
 function renderNotes(){
@@ -1501,7 +1519,7 @@ function renderNotes(){
   cnt.style.display = all.length ? '' : 'none';
   sub.innerHTML = escapeHtml(pr.label + ' · ' + scopeLabel) +
     (carriedN ? ' <b style="color:#B45309;">이월 ' + carriedN + '건</b>' : '') +
-    ' — <b>기술</b>·<b>고객</b>·<b>일반</b>으로 나눠 기록합니다. 위 칩을 누르면 그 건만 모아 봅니다.';
+    ' — <b>기술</b>·<b>고객</b>·<b>일반</b>으로 나눠 기록합니다. 완료된 건은 <b>끝낸 날</b> 기준으로 들어갑니다.';
 
   // ── 구분(장비·고객)별 건수 칩 + 상태별 건수 칩 ──
   const counts = {};
@@ -1568,13 +1586,20 @@ function renderNotes(){
       '<th style="width:80px;"></th>' +
     '</tr></thead><tbody>' +
     list.map(n=>{
-      const p = n.date.split('-');
+      // 목록에 놓인 자리는 '완료일(완료 건)' 또는 '발생일(미결)' 기준이므로, 칸에도 그 날짜를 적습니다.
+      // 완료일이 발생일과 다르면 아래에 "발생 10/07"을 작게 덧붙여 원래 언제 생긴 일인지 남깁니다.
+      const eff = noteEffDate(n);
+      const p = eff.split('-');
       const wk = weekdayKr(+p[0], +p[1], +p[2]);
-      const red = isWeekendDate(n.date) || !!HOLIDAYS_KR[n.date];
+      const red = isWeekendDate(eff) || !!HOLIDAYS_KR[eff];
+      const o = n.date.split('-');
+      const origin = (eff !== n.date)
+        ? '<div class="notes-origin" title="이 일이 생긴 날">발생 ' + escapeHtml(o[1] + '/' + o[2]) + '</div>' : '';
       return '<tr' + (n.carried ? ' class="is-carried"' : '') + '>' +
         '<td class="notes-date' + (red?' is-red':'') + '">' +
           (n.carried ? '<span class="notes-carry" title="이전 기간에 등록됐지만 아직 끝나지 않은 건">이월</span>' : '') +
-          escapeHtml(p[1] + '/' + p[2]) + ' (' + escapeHtml(wk) + ')</td>' +
+          (n.status === '완료' && n.doneAt ? '<span class="notes-donetag" title="끝낸 날">완료</span>' : '') +
+          escapeHtml(p[1] + '/' + p[2]) + ' (' + escapeHtml(wk) + ')' + origin + '</td>' +
         '<td class="notes-cat"><span class="st-badge" style="' + noteCatStyle(n.cat) + '">' + escapeHtml(noteCatLabel(n.cat)) + '</span></td>' +
         '<td class="notes-inst">' + (showTeam ? '<span class="notes-team" style="--tc:' + (TEAMS[n.team] ? TEAMS[n.team].hex : '#009EE0') + ';">' + escapeHtml(TEAMS[n.team].label.replace('FS ','')) + '</span>' : '') + escapeHtml(n.inst || '—') + '</td>' +
         '<td class="notes-dev">' + escapeHtml(n.device || '—') + '</td>' +
@@ -1659,7 +1684,7 @@ async function exportNotesExcel(){
   const ws = wb.addWorksheet('특이사항');
   ws.properties.tabColor = { argb: NAVY };
 
-  ws.mergeCells('A1:I1');
+  ws.mergeCells('A1:J1');
   ws.getCell('A1').value = '특이사항 — ' + ymLabel + ' · ' + scopeLabel +
     (notesCatFilter ? ' · ' + notesCatFilter + '만' : '') + (notesFilter ? ' · ' + notesFilter + '만' : '');
   ws.getCell('A1').font = { bold:true, size:14, color:{argb:NAVY} };
@@ -1669,7 +1694,7 @@ async function exportNotesExcel(){
   const counts = {};
   NOTE_STATUS.forEach(st=>{ counts[st.key] = 0; });
   all.forEach(n=>{ counts[n.status] = (counts[n.status]||0) + 1; });
-  ws.mergeCells('A2:I2');
+  ws.mergeCells('A2:J2');
   const catCounts = {};
   NOTE_CAT.forEach(c=>{ catCounts[c.key] = 0; });
   catCounts[NOTE_CAT_NONE] = 0;
@@ -1681,7 +1706,7 @@ async function exportNotesExcel(){
   ws.getCell('A2').font = { bold:true, size:10, color:{argb:'FF4A5A78'} };
   ws.getCell('A2').alignment = { horizontal:'center' };
 
-  const HEAD = ['날짜','요일','팀','구분','기관','장비','상태','작성자','특이사항'];
+  const HEAD = ['날짜','요일','팀','구분','기관','장비','상태','완료일','작성자','특이사항'];
   const CAT_FILL = {'기술':'FFCCFBF1', '고객':'FFF3E8FF', '일반':'FFFFEDD5'};
   const hr = 4;
   HEAD.forEach((h,i)=>{
@@ -1693,19 +1718,22 @@ async function exportNotesExcel(){
   });
   rows.forEach((n,i)=>{
     const r = hr + 1 + i;
-    const p = n.date.split('-').map(Number);
+    // 날짜 칸은 화면 목록과 같은 기준(완료 건은 완료일)으로 적고, 발생일이 다르면 괄호로 함께 남깁니다.
+    const eff = noteEffDate(n);
+    const p = eff.split('-').map(Number);
     const wk = weekdayKr(p[0], p[1], p[2]);
-    const red = isWeekendDate(n.date) || !!HOLIDAYS_KR[n.date];
-    const vals = [(n.carried ? '이월 ' : '') + n.date, wk, TEAMS[n.team] ? TEAMS[n.team].label : n.team,
-                  noteCatLabel(n.cat), n.inst, n.device, n.status, n.author, n.text];
+    const red = isWeekendDate(eff) || !!HOLIDAYS_KR[eff];
+    const dateCell = (n.carried ? '이월 ' : '') + eff + (eff !== n.date ? ' (발생 ' + n.date + ')' : '');
+    const vals = [dateCell, wk, TEAMS[n.team] ? TEAMS[n.team].label : n.team,
+                  noteCatLabel(n.cat), n.inst, n.device, n.status, n.doneAt || '', n.author, n.text];
     vals.forEach((v,ci)=>{
       const c = ws.getCell(r, ci+1);
       c.value = sanitizeForExcel(v);
-      c.alignment = { vertical:'top', wrapText: ci===4 || ci===8 };
-      if(ci <= 3 || ci === 6 || ci === 7) c.alignment = { horizontal:'center', vertical:'top' };
+      c.alignment = { vertical:'top', wrapText: ci===4 || ci===9 };
+      if(ci <= 3 || ci === 6 || ci === 7 || ci === 8) c.alignment = { horizontal:'center', vertical:'top' };
     });
     if(red){ ws.getCell(r,1).font = { color:{argb:'FFDC2626'}, bold:true }; ws.getCell(r,2).font = { color:{argb:'FFDC2626'}, bold:true }; }
-    if(n.carried){ for(let c=1;c<=9;c++) ws.getCell(r,c).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFFFBEB'} }; }
+    if(n.carried){ for(let c=1;c<=10;c++) ws.getCell(r,c).fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFFFFBEB'} }; }
     const tHex = TEAMS[n.team] ? TEAMS[n.team].hex : null;
     if(tHex){
       const tc = ws.getCell(r, 3);
@@ -1720,16 +1748,16 @@ async function exportNotesExcel(){
     ws.getRow(r).height = Math.min(90, Math.max(16, Math.ceil(String(n.text||'').length / 40) * 15));
   });
   // 날짜 칸은 '이월' 표시가 붙어도 잘리지 않을 만큼 둔다
-  [17, 7, 13, 8, 24, 15, 9, 10, 50].forEach((w,i)=>{ ws.getColumn(i+1).width = w; });
+  [26, 7, 13, 8, 22, 14, 9, 12, 10, 44].forEach((w,i)=>{ ws.getColumn(i+1).width = w; });
   for(let r = hr; r <= hr + rows.length; r++){
-    for(let c = 1; c <= 9; c++){
+    for(let c = 1; c <= 10; c++){
       ws.getCell(r,c).border = {
         top:{style:'thin',color:{argb:LINE}}, bottom:{style:'thin',color:{argb:LINE}},
         left:{style:'thin',color:{argb:LINE}}, right:{style:'thin',color:{argb:LINE}}
       };
     }
   }
-  ws.autoFilter = { from:{row:hr, column:1}, to:{row:hr + rows.length, column:9} };
+  ws.autoFilter = { from:{row:hr, column:1}, to:{row:hr + rows.length, column:10} };
   ws.views = [{ state:'frozen', ySplit: hr }];
   ws.pageSetup = { fitToPage:true, fitToWidth:1, fitToHeight:0, orientation:'landscape' };
 
@@ -1779,7 +1807,10 @@ function openNotePanel(opts){
     // 구분도 같은 방식 — '고객'만 보다가 추가하면 고객으로 시작합니다.
     // 기존 건을 수정할 때는 저장된 값(미분류면 빈 값)을 그대로 보여 줍니다.
     cat: existing ? noteCatOf(existing.cat)
-       : (noteCatOf(notesCatFilter) || noteCatOf(opts.cat) || NOTE_CAT_DEFAULT)
+       : (noteCatOf(notesCatFilter) || noteCatOf(opts.cat) || NOTE_CAT_DEFAULT),
+    // 완료일 — 상태를 완료로 바꾸는 날짜가 자동으로 들어가고, 필요하면 고칠 수 있습니다
+    // (며칠 지나서 등록하는 경우가 있어서 고정하지 않았습니다).
+    doneAt: existing ? String(existing.doneAt || '') : ''
   };
   // 작성자도 내 이름으로 먼저 채웁니다. 그 팀 명단에 없는 사람(타 부서·신규 입사자)도
   // 이 표를 보고 등록하므로, 명단에 없으면 아래 직접 입력칸에 채워 줍니다.
@@ -1839,6 +1870,13 @@ function openNotePanel(opts){
       '</select></div>' +
       '<div><label>작성자</label><select id="nt-author">' + memberOptions(editTeam) + '</select></div>' +
     '</div>' +
+    // 완료로 바꾸면 그날 날짜가 자동으로 들어갑니다. 목록·엑셀에서 이 날짜를 기준으로 잡히므로,
+    // 실제로 끝난 날과 다르면 여기서 고치면 됩니다.
+    '<div class="form-row" id="nt-done-row"' + (cur.status === '완료' ? '' : ' style="display:none;"') + '>' +
+      '<label>완료일</label>' +
+      '<input type="date" id="nt-done" value="' + escapeHtml(cur.doneAt) + '">' +
+      '<div class="by-hint">완료된 건은 이 날짜를 기준으로 목록·엑셀에 들어갑니다 (발생일은 그대로 남습니다).</div>' +
+    '</div>' +
     '<div class="form-row"><label>특이사항</label>' +
       '<textarea id="nt-text" rows="5" placeholder="' + escapeHtml(noteCatPlaceholder(cur.cat)) + '" style="width:100%;box-sizing:border-box;resize:vertical;">' + escapeHtml(cur.text) + '</textarea>' +
     '</div>' +
@@ -1849,6 +1887,17 @@ function openNotePanel(opts){
     '</div>';
 
   document.getElementById('overlay').classList.add('show');
+
+  // 상태 ↔ 완료일: 완료로 바꾸면 칸이 열리고 비어 있으면 오늘 날짜를 넣습니다.
+  // 완료가 아닌 상태로 되돌리면 칸을 감춥니다 (저장할 때 완료일도 지웁니다).
+  const ntStatus = panel.querySelector('#nt-status');
+  const ntDoneRow = panel.querySelector('#nt-done-row');
+  const ntDone = panel.querySelector('#nt-done');
+  ntStatus.onchange = ()=>{
+    const done = ntStatus.value === '완료';
+    ntDoneRow.style.display = done ? '' : 'none';
+    if(done && !ntDone.value) ntDone.value = todayISO();
+  };
 
   // 구분 선택 — 누른 쪽만 켜지고, 그 구분의 작성 기준과 입력칸 안내문이 따라 바뀝니다.
   const catSeg = panel.querySelector('#nt-cat-seg');
@@ -1888,6 +1937,10 @@ function openNotePanel(opts){
       device: panel.querySelector('#nt-device').value.trim(),
       author: panel.querySelector('#nt-author').value.trim(),
       status: noteStatusOf(panel.querySelector('#nt-status').value),
+      // 완료가 아닌 상태로 되돌리면 완료일도 지웁니다 — 안 그러면 끝나지도 않은 건이
+      // 옛 완료일 기준으로 엉뚱한 주에 남습니다.
+      doneAt: noteStatusOf(panel.querySelector('#nt-status').value) === '완료'
+        ? (panel.querySelector('#nt-done').value || todayISO()) : '',
       cat: noteCatOf(cur.cat),
       text: text,
       ts: existing && existing.ts ? existing.ts : Date.now(),
