@@ -159,7 +159,23 @@ function buildReport(opt) {
   const corrRows = CORR_SERIES.map(g => { const c = cur.series[g.name], p = prv.series[g.name];
     return [g.name, c.repair, c.revisit, rate(c), p.den ? rate(p) : '-', p.den ? delta(rate(c), rate(p)) : '-']; });
   corrRows.push(['(전체 평균)', cur.repair, cur.revisit, rate(cur), prv.den ? rate(prv) : '-', prv.den ? delta(rate(cur), rate(prv)) : '-']);
-  const caseAnalysis = { monthRows: labels12.map(l => [l, rp[l], pmm[l], cal[l]]), corrRows, prevLabel: P.lab(prev.y, prev.m) };
+  /* 팀별 Calibration 건수(덱 5장 오른쪽 상자 「Cal n건」 아래 한 줄, 2026-11-03) — monthRows 의 Calibration 열과 같은 기준: 목적 「Calibration」 · 담당자+필수 참석자 인정 인원 수(팀 몫만, 한 방문에 다른 팀이 함께 오면 각 팀에 1씩) · 취소·온라인 정기점검 제외.
+     원격 Calibration(목적 「원격 Calibration」)은 monthRows 에서도 빠지므로 여기서도 팀 건수·합계에 넣지 않고 remote 에 따로 센다. 팀 합계 + unassigned(로스터 밖 인원) = monthRows 같은 달 값. */
+  const calTeams = (() => {
+    const REMOTE = '원격 Calibration';
+    const count = months => { const t = {}; teams.forEach(k => t[k] = 0); let unassigned = 0, remote = 0;
+      rows.forEach(x => { if (!inMonths(x.t, months)) return;
+        if (x.purpose === PV.CAL) x.credits.forEach(c => { const k = teamOf(c); if (k in t) t[k]++; else unassigned++; });
+        else if (x.purpose === REMOTE) remote += x.credits.length; });
+      return { t, unassigned, remote }; };
+    const c = count(period.months), p = count(prevMonths), sum = o => teams.reduce((a, k) => a + o.t[k], 0);
+    const order = ['FS EAST', 'FS WEST', 'FS SOUTH', 'FS CENTRAL'].filter(k => teams.indexOf(k) >= 0).concat(teams.filter(k => ['FS EAST', 'FS WEST', 'FS SOUTH', 'FS CENTRAL'].indexOf(k) < 0));
+    return { label: period.label, prevLabel: P.lab(prev.y, prev.m),
+      teams: order.map(k => ({ team: k, label: k.replace(/^FS\s*/, ''), cur: c.t[k], prev: p.t[k] })),
+      total: sum(c), prevTotal: sum(p), unassigned: c.unassigned, prevUnassigned: p.unassigned,
+      remote: { cur: c.remote, prev: p.remote, note: '원격 Calibration은 Cal 건수(monthRows)와 팀 건수에서 제외, 참고로만 표시' },
+      basis: '목적 Calibration · 담당자+필수 참석자 인정(팀 몫만) · 취소 제외 · 원격 Calibration 제외 — 5장 12개월 추이와 같은 기준' }; })();
+  const caseAnalysis = { monthRows: labels12.map(l => [l, rp[l], pmm[l], cal[l]]), corrRows, prevLabel: P.lab(prev.y, prev.m), calTeams };
 
   /* ════════ 2차 묶음 ════════ 공통: 최근 12개월 = 기간 끝 달까지 12개월, 당월/기간 = period.months */
   const inT12 = x => inMonths(x.t, months12), inPer = x => inMonths(x.t, period.months);

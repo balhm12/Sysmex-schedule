@@ -70,4 +70,18 @@ assert msgs == [], msgs
 
 # json 에 peopleKpi.units 가 없으면 건너뜀
 p3 = synthetic(); st, ms = add_people_kpi_slide(p3, {'peopleKpi': {'top': []}}, '2026-10', '10월', '9월'); assert st == 'skipped' and len(p3.slides) == 12 and ms
-print('test_people_slide: OK (새로 만들기·갱신·정식 시행 월·건너뜀)')
+
+# 5장 Cal 팀별 한 줄(fill_deck.cal_teams_segs) — 문구·▲▼·set_paras 로 5번째 문단 추가
+from fill_deck import cal_teams_segs
+from ppt_helpers import set_paras
+CT = {'teams': [{'team': 'FS EAST', 'label': 'EAST', 'cur': 31, 'prev': 27}, {'team': 'FS WEST', 'label': 'WEST', 'cur': 28, 'prev': 30},
+                {'team': 'FS SOUTH', 'label': 'SOUTH', 'cur': 25, 'prev': 25}, {'team': 'FS CENTRAL', 'label': 'CENTRAL', 'cur': 25, 'prev': 24}]}
+seg = cal_teams_segs(CT, '9월'); line = ''.join(t[0] for t in seg)
+assert line == '   └ East 31 ▲4 · West 28 ▼2 · South 25 ■0 · Central 25 ▲1 (9월 대비)', line
+assert [t[1] for t in seg if t[0].strip() in ('▲4', '▼2', '■0', '▲1')] == [True] * 4, '증감은 굵게'
+p4 = synthetic(); box = p4.slides[0].shapes.add_textbox(Emu(100000), Emu(100000), Emu(5000000), Emu(2000000))
+box.text_frame.text = 'a'; [box.text_frame.add_paragraph() for _ in range(3)]
+set_paras(box, [[('지수', True)], [('• PM', False)], [('• 고장수리', False)], [('• Cal 109건(9월 182건)', False)], seg])
+tp = [p.text for p in box.text_frame.paragraphs]
+assert len(tp) == 5 and tp[3].startswith('• Cal 109건') and tp[4] == line, tp
+print('test_people_slide: OK (새로 만들기·갱신·정식 시행 월·건너뜀 · 5장 Cal 팀별 줄)')

@@ -34,6 +34,18 @@ def mnum(label): return int(label.split('-')[1])
 def yymm(label): return label[2:]
 
 
+def cal_teams_segs(ct, pmo):
+    """5장 오른쪽 상자 「• Cal n건」 아래 팀별 한 줄 — [(텍스트, 굵게)] 목록. 예: └ East 31 ▲4 · West 28 ▼2 · South 25 ■0 · Central 25 ▲1 (9월 대비)"""
+    seg = [('   └ ', N)]
+    for i, t in enumerate(ct['teams']):
+        if i: seg.append((' · ', N))
+        seg.append((f"{t['label'].title()} {t['cur']}", N))
+        dl = t['cur'] - t['prev']
+        seg.append((f" {arrow(dl)}{abs(dl)}", B))
+    seg.append((f" ({pmo} 대비)", N))
+    return seg
+
+
 def run(base, data, out, fca=None, fsr=None):
     prs = Presentation(base)
     S = [list(s.shapes) for s in prs.slides]
@@ -168,12 +180,25 @@ def run(base, data, out, fca=None, fsr=None):
     pmv, rpv, cal = mr[-1][2], mr[-1][1], mr[-1][3]
     pmp, rpp, calp = mr[-2][2], mr[-2][1], mr[-2][3]
     nxt = f'{m % 12 + 1}월'
-    set_paras(s[8], [
+    paras5 = [
         [(f"{mo} 예방정비 지수 {f1(prv['pmRatio'])}% → {f1(cur['pmRatio'])}%", B)],
         [(f"• PM {comma(pmv)}건 ({pmo} 대비 ", N), (f"{arrow(pmv - pmp)}{abs(pmv - pmp)}건", B), (')', N)],
         [(f"• 고장수리 {comma(rpv)}건 ({pmo} 대비 ", N), (f"{arrow(rpv - rpp)}{abs(rpv - rpp)}건", B), (')', N)],
         [(f"• Cal {cal}건({pmo} {calp}건) — {nxt} ", N), ('반락 여부 확인', B)],
-    ])
+    ]
+    # Cal 줄 아래 팀별 한 줄(2026-11-03, json caseAnalysis.calTeams — 5장 12개월 추이와 같은 기준, 원격 Calibration 제외). 4팀 합계 = 위 Cal 건수
+    ct = ca.get('calTeams')
+    if ct and ct.get('teams'):
+        seg = cal_teams_segs(ct, pmo)
+        paras5.append(seg)
+        if ct['total'] + ct.get('unassigned', 0) != cal:
+            REVIEW.append(f"5장 Cal 팀별 줄 — 4팀 합계({ct['total']})가 Cal {cal}건과 다름(로스터 밖 {ct.get('unassigned', 0)}건) — json 확인")
+        if ct['remote']['cur']:
+            REVIEW.append(f"5장 Cal 팀별 줄은 원격 Calibration {ct['remote']['cur']}건({pmo} {ct['remote']['prev']}건)을 뺀 값 — Cal 건수와 같은 기준")
+        REVIEW.append('5장 오른쪽 상자 — 팀별 줄이 한 줄 늘어 상자 높이·글자 넘침 확인(PowerPoint에서)')
+    else:
+        SKIP.append('5장 Cal 팀별 줄 — json 에 caseAnalysis.calTeams 없음(엔진 최신판 필요)')
+    set_paras(s[8], paras5)
     cr = {r[0]: r for r in ca['corrRows']}
     allr = cr['(전체 평균)']
     def rate(r): return float(r[3]); 
