@@ -235,7 +235,28 @@ function buildReport(opt) {
     const list = Object.keys(prod.person).map(n => { const p = prod.person[n], cur = p.score['이번 년도'] || 0, prev = p.score['직전 년도'] || 0;
       return { name: n, unit: p.team, unitLabel: label(p.team), grade: gradeNow[n] || '', newbie: newbie.indexOf(n) >= 0, score: cur, count: p.total_case['이번 년도'] || 0, prevScore: prev, deltaPct: prev > 0 ? round1((cur / prev - 1) * 100) : null }; })
       .filter(x => x.score > 0 && !EXCLUDED.includes(x.name)).sort((a, b) => b.score - a.score);
-    return { top: list.slice(0, 10), people: list.length, sel, cmp };
+    /* 사무소 단위 1인당 비교(월간보고 고정 슬라이드, 8장 뒤) — 대시보드 서비스 탭 「사무소·팀별 1인당 생산성」(drawTeamProd)과 같은 값.
+       units = 사무소 6개(WEST·EAST·CENTRAL 대전·광주·SOUTH 부산·대구), teams = 팀 4개 합계(CENTRAL = 대전+광주, SOUTH = 부산+대구; WEST·EAST 는 units 와 같은 값).
+       값: n(전체 인원) · nCore(비교 인원 = 팀장·신입 제외) · score(1인당 KPI 점수) · index(직급 보정 지수, 100 = FSG 같은 직급 중앙값) · cases(1인당 처리 건수) ·
+       revisit·ftfr(재방문율·FTFR %, 팀은 팀 단위 거래처 배정 · 사무소는 사무소 단위 배정 — kpiCore) · mttr(분, 고장 수리 가중평균). 각 값의 Prev = 직전 같은 길이 기간(월간이면 전월).
+       부서원 KPI 는 2026-11 정식 시행 → 그 전 기간은 official=false(「시행 전 참고값」). */
+    const PR = '이번 년도', PV = '직전 년도', g = (o, k, p2) => { const v = o && o[k] && o[k][p2]; return v == null ? null : v; };
+    const mttrOf = (o, p2) => { const m = (o.mttr || {})[p2] || {}; let a = 0, n = 0; Object.keys(m).forEach(x => { a += m[x].avg * m[x].n; n += m[x].n; }); return n ? round1(a / n) : null; };
+    const pc = v => v == null ? null : round1(v);
+    const entry = (key, label, kind) => { const o = prod.team[key] || {}, rv = ((prod.revisit || {})[key] || {}).team_total || {};
+      return { key, label, kind, n: (o.members || []).length, nCore: o.n_core || 0,
+        score: g(o, 'score_avg_core', PR), scorePrev: g(o, 'score_avg_core', PV), index: g(o, 'index_avg', PR), indexPrev: g(o, 'index_avg', PV),
+        cases: g(o, 'case_avg_core', PR), casesPrev: g(o, 'case_avg_core', PV),
+        revisit: pc(rv['이번년도재방문율']), revisitPrev: pc(rv['직전년도재방문율']), ftfr: pc(rv['이번년도FTFR']), ftfrPrev: pc(rv['직전년도FTFR']),
+        mttr: mttrOf(o, PR), mttrPrev: mttrOf(o, PV) }; };
+    const short = k => k.replace(/^FS\s*/, '');
+    const unitsOut = units.map(u => entry(u, short(u), 'office')), teamsOut = ['FS WEST', 'FS EAST', 'FS CENTRAL', 'FS SOUTH'].map(t => entry(t, short(t), 'team'));
+    const lastKey = sel[sel.length - 1], official = lastKey >= '2026-11';
+    const pk = { top: list.slice(0, 10), people: list.length, sel, cmp,
+      units: { official, officialFrom: '2026-11', note: official ? '' : '시행 전 참고값(부서원 KPI는 2026-11 정식 시행)', period: period.label, cmpPeriod: cmp.length ? cmp[0] + (cmp.length > 1 ? '~' + cmp[cmp.length - 1] : '') : '',
+        basis: '1인당 = 팀장·신입 제외 비교 인원 평균 · 직급 보정 지수 100 = FSG 같은 직급 중앙값 · 재방문율·FTFR: 팀은 팀 단위, 사무소는 사무소 단위 거래처 배정 · MTTR = 고장 수리 가중평균(분)',
+        units: unitsOut, teams: teamsOut } };
+    return pk;
   })();
 
   /* ⑤ 엔지니어 생산성 — computeEngineerProductivity_ (최근 1년 · 기간), 담당자+필수 참석자 각각, 시간은 종료-시작(제한 없음) */

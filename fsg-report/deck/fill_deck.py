@@ -7,11 +7,13 @@
 바꾸지 않는 곳: 9 FCA · 11 만족도 · 12 Next Step, 그리고 판단이 필요한 문장(이슈·대책·분석 코멘트).
 → 판단 문장은 값이 낡았을 수 있어 실행 끝에 「검토 필요」 목록으로 따로 알려 준다. json 에 없는 값(엔진이 아직 안 내는 것)은 건드리지 않고 「건너뜀」 목록에 적는다.
 베이스 덱이 이미 같은 달이면(시험용) 값만 새 json 으로 갈아 끼운다.
+추가(2026-11): 8장 바로 뒤에 고정 슬라이드 「사무소 단위 1인당 KPI 비교」(json peopleKpi.units — people_slide.py). 베이스에 없으면 새로 만들고, 있으면 값만 갈아 끼운다. 10월분은 「시행 전 참고값」 표시.
 """
 import argparse, json, os, re, sys
 from pptx import Presentation
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ppt_helpers import set_text, set_paras, set_cell, fill_table, replace_chart, GREEN, RED
+from people_slide import add_people_kpi_slide, find_people_slide
 
 B, N = True, False
 SKIP, REVIEW = [], []
@@ -35,6 +37,9 @@ def yymm(label): return label[2:]
 def run(base, data, out, fca=None, fsr=None):
     prs = Presentation(base)
     S = [list(s.shapes) for s in prs.slides]
+    # 「사무소 단위 1인당 KPI 비교」(8장 뒤 고정 슬라이드)가 베이스 덱에 이미 있으면 장 번호 계산에서 뺀다 — 이후 장(9 FCA·10 건전성·11 만족도·12 Next Step)이 한 칸씩 밀려 있기 때문
+    pk_at = find_people_slide(prs)
+    if pk_at is not None: S.pop(pk_at)
     d = data
     tr = d['kpiTrend']; cur, prv = tr[-1]['kpi'], tr[-2]['kpi']
     label = d['meta']['period']['label']; m = mnum(label); pm_ = mnum(tr[-2]['label'])
@@ -373,6 +378,10 @@ def run(base, data, out, fca=None, fsr=None):
     else:
         SKIP.append('9장 FCA — FCA 현황 엑셀을 --fca 로 주지 않음')
     SKIP.append('12장 결과/Next Step — 문장이라 건드리지 않음')
+
+    # ── 8장 뒤 고정 슬라이드: 사무소 단위 1인당 KPI 비교 (peopleKpi.units) — 없으면 만들고, 있으면 값만 갈아 끼운다
+    state, msgs = add_people_kpi_slide(prs, d, label, mo, pmo)
+    (SKIP if state == 'skipped' else REVIEW).extend(msgs)
 
     # 표지·12장 월 표기는 건드리지 않음 — 월이 바뀌면 사람이 확인
     prs.save(out)
