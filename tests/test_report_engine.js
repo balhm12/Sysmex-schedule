@@ -109,6 +109,25 @@ const rp = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-09', cut: 
 assert(rp.peopleKpi && rp.peopleKpi.top.length >= 1, '부서원 KPI 상위 목록');
 rp.peopleKpi.top.forEach((x, i, arr) => { assert(x.score > 0 && typeof x.unitLabel === 'string' && typeof x.count === 'number'); if (i) assert(arr[i - 1].score >= x.score, '점수 내림차순'); });
 assert.strictEqual(rep.peopleKpi, null, 'prod 상수를 주지 않으면 계산하지 않음');
+// 2026-11-03: 사무소 단위 1인당 비교(고정 슬라이드) — peopleKpi.units / teams
+const rpu = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-09', cut: '2026-09-30', prod: { office: { X: '대전' }, gradeHist: [], newbie: [] } }).peopleKpi, U = rpu.units;
+assert.deepStrictEqual(U.units.map(u => u.key), ['FS WEST', 'FS EAST', 'FS CENTRAL 대전', 'FS CENTRAL 광주', 'FS SOUTH 부산', 'FS SOUTH 대구'], '사무소 6개 순서');
+assert.deepStrictEqual(U.teams.map(t => t.key), ['FS WEST', 'FS EAST', 'FS CENTRAL', 'FS SOUTH'], '팀 4개 합계');
+assert.deepStrictEqual(U.units.map(u => u.label), ['WEST', 'EAST', 'CENTRAL 대전', 'CENTRAL 광주', 'SOUTH 부산', 'SOUTH 대구']);
+assert.strictEqual(U.official, false, '2026-11 전 기간은 시행 전 참고값'); assert(/시행 전 참고값/.test(U.note) && U.officialFrom === '2026-11');
+const uE = U.units[1], tE = U.teams[1], pA = rpu.top.find(x => x.name === 'A');
+assert.strictEqual(uE.n, 2, 'EAST 전체 인원 A·C'); assert.strictEqual(uE.nCore, 1, '비교 인원 = 팀장(C) 제외 → A');
+assert.strictEqual(uE.score, pA.score, 'EAST 1인당 점수 = 비교 인원 A의 점수'); assert.strictEqual(uE.cases, pA.count, '1인당 처리 건수 = A의 건수');
+assert.deepStrictEqual(tE, Object.assign({}, uE, { kind: 'team' }), 'WEST·EAST 팀 값 = 사무소 값(kind 만 다름)');
+const uC = U.units[2], uG = U.units[3], tC = U.teams[2];
+assert.strictEqual(tC.n, uC.n + uG.n, 'CENTRAL 팀 인원 = 대전 + 광주'); assert.strictEqual(tC.nCore, uC.nCore + uG.nCore); assert.strictEqual(uC.n, 1); assert.strictEqual(uG.n, 0);
+assert.strictEqual(uG.score, 0, '인원 없는 사무소는 0'); assert.strictEqual(uG.index, null, '직급 보정 지수는 비교 인원이 없으면 null');
+U.units.concat(U.teams).forEach(x => ['revisit', 'ftfr'].forEach(k => assert(x[k] == null || (x[k] >= 0 && x[k] <= 100), k + ' 범위')));
+assert(typeof U.basis === 'string' && U.basis.length > 20, '기준 설명');
+assert(Array.isArray(rpu.top) && rpu.top.length >= 1, '기존 top 유지');
+const nov = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-11', cut: '2026-11-30', prod: { office: { X: '대전' }, gradeHist: [], newbie: [] } }).peopleKpi.units;
+assert.strictEqual(nov.official, true, '2026-11부터 정식'); assert.strictEqual(nov.note, '');
+assert.strictEqual(nov.units.length, 6); assert.strictEqual(nov.units[0].scorePrev === null || typeof nov.units[0].scorePrev === 'number', true);
 rep.hospMonth.forEach(h => assert(typeof h.team === 'string')); rep.repeatMonth.forEach(r => assert(typeof r.team === 'string'));
 // 2026-10-27: 팀 기준 내역(teamCredits)과 기준 설명(meta.basis) — 덱을 쓰는 쪽이 "왜 이 팀인가·왜 전월 덱과 다른가"를 json 만 보고 알 수 있게
 [rep.hospMonth, rep.repeatMonth].forEach(list => list.forEach(h => {
