@@ -128,6 +128,32 @@ assert(Array.isArray(rpu.top) && rpu.top.length >= 1, '기존 top 유지');
 const nov = buildReport({ raw: act.rows, roster: ROSTER, period: '2026-11', cut: '2026-11-30', prod: { office: { X: '대전' }, gradeHist: [], newbie: [] } }).peopleKpi.units;
 assert.strictEqual(nov.official, true, '2026-11부터 정식'); assert.strictEqual(nov.note, '');
 assert.strictEqual(nov.units.length, 6); assert.strictEqual(nov.units[0].scorePrev === null || typeof nov.units[0].scorePrev === 'number', true);
+// 2026-11-03: 팀별 Calibration 건수 caseAnalysis.calTeams — monthRows 와 같은 기준(인정 인원 수·팀 몫만·취소 제외), 원격 Calibration 은 따로
+const calRows = [
+  row('완료됨', 'A', 'Calibration', 'H1', 'S1', 'XN-1000', T(2026, 9, 3, 10), T(2026, 9, 3, 11)),                       // EAST 1
+  row('완료됨', 'A', 'Calibration', 'H2', 'S2', 'SP-50', T(2026, 9, 8, 10), T(2026, 9, 8, 11), '', 'B'),               // 담당 A(EAST) + 참석 B(WEST) → 각 팀 1
+  row('취소됨', 'B', 'Calibration', 'H1', 'S1', 'XN-1000', T(2026, 9, 9, 10), T(2026, 9, 9, 11)),                       // 취소 제외
+  row('완료됨', 'X', '원격 Calibration', 'H3', 'S3', 'CN-3000', T(2026, 9, 10, 10), T(2026, 9, 10, 11)),                // 원격: 팀 건수 제외, remote 1
+  row('완료됨', 'Z', 'Calibration', 'H4', 'S4', 'XN-1000', T(2026, 9, 11, 10), T(2026, 9, 11, 11)),                     // 로스터 밖 → 인정 0명
+  row('완료됨', 'X', 'Calibration', 'H3', 'S3', 'CN-3000', T(2026, 8, 12, 10), T(2026, 8, 12, 11)),                     // 전월: CENTRAL 1
+  row('완료됨', 'B', 'Calibration', 'H1', 'S1', 'XN-1000', T(2026, 8, 20, 10), T(2026, 8, 20, 11)),                     // 전월: WEST 1
+  row('완료됨', 'X', '원격 Calibration', 'H3', 'S3', 'CN-3000', T(2026, 7, 20, 10), T(2026, 7, 20, 11)),                // 전전월 — 기간 밖
+];
+const calWb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(calWb, XLSX.utils.aoa_to_sheet([H, ...calRows]), '약속');
+const calAct = R.parseActivity(XLSX.write(calWb, { type: 'buffer', bookType: 'xlsx' }));
+const calRep = buildReport({ raw: calAct.rows, roster: ROSTER, period: '2026-09', cut: '2026-09-30' }), ct = calRep.caseAnalysis.calTeams, cm = calRep.caseAnalysis.monthRows;
+assert.deepStrictEqual(ct.teams.map(t => t.team), ['FS EAST', 'FS WEST', 'FS SOUTH', 'FS CENTRAL'], 'EAST·WEST·SOUTH·CENTRAL 순서');
+assert.deepStrictEqual(ct.teams.map(t => t.label), ['EAST', 'WEST', 'SOUTH', 'CENTRAL']);
+assert.deepStrictEqual(ct.teams.map(t => t.cur), [2, 1, 0, 0], '이번 달: A 두 건 → EAST 2, 참석 B → WEST 1, 취소·원격·로스터 밖 제외');
+assert.deepStrictEqual(ct.teams.map(t => t.prev), [0, 1, 0, 1], '전월: B → WEST 1, X → CENTRAL 1');
+assert.strictEqual(ct.total + ct.unassigned, cm[cm.length - 1][3], '4팀 합계 + 로스터 밖 = monthRows 이번 달 Calibration 값');
+assert.strictEqual(ct.prevTotal + ct.prevUnassigned, cm[cm.length - 2][3], '전월도 같음');
+assert.strictEqual(ct.total, 3); assert.strictEqual(ct.prevTotal, 2); assert.strictEqual(ct.unassigned, 0);
+assert.deepStrictEqual([ct.remote.cur, ct.remote.prev], [1, 0], '원격 Calibration 은 따로 센다(전전월 건은 제외)'); assert(/원격/.test(ct.remote.note));
+assert.deepStrictEqual([ct.label, ct.prevLabel], ['2026-09', '2026-08']);
+// 같은 기준이라 기존 큰 데이터에서도 합계가 맞아야 한다
+const ctB = rep.caseAnalysis.calTeams, cmB = rep.caseAnalysis.monthRows;
+assert.strictEqual(ctB.total + ctB.unassigned, cmB[cmB.length - 1][3]); assert.strictEqual(ctB.prevTotal + ctB.prevUnassigned, cmB[cmB.length - 2][3]);
 rep.hospMonth.forEach(h => assert(typeof h.team === 'string')); rep.repeatMonth.forEach(r => assert(typeof r.team === 'string'));
 // 2026-10-27: 팀 기준 내역(teamCredits)과 기준 설명(meta.basis) — 덱을 쓰는 쪽이 "왜 이 팀인가·왜 전월 덱과 다른가"를 json 만 보고 알 수 있게
 [rep.hospMonth, rep.repeatMonth].forEach(list => list.forEach(h => {
