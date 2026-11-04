@@ -13,7 +13,7 @@ import argparse, json, os, re, sys
 from pptx import Presentation
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ppt_helpers import set_text, set_paras, set_cell, fill_table, replace_chart, GREEN, RED
-from people_slide import add_people_kpi_slide, find_people_slide
+from people_slide import add_people_kpi_slide, find_people_slide, equip_footnote
 
 B, N = True, False
 SKIP, REVIEW = [], []
@@ -91,6 +91,17 @@ def run(base, data, out, fca=None, fsr=None):
     rows3.append([None, None, f"{tot['cnt']}명", f"{tot['org']} / {tot['unit']}" if ib else f"{tot['org']}", comma(tot['pm']), comma(tot['as']), comma(tot['sum']), f1(tot['sum'] / tot['cnt'])])
     if not ib: SKIP.append('3장 설치 칸 장비 대수 — 설치 정보(캘린더·Serial)가 json 에 없음')
     fill_table(s[1].table, rows3)
+    # 담당 장비(2026-11-05, json peopleKpi.units.equip — 현재 관리표 기준): 팀 표 아래 각주 한 줄. 표 구조를 모르는 덱이라 열을 넣지 않고 각주로만 — 자리가 없으면 「검토 필요」
+    eqk = ((d.get('peopleKpi') or {}).get('units') or {}).get('equip')
+    if eqk:
+        order3 = ['FS EAST', 'FS WEST', 'FS SOUTH', 'FS CENTRAL']
+        byk = {r['key']: r for r in eqk['rows'] if r['kind'] == 'team'}
+        txt3 = '1인당 담당 장비(현재 관리표 기준·참고): ' + ' · '.join(f"{TEAM_SHORT.get(k, k.replace('FS ', ''))} {byk[k]['equipPerHead']:.1f}대" for k in order3 if k in byk)
+        tb3 = next((sh for sh in s if sh.has_table), None)
+        if tb3 is None or not equip_footnote(prs.slides[2], tb3, txt3):
+            REVIEW.append('3장 팀 표 아래 「1인당 담당 장비」 각주 — 자리가 없어 넣지 못했다. 필요하면 표 열이나 각주로 직접 넣을 것: ' + txt3)
+    else:
+        SKIP.append('3장 「1인당 담당 장비」 각주 — json 에 peopleKpi.units.equip 없음(관리표 정리본 필요)')
     tshort = lambda key: ' · '.join(f"{TEAM_SHORT[t['team']][0]} {f1(t[key])}" for t in cur['teams'])
     dt = cur['ftfr'] - prv['ftfr']
     set_text(s[5], f"{f1(cur['ftfr'])}%  목표 90%↑"); set_text(s[6], tshort('ftfr'))
@@ -273,7 +284,8 @@ def run(base, data, out, fca=None, fsr=None):
     def owner_cell(account, eng_team):
         hit = fsr(account) if fsr else None
         if hit:
-            t = TEAM_SHORT.get(hit[0].upper(), hit[0].replace('FS ', '')); return f'{t} · {hit[1]}'
+            t = TEAM_SHORT.get(hit[0].upper(), hit[0].replace('FS ', '')) if hit[0] else (TEAM_SHORT.get(eng_team, eng_team) if eng_team else '')   # 정리본에 팀 열이 없으면 엔진 팀
+            return f'{t} · {hit[1]}' if t else hit[1]
         if fsr: miss_fsr.append(account)
         return TEAM_SHORT.get(eng_team, eng_team) if eng_team else None
     hm = d['hospMonth']
@@ -335,6 +347,14 @@ def run(base, data, out, fca=None, fsr=None):
     else:
         SKIP.append('10장 운영 건전성 — json 에 health 없음(Serial 필요)')
     REVIEW.append('10장 Insight·「업무량 편차 진단」 문장 — 새로 써야 함')
+    if eqk:   # 문장은 사람이 쓰므로 근거 숫자(팀별 1인당 장비·장비 100대당 처리 건수)를 같이 알려 준다 — 현재 관리표 기준, 10장 「가동 장비」(Serial 기준)와 정의가 다르니 섞지 않는다
+        def eqtxt(r): return f"{TEAM_SHORT.get(r['key'], r['key'].replace('FS ', ''))} 1인당 {r['equipPerHead']:.1f}대 · 100대당 처리 {('-' if r['per100'] is None else f1(r['per100']))}건({pmo} {('-' if r['per100Prev'] is None else f1(r['per100Prev']))})"
+        teams_eq = [r for k in ['FS EAST', 'FS WEST', 'FS SOUTH', 'FS CENTRAL'] for r in eqk['rows'] if r['kind'] == 'team' and r['key'] == k]
+        t_ = eqk['total']
+        REVIEW.append('10장 「업무량 편차 진단」 근거(담당 장비 — 현재 관리표 기준·시험 운영 중, 가동 장비와 다른 정의): ' + ' / '.join(eqtxt(r) for r in teams_eq)
+                      + f" / FSG 전체 1인당 {t_['equipPerHead']:.1f}대 · 100대당 처리 {('-' if t_['per100'] is None else f1(t_['per100']))}건")
+    else:
+        SKIP.append('10장 업무량 진단 근거(담당 장비) — json 에 peopleKpi.units.equip 없음')
     # ── 11. 고객 만족도조사 — VOC 대시보드 월 집계(satisfaction)
     sat = d.get('satisfaction')
     if sat and sat.get('n'):
@@ -405,8 +425,8 @@ def run(base, data, out, fca=None, fsr=None):
     SKIP.append('12장 결과/Next Step — 문장이라 건드리지 않음')
 
     # ── 8장 뒤 고정 슬라이드: 사무소 단위 1인당 KPI 비교 (peopleKpi.units) — 없으면 만들고, 있으면 값만 갈아 끼운다
-    state, msgs = add_people_kpi_slide(prs, d, label, mo, pmo)
-    (SKIP if state == 'skipped' else REVIEW).extend(msgs)
+    state, msgs, skips = add_people_kpi_slide(prs, d, label, mo, pmo)
+    REVIEW.extend(msgs); SKIP.extend(skips)
 
     # 표지·12장 월 표기는 건드리지 않음 — 월이 바뀌면 사람이 확인
     prs.save(out)

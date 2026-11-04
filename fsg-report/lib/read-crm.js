@@ -86,6 +86,7 @@ function fileDateKey(name) {
   return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
 }
 const TYPES = [
+  { key: 'EQ', pat: /담당기관\s*관리표/ },   /* FSR 담당기관 관리표 정리본(담당 장비) — 2026-11-05. 개인·기관명이 있어 Drive 로 올리지 않는다 */
   { key: 'CASE', pat: /케이스|case/i }, /* 케이스 파일은 쓰지 않음(폴더에 있어도 무시) */ { key: 'SER', pat: /serial|시리얼|자산/i }, { key: 'CAL', pat: /캘린더|calendar/i }, { key: 'ACT', pat: /약속|활동|activit/i },
 ];
 function classifyByName(name) { for (const T of TYPES) if (T.pat.test(name)) return T.key; return null; }

@@ -11,6 +11,8 @@
  *   --serial   「Serial No …xlsx」 자산대장 (가동 장비 기준 지표: 운영건전성·집중관리대상). --dir 에 있으면 자동
  *   --calendar 설치 공유캘린더 내보내기 「시스템설치_공유캘린더_YYYYMMDD.xlsx」 (4장 설치 현황). --dir 에 있으면 자동
  *   --roster   로스터 CSV(fsg-roster 형식: 번호,팀,직급,성명,…). 없으면 ../fsg-kpi.html 의 ROSTER 상수(대시보드와 같은 명단)
+ *   --eq       「FSG_FSR_담당기관관리표_YYYYMMDD_정리본.xlsx」 FSR 담당기관 관리표 정리본(담당 장비, 「담당기관 마스터」 시트의 수식 계산값). --dir 에 있으면 자동.
+ *              없거나 못 읽으면 json 의 peopleKpi.units.equip 은 비고 meta.warnings 에 이유만 남긴다(멈추지 않는다). 담당자·기관명이 있어 Drive 로 올리지 않는다
  *   --cut      CRM 추출일 YYYY-MM-DD. 없으면 활동 파일명의 날짜, 그것도 없으면 오늘. 그 뒤로 잡힌 예정 약속을 뺀다
  *   --out      출력 폴더(기본 fsg-report/out). report-data_<기간>.json 과 검산_<기간>.xlsx 를 쓴다
  *
@@ -23,6 +25,7 @@ const R = require('./lib/read-crm');
 const { buildReport } = require('./lib/report-core');
 const { parsePeriod } = require('./lib/period');
 const INS = require('./lib/install');
+const EQC = require('./equip-core');
 const { buildCheckWorkbook } = require('./lib/write-check');
 
 function args(argv) {
@@ -60,9 +63,10 @@ function main() {
       if (!serPath && picked.SER) serPath = picked.SER.path;
     }
   }
-  let calPath = o.calendar;
+  let calPath = o.calendar, eqPath = o.eq && o.eq !== true ? o.eq : null;
   if (o.dir) { picked = picked || R.pickLatest(o.dir);
     if (!calPath && picked.CAL) calPath = picked.CAL.path;
+    if (!eqPath && picked.EQ) eqPath = picked.EQ.path;
   }
   const table = p => { const t = R.xlsxRows(fs.readFileSync(p), null); if (!t) throw new Error('읽을 수 없습니다: ' + p); return t; };
   const rosterSrc = o.roster ? path.resolve(o.roster) : 'fsg-kpi.html ROSTER';
@@ -73,7 +77,14 @@ function main() {
   const serial = serPath ? R.parseSerial(fs.readFileSync(serPath)) : null;
   const calendar = calPath ? INS.readCalendarRows(table(calPath), R.toMs) : null;
   const prod = o.roster ? null : loadProdConsts();
-  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, calendar, prod });
+  /* 담당 장비(관리표 정리본) — 못 읽어도 보고서 전체는 만든다: 이유를 meta.warnings 에 남기고 equip 은 비운다 */
+  const warnings = []; let equip = null;
+  if (!prod) { /* --roster 로 명단을 따로 준 경우 부서원 KPI 를 계산하지 않으므로 담당 장비도 생략 */ }
+  else if (!eqPath) warnings.push('관리표 없음 — 담당 장비 생략(폴더에 「…담당기관관리표…정리본.xlsx」가 없음)');
+  else { try { equip = EQC.parseEq(fs.readFileSync(eqPath), path.basename(eqPath)); } catch (e) { warnings.push('관리표를 읽지 못함 — 담당 장비 생략: ' + e.message); } }
+  const rep = buildReport({ raw: act.rows, roster, period, cut, serial, calendar, prod, equip });
+  rep.meta.warnings = warnings.concat(equip ? ['담당 장비는 현재 관리표 기준(' + equip.src + ') — 과거 기간과 시점이 다름'] : []);
+  rep.meta.inputs = { equip: !!equip };
   /* 덱 10장 「8월 대비」 등 전월 비교용: 같은 입력으로 전월(한 달) 기준을 한 번 더 계산해 필요한 부분만 붙인다 */
   if (period.months.length === 1) {
     const pm = require('./lib/period').prevMonth(period), pp = parsePeriod(pm.y + '-' + String(pm.m).padStart(2, '0'));
@@ -82,6 +93,7 @@ function main() {
   }
   rep.meta.files = { activity: (act.used || [path.basename(actPath)]).join(' + '), serial: serPath ? path.basename(serPath) : '',
     calendar: calPath ? path.basename(calPath) : '',
+    equip: equip ? path.basename(eqPath) : '',
     roster: path.basename(rosterSrc), header: { hasAtt: act.hasAtt, hasFormType: act.hasFormType } };
 
   const out = path.resolve(o.out || path.join(__dirname, 'out')); fs.mkdirSync(out, { recursive: true });
@@ -102,6 +114,10 @@ function main() {
   const IB = rep.installBlock;
   if (IB) { const D = IB.detail; console.log(`설치(캘린더 기준): 작업 ${D.rows.length}건 · 단품 ${IB.install.total}대(캘린더 표기 ${IB.install.calUnits}) · System ${IB.systems.list.length}세트 · 캘린더 미등록 ${D.orphan.length}대 · 중복 제외 ${(D.dupOrphan || []).length}대 · 예정 ${D.tentative.length}건` + (IB.links.length ? ` · 이름 다른 짝 자동 연결 ${IB.links.length}건(검산 xlsx 「자동연결」)` : '') + (D.partSkipped ? ` · 부품 행 제외 ${D.partSkipped}` : '')); }
   else console.log(serial ? '설치 현황 없음 — 설치 공유캘린더 내보내기를 --calendar 또는 --dir 로 주면 4장 설치 현황이 계산됩니다' : '설치 현황 없음 — Serial No 파일과 설치 공유캘린더가 모두 필요합니다');
+  const EQ = rep.peopleKpi && rep.peopleKpi.units && rep.peopleKpi.units.equip;
+  if (EQ) { const T = EQ.total, sy = T.systems; console.log(`담당 장비(관리표 ${EQ.asOf || '날짜 미상'}): ${T.equip}대 · 기관 ${T.accounts}곳 · ${T.nPeople}명 · 시스템 ${sy.blood + sy.urine + sy.coag}(혈액 ${sy.blood}·유린 ${sy.urine}·응고 ${sy.coag}) · 장비 100대당 처리 ${T.per100 ?? '-'}건(전월 ${T.per100Prev ?? '-'})`
+    + (EQ.unmatched.equip || EQ.unmatched.accounts ? ` · 로스터 밖 담당자의 장비 ${EQ.unmatched.equip}대·기관 ${EQ.unmatched.accounts}곳은 합계에서 빠짐` : '')); }
+  (rep.meta.warnings || []).filter(w => /관리표/.test(w) && !EQ).forEach(w => console.log('⚠ ' + w));
   console.log(`출력: ${out}`);
 }
 if (require.main === module) { try { main(); } catch (e) { console.error('오류:', e.message); process.exit(1); } }
