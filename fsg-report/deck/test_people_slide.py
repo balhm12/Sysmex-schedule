@@ -7,7 +7,7 @@ try:
 except ImportError:
     print('test_people_slide: SKIP (python-pptx 없음)'); sys.exit(0)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from people_slide import add_people_kpi_slide, find_people_slide, NAMES, COLS
+from people_slide import add_people_kpi_slide, find_people_slide, equip_footnote, NAMES, COLS, EQ_COLS
 
 def synthetic():
     prs = Presentation(); prs.slide_width, prs.slide_height = Emu(12192000), Emu(6858000)
@@ -39,7 +39,7 @@ def texts(slide): return [sh.text_frame.text for sh in slide.shapes if sh.has_te
 def table_of(slide): return next(sh for sh in slide.shapes if sh.name == NAMES['table']).table
 
 prs = synthetic(); assert len(prs.slides) == 12 and find_people_slide(prs) is None
-state, msgs = add_people_kpi_slide(prs, D, '2026-10', '10월', '9월')
+state, msgs, skips = add_people_kpi_slide(prs, D, '2026-10', '10월', '9월')
 assert state == 'created' and len(prs.slides) == 13 and find_people_slide(prs) == 8, '8장 바로 뒤(새 9장)'
 sl = prs.slides[8]; tb = table_of(sl)
 assert len(tb.rows) == 12 and len(tb.columns) == len(COLS), (len(tb.rows), len(tb.columns))
@@ -54,6 +54,8 @@ joined = ' '.join(texts(sl))
 assert '사무소 단위 1인당 KPI 비교 (10월)' in joined and '시행 전 참고값' in joined and '2026년 10월 기준' in joined and any(sh.name == NAMES['badge'] for sh in sl.shapes)
 assert any('▲▼' in t for t in texts(sl)), '기준 설명'
 assert len(msgs) == 2 and any('새 9장' in m for m in msgs) and any('시행 전' in m for m in msgs)
+assert len(skips) == 1 and '장비' in skips[0] and '열 없이' not in skips[0], '장비 열 건너뜀 안내: ' + str(skips)
+assert len(tb.columns) == len(COLS), '관리표가 없으면 장비 열을 만들지 않는다'
 ids = [int(x) for x in sl.shapes._spTree.xpath('.//p:cNvPr/@id')]; assert len(ids) == len(set(ids)), '도형 ID 유일'
 out = os.path.join(tempfile.mkdtemp(), 'a.pptx'); prs.save(out)
 
@@ -61,7 +63,7 @@ out = os.path.join(tempfile.mkdtemp(), 'a.pptx'); prs.save(out)
 p2 = Presentation(out); assert find_people_slide(p2) == 8
 extra = p2.slides[8].shapes.add_textbox(Emu(100000), Emu(100000), Emu(1000000), Emu(300000)); extra.name = '내 코멘트'; extra.text_frame.text = '손으로 쓴 문장'
 D2 = {'peopleKpi': {'units': dict(D['peopleKpi']['units'], official=True, units=[dict(x, score=60.0) for x in U])}}
-state, msgs = add_people_kpi_slide(p2, D2, '2026-11', '11월', '10월')
+state, msgs, skips = add_people_kpi_slide(p2, D2, '2026-11', '11월', '10월')
 assert state == 'updated' and len(p2.slides) == 13 and find_people_slide(p2) == 8
 t2 = table_of(p2.slides[8]); assert t2.cell(1, 3).text.startswith('60.0') and len(t2.rows) == 12
 assert '사무소 단위 1인당 KPI 비교 (11월)' in ' '.join(texts(p2.slides[8])) and '시행 전 참고값' not in ' '.join(texts(p2.slides[8])), '정식 시행 월은 배지·문구 없음'
@@ -69,7 +71,38 @@ assert not any(sh.name == NAMES['badge'] for sh in p2.slides[8].shapes) and any(
 assert msgs == [], msgs
 
 # json 에 peopleKpi.units 가 없으면 건너뜀
-p3 = synthetic(); st, ms = add_people_kpi_slide(p3, {'peopleKpi': {'top': []}}, '2026-10', '10월', '9월'); assert st == 'skipped' and len(p3.slides) == 12 and ms
+p3 = synthetic(); st, ms, sk = add_people_kpi_slide(p3, {'peopleKpi': {'top': []}}, '2026-10', '10월', '9월'); assert st == 'skipped' and len(p3.slides) == 12 and sk and not ms
+
+# 담당 장비(peopleKpi.units.equip, 2026-11-05) — 열 2개, 파랑 증감, 8열 → 10열 갱신, 각주 문구
+def erow(key, label, kind, eph, per, prev, eq=100): return dict(key=key, label=label, kind=kind, nPeople=10, accounts=40, equip=eq, equipPerHead=eph, systems={'blood': 1, 'urine': 1, 'coag': 0}, fields={}, per100=per, per100Prev=prev)
+EQ = {'asOf': '2026-11-04', 'source': 'x', 'note': '현재 관리표 기준', 'rows': [erow(u['key'], u['label'], 'office', 60.0 + i, 25.0 + i, 24.0 + i) for i, u in enumerate(U)] + [erow(t['key'], t['label'], 'team', 61.0 + i, 26.0, None) for i, t in enumerate(T)]}
+DE = {'peopleKpi': {'units': dict(D['peopleKpi']['units'], equip=EQ)}}
+pe = synthetic(); st, ms, sk = add_people_kpi_slide(pe, DE, '2026-10', '10월', '9월'); te = table_of(pe.slides[8])
+assert len(te.columns) == len(COLS) + len(EQ_COLS) == 10 and len(te.rows) == 12 and sk == []
+assert [te.cell(0, j).text for j in (8, 9)] == EQ_COLS
+assert te.cell(1, 8).text == '60.0' and te.cell(1, 9).text.startswith('25.0') and '▲1.0' in te.cell(1, 9).text, (te.cell(1, 8).text, te.cell(1, 9).text)
+from pptx.dml.color import RGBColor
+dr = te.cell(1, 9).text_frame.paragraphs[0].runs[-1]; assert dr.font.color.rgb == RGBColor(0x00, 0x5B, 0xAC), '장비 100대당 처리 건수 증감은 파랑(좋고 나쁨 판단 없음)'
+assert te.cell(8, 9).text == '26.0', '전월 값이 없으면 증감 없음: ' + te.cell(8, 9).text
+assert min(r.font.size.pt for c in (te.cell(0, j) for j in range(10)) for r in c.text_frame.paragraphs[0].runs) >= 10, '글자 10pt 미만 금지'
+assert any('현재 관리표 기준' in t and '2026-11-04' in t for t in texts(pe.slides[8])), '각주에 관리표 시점'
+# 지난달 덱(8열)에서 열었을 때: 갱신하면서 10열로 맞춘다
+pe.save(out); pp = Presentation(out)
+p8 = synthetic(); add_people_kpi_slide(p8, D, '2026-10', '10월', '9월'); o8 = os.path.join(tempfile.mkdtemp(), 'e.pptx'); p8.save(o8); p8 = Presentation(o8)
+assert len(table_of(p8.slides[8]).columns) == 8
+st, ms, sk = add_people_kpi_slide(p8, DE, '2026-10', '10월', '9월'); t8 = table_of(p8.slides[8])
+assert st == 'updated' and len(t8.columns) == 10 and len(t8.rows) == 12 and t8.cell(1, 8).text == '60.0' and t8.cell(0, 9).text == EQ_COLS[1]
+ids = [int(x) for x in p8.slides[8].shapes._spTree.xpath('.//p:cNvPr/@id')]; assert len(ids) == len(set(ids))
+# 반대로 관리표가 없어지면(10열 → 8열) 열을 줄이고 건너뜀 안내
+st, ms, sk = add_people_kpi_slide(p8, D, '2026-10', '10월', '9월'); assert len(table_of(p8.slides[8]).columns) == 8 and sk
+
+# 3장 팀 표 아래 각주(equip_footnote) — 자리가 있으면 넣고, 겹치면 False
+p5 = synthetic(); sl = p5.slides[2]; tbl3 = sl.shapes.add_table(3, 3, Emu(500000), Emu(1500000), Emu(6000000), Emu(900000))
+assert equip_footnote(sl, tbl3, '1인당 담당 장비(현재 관리표 기준·참고): East 58.5대') is True and any(sh.name == 'EQ_Foot3' for sh in sl.shapes)
+assert equip_footnote(sl, tbl3, '바뀐 문구') is True and sum(1 for sh in sl.shapes if sh.name == 'EQ_Foot3') == 1 and '바뀐 문구' in [sh.text_frame.text for sh in sl.shapes if sh.name == 'EQ_Foot3'][0], '이미 있으면 글자만 교체'
+p6 = synthetic(); s6 = p6.slides[2]; t6 = s6.shapes.add_table(3, 3, Emu(500000), Emu(1500000), Emu(6000000), Emu(900000))
+s6.shapes.add_textbox(Emu(500000), Emu(2430000), Emu(6000000), Emu(400000))   # 표 바로 아래에 이미 다른 도형
+assert equip_footnote(s6, t6, 'x') is False, '다른 도형과 겹치면 넣지 않는다'
 
 # 5장 Cal 팀별 한 줄(fill_deck.cal_teams_segs) — 문구·▲▼·set_paras 로 5번째 문단 추가
 from fill_deck import cal_teams_segs
