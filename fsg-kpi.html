@@ -422,11 +422,17 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
       <p>「FSG_이동거리_좌표_날짜.json」 — 기관 좌표(자산대장 주소 → 행정동 중심)와 직원 거주지 좌표(동·구 단위). 넣으면 부서원 KPI에 「이동거리」 탭이 계산됩니다. 거주지가 들어 있어 암호화해서만 올라갑니다.</p>
       <div class="st" id="stGeo">선택된 파일 없음</div>
     </div>
+    <div class="drop" id="dropEq" tabindex="0" role="button" aria-label="담당기관 관리표 파일 선택">
+      <b>담당기관 관리표 (선택)</b>
+      <p>「FSG_FSR_담당기관관리표_…정리본.xlsx」 — 「담당기관 마스터」 시트의 담당자·기관·장비 수·시스템·장비군 수량(엑셀에서 저장한 계산값)을 읽습니다. 넣으면 부서원 KPI에 「담당 장비」 탭이 계산됩니다. 기관명·이름이 들어 있어 암호화해서만 올라갑니다.</p>
+      <div class="st" id="stEq">선택된 파일 없음</div>
+    </div>
   </div>
   <input type="file" id="fAct" accept=".xlsx,.xls,.csv" hidden>
   <input type="file" id="fSer" accept=".xlsx,.xls,.csv" hidden>
   <input type="file" id="fHr" accept=".xlsx,.xls,.csv" hidden>
   <input type="file" id="fGeo" accept=".json" hidden>
+  <input type="file" id="fEq" accept=".xlsx" hidden>
   <div class="uplfoot">
     <span>엑셀은 이 브라우저에서 읽어 집계에 필요한 열만 정리한 뒤, 접근 코드로 암호화해서 저장소에 올립니다. 팀장 화면은 5분 안에(또는 새로고침 시) 자동 반영됩니다.</span>
   </div>
@@ -1103,7 +1109,7 @@ var state = { tab:'overview', period:'이번 년도', team:'FS WEST', person:nul
   var firstTeamMembers = DATA.team[state.team].members;
   state.person = firstTeamMembers[0];
 })();
-if (window.__prodState){ ['tab','team','person','personSearch','otScope','otSortKey','otSortDir','sortKey','sortDir','hospSortKey','hospSortDir','lbSortKey','lbSortDir'].forEach(function(k){ if (window.__prodState[k] !== undefined) state[k] = window.__prodState[k]; }); if (!DATA.person[state.person]) state.person = DATA.team[state.team].members[0]; }
+if (window.__prodState){ ['tab','team','person','personSearch','otScope','otSortKey','otSortDir','sortKey','sortDir','hospSortKey','hospSortDir','lbSortKey','lbSortDir','eqScope','eqSort','eqDir'].forEach(function(k){ if (window.__prodState[k] !== undefined) state[k] = window.__prodState[k]; }); if (!DATA.person[state.person]) state.person = DATA.team[state.team].members[0]; }
 state.period = '이번 년도';
 window.__prodState = state;
 
@@ -2161,6 +2167,59 @@ function renderMove(){
   T.querySelectorAll('th[data-k]').forEach(function(th){ th.addEventListener('click', function(){ var k = th.getAttribute('data-k'); if (state.mvSort === k) state.mvDir = -(state.mvDir||-1); else { state.mvSort = k; state.mvDir = -1; } renderMove(); }); });
 }
 
+/* ================= RENDER: 담당 장비 (2026-11-04) ================= */
+function renderEquip(){
+  var el = document.getElementById('panel-equip'), Q = DATA.eq;
+  var info = '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div>';
+  if (!Q){ el.innerHTML = info+'<b>담당기관 관리표가 아직 없습니다.</b> 관리자가 「담당기관 관리표」 파일을 올리면 표시됩니다.</div></div>'; return; }
+  var period = state.period, scope = state.eqScope || 'ALL', FL = ['CBC','유린','응고','면역'];
+  var zero = function(){ return {inst:0,eq:0,sB:0,sU:0,sC:0,CBC:0,'유린':0,'응고':0,'면역':0}; };
+  var of = function(n){ return Q.by[n] || zero(); };
+  var all = DATA.teams.reduce(function(a,t){ return a.concat(DATA.team[t].members); }, []);
+  var names = scope === 'ALL' ? all : DATA.team[scope].members;
+  var agg = function(list){ return list.reduce(function(o,n){ var x = of(n); Object.keys(o).forEach(function(k){ o[k] += x[k] || 0; }); return o; }, zero()); };
+  var cs = function(n){ return ((DATA.person[n]||{}).total_case||{})[period] || 0; };
+  var cur = agg(names), head = names.length || 1, cases = names.reduce(function(a,n){ return a + cs(n); }, 0);
+  var html = info+'<b>담당 장비 = 「FSR 담당기관 관리표」의 담당자별 기관·장비 수</b>(CRM 자산대장 「사용」 장비 1대씩, 시스템 구성 장비 포함 · XP·XQ·주변기기 제외 · 시스템은 1개씩). '+
+    '분야: CBC = XN·XN-L·XR·SP·DI·HLC, 유린 = UF·UC·UD, 응고 = CA·CS·CN, 면역 = HISCL. 장비 100대당 처리 건수 = 기간 처리 건수 ÷ 담당 장비 × 100(장비는 현재 관리표 기준이라 과거 기간과는 시점이 다릅니다). '+
+    '관리표: '+esc(Q.src||'')+(Q.made?' ('+esc(Q.made)+')':'')+' · 기관 '+fmt(Q.n)+'곳.</div></div>';
+  html += '<div class="controls" style="margin-bottom:14px;"><div class="control-group" style="flex-wrap:wrap;min-width:0;"><span class="control-label">범위</span><div class="segmented" id="eqSeg" style="flex-wrap:wrap;max-width:100%;"></div></div></div>';
+  html += '<div class="block grid grid-4">'+
+    statTile('담당 장비', fmt(cur.eq), '대', '', fmt(names.length)+'명 · 기관 '+fmt(cur.inst)+'곳')+
+    statTile('1인당 장비', fmt1(cur.eq/head), '대', '', '1인당 기관 '+fmt1(cur.inst/head)+'곳')+
+    statTile('시스템', fmt(cur.sB+cur.sU+cur.sC), '개', '', '혈액 '+fmt(cur.sB)+' · 유린 '+fmt(cur.sU)+' · 응고 '+fmt(cur.sC))+
+    statTile('장비 100대당 처리 건수', cur.eq ? fmt1(cases/cur.eq*100) : '-', '건', '', PL(period)+' · 처리 '+fmt(cases)+'건')+
+    '</div>';
+  html += '<div class="block grid grid-2">'+chartCard('eq-team-chart', '사무소별 1인당 담당 장비', '현재 관리표 기준')+
+    '<div class="card chart-card" style="min-width:0"><div class="block-head"><h2>분야별 담당 장비</h2><span class="hint">대 · 시스템은 개 · 현재 관리표 기준</span></div><div class="table-scroll"><table class="data-table" id="eqFieldTable"></table></div></div></div>';
+  html += '<div class="block"><div class="block-head"><h2>개인별 담당 장비</h2><span class="hint">열 제목 클릭 시 정렬 · 처리 건수는 '+PL(period)+'</span></div>'+
+    '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="eqTable"></table></div></div>';
+  el.innerHTML = html;
+  teamButtons(document.getElementById('eqSeg'), scope, true, function(t){ state.eqScope = t; renderEquip(); });
+  var UNITS = DATA.teams;
+  barChart(document.getElementById('eq-team-chart'), UNITS.map(function(t){ return DATA.team_short[t]; }), UNITS.map(function(t){ var L = DATA.team[t].members; return L.length ? Math.round(agg(L).eq / L.length * 10) / 10 : 0; }), UNITS.map(function(t){ return TEAM_COLOR[t]; }), {unit:'대'});
+  var FT = document.getElementById('eqFieldTable'), U = UNITS, fr = FL.concat(['장비 합계','혈액 시스템','유린 시스템','응고 시스템']);
+  var key2 = {'장비 합계':'eq','혈액 시스템':'sB','유린 시스템':'sU','응고 시스템':'sC'};
+  var tot = function(list, f){ var a = agg(list); return a[key2[f] || f] || 0; };
+  FT.innerHTML = '<thead><tr><th>분야</th>'+U.map(function(t){ return '<th class="num">'+esc(String(DATA.team_short[t]).replace(/^(CENTRAL|SOUTH) /,''))+'</th>'; }).join('')+'<th class="num">합계</th></tr></thead><tbody>'+
+    fr.map(function(f){ return '<tr'+(f==='장비 합계'?' style="font-weight:700"':'')+'><td>'+esc(f)+'</td>'+U.map(function(t){ var v = tot(DATA.team[t].members, f); return '<td class="num">'+(v?fmt(v):'-')+'</td>'; }).join('')+'<td class="num" style="font-weight:700">'+fmt(tot(all, f))+'</td></tr>'; }).join('')+'</tbody>';
+  var rows = names.map(function(n){ var x = of(n), c = cs(n);
+    return {name:n, team:(DATA.person[n]||{}).team, grade:(DATA.grade||{})[n]||'', inst:x.inst, eq:x.eq, sys:x.sB+x.sU+x.sC, sB:x.sB, sU:x.sU, sC:x.sC, CBC:x.CBC, U:x['유린'], C:x['응고'], I:x['면역'], cs:c, per:x.eq?c/x.eq*100:null}; });
+  var key = state.eqSort || 'eq', dir = state.eqDir || -1;
+  rows.sort(function(a,b){ var x = a[key], y = b[key]; return (typeof x === 'string' ? x.localeCompare(y,'ko') : (x==null?-1:x)-(y==null?-1:y)) * dir; });
+  var mx = Math.max(1, Math.max.apply(null, rows.map(function(r){ return r.eq; })));
+  var cols = [['#',null],['이름','name'],['팀','team'],['직급','grade'],['담당 기관','inst'],['장비 수','eq'],['CBC','CBC'],['유린','U'],['응고','C'],['면역','I'],['혈액 시스템','sB'],['유린 시스템','sU'],['응고 시스템','sC'],['처리 건수','cs'],['장비 100대당','per']];
+  var NUM = ['inst','eq','CBC','U','C','I','sB','sU','sC','cs','per'];
+  var T = document.getElementById('eqTable'), dash = function(v){ return v ? fmt(v) : '<span style="color:var(--text-muted)">-</span>'; };
+  T.innerHTML = '<thead><tr>'+cols.map(function(c){ return '<th'+(c[1]?' data-k="'+c[1]+'" style="cursor:pointer"':'')+(NUM.indexOf(c[1])>=0?' class="num"':'')+'>'+c[0]+(c[1]===key?(dir<0?' ▼':' ▲'):'')+'</th>'; }).join('')+'</tr></thead><tbody>'+
+    rows.map(function(r,i){ return '<tr data-person="'+esc(r.name)+'" style="cursor:pointer"><td>'+(i+1)+'</td><td>'+esc(r.name)+'</td><td><span style="color:'+TEAM_COLOR[r.team]+';font-weight:700">'+esc(DATA.team_short[r.team]||r.team||'')+'</span></td><td>'+esc(r.grade)+'</td>'+
+      '<td class="num">'+dash(r.inst)+'</td><td class="num"><span style="display:inline-block;width:60px;height:6px;border-radius:3px;background:var(--border);margin-right:8px;vertical-align:middle;overflow:hidden"><i style="display:block;height:100%;width:'+(r.eq/mx*100)+'%;background:'+TEAM_COLOR[r.team]+'"></i></span><b>'+fmt(r.eq)+'</b></td>'+
+      ['CBC','U','C','I','sB','sU','sC'].map(function(k){ return '<td class="num">'+dash(r[k])+'</td>'; }).join('')+
+      '<td class="num">'+fmt(r.cs)+'</td><td class="num">'+(r.per==null?'-':fmt1(r.per))+'</td></tr>'; }).join('')+'</tbody>';
+  T.querySelectorAll('th[data-k]').forEach(function(th){ th.addEventListener('click', function(){ var k = th.getAttribute('data-k'); if (state.eqSort === k) state.eqDir = -(state.eqDir||-1); else { state.eqSort = k; state.eqDir = -1; } renderEquip(); }); });
+  T.querySelectorAll('tbody tr').forEach(function(tr){ tr.addEventListener('click', function(){ state.person = tr.getAttribute('data-person'); switchTab('person'); }); });
+}
+
 /* ================= APP SHELL ================= */
 function render(){
   if (state.tab === 'overview') renderOverview();
@@ -2168,6 +2227,7 @@ function render(){
   else if (state.tab === 'person') renderPerson();
   else if (state.tab === 'ot') renderOT();
   else if (state.tab === 'move') renderMove();
+  else if (state.tab === 'equip') renderEquip();
 }
 
 function switchTab(tab){
@@ -2295,6 +2355,7 @@ function errKey(e){
 
 /* ===== 상태 ===== */
 let GEO=null;   /* 이동거리 좌표 — 관리자 업로드(암호화) */
+let EQD=null;   /* 담당기관 관리표(담당자·기관·장비 수) — 관리자 업로드(암호화) */
 let RAW=null, SERIAL=null, HRDATA=null, SRC={act:'', ser:null, hr:null, at:null, embedded:false};
 let D=null;   // 가공 결과
 
@@ -2739,6 +2800,41 @@ function drawErr(rows){
    일자별 거주지 → 그날 방문 기관 → 거주지 최단경로(가까운 순 + 2-opt), 직선거리 × 1.3. 담당자 기준, 장비 설치·이전 설치·고장 수리·PM·Calibration, 취소 제외, 제주 제외, 하루 같은 기관 1번.
    좌표 = 관리자가 올린 이동거리 좌표 파일 {acct:{거래처:[위도,경도,정밀도('동'|'구'),제주?]}, home:{성명:[위도,경도,정밀도]}} — 기관은 자산대장 주소의 행정동 중심(없으면 시군구 중심). */
 const MOVE_PURP=new Set(['장비 설치','장비 이전 설치','고장 수리','PM','Calibration']);
+/* ===== 담당 장비 (2026-11-04) =====
+   「FSR 담당기관 관리표」 정리본의 「담당기관 마스터」 시트를 읽는다. 장비 수·시스템 수·장비군 수량은 엑셀 수식 계산값(관리표 기준:
+   장비 = 자산대장 「사용」 장비 1대씩, 시스템 = 1개씩, XP·XQ·주변기기·기타 제외). 분야 = CBC(XN·XN-L·XR·SP·DI·HLC)·유린(UF·UC·UD)·응고(CA·CS·CN)·면역(HISCL).
+   저장 형식 {rows:[[담당자, 기관명, 시도, 장비 수, 혈액 시스템, 유린 시스템, 응고 시스템, CBC, 유린, 응고, 면역]], src, made} — 기관명·이름이 있어 암호화 업로드만. */
+const EQ_FIELD={'XN':'CBC','XN-L':'CBC','XR':'CBC','SP':'CBC','DI':'CBC','HLC':'CBC','UF':'유린','UC':'유린','UD':'유린','CA':'응고','CS-1600·2500':'응고','CS-5100':'응고','CN':'응고','HISCL':'면역'};
+const EQ_FIELDS=['CBC','유린','응고','면역'];
+function eqFromRows(h, rows){
+  const nz=c=>String(c==null?'':c).replace(/\s/g,''), ix=k=>h.findIndex(c=>nz(c).startsWith(k));
+  const iP=ix('담당자'), iN=ix('기관명'), iS=ix('시·도'), iE=ix('장비수'), iB=ix('혈액시스템'), iU=ix('유린시스템'), iC=ix('응고시스템');
+  if(iP<0||iN<0||iE<0) throw new Error("「담당기관 마스터」 시트에서 담당자·기관명·장비 수 열을 찾지 못했습니다. 담당기관 관리표 정리본인지 확인해 주세요.");
+  const fam=Object.keys(EQ_FIELD).map(f=>[f,h.findIndex(c=>String(c==null?'':c).trim()===f)]).filter(x=>x[1]>=0);
+  const num=v=>{ const n=typeof v==='number'?v:parseFloat(v); return isFinite(n)?n:0; }, at=(r,i)=>i>=0?r[i]:null;
+  const out=[]; let any=0;
+  for(const r of rows){ if(!r) continue; const n=String(at(r,iN)??'').trim(), p=String(at(r,iP)??'').trim(); if(!n||n===String(h[iN]).trim()) continue;
+    const f={CBC:0,'유린':0,'응고':0,'면역':0}; fam.forEach(([k,i])=>{ f[EQ_FIELD[k]]+=num(r[i]); });
+    const e=num(at(r,iE)); if(e>0) any++;
+    out.push([p,n,String(at(r,iS)??'').trim(),e,num(at(r,iB)),num(at(r,iU)),num(at(r,iC)),f.CBC,f['유린'],f['응고'],f['면역']]); }
+  if(!out.length) throw new Error('기관 행을 찾지 못했습니다.');
+  if(!any) throw new Error('장비 수가 모두 비어 있습니다. 엑셀에서 파일을 한 번 열어 저장한 뒤 올려 주세요(수식 계산값이 필요합니다).');
+  return out;
+}
+function parseEq(buf, fname){
+  const wb=XLSX.read(buf,{type:'array'}), nm=wb.SheetNames.find(n=>n.replace(/\s/g,'')==='담당기관마스터');
+  if(!nm) throw new Error("「담당기관 마스터」 시트가 없습니다. 담당기관 관리표 정리본인지 확인해 주세요.");
+  const A=XLSX.utils.sheet_to_json(wb.Sheets[nm],{header:1,raw:true,defval:null,blankrows:false});
+  const hi=A.findIndex(r=>r&&r.some(c=>String(c==null?'':c).trim()==='담당자')&&r.some(c=>String(c==null?'':c).replace(/\s/g,'').startsWith('기관명')));
+  if(hi<0) throw new Error("「담당기관 마스터」 시트에서 머리글(담당자·기관명)을 찾지 못했습니다.");
+  const dt=String(fname||'').match(/(20\d{2})[_.\-]?(\d{2})[_.\-]?(\d{2})/);
+  return {rows:eqFromRows(A[hi], A.slice(hi+1)), src:fname, made:dt?dt[1]+'-'+dt[2]+'-'+dt[3]:''};
+}
+function eqByPerson(rows){
+  const m={}; for(const r of rows){ if(!r[0]) continue; const o=m[r[0]]||(m[r[0]]={inst:0,eq:0,sB:0,sU:0,sC:0,CBC:0,'유린':0,'응고':0,'면역':0});
+    o.inst++; o.eq+=r[3]; o.sB+=r[4]; o.sU+=r[5]; o.sC+=r[6]; o.CBC+=r[7]; o['유린']+=r[8]; o['응고']+=r[9]; o['면역']+=r[10]; }
+  return m;
+}
 function parseGeo(buf, fname){
   let g; try{ g=JSON.parse(new TextDecoder().decode(buf)); }catch(e){ throw new Error('이동거리 좌표 파일(JSON)이 아닙니다.'); }
   if(!g||!g.acct||!g.home) throw new Error("acct·home 항목이 없습니다. 「FSG_이동거리_좌표」 파일인지 확인해 주세요.");
@@ -3049,7 +3145,7 @@ function parseSerial(buf){
 }
 const nowStr=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
 async function handleFile(kind, file){
-  if(!file) return; const st=$(kind==='act'?'stAct':kind==='hr'?'stHr':kind==='geo'?'stGeo':'stSer');
+  if(!file) return; const st=$(kind==='act'?'stAct':kind==='hr'?'stHr':kind==='geo'?'stGeo':kind==='eq'?'stEq':'stSer');
   if(typeof XLSX==='undefined'){ st.innerHTML='<span class="bad">엑셀 읽기 라이브러리를 불러오지 못했습니다. 네트워크 연결을 확인해 주세요.</span>'; return; }
   $('busy').classList.add('on'); await new Promise(r=>setTimeout(r,30));
   try{
@@ -3059,6 +3155,7 @@ async function handleFile(kind, file){
     else if(kind==='hr'){ const nw=parseHr(buf,file.name), c=hrCovOf(nw); HRDATA=mergeHr(HRDATA, nw); SRC.hr=HRDATA.src;
       msg=`${file.name}: ${nw.kind==='mon'?'월별 연장근로':'연장근무 신청'} ${fmt(Object.keys(nw.h).length)}명, ${c[0]||''}~${c[c.length-1]||''} 읽음(기존 자료와 합침: ${HRDATA.srcs.map(x=>(x.kind==='mon'?'월별 ':'신청 ')+x.first+'~'+x.last).join(' + ')})`; }
     else if(kind==='geo'){ GEO=parseGeo(buf,file.name); SRC.geo=file.name; PROD_DIRTY=true; msg=`${file.name}: 기관 ${fmt(Object.keys(GEO.acct).length)}곳 · 직원 ${fmt(Object.keys(GEO.home).length)}명 좌표 읽음`; }
+    else if(kind==='eq'){ EQD=parseEq(buf,file.name); SRC.eq=file.name; PROD_DIRTY=true; msg=`${file.name}: 기관 ${fmt(EQD.rows.length)}곳 · 장비 ${fmt(EQD.rows.reduce((a,r)=>a+r[3],0))}대 읽음`; }
     else { const all=parseSerial(buf); SERIAL=all.filter(x=>x.state==='사용'); SRC.ser=file.name; msg=`${file.name}: 장비 ${fmt(all.length)}대 중 '사용' ${fmt(SERIAL.length)}대`; }
     SRC.at=nowStr(); if(RAW){ refresh(); } else PROD_DIRTY=true;
     st.textContent=msg+', 저장소에 올리는 중';
@@ -3067,6 +3164,7 @@ async function handleFile(kind, file){
       ? await pushShared('act', encodeAct(RAW,file.name), {actSrc:file.name, actRows:RAW.length})
       : kind==='hr' ? await pushShared('hr', HRDATA, {hrSrc:HRDATA.src})
       : kind==='geo' ? await pushShared('geo', GEO, {geoSrc:file.name})
+      : kind==='eq' ? await pushShared('eq', EQD, {eqSrc:file.name})
       : await pushShared('ser', encodeSer(SERIAL), {serSrc:file.name});
     st.innerHTML = ok ? msg+', <span class="good">올리기 완료. 팀장 화면은 새로고침하거나 5분 안에 자동 반영됩니다</span>' : msg+'. <span class="bad">공유 저장소에 연결되지 않아 이 화면에만 반영됐습니다</span>';
   }catch(err){ st.innerHTML=`<span class="bad">${esc(err.code?('공유 저장 실패 ('+err.code+'). 잠시 후 다시 올려 주세요.'):(err.message||err))}</span>`; }
@@ -3200,10 +3298,11 @@ async function loadAll(){
     if(!(await codeOk(CODE,meta))){ localStorage.removeItem(KEY_LS); CODE=null; showLock('접근 코드가 맞지 않습니다. 다시 입력해 주세요.'); return; }
     /* 자산대장·연장근무는 선택 자료 — 못 읽어도 CRM 화면은 연다 */
     const opt=k=>fb(k).catch(e=>{ console.warn(k+' 불러오기 실패',e); return null; });
-    const [a,s,hr,geo]=await Promise.all([fb('act'), meta.serSrc?opt('ser'):Promise.resolve(null), meta.hrSrc?opt('hr'):Promise.resolve(null), meta.geoSrc?opt('geo'):Promise.resolve(null)]);
+    const [a,s,hr,geo,eq]=await Promise.all([fb('act'), meta.serSrc?opt('ser'):Promise.resolve(null), meta.hrSrc?opt('hr'):Promise.resolve(null), meta.geoSrc?opt('geo'):Promise.resolve(null), meta.eqSrc?opt('eq'):Promise.resolve(null)]);
     RAW=fixTz(decodeEmbed(await open_(a,CODE))); SERIAL=s?decodeSer(await open_(s,CODE)):null;
     HRDATA=null; if(hr){ try{ HRDATA=await open_(hr,CODE); }catch(e){ console.warn('hr decode',e); } }
     GEO=null; if(geo){ try{ GEO=await open_(geo,CODE); GEO.src=GEO.src||meta.geoSrc; }catch(e){ console.warn('geo decode',e); } }
+    EQD=null; if(eq){ try{ EQD=await open_(eq,CODE); EQD.src=EQD.src||meta.eqSrc; }catch(e){ console.warn('eq decode',e); } }
     META=meta; SRC={act:meta.actSrc,ser:s?meta.serSrc:null,hr:HRDATA?meta.hrSrc:null,at:meta.updatedAt,embedded:false};
     $('empty').hidden=true; refresh(); showMain();
   }catch(err){ const net=err instanceof TypeError;
@@ -3261,7 +3360,7 @@ document.querySelectorAll('#tInst th.s').forEach(th=>{const go=()=>{const k=th.d
   document.querySelectorAll('#tInst th').forEach(x=>x.removeAttribute('aria-sort'));th.setAttribute('aria-sort',sortDir<0?'descending':'ascending');drawInst();};
   th.addEventListener('click',go);th.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});});
 $('openUpl').addEventListener('click',()=>{const o=$('upl').classList.toggle('open');$('openUpl').setAttribute('aria-expanded',o);});
-bindDrop('dropAct','fAct','act'); bindDrop('dropSer','fSer','ser'); bindDrop('dropHr','fHr','hr'); bindDrop('dropGeo','fGeo','geo');
+bindDrop('dropAct','fAct','act'); bindDrop('dropSer','fSer','ser'); bindDrop('dropHr','fHr','hr'); bindDrop('dropGeo','fGeo','geo'); bindDrop('dropEq','fEq','eq');
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>render());
 if(typeof Chart!=='undefined'){Chart.defaults.font.family="'Malgun Gothic', Arial, sans-serif";Chart.defaults.font.size=12;}
 $('lockBtn').addEventListener('click',submitCode);
@@ -3279,6 +3378,7 @@ const PROD_SKELETON=`<nav class="tabs" id="prodTabs">
     <button data-tab="person">개인별 상세</button>
     <button data-tab="ot">야간·휴일 근무</button>
     <button data-tab="move">이동거리</button>
+    <button data-tab="equip">담당 장비</button>
   </nav>
   <div class="controls" id="globalControls">
     <div class="control-group"><span class="control-label">기간</span><div class="segmented" id="periodSeg"></div></div>
@@ -3288,6 +3388,7 @@ const PROD_SKELETON=`<nav class="tabs" id="prodTabs">
   <section class="panel" id="panel-person"></section>
   <section class="panel" id="panel-ot"></section>
   <section class="panel" id="panel-move"></section>
+  <section class="panel" id="panel-equip"></section>
   <p class="pfoot" id="metaLine"></p>
   <div class="tooltip" id="tooltip"></div>`;
 /* 직급 표시는 현재 직급(ROSTER), 직급 가중치는 활동일 기준(GRADE_HIST 시행일부터 새 직급) · 신입은 업무량 비교에서 따로 표시 */
@@ -3330,7 +3431,7 @@ function ensureProd(){
       trend_labels:S.trend.map(m=>m.slice(2,4)+'.'+m.slice(5)), trend_names:['최근 12개월','전년 동월'],
       /* 월별 추이 마지막 달이 CRM 추출일이 속한 달이면 아직 집계 중(진행 중) */
       trend_partial:(()=>{const lm=S.trend[S.trend.length-1], c=D.excl&&D.excl.cut; return c&&lm&&c.slice(0,7)===lm?{idx:S.trend.length, month:+lm.slice(5), cut:c}:null;})(),
-      move:GEO?moveData():null, sel_months:S.sel, cmp_months:S.cmp, trend_months:S.trend,
+      move:GEO?moveData():null, eq:EQD?{by:eqByPerson(EQD.rows), src:EQD.src||'', made:EQD.made||'', n:EQD.rows.length}:null, sel_months:S.sel, cmp_months:S.cmp, trend_months:S.trend,
       grade:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), promoted:Object.fromEntries(GRADE_HIST.filter(([n,d])=>S.sel.includes(d.slice(0,7))).map(([n,d,prev])=>[n,prev+'→'+rosterMap[n].grade+' ('+d.slice(5).replace('-','/')+')'])), newbie:NEWBIE, ex_lead:$('pExLead').checked});
     $('pCmp').innerHTML=`비교 기간: ${esc(S.cmpLabel)}<br>직급 표시: 현재 · 직급 가중치: 진급자는 시행일부터 새 직급`;
     PROD_DIRTY=false; PROD_SHOWN=false; return true;
