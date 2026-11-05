@@ -216,7 +216,7 @@ def add_people_kpi_slide(prs, d, label, mo, pmo):
                                   'MTTR = 고장 수리 가중평균(분) · ▲▼ = 직전 기간 대비 (초록 = 좋아짐, 빨강 = 나빠짐) · 팀 합계의 WEST·EAST는 사무소와 같은 값')
         r.font.size = Pt(10); r.font.color.rgb = RGBColor(0x59, 0x59, 0x59)
         if u.get('equip'):
-            r2 = p.add_run(); r2.text = (f" · 장비 = 현재 관리표 기준({u['equip'].get('asOf') or '날짜 미상'}·과거와 시점이 다름·시험 운영 중), 10장 「가동 장비」(Serial 가동 기준)와 정의가 다름 · "
+            r2 = p.add_run(); r2.text = (f" · 장비 = 현재 관리표 기준({u['equip'].get('asOf') or '날짜 미상'}·과거와 시점이 다름·시험 운영 중), 1인당 장비·장비 100대당 처리 건수는 팀장 제외 기준(장비 합계에는 팀장 담당 기관 포함), 10장 「가동 장비」(Serial 가동 기준)와 정의가 다름 · "
                                          '장비 100대당 처리 건수의 ▲▼(파랑)는 좋고 나쁨 판단 없음')
             r2.font.size = Pt(10); r2.font.color.rgb = RGBColor(0x59, 0x59, 0x59)
     if not u.get('equip'):

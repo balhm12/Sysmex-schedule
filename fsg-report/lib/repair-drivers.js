@@ -102,22 +102,36 @@ function build(o) {
       note: '수리 방문 건수(행) ÷ 개월 수 ÷ 가동 장비 × 100. 가동 장비 = Serial 「사용」 중 그 시점까지 12개월에 서비스 이력이 있는 장비(현재 Serial 기준이라 과거 시점은 근사). 인정 인원 수가 아니라 방문 행 수라 위 건수와 단위가 다르다' };
   } else warnings.push('repairDrivers.activeFleet — Serial 없음: 가동 장비 100대당 수리를 비움');
 
-  // Calibration·Application 같은 기준 비교(개편 전 12개월 월평균 vs 개편 후) — 비중 = 해당 건수 ÷ 전체 활동 건수(인정 인원 수, 모든 목적)
-  const appPurposes = new Set(); rows.forEach(x => { if (/^application/i.test(String(x.purpose || ''))) appPurposes.add(x.purpose); });
-  const calOf = w => { const S = wset(w); let cal = 0, app = 0, all = 0, pm = 0, rp = 0;
+  // Calibration·Evaluation·Application 같은 기준 비교(개편 전 12개월 월평균 vs 개편 후) — 비중 = 해당 건수 ÷ 전체 활동 건수(인정 인원 수, 모든 목적)
+  // 2026-11-05: 경영회의 기준의 Application = 활동 목적 Calibration + Evaluation (CRM 에 「Application」이라는 목적 이름은 없다). Evaluation = 목적이 「Evaluation」으로 시작(대소문자 무시, EVALUATION 포함),
+  //   「원격 Evaluation」은 제외하고 따로 센다. 「설치/데모 평가」는 설치 업무라 Evaluation 이 아니다. Calibration 은 목적 「Calibration」(원격 Calibration 제외 — 5장 12개월 추이와 같음)
+  const isEval = p => /^evaluation/i.test(String(p || '')), isRemoteEval = p => /^원격\s*evaluation/i.test(String(p || '')), isRemoteCal = p => /^원격\s*calibration/i.test(String(p || ''));
+  const evalPurposes = new Set(), calPurposes = new Set();
+  rows.forEach(x => { if (isEval(x.purpose)) evalPurposes.add(x.purpose); else if (x.purpose === PV.CAL) calPurposes.add(x.purpose); });
+  const calOf = w => { const S = wset(w); let cal = 0, ev = 0, all = 0, pm = 0, rp = 0, calR = 0, evR = 0;
     rows.forEach(x => { if (!S.has(mkOf(x))) return; const n = x.credits.length; all += n;
-      if (x.purpose === PV.CAL) cal += n; else if (appPurposes.has(x.purpose)) app += n; else if (x.purpose === PV.PM) pm += n; else if (x.purpose === PV.REPAIR) rp += n; });
-    const sh = v => all ? r1(v / all * 100) : null;
+      if (x.purpose === PV.CAL) cal += n; else if (isEval(x.purpose)) ev += n; else if (isRemoteCal(x.purpose)) calR += n; else if (isRemoteEval(x.purpose)) evR += n;
+      else if (x.purpose === PV.PM) pm += n; else if (x.purpose === PV.REPAIR) rp += n; });
+    const sh = v => all ? r1(v / all * 100) : null, blk = v => ({ total: v, perMonth: r1(avg(v, w)), sharePct: sh(v) });
     return { months: KEYS[w].length, complete: missing[w].length === 0, all, allPerMonth: r1(avg(all, w)),
-      calibration: { total: cal, perMonth: r1(avg(cal, w)), sharePct: sh(cal) }, application: appPurposes.size ? { total: app, perMonth: r1(avg(app, w)), sharePct: sh(app) } : null,
-      pm: { total: pm, perMonth: r1(avg(pm, w)), sharePct: sh(pm) }, repair: { total: rp, perMonth: r1(avg(rp, w)), sharePct: sh(rp) } }; };
+      calibration: blk(cal), evaluation: blk(ev), application: (calPurposes.size || evalPurposes.size) ? blk(cal + ev) : null,
+      calibrationRemote: { total: calR, perMonth: r1(avg(calR, w)) }, evaluationRemote: { total: evR, perMonth: r1(avg(evR, w)) },
+      pm: blk(pm), repair: blk(rp) }; };
   const CW = { pre: calOf('pre'), post: calOf('post'), cur: calOf('cur'), prev: calOf('prev'), yoy: calOf('yoy') };
   const dpct = (a, b) => b ? r1((a - b) / b * 100) : null;
-  const calCompare = { windows: CW, applicationPurposes: [...appPurposes].sort(),
-    delta: { calibrationPerMonth: r1(CW.post.calibration.perMonth - CW.pre.calibration.perMonth), calibrationPct: dpct(CW.post.calibration.perMonth, CW.pre.calibration.perMonth),
-      applicationPerMonth: CW.post.application ? r1(CW.post.application.perMonth - CW.pre.application.perMonth) : null, applicationPct: CW.post.application ? dpct(CW.post.application.perMonth, CW.pre.application.perMonth) : null },
-    basis: 'Calibration = 목적 「Calibration」(원격 Calibration 제외 — 5장 12개월 추이와 같음) · Application = 목적이 「Application」으로 시작하는 활동 · 비중 = 해당 건수 ÷ 전체 활동 건수(인정 인원 수, 취소·온라인 정기점검 제외) · 월평균 = 합 ÷ 달 수' };
-  if (!appPurposes.size) warnings.push('repairDrivers.calCompare — 활동 목적에 「Application」이 한 건도 없어 Application 값을 비움(목적 이름이 다르면 알려 주세요)');
+  const dd = k => CW.post[k] && CW.pre[k] ? { perMonth: r1(CW.post[k].perMonth - CW.pre[k].perMonth), pct: dpct(CW.post[k].perMonth, CW.pre[k].perMonth) } : { perMonth: null, pct: null };
+  // 월별 12개월(기준월까지, caseAnalysis.monthRows 와 같은 달) — [월, Calibration, Evaluation, Application = 합] 인정 인원 수
+  const months12 = P.monthsBack(period, 12), m12 = {}; months12.forEach(ym => { m12[P.lab(ym.y, ym.m)] = { cal: 0, ev: 0 }; });
+  rows.forEach(x => { const d = monthOf(x.t), l = P.lab(d.y, d.m); if (!m12[l]) return; const n = x.credits.length; if (x.purpose === PV.CAL) m12[l].cal += n; else if (isEval(x.purpose)) m12[l].ev += n; });
+  const calCompare = { windows: CW, calibrationPurposes: [...calPurposes].sort(), evaluationPurposes: [...evalPurposes].sort(),
+    applicationPurposes: [...calPurposes, ...evalPurposes].sort(),   // 실제로 합산한 목적 이름(이름이 틀렸을 때 확인용)
+    delta: { calibrationPerMonth: dd('calibration').perMonth, calibrationPct: dd('calibration').pct, evaluationPerMonth: dd('evaluation').perMonth, evaluationPct: dd('evaluation').pct,
+      applicationPerMonth: dd('application').perMonth, applicationPct: dd('application').pct },
+    evalMonthRows: months12.map(ym => { const l = P.lab(ym.y, ym.m); return [l, m12[l].ev]; }),
+    applicationMonthRows: months12.map(ym => { const l = P.lab(ym.y, ym.m); return [l, m12[l].cal, m12[l].ev, m12[l].cal + m12[l].ev]; }),
+    basis: 'Application = 활동 목적 Calibration + Evaluation(경영회의 기준) · Calibration = 목적 「Calibration」(원격 Calibration 제외 — 5장 12개월 추이와 같음) · Evaluation = 목적이 「Evaluation」으로 시작(대소문자 무시, evaluationPurposes 에 실제 이름), 「원격 Evaluation」은 제외하고 evaluationRemote 에 따로 · 「설치/데모 평가」는 설치 업무라 포함하지 않음 · 비중 = 해당 건수 ÷ 전체 활동 건수(인정 인원 수, 취소·온라인 정기점검 제외, 한 번만 셈) · 월평균 = 합 ÷ 달 수 · applicationMonthRows = [월, Calibration, Evaluation, 합]' };
+  if (!calPurposes.size && !evalPurposes.size) warnings.push('repairDrivers.calCompare — 활동 목적에 Calibration·Evaluation 이 한 건도 없어 Application 값을 비움(목적 이름이 다르면 알려 주세요)');
+  else if (!evalPurposes.size) warnings.push('repairDrivers.calCompare — 활동 목적에 「Evaluation」으로 시작하는 이름이 없어 Application 은 Calibration 만 합산됨(목적 이름이 다르면 알려 주세요)');
 
   // 합계 검증 — 분해 4개 합 = 수리 건수, 그리고 기존 값(trendCompare·caseAnalysis.monthRows)과 같아야 한다
   const checks = {};

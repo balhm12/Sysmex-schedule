@@ -58,21 +58,34 @@ assert.strictEqual(rep.inputs.equip, true); assert.strictEqual(E.asOf, '2026-11-
 assert.deepStrictEqual(E.rows.map(r => r.key), ['FS WEST', 'FS EAST', 'FS CENTRAL 대전', 'FS CENTRAL 광주', 'FS SOUTH 부산', 'FS SOUTH 대구', 'FS WEST', 'FS EAST', 'FS CENTRAL', 'FS SOUTH'], 'units 6 + teams 4 순서');
 assert.deepStrictEqual(E.rows.map(r => r.kind), ['office', 'office', 'office', 'office', 'office', 'office', 'team', 'team', 'team', 'team']);
 const east = row('FS EAST');
-assert.strictEqual(east.nPeople, 2, '장비 담당 인원 = 구성원(팀장 포함)'); assert.strictEqual(east.accounts, 3); assert.strictEqual(east.equip, 19, 'A 15 + C(팀장) 4'); assert.strictEqual(east.equipPerHead, 9.5);
+assert.strictEqual(east.nPeople, 1, '장비 지표는 팀장 제외 — 인원 = A 한 명'); assert.deepStrictEqual([east.nLead, east.nPeopleInclLead], [1, 2]); assert.strictEqual(east.accounts, 3); assert.strictEqual(east.equip, 19, '장비 합에는 팀장(C)이 맡은 기관 4대도 들어간다: A 15 + C 4'); assert.strictEqual(east.equipPerHead, 19, '1인당 = 19 ÷ 팀장 제외 1명'); assert.strictEqual(east.equipPerHeadInclLead, 9.5, '팀장 포함 값은 …InclLead');
 assert.deepStrictEqual(east.systems, { blood: 1, urine: 1, coag: 1 }); assert.deepStrictEqual(east.fields, { CBC: 11, urine: 3, coag: 5, immuno: 0 }, 'A CBC 8+3, 유린 2+1, 응고 1 · C 응고 4');
-const west = row('FS WEST'); assert.deepStrictEqual([west.nPeople, west.accounts, west.equip, west.equipPerHead], [1, 1, 20, 20]); assert.deepStrictEqual(west.systems, { blood: 2, urine: 1, coag: 0 });
+const west = row('FS WEST'); assert.deepStrictEqual([west.nPeople, west.accounts, west.equip, west.equipPerHead], [1, 1, 20, 20]); assert.strictEqual(west.equipPerHeadInclLead, 20, '팀장이 없는 단위는 같은 값'); assert.deepStrictEqual(west.systems, { blood: 2, urine: 1, coag: 0 });
 const dj = row('FS CENTRAL 대전'); assert.deepStrictEqual([dj.nPeople, dj.equip, dj.equipPerHead], [1, 8, 8]);
 const gj = row('FS CENTRAL 광주'); assert.deepStrictEqual([gj.nPeople, gj.equip, gj.per100], [0, 0, null], '인원·장비 없는 사무소');
 const busan = row('FS SOUTH 부산'); assert.strictEqual(busan.equip, 0); assert.strictEqual(busan.per100, null, '장비 0이면 100대당 처리 건수는 null');
 // 100대당 처리 건수 = 기간 처리 건수 ÷ 담당 장비 × 100 (대시보드 renderEquip 과 같은 식). 처리 건수는 담당자+필수 참석자 각각 1건
 const top = {}; rep.peopleKpi.top.forEach(x => { top[x.name] = x.count; });
 const cases = names => names.reduce((t, n) => t + (top[n] || 0), 0), r1 = v => Math.round(v * 10) / 10;
-assert.strictEqual(east.per100, r1(cases(['A', 'C']) / 19 * 100), 'EAST = (A+C 건수) ÷ 19 × 100'); assert.strictEqual(west.per100, r1(cases(['B']) / 20 * 100)); assert.strictEqual(dj.per100, r1(cases(['X']) / 8 * 100));
+assert.strictEqual(east.per100, r1(cases(['A']) / 19 * 100), 'EAST = (팀장 제외 A 의 건수) ÷ 19 × 100'); assert.strictEqual(east.per100InclLead, r1(cases(['A', 'C']) / 19 * 100), '팀장 포함 = (A+C 건수) ÷ 19 × 100'); assert(east.per100 < east.per100InclLead, '팀장의 건수(C 1건)만큼 팀장 제외 값이 작다'); assert.strictEqual(west.per100, r1(cases(['B']) / 20 * 100)); assert.strictEqual(dj.per100, r1(cases(['X']) / 8 * 100));
 assert.strictEqual(top.C, 1, '팀장 C 는 A 의 PM 에 필수 참석자로 1건 — 팀장도 구성원이라 EAST 장비·건수에 들어간다')
-assert.strictEqual(E.total.equip, 19 + 20 + 8, '로스터 단위 구성원의 장비 합'); assert.strictEqual(E.total.nPeople, 4); assert.strictEqual(E.total.accounts, 5);
-assert.strictEqual(E.total.per100, r1(cases(['A', 'B', 'C', 'X']) / 47 * 100));
+assert.strictEqual(E.total.equip, 19 + 20 + 8, '로스터 단위 구성원의 장비 합(팀장 담당 포함)'); assert.strictEqual(E.total.nPeople, 3, '팀장(C) 제외 3명'); assert.strictEqual(E.total.nPeopleInclLead, 4); assert.strictEqual(E.total.accounts, 5);
+assert.strictEqual(E.total.equipPerHead, r1(47 / 3)); assert.strictEqual(E.total.equipPerHeadInclLead, r1(47 / 4));
+assert.strictEqual(E.total.per100, r1(cases(['A', 'B', 'X']) / 47 * 100)); assert.strictEqual(E.total.per100InclLead, r1(cases(['A', 'B', 'C', 'X']) / 47 * 100));
+assert(/팀장 제외 기준/.test(E.note) && /InclLead/.test(E.note), 'note 에 팀장 제외 기준');
 assert.deepStrictEqual(E.unmatched, Object.assign({ accounts: 1, equip: 3 }, { note: E.unmatched.note })); assert(/로스터/.test(E.unmatched.note));
 assert.deepStrictEqual(E.fileTotal, { owners: 5, accounts: 6, equip: 50, systems: 7 }, '파일 전체(로스터 밖 포함)');
+// eqAgg 단위 시험 — 손 계산: 구성원 L(팀장), P, Q — 장비는 전체 합, 인원·1인당·100대당은 팀장 제외
+const by = { L: { inst: 2, eq: 30, sB: 1, sU: 0, sC: 0, CBC: 20, '유린': 10, '응고': 0, '면역': 0 }, P: { inst: 1, eq: 10, sB: 0, sU: 1, sC: 0, CBC: 10, '유린': 0, '응고': 0, '면역': 0 } };
+const ag = EQC.eqAgg(by, ['L', 'P', 'Q'], n => ({ L: 100, P: 40, Q: 20 })[n], n => n === 'L');
+assert.deepStrictEqual([ag.eq, ag.inst, ag.nAll, ag.nLead, ag.nPeople], [40, 3, 3, 1, 2], '장비 합 40(팀장 30 포함), 인원 3 중 팀장 1');
+assert.strictEqual(ag.perHead, 20); assert.strictEqual(ag.perHeadInclLead, 40 / 3); assert.strictEqual(ag.casesNoLead, 60); assert.strictEqual(ag.casesAll, 160);
+assert.strictEqual(ag.per100, 60 / 40 * 100); assert.strictEqual(ag.per100InclLead, 160 / 40 * 100);
+assert.strictEqual(EQC.eqAgg({}, ['L'], () => 5, () => true).perHead, 0, '팀장만 있으면 0 으로 나눠도 깨지지 않는다'); assert.strictEqual(EQC.eqAgg({}, ['P'], () => 5, () => false).per100, null, '장비 0 이면 100대당은 null');
+// 대시보드의 같은 함수를 실제로 실행한 결과와 같다 + 화면(renderEquip)이 eqAgg 를 쓰고 팀장 제외를 안내한다
+const ctx2 = vm.createContext({}); vm.runInContext(K.sliceFunction(html, 'eqAgg') + '\nthis.eqAgg = eqAgg;', ctx2);
+assert.strictEqual(JSON.stringify(ctx2.eqAgg(by, ['L', 'P', 'Q'], n => ({ L: 100, P: 40, Q: 20 })[n], n => n === 'L')), JSON.stringify(ag), '대시보드 eqAgg 와 같은 결과');
+const rEq = K.sliceFunction(html, 'renderEquip'); assert(/eqAgg\(/.test(rEq) && /cur\.per100/.test(rEq) && /cur\.perHead/.test(rEq) && /팀장/.test(rEq), 'renderEquip 은 eqAgg(팀장 제외)로 계산');
 // 같은 값이 직전 기간으로도 나온다(같은 장비 수로 나눔)
 assert(east.per100Prev === null || typeof east.per100Prev === 'number');
 

@@ -10,7 +10,7 @@ const { sliceFunction } = require('./extract-kpi-core');
 const ROOT = path.resolve(__dirname, '..', '..');
 const HTML = path.join(ROOT, 'fsg-kpi.html');
 const OUT = path.join(ROOT, 'fsg-report', 'equip-core.js');
-const FUNCS = ['parseEq', 'eqFromRows', 'eqByPerson'];
+const FUNCS = ['parseEq', 'eqFromRows', 'eqByPerson', 'eqAgg'];
 const CONSTS = ['EQ_FIELD', 'EQ_FIELDS'];
 
 function sliceConst(src, name) {
@@ -23,14 +23,14 @@ function build(html) {
   funcs.forEach(p => new Function('XLSX', p));                           // 떼어 낸 본문이 문법적으로 완전한지
   return [
     '/* 생성 파일 — 손으로 고치지 말 것.',
-    ' * fsg-kpi.html의 담당 장비 읽기(EQ_FIELD·parseEq·eqFromRows·eqByPerson)를 tools/extract-equip-core.js 가 글자 그대로 떼어 낸 사본이다.',
+    ' * fsg-kpi.html의 담당 장비 읽기(EQ_FIELD·parseEq·eqFromRows·eqByPerson·eqAgg)를 tools/extract-equip-core.js 가 글자 그대로 떼어 낸 사본이다.',
     ' * 규칙을 바꾸려면 fsg-kpi.html을 고친 뒤 `node fsg-report/tools/extract-equip-core.js`를 다시 돌린다.',
     ' * (대시보드·월간보고가 같은 규칙을 쓰도록 tests/test_equip.js 가 두 파일의 일치를 검사한다) */',
     "const XLSX = require('xlsx');   // 대시보드는 브라우저 전역 XLSX 를 쓴다 — 함수 본문은 그대로",
     '',
     ...consts, '',
     ...funcs.map(p => p + '\n'),
-    'module.exports = { EQ_FIELD: EQ_FIELD, EQ_FIELDS: EQ_FIELDS, parseEq: parseEq, eqFromRows: eqFromRows, eqByPerson: eqByPerson };',
+    'module.exports = { EQ_FIELD: EQ_FIELD, EQ_FIELDS: EQ_FIELDS, parseEq: parseEq, eqFromRows: eqFromRows, eqByPerson: eqByPerson, eqAgg: eqAgg };',
     '',
   ].join('\n');
 }

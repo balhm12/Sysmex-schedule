@@ -115,7 +115,7 @@ function main() {
   if (IB) { const D = IB.detail; console.log(`설치(캘린더 기준): 작업 ${D.rows.length}건 · 단품 ${IB.install.total}대(캘린더 표기 ${IB.install.calUnits}) · System ${IB.systems.list.length}세트 · 캘린더 미등록 ${D.orphan.length}대 · 중복 제외 ${(D.dupOrphan || []).length}대 · 예정 ${D.tentative.length}건` + (IB.links.length ? ` · 이름 다른 짝 자동 연결 ${IB.links.length}건(검산 xlsx 「자동연결」)` : '') + (D.partSkipped ? ` · 부품 행 제외 ${D.partSkipped}` : '')); }
   else console.log(serial ? '설치 현황 없음 — 설치 공유캘린더 내보내기를 --calendar 또는 --dir 로 주면 4장 설치 현황이 계산됩니다' : '설치 현황 없음 — Serial No 파일과 설치 공유캘린더가 모두 필요합니다');
   const EQ = rep.peopleKpi && rep.peopleKpi.units && rep.peopleKpi.units.equip;
-  if (EQ) { const T = EQ.total, sy = T.systems; console.log(`담당 장비(관리표 ${EQ.asOf || '날짜 미상'}): ${T.equip}대 · 기관 ${T.accounts}곳 · ${T.nPeople}명 · 시스템 ${sy.blood + sy.urine + sy.coag}(혈액 ${sy.blood}·유린 ${sy.urine}·응고 ${sy.coag}) · 장비 100대당 처리 ${T.per100 ?? '-'}건(전월 ${T.per100Prev ?? '-'})`
+  if (EQ) { const T = EQ.total, sy = T.systems; console.log(`담당 장비(관리표 ${EQ.asOf || '날짜 미상'}): ${T.equip}대 · 기관 ${T.accounts}곳 · ${T.nPeople}명(팀장 제외, 팀장 포함 ${T.nPeopleInclLead}명) · 시스템 ${sy.blood + sy.urine + sy.coag}(혈액 ${sy.blood}·유린 ${sy.urine}·응고 ${sy.coag}) · 장비 100대당 처리 ${T.per100 ?? '-'}건(전월 ${T.per100Prev ?? '-'}) · 1인당 ${T.equipPerHead}대(팀장 포함 ${T.equipPerHeadInclLead}대, 팀장 제외 기준)`
     + (EQ.unmatched.equip || EQ.unmatched.accounts ? ` · 로스터 밖 담당자의 장비 ${EQ.unmatched.equip}대·기관 ${EQ.unmatched.accounts}곳은 합계에서 빠짐` : '')); }
   const RDV = rep.repairDrivers;
   if (RDV) { const a = RDV.windows.pre, b = RDV.windows.post, d = RDV.increase, pm = x => x.bucketsPerMonth;

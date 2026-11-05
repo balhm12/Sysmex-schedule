@@ -96,7 +96,7 @@ def run(base, data, out, fca=None, fsr=None):
     if eqk:
         order3 = ['FS EAST', 'FS WEST', 'FS SOUTH', 'FS CENTRAL']
         byk = {r['key']: r for r in eqk['rows'] if r['kind'] == 'team'}
-        txt3 = '1인당 담당 장비(현재 관리표 기준·참고): ' + ' · '.join(f"{TEAM_SHORT.get(k, k.replace('FS ', ''))} {byk[k]['equipPerHead']:.1f}대" for k in order3 if k in byk)
+        txt3 = '1인당 담당 장비(현재 관리표 기준·팀장 제외·참고): ' + ' · '.join(f"{TEAM_SHORT.get(k, k.replace('FS ', ''))} {byk[k]['equipPerHead']:.1f}대" for k in order3 if k in byk)
         tb3 = next((sh for sh in s if sh.has_table), None)
         if tb3 is None or not equip_footnote(prs.slides[2], tb3, txt3):
             REVIEW.append('3장 팀 표 아래 「1인당 담당 장비」 각주 — 자리가 없어 넣지 못했다. 필요하면 표 열이나 각주로 직접 넣을 것: ' + txt3)
@@ -351,7 +351,7 @@ def run(base, data, out, fca=None, fsr=None):
         def eqtxt(r): return f"{TEAM_SHORT.get(r['key'], r['key'].replace('FS ', ''))} 1인당 {r['equipPerHead']:.1f}대 · 100대당 처리 {('-' if r['per100'] is None else f1(r['per100']))}건({pmo} {('-' if r['per100Prev'] is None else f1(r['per100Prev']))})"
         teams_eq = [r for k in ['FS EAST', 'FS WEST', 'FS SOUTH', 'FS CENTRAL'] for r in eqk['rows'] if r['kind'] == 'team' and r['key'] == k]
         t_ = eqk['total']
-        REVIEW.append('10장 「업무량 편차 진단」 근거(담당 장비 — 현재 관리표 기준·시험 운영 중, 가동 장비와 다른 정의): ' + ' / '.join(eqtxt(r) for r in teams_eq)
+        REVIEW.append('10장 「업무량 편차 진단」 근거(담당 장비 — 현재 관리표 기준·팀장 제외·시험 운영 중, 가동 장비와 다른 정의): ' + ' / '.join(eqtxt(r) for r in teams_eq)
                       + f" / FSG 전체 1인당 {t_['equipPerHead']:.1f}대 · 100대당 처리 {('-' if t_['per100'] is None else f1(t_['per100']))}건")
     else:
         SKIP.append('10장 업무량 진단 근거(담당 장비) — json 에 peopleKpi.units.equip 없음')

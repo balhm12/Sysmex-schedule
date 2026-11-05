@@ -1,5 +1,5 @@
 /* 생성 파일 — 손으로 고치지 말 것.
- * fsg-kpi.html의 담당 장비 읽기(EQ_FIELD·parseEq·eqFromRows·eqByPerson)를 tools/extract-equip-core.js 가 글자 그대로 떼어 낸 사본이다.
+ * fsg-kpi.html의 담당 장비 읽기(EQ_FIELD·parseEq·eqFromRows·eqByPerson·eqAgg)를 tools/extract-equip-core.js 가 글자 그대로 떼어 낸 사본이다.
  * 규칙을 바꾸려면 fsg-kpi.html을 고친 뒤 `node fsg-report/tools/extract-equip-core.js`를 다시 돌린다.
  * (대시보드·월간보고가 같은 규칙을 쓰도록 tests/test_equip.js 가 두 파일의 일치를 검사한다) */
 const XLSX = require('xlsx');   // 대시보드는 브라우저 전역 XLSX 를 쓴다 — 함수 본문은 그대로
@@ -39,4 +39,14 @@ function eqByPerson(rows){
   return m;
 }
 
-module.exports = { EQ_FIELD: EQ_FIELD, EQ_FIELDS: EQ_FIELDS, parseEq: parseEq, eqFromRows: eqFromRows, eqByPerson: eqByPerson };
+function eqAgg(by, members, cases, lead){
+  const Z=()=>({inst:0,eq:0,sB:0,sU:0,sC:0,CBC:0,'유린':0,'응고':0,'면역':0}), a=Z();
+  let nLead=0, cAll=0, cNoLead=0;
+  for(const n of members){ const x=by[n]||Z(); for(const k in a) a[k]+=x[k]||0; const c=cases(n)||0; cAll+=c; if(lead(n)) nLead++; else cNoLead+=c; }
+  const nAll=members.length, nPeople=nAll-nLead;
+  a.nAll=nAll; a.nLead=nLead; a.nPeople=nPeople; a.perHead=a.eq/(nPeople||1); a.perHeadInclLead=a.eq/(nAll||1);
+  a.casesAll=cAll; a.casesNoLead=cNoLead; a.per100=a.eq?cNoLead/a.eq*100:null; a.per100InclLead=a.eq?cAll/a.eq*100:null;
+  return a;
+}
+
+module.exports = { EQ_FIELD: EQ_FIELD, EQ_FIELDS: EQ_FIELDS, parseEq: parseEq, eqFromRows: eqFromRows, eqByPerson: eqByPerson, eqAgg: eqAgg };
