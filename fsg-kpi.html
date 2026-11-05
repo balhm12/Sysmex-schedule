@@ -2179,25 +2179,27 @@ function renderEquip(){
   var names = scope === 'ALL' ? all : DATA.team[scope].members;
   var agg = function(list){ return list.reduce(function(o,n){ var x = of(n); Object.keys(o).forEach(function(k){ o[k] += x[k] || 0; }); return o; }, zero()); };
   var cs = function(n){ return ((DATA.person[n]||{}).total_case||{})[period] || 0; };
-  var cur = agg(names), head = names.length || 1, cases = names.reduce(function(a,n){ return a + cs(n); }, 0);
+  var lead = function(n){ return (DATA.grade||{})[n] === '팀장'; };   // 장비 지표는 팀장 제외(2026-11-05 사용자 결정) — eqAgg
+  var A = function(list){ return eqAgg(Q.by, list, cs, lead); };
+  var cur = A(names), head = cur.nPeople || 1, cases = cur.casesAll;
   var html = info+'<b>담당 장비 = 「FSR 담당기관 관리표」의 담당자별 기관·장비 수</b>(CRM 자산대장 「사용」 장비 1대씩, 시스템 구성 장비 포함 · XP·XQ·주변기기 제외 · 시스템은 1개씩). '+
-    '분야: CBC = XN·XN-L·XR·SP·DI·HLC, 유린 = UF·UC·UD, 응고 = CA·CS·CN, 면역 = HISCL. 장비 100대당 처리 건수 = 기간 처리 건수 ÷ 담당 장비 × 100(장비는 현재 관리표 기준이라 과거 기간과는 시점이 다릅니다). '+
+    '분야: CBC = XN·XN-L·XR·SP·DI·HLC, 유린 = UF·UC·UD, 응고 = CA·CS·CN, 면역 = HISCL. 장비 100대당 처리 건수 = 기간 처리 건수 ÷ 담당 장비 × 100(장비는 현재 관리표 기준이라 과거 기간과는 시점이 다릅니다). <b>1인당 장비는 팀장을 뺀 인원 기준</b>이고, 장비·기관 합계와 장비 100대당 처리 건수(분자 = 팀장 방문 포함 처리 건수)에는 팀장이 맡은 기관·방문도 들어갑니다. '+
     '관리표: '+esc(Q.src||'')+(Q.made?' ('+esc(Q.made)+')':'')+' · 기관 '+fmt(Q.n)+'곳.</div></div>';
   html += '<div class="controls" style="margin-bottom:14px;"><div class="control-group" style="flex-wrap:wrap;min-width:0;"><span class="control-label">범위</span><div class="segmented" id="eqSeg" style="flex-wrap:wrap;max-width:100%;"></div></div></div>';
   html += '<div class="block grid grid-4">'+
-    statTile('담당 장비', fmt(cur.eq), '대', '', fmt(names.length)+'명 · 기관 '+fmt(cur.inst)+'곳')+
-    statTile('1인당 장비', fmt1(cur.eq/head), '대', '', '1인당 기관 '+fmt1(cur.inst/head)+'곳')+
+    statTile('담당 장비', fmt(cur.eq), '대', '', fmt(cur.nPeople)+'명(팀장 제외) · 기관 '+fmt(cur.inst)+'곳')+
+    statTile('1인당 장비', fmt1(cur.perHead), '대', '', '1인당 기관 '+fmt1(cur.inst/head)+'곳 · 팀장 제외')+
     statTile('시스템', fmt(cur.sB+cur.sU+cur.sC), '개', '', '혈액 '+fmt(cur.sB)+' · 유린 '+fmt(cur.sU)+' · 응고 '+fmt(cur.sC))+
-    statTile('장비 100대당 처리 건수', cur.eq ? fmt1(cases/cur.eq*100) : '-', '건', '', PL(period)+' · 처리 '+fmt(cases)+'건')+
+    statTile('장비 100대당 처리 건수', cur.eq ? fmt1(cur.per100) : '-', '건', '', PL(period)+' · 처리 '+fmt(cases)+'건(팀장 방문 포함)')+
     '</div>';
-  html += '<div class="block grid grid-2">'+chartCard('eq-team-chart', '사무소별 1인당 담당 장비', '현재 관리표 기준')+
+  html += '<div class="block grid grid-2">'+chartCard('eq-team-chart', '사무소별 1인당 담당 장비', '현재 관리표 기준 · 팀장 제외')+
     '<div class="card chart-card" style="min-width:0"><div class="block-head"><h2>분야별 담당 장비</h2><span class="hint">대 · 시스템은 개 · 현재 관리표 기준</span></div><div class="table-scroll"><table class="data-table" id="eqFieldTable"></table></div></div></div>';
   html += '<div class="block"><div class="block-head"><h2>개인별 담당 장비</h2><span class="hint">열 제목 클릭 시 정렬 · 처리 건수는 '+PL(period)+'</span></div>'+
     '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="eqTable"></table></div></div>';
   el.innerHTML = html;
   teamButtons(document.getElementById('eqSeg'), scope, true, function(t){ state.eqScope = t; renderEquip(); });
   var UNITS = DATA.teams;
-  barChart(document.getElementById('eq-team-chart'), UNITS.map(function(t){ return DATA.team_short[t]; }), UNITS.map(function(t){ var L = DATA.team[t].members; return L.length ? Math.round(agg(L).eq / L.length * 10) / 10 : 0; }), UNITS.map(function(t){ return TEAM_COLOR[t]; }), {unit:'대'});
+  barChart(document.getElementById('eq-team-chart'), UNITS.map(function(t){ return DATA.team_short[t]; }), UNITS.map(function(t){ var L = DATA.team[t].members; return L.length ? Math.round(A(L).perHead * 10) / 10 : 0; }), UNITS.map(function(t){ return TEAM_COLOR[t]; }), {unit:'대'});
   var FT = document.getElementById('eqFieldTable'), U = UNITS, fr = FL.concat(['장비 합계','혈액 시스템','유린 시스템','응고 시스템']);
   var key2 = {'장비 합계':'eq','혈액 시스템':'sB','유린 시스템':'sU','응고 시스템':'sC'};
   var tot = function(list, f){ var a = agg(list); return a[key2[f] || f] || 0; };
@@ -2829,6 +2831,19 @@ function parseEq(buf, fname){
   if(hi<0) throw new Error("「담당기관 마스터」 시트에서 머리글(담당자·기관명)을 찾지 못했습니다.");
   const dt=String(fname||'').match(/(20\d{2})[_.\-]?(\d{2})[_.\-]?(\d{2})/);
   return {rows:eqFromRows(A[hi], A.slice(hi+1)), src:fname, made:dt?dt[1]+'-'+dt[2]+'-'+dt[3]:''};
+}
+/* 담당 장비 집계 (2026-11-05 사용자 결정 2번: 인원·1인당 장비만 팀장 제외). members = 단위 구성원 이름 목록, by = eqByPerson 결과, cases(n) = 그 사람의 선택 기간 처리 건수, lead(n) = 팀장 여부.
+   장비·기관·시스템·분야 합은 구성원 전체(팀장이 맡은 담당 기관 포함 — 장비는 현장 담당 규모), 인원·1인당 장비는 팀장 제외(분모 = 팀장 제외 인원).
+   장비 100대당 처리 건수 = 구성원 전체(팀장 방문 포함) 처리 건수 ÷ 담당 장비 전체 × 100 — 분모의 장비에 팀장 담당 기관이 들어가므로 분자도 같은 대상. per100CasesExclLead = 팀장 제외 처리 건수 기준(참고).
+   …InclLead = 팀장 포함 인원 기준 값(비교·롤백용). 월간보고 엔진도 이 함수를 그대로 쓴다(tools/extract-equip-core.js). */
+function eqAgg(by, members, cases, lead){
+  const Z=()=>({inst:0,eq:0,sB:0,sU:0,sC:0,CBC:0,'유린':0,'응고':0,'면역':0}), a=Z();
+  let nLead=0, cAll=0, cNoLead=0;
+  for(const n of members){ const x=by[n]||Z(); for(const k in a) a[k]+=x[k]||0; const c=cases(n)||0; cAll+=c; if(lead(n)) nLead++; else cNoLead+=c; }
+  const nAll=members.length, nPeople=nAll-nLead;
+  a.nAll=nAll; a.nLead=nLead; a.nPeople=nPeople; a.perHead=a.eq/(nPeople||1); a.perHeadInclLead=a.eq/(nAll||1);
+  a.casesAll=cAll; a.casesNoLead=cNoLead; a.per100=a.eq?cAll/a.eq*100:null; a.per100InclLead=a.per100; a.per100CasesExclLead=a.eq?cNoLead/a.eq*100:null;
+  return a;
 }
 function eqByPerson(rows){
   const m={}; for(const r of rows){ if(!r[0]) continue; const o=m[r[0]]||(m[r[0]]={inst:0,eq:0,sB:0,sU:0,sC:0,CBC:0,'유린':0,'응고':0,'면역':0});

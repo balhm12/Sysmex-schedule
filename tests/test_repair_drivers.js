@@ -12,7 +12,7 @@ const REP = PV.REPAIR, PM = PV.PM;
 const rows = [
   // 자료가 있는 달 채우기(없는 달 경고를 따로 시험하므로 여기서는 매달 활동 1건) — 개편 전 12개월 + 개편 후 7개월
   ...[[2025, 4], [2025, 5], [2025, 6], [2025, 7], [2025, 8], [2025, 9], [2025, 10], [2025, 11], [2025, 12], [2026, 1], [2026, 2], [2026, 3], [2026, 4], [2026, 5], [2026, 6], [2026, 7], [2026, 8], [2026, 9], [2026, 10]]
-    .map(([y, m]) => x(U(y, m, 28), 'Evaluation', ['A'], null, 'HZ', 'XN-1000')),
+    .map(([y, m]) => x(U(y, m, 28), '기타 활동', ['A'], null, 'HZ', 'XN-1000')),
   // 개편 전(2025.4~2026.3): 합 5 — 설치 12개월 이내 1 · 반복 2 · PM 후 30일 1 · 그 외 1
   x(U(2025, 5, 10), REP, ['A'], 'S1', 'HA', 'XN-1000'),                    // S1: 설치 2025-02-01 → 12개월 이내
   x(U(2025, 6, 1), REP, ['A'], 'S2', 'HB', 'SP-50'), x(U(2025, 9, 1), REP, ['B'], 'S2', 'HB', 'SP-50'),   // S2: 창 안 2회 → 반복(설치 오래됨)
@@ -28,7 +28,9 @@ const rows = [
   x(U(2026, 10, 10), REP, ['A'], 'S3', 'HC', 'CN-3000'),                   // S3: 마지막 PM(2025-07)이 30일보다 오래됨 → 그 외
   // Calibration · Application · 취소/온라인은 rows 에 없음
   x(U(2025, 10, 3), 'Calibration', ['A'], 'S1', 'HA', 'XN-1000'), x(U(2026, 7, 3), 'Calibration', ['A', 'B'], 'S1', 'HA', 'XN-1000'),
-  x(U(2025, 11, 3), 'Application', ['A'], 'S1', 'HA', 'XN-1000'), x(U(2026, 8, 3), 'Application Support', ['B'], 'S1', 'HA', 'XN-1000'),
+  x(U(2025, 11, 3), 'Evaluation', ['A'], 'S1', 'HA', 'XN-1000'), x(U(2026, 8, 3), 'EVALUATION', ['B', 'A'], 'S1', 'HA', 'XN-1000'),   // 대소문자 무시 · 인정 2명
+  x(U(2026, 8, 20), '원격 Evaluation', ['A'], 'S1', 'HA', 'XN-1000'), x(U(2026, 9, 9), '원격 Calibration', ['A'], 'S1', 'HA', 'XN-1000'),   // 원격은 따로
+  x(U(2026, 9, 12), '설치/데모 평가', ['A'], 'S1', 'HA', 'XN-1000'),   // 설치 업무라 Evaluation 아님
 ];
 const serial = [
   { state: '사용', acct: 'HA', sn: 'S1', model: 'XN-1000', install: U(2025, 2, 1), first: null }, { state: '사용', acct: 'HB', sn: 'S2', model: 'SP-50', install: U(2018, 1, 1), first: null },
@@ -78,20 +80,29 @@ const t = Object.fromEntries(R.teams.map(r => [r.team, r])); assert.deepStrictEq
 assert.strictEqual(R.activeFleet.preActive, 4, '개편 전 12개월 서비스 이력 있는 「사용」 장비: S1~S4'); assert.strictEqual(R.activeFleet.postActive, 6, '기준월까지 12개월: S1·S2·S3·S5·S6·S8');
 assert.strictEqual(R.activeFleet.pre, 10.4, '5행 ÷ 12 ÷ 4 × 100'); assert.strictEqual(R.activeFleet.post, 16.7, '7행 ÷ 7 ÷ 6 × 100 — 방문 행 수(인정 인원 수 아님)');
 // Calibration · Application — 같은 기준 비교
-const C = R.calCompare.windows; assert.deepStrictEqual(R.calCompare.applicationPurposes, ['Application', 'Application Support']);
-assert.strictEqual(C.pre.calibration.total, 1); assert.strictEqual(C.post.calibration.total, 2, '2026-07 Calibration 인정 2명'); assert.strictEqual(C.pre.application.total, 1); assert.strictEqual(C.post.application.total, 1);
-assert.strictEqual(C.pre.all, 12 + 5 + 1 + 1 + 1, '개편 전 전체 활동: 매달 1 × 12 + 수리 5 + PM 1 + Cal 1 + App 1'); assert.strictEqual(C.pre.calibration.sharePct, round1(1 / 20 * 100));
+const C = R.calCompare.windows;
+assert.deepStrictEqual(R.calCompare.evaluationPurposes, ['EVALUATION', 'Evaluation']); assert.deepStrictEqual(R.calCompare.calibrationPurposes, ['Calibration']); assert.deepStrictEqual(R.calCompare.applicationPurposes, ['Calibration', 'EVALUATION', 'Evaluation'], '실제로 합산한 목적 이름');
+assert.strictEqual(C.pre.calibration.total, 1); assert.strictEqual(C.post.calibration.total, 2, '2026-07 Calibration 인정 2명');
+assert.strictEqual(C.pre.evaluation.total, 1, '개편 전 Evaluation(2025-11) 1'); assert.strictEqual(C.post.evaluation.total, 2, '개편 후 EVALUATION(2026-08) 인정 2명 — 원격 Evaluation·설치/데모 평가는 빠짐');
+assert.strictEqual(C.pre.application.total, 2, 'Application = Calibration 1 + Evaluation 1'); assert.strictEqual(C.post.application.total, 4, 'Calibration 2 + Evaluation 2');
+assert.deepStrictEqual([C.post.evaluationRemote.total, C.post.calibrationRemote.total, C.pre.evaluationRemote.total], [1, 1, 0], '원격은 따로 센다');
+assert.strictEqual(C.post.application.total, C.post.calibration.total + C.post.evaluation.total); assert.strictEqual(C.post.application.perMonth, round1(4 / 7));
+assert.strictEqual(R.calCompare.delta.evaluationPerMonth, round1(C.post.evaluation.perMonth - C.pre.evaluation.perMonth)); assert.strictEqual(R.calCompare.delta.evaluationPct, round1((C.post.evaluation.perMonth - C.pre.evaluation.perMonth) / C.pre.evaluation.perMonth * 100)); assert.strictEqual(R.calCompare.delta.applicationPerMonth, round1(C.post.application.perMonth - C.pre.application.perMonth));
+const evm = Object.fromEntries(R.calCompare.evalMonthRows); assert.strictEqual(evm['2025-11'], 1); assert.strictEqual(evm['2026-08'], 2, '2026-08 EVALUATION 인정 2명(원격 Evaluation 제외)'); assert.strictEqual(R.calCompare.evalMonthRows.length, 12); assert.strictEqual(R.calCompare.evalMonthRows[0][0], '2025-11', '2025-11~기준월');
+const am = Object.fromEntries(R.calCompare.applicationMonthRows.map(r => [r[0], r.slice(1)])); assert.deepStrictEqual(am['2026-07'], [2, 0, 2]); assert.deepStrictEqual(am['2026-08'], [0, 2, 2]); assert.deepStrictEqual(am['2025-11'], [0, 1, 1]);
+assert.strictEqual(C.pre.all, 12 + 5 + 1 + 1 + 1, '개편 전 전체 활동: 매달 1 × 12 + 수리 5 + PM 1 + Cal 1 + Evaluation 1(한 번만 셈)'); assert.strictEqual(C.pre.calibration.sharePct, round1(1 / 20 * 100)); assert.strictEqual(C.pre.application.sharePct, round1(2 / 20 * 100), 'Application 비중 = (Cal+Eval) ÷ 전체 활동 — 이중 가산 없음');
 assert.strictEqual(R.calCompare.delta.calibrationPerMonth, round1(C.post.calibration.perMonth - C.pre.calibration.perMonth));
 // 합계 검증 · 경고
 assert.deepStrictEqual(Object.values(R.checks).map(c => c.ok), [true, true, true], '기존 값과 같음'); assert.deepStrictEqual(res.warnings.filter(w => /다름/.test(w)), []);
 // 자료가 없는 달은 채우지 않고 알린다
-const holes = RD.build(Object.assign({}, base, { rows: rows.filter(r => !(r.purpose === 'Evaluation' && monthOf(r.t).y === 2025 && monthOf(r.t).m === 12)) }));
+const holes = RD.build(Object.assign({}, base, { rows: rows.filter(r => !(r.purpose === '기타 활동' && monthOf(r.t).y === 2025 && monthOf(r.t).m === 12)) }));
 assert(holes.warnings.some(w => /2025-12/.test(w) && /자료가 없는 달/.test(w)), '없는 달 경고'); assert.deepStrictEqual(holes.value.windows.pre.missingMonths, ['2025-12']); assert.strictEqual(holes.value.windows.pre.complete, false);
 // Serial 없으면 가동 장비·설치 12개월은 비우고 알린다
 const ns = RD.build(Object.assign({}, base, { serial: null })); assert.strictEqual(ns.value.activeFleet, null); assert(ns.warnings.some(w => /Serial 없음/.test(w)) && ns.warnings.some(w => /설치일자가 없어/.test(w)));
 assert.strictEqual(ns.value.windows.post.buckets.install12, 0);
-// Application 이 하나도 없으면 비우고 알린다
-const na = RD.build(Object.assign({}, base, { rows: rows.filter(r => !/^Application/.test(r.purpose)) })); assert.strictEqual(na.value.calCompare.windows.post.application, null); assert(na.warnings.some(w => /Application/.test(w)));
+// Calibration·Evaluation 이 하나도 없으면 Application 을 비우고 알린다
+const na = RD.build(Object.assign({}, base, { rows: rows.filter(r => !/^(Evaluation|Calibration)$/i.test(r.purpose)) })); assert.strictEqual(na.value.calCompare.windows.post.application, null); assert(na.warnings.some(w => /Application/.test(w) && /한 건도 없어/.test(w)));
+const ne = RD.build(Object.assign({}, base, { rows: rows.filter(r => !/^Evaluation$/i.test(r.purpose)) })); assert.strictEqual(ne.value.calCompare.windows.post.evaluation.total, 0); assert.strictEqual(ne.value.calCompare.windows.post.application.total, ne.value.calCompare.windows.post.calibration.total, 'Evaluation 이 없으면 Calibration 만'); assert(ne.warnings.some(w => /Evaluation/.test(w)));
 // 기준 설명 · 개인 정보 없음
 ['windows', 'count', 'order', 'install12', 'repeat', 'pm30', 'groups', 'caution'].forEach(k => assert(typeof R.basis[k] === 'string' && R.basis[k].length > 15, 'basis.' + k));
 assert(!/"(A|B)"/.test(JSON.stringify(R)), '담당자 이름 없음');

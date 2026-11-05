@@ -34,7 +34,7 @@ function errGroup(model) {
   if (u.indexOf('HISCL') >= 0) return 'HISCL';
   return null;
 }
-const { eqByPerson } = require('../equip-core');
+const { eqByPerson, eqAgg } = require('../equip-core');
 const RD = require('./repair-drivers');
 const round1 = v => Math.round(v * 10) / 10;                  // Apps Script round1_ (MTTR·예방정비지수·상관표 재방문율)
 const monthOf = ms => { const d = new Date(ms); return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 }; };
@@ -279,24 +279,26 @@ function buildReport(opt) {
        전월 값도 같은 장비 수로 나눈다(장비는 현재 관리표 기준). json 에는 사무소·팀 단위 합계만 — 담당자 이름·기관명·개인별 장비 수는 넣지 않는다. */
     const equipBlock = (() => {
       if (!opt.equip || !opt.equip.rows) return null;
-      const by = eqByPerson(opt.equip.rows), ZERO = () => ({ inst: 0, eq: 0, sB: 0, sU: 0, sC: 0, CBC: 0, '유린': 0, '응고': 0, '면역': 0 });
-      const of = n => by[n] || ZERO(), cs = (n, p2) => ((prod.person[n] || {}).total_case || {})[p2] || 0;
-      const agg = list => list.reduce((o, n) => { const x = of(n); Object.keys(o).forEach(k => { o[k] += x[k] || 0; }); return o; }, ZERO());
-      const row = (key, label, kind, members) => { const a = agg(members), head = members.length || 1;
-        const c = p2 => members.reduce((t, n) => t + cs(n, p2), 0);
-        return { key, label, kind, nPeople: members.length, accounts: a.inst, equip: a.eq, equipPerHead: round1(a.eq / head),
+      /* 장비 지표(2026-11-05 사용자 결정 2번) — eqAgg(fsg-kpi.html 에서 떼어 온 같은 함수)가 집계한다: 장비·기관·시스템·분야 합 = 구성원 전체(팀장이 맡은 기관 포함),
+         인원·1인당 장비 = 팀장 제외, 장비 100대당 처리 건수 = 팀장 방문 포함 처리 건수 ÷ 담당 장비 전체(분모의 장비에 팀장 담당 기관이 들어가므로 분자도 같은 대상).
+         per100ExclLeadCases = 팀장 제외 처리 건수 기준(참고), …InclLead = 팀장 포함 인원 기준 값(비교·롤백용). */
+      const by = eqByPerson(opt.equip.rows), lead = n => gradeNow[n] === '팀장', cs = (n, p2) => ((prod.person[n] || {}).total_case || {})[p2] || 0;
+      const row = (key, label, kind, members) => { const a = eqAgg(by, members, n => cs(n, PR), lead), b = eqAgg(by, members, n => cs(n, PV), lead);
+        return { key, label, kind, nPeople: a.nPeople, nLead: a.nLead, nPeopleInclLead: a.nAll, accounts: a.inst, equip: a.eq, equipPerHead: round1(a.perHead), equipPerHeadInclLead: round1(a.perHeadInclLead),
           systems: { blood: a.sB, urine: a.sU, coag: a.sC }, fields: { CBC: a.CBC, urine: a['유린'], coag: a['응고'], immuno: a['면역'] },
-          per100: a.eq ? round1(c(PR) / a.eq * 100) : null, per100Prev: a.eq ? round1(c(PV) / a.eq * 100) : null }; };
+          per100: a.eq ? round1(a.per100) : null, per100Prev: b.eq ? round1(b.per100) : null,
+          per100InclLead: a.eq ? round1(a.per100InclLead) : null, per100PrevInclLead: b.eq ? round1(b.per100InclLead) : null,
+          per100ExclLeadCases: a.eq ? round1(a.per100CasesExclLead) : null, per100PrevExclLeadCases: b.eq ? round1(b.per100CasesExclLead) : null }; };
       const rows = unitsOut.concat(teamsOut).map(x => row(x.key, x.label, x.kind, (prod.team[x.key] || {}).members || []));
       const all = units.reduce((l, u) => l.concat((prod.team[u] || {}).members || []), []), tot = row('FSG', 'FSG 전체', 'total', all);
       const inSet = {}; all.forEach(n => { inSet[n] = 1; });
       let unAcc = 0, unEq = 0, owners = 0, fileEq = 0, fileSys = 0;
       Object.keys(by).forEach(n => { owners++; fileEq += by[n].eq; fileSys += by[n].sB + by[n].sU + by[n].sC; if (!inSet[n]) { unAcc += by[n].inst; unEq += by[n].eq; } });
+      const { key: _k, label: _l, kind: _kd, ...total } = tot;
       return { asOf: opt.equip.made || '', source: opt.equip.src || '',
-        note: '장비는 현재 관리표 기준 — 과거 기간과 시점이 다름(전월 값도 같은 장비 수로 나눔). 장비 = 자산대장 「사용」 장비 1대씩(XP·XQ·주변기기·기타 제외), 시스템은 1개씩. 10장 「가동 장비」(Serial 가동 기준)와는 정의가 달라 섞지 않는다.',
-        basis: '장비 100대당 처리 건수 = 기간 처리 건수(담당자+필수 참석자 각각 1건) ÷ 담당 장비 × 100 — 대시보드 「담당 장비」 탭과 같음. nPeople = 구성원 수(팀장 포함)',
-        rows, total: (({ nPeople, accounts, equip, equipPerHead, systems, fields, per100, per100Prev }) => ({ nPeople, accounts, equip, equipPerHead, systems, fields, per100, per100Prev }))(tot),
-        unmatched: { accounts: unAcc, equip: unEq, note: unEq || unAcc ? '관리표 담당자 중 로스터(단위 구성원)에 없는 사람의 기관·장비 — 단위 합계와 total 에서 빠짐(이름은 json 에 없음)' : '' },
+        note: '팀장 제외는 인원·1인당 장비만(2026-11-05 사용자 결정) — nPeople·equipPerHead 는 팀장을 뺀 인원 기준이고, 장비·기관·시스템·분야 합계와 장비 100대당 처리 건수(per100·per100Prev)에는 팀장이 맡은 담당 기관과 팀장의 방문이 들어간다. 팀장 포함 인원 기준은 …InclLead, 팀장 방문을 뺀 100대당은 per100ExclLeadCases. 장비는 현재 관리표 기준 — 과거 기간과 시점이 다름(전월 값도 같은 장비 수로 나눔). 장비 = 자산대장 「사용」 장비 1대씩(XP·XQ·주변기기·기타 제외), 시스템은 1개씩. 10장 「가동 장비」(Serial 가동 기준)와는 정의가 달라 섞지 않는다.',
+        basis: '장비 100대당 처리 건수 = 기간 처리 건수(담당자+필수 참석자 각각 1건, 팀장 방문 포함) ÷ 담당 장비(전체, 팀장 담당 기관 포함) × 100 — 대시보드 「담당 장비」 탭과 같은 함수(eqAgg). 1인당 장비 = 담당 장비(전체) ÷ 팀장 제외 인원. nPeople = 팀장 제외 구성원 수, nPeopleInclLead = 구성원 수(팀장 포함), nLead = 팀장 수',
+        rows, total, unmatched: { accounts: unAcc, equip: unEq, note: unEq || unAcc ? '관리표 담당자 중 로스터(단위 구성원)에 없는 사람의 기관·장비 — 단위 합계와 total 에서 빠짐(이름은 json 에 없음)' : '' },
         fileTotal: { owners, accounts: opt.equip.rows.length, equip: fileEq, systems: fileSys } }; })();
     const lastKey = sel[sel.length - 1], official = lastKey >= '2026-11';
     const pk = { top: list.slice(0, 10), people: list.length, sel, cmp,
