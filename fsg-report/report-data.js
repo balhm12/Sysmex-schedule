@@ -121,6 +121,8 @@ function main() {
   if (RDV) { const a = RDV.windows.pre, b = RDV.windows.post, d = RDV.increase, pm = x => x.bucketsPerMonth;
     console.log(`A/S 증가 요인(월평균 ${a.perMonth} → ${b.perMonth}건, ${d.deltaPct == null ? '-' : (d.deltaPct > 0 ? '+' : '') + d.deltaPct + '%'}): 개편 후 설치 12개월 이내 ${pm(b).install12} · 반복 고장 ${pm(b).repeat} · PM 후 30일 ${pm(b).pm30} · 그 외 ${pm(b).other}`
       + ` (개편 전 ${pm(a).install12}·${pm(a).repeat}·${pm(a).pm30}·${pm(a).other}) · PM 100건당 PM 후 30일 내 수리 ${a.pmFollow.per100Pm ?? '-'} → ${b.pmFollow.per100Pm ?? '-'}`);
+    const gt = (RDV.groupsDetail || []).filter(g => g.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 4);
+    if (gt.length) console.log('  장비군별 증가(월평균): ' + gt.map(g => `${g.family} +${g.delta}(${g.shareOfIncrease ?? '-'}%)`).join(' · ') + (RDV.otherModels && RDV.otherModels.length ? ` · 「기타」 안 ${RDV.otherModels.slice(0, 2).map(m => m.model + ' +' + m.delta).join(', ')}` : ''));
     const rw = (rep.meta.warnings || []).filter(w => /^repairDrivers/.test(w)); if (rw.length) console.log(`  repairDrivers 주의 ${rw.length}건 — json meta.warnings 참고`); }
   (rep.meta.warnings || []).filter(w => /관리표/.test(w) && !EQ).forEach(w => console.log('⚠ ' + w));
   console.log(`출력: ${out}`);
