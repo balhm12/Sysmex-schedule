@@ -45,7 +45,7 @@ function eqAgg(by, members, cases, lead){
   for(const n of members){ const x=by[n]||Z(); for(const k in a) a[k]+=x[k]||0; const c=cases(n)||0; cAll+=c; if(lead(n)) nLead++; else cNoLead+=c; }
   const nAll=members.length, nPeople=nAll-nLead;
   a.nAll=nAll; a.nLead=nLead; a.nPeople=nPeople; a.perHead=a.eq/(nPeople||1); a.perHeadInclLead=a.eq/(nAll||1);
-  a.casesAll=cAll; a.casesNoLead=cNoLead; a.per100=a.eq?cNoLead/a.eq*100:null; a.per100InclLead=a.eq?cAll/a.eq*100:null;
+  a.casesAll=cAll; a.casesNoLead=cNoLead; a.per100=a.eq?cAll/a.eq*100:null; a.per100InclLead=a.per100; a.per100CasesExclLead=a.eq?cNoLead/a.eq*100:null;
   return a;
 }
 
