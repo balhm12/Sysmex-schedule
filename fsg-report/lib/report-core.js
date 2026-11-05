@@ -35,6 +35,7 @@ function errGroup(model) {
   return null;
 }
 const { eqByPerson } = require('../equip-core');
+const RD = require('./repair-drivers');
 const round1 = v => Math.round(v * 10) / 10;                  // Apps Script round1_ (MTTR·예방정비지수·상관표 재방문율)
 const monthOf = ms => { const d = new Date(ms); return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 }; };
 const inMonths = (ms, months) => { const o = monthOf(ms); return months.some(x => x.y === o.y && x.m === o.m); };
@@ -209,6 +210,11 @@ function buildReport(opt) {
     const out = []; METRO_TEAMS.forEach(t => labels.forEach(l => { const c = data[t + '|' + l]; out.push([l, t.replace('FS ', ''), c.pm, c.rp]); }));
     return { rows: out, months: labels };
   })();
+
+  /* A/S(수리) 증가 요인 분해 — repairDrivers(2026-11-05): 설치 12개월 이내·반복 고장·PM 후 30일·그 외, PM 100건당 PM 후 수리, 장비군·기관(상위 5)·팀, 가동 장비 100대당 수리, Calibration·Application 비교 */
+  const rdRes = RD.build({ rows, serial: opt.serial || null, period, REORG, P, teamOf, PV, internal: INTERNAL_ACCOUNTS, round1, monthOf,
+    expect: { preRP: trendCompare.preRP, postRP: trendCompare.postRP, curRepair: (caseAnalysis.monthRows[caseAnalysis.monthRows.length - 1] || [])[1] } });
+  const repairDrivers = rdRes.value;
 
   /* 덱 6장 「전년 대비」 — 기간 끝 달과 1년 전 같은 달의 수리·PM·Calibration 건수(인정 인원 수), 예방정비 지수 */
   const monthCounts = mk => { const c = { repair: 0, pm: 0, cal: 0 };
@@ -410,6 +416,7 @@ function buildReport(opt) {
     meta: { period: { key: period.key, label: period.label, months: period.months.map(ym => P.lab(ym.y, ym.m)) }, cut: opt.cut || null, teams,
       rows: { raw: raw.length, afterCut: RAWC.length, counted: rows.length }, excluded,
       unmappedRows: rows.filter(x => !x.credits.length).length, eligibleAccounts: CORE.eligible.length,
+      warnings: rdRes.warnings,
       // 숫자의 기준 설명(보고서·덱을 쓰는 쪽이 "왜 전월 덱과 다른가"를 json 만 보고 알 수 있게). 값이 아니라 정의다.
       basis: {
         hospital: '활동(방문) 기준 — 모든 목적, 내부 계정 제외. 2026-10-26부터 서비스 케이스 파일을 쓰지 않는다(2026-09 덱까지는 케이스 파일 기준이라 순위·건수가 다를 수 있음)',
@@ -419,7 +426,7 @@ function buildReport(opt) {
         install: '설치 = 설치 공유캘린더 작업(CRM 설치 기록과 자동 연결). team.rows.inst 는 팀별 (신규+이전설치) 기관 수의 합이라 한 기관이 둘 다면 2로 세고, installBlock.summary.mat 전체 합계는 기관을 한 번만 센다'
       } },
     kpi, kpiTrend, team, caseAnalysis,
-    trendCompare, yoy, metro, metroDelta, peopleKpi, engYear, engMonth, hospYear, hospMonth, repeatYear, repeatMonth, errYear, errMonth, errRate,
+    trendCompare, repairDrivers, yoy, metro, metroDelta, peopleKpi, engYear, engMonth, hospYear, hospMonth, repeatYear, repeatMonth, errYear, errMonth, errRate,
     fleet: fleet ? { activeCount: fleet.activeCount, pmActiveCount: fleet.pmActiveCount } : null, health, focus,
     installBlock, nextPlan,
     inputs: { serial: !!serial, calendar: !!(opt.calendar && opt.calendar.length), equip: !!(opt.equip && opt.equip.rows) },

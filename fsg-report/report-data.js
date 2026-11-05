@@ -83,7 +83,7 @@ function main() {
   else if (!eqPath) warnings.push('관리표 없음 — 담당 장비 생략(폴더에 「…담당기관관리표…정리본.xlsx」가 없음)');
   else { try { equip = EQC.parseEq(fs.readFileSync(eqPath), path.basename(eqPath)); } catch (e) { warnings.push('관리표를 읽지 못함 — 담당 장비 생략: ' + e.message); } }
   const rep = buildReport({ raw: act.rows, roster, period, cut, serial, calendar, prod, equip });
-  rep.meta.warnings = warnings.concat(equip ? ['담당 장비는 현재 관리표 기준(' + equip.src + ') — 과거 기간과 시점이 다름'] : []);
+  rep.meta.warnings = (rep.meta.warnings || []).concat(warnings, equip ? ['담당 장비는 현재 관리표 기준(' + equip.src + ') — 과거 기간과 시점이 다름'] : []);
   rep.meta.inputs = { equip: !!equip };
   /* 덱 10장 「8월 대비」 등 전월 비교용: 같은 입력으로 전월(한 달) 기준을 한 번 더 계산해 필요한 부분만 붙인다 */
   if (period.months.length === 1) {
@@ -117,6 +117,11 @@ function main() {
   const EQ = rep.peopleKpi && rep.peopleKpi.units && rep.peopleKpi.units.equip;
   if (EQ) { const T = EQ.total, sy = T.systems; console.log(`담당 장비(관리표 ${EQ.asOf || '날짜 미상'}): ${T.equip}대 · 기관 ${T.accounts}곳 · ${T.nPeople}명 · 시스템 ${sy.blood + sy.urine + sy.coag}(혈액 ${sy.blood}·유린 ${sy.urine}·응고 ${sy.coag}) · 장비 100대당 처리 ${T.per100 ?? '-'}건(전월 ${T.per100Prev ?? '-'})`
     + (EQ.unmatched.equip || EQ.unmatched.accounts ? ` · 로스터 밖 담당자의 장비 ${EQ.unmatched.equip}대·기관 ${EQ.unmatched.accounts}곳은 합계에서 빠짐` : '')); }
+  const RDV = rep.repairDrivers;
+  if (RDV) { const a = RDV.windows.pre, b = RDV.windows.post, d = RDV.increase, pm = x => x.bucketsPerMonth;
+    console.log(`A/S 증가 요인(월평균 ${a.perMonth} → ${b.perMonth}건, ${d.deltaPct == null ? '-' : (d.deltaPct > 0 ? '+' : '') + d.deltaPct + '%'}): 개편 후 설치 12개월 이내 ${pm(b).install12} · 반복 고장 ${pm(b).repeat} · PM 후 30일 ${pm(b).pm30} · 그 외 ${pm(b).other}`
+      + ` (개편 전 ${pm(a).install12}·${pm(a).repeat}·${pm(a).pm30}·${pm(a).other}) · PM 100건당 PM 후 30일 내 수리 ${a.pmFollow.per100Pm ?? '-'} → ${b.pmFollow.per100Pm ?? '-'}`);
+    const rw = (rep.meta.warnings || []).filter(w => /^repairDrivers/.test(w)); if (rw.length) console.log(`  repairDrivers 주의 ${rw.length}건 — json meta.warnings 참고`); }
   (rep.meta.warnings || []).filter(w => /관리표/.test(w) && !EQ).forEach(w => console.log('⚠ ' + w));
   console.log(`출력: ${out}`);
 }
