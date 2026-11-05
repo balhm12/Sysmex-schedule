@@ -70,6 +70,31 @@ assert.deepStrictEqual([g['XN/XR'].pre, g['XN/XR'].post], [0.1, 0.4], 'XN 1건 �
 assert.deepStrictEqual([g['SP-50'].pre, g['SP-50'].post], [0.2, 0.3]); assert.deepStrictEqual([g['SP 기타'].pre, g['SP 기타'].post], [0, 0.1]);
 assert.deepStrictEqual([g.CN.pre, g.CN.post], [0.1, 0.1]); assert.deepStrictEqual([g.HISCL.pre, g.HISCL.post], [0.1, 0]); assert.deepStrictEqual([g['기타'].pre, g['기타'].post], [0, 0.1], 'UF-5000(S/N 없음)');
 assert.strictEqual(R.groups.reduce((t, r) => t + r.postTotal, 0), 8, '장비군 합 = 개편 후 수리 건수'); assert.strictEqual(R.groups.reduce((t, r) => t + r.preTotal, 0), 5, '장비군 합 = 개편 전 수리 건수');
+// 장비군 세분화(groupsDetail) — 대시보드 장비군(famOf·FAM_ORDER) 그대로
+const fs = require('fs'), vm = require('vm'), K = require('../fsg-report/tools/extract-kpi-core');
+const html = fs.readFileSync(require('path').join(__dirname, '..', 'fsg-kpi.html'), 'utf8'), dctx = vm.createContext({});
+vm.runInContext([html.match(/^const FAM_ORDER=.*;$/m)[0], K.sliceFunction(html, 'modelOf'), K.sliceFunction(html, 'famOf'), 'this.FAM_ORDER = FAM_ORDER; this.modelOf = modelOf; this.famOf = famOf;'].join('\n'), dctx);
+assert.strictEqual(JSON.stringify(RD.FAM_ORDER), JSON.stringify(dctx.FAM_ORDER), 'FAM_ORDER 가 대시보드와 같다');
+['XN-1000', 'XN-L', 'XN-350', 'XN-450', 'XN-550', 'XR-20', 'SP-50', 'SP-10', 'SPX', 'CN-3000', 'CA-620', 'CS-5100', 'CV-1', 'UF-5000', 'UN-2000', 'UC-3500', 'UC-1000', 'HISCL-5000', 'G11', 'HLC-723', 'Tosoh G11', 'TS-10', 'DI-60', 'RF-500', 'xn-9100', '', null, undefined]
+  .forEach(m => assert.strictEqual(RD.famOf(m), dctx.famOf(m), '대시보드 famOf 와 같다: ' + m));
+[['XN-1000', ''], ['', 'a/XN-9100/b/c'], ['', 'a/b'], [undefined, undefined]].forEach(([p, sj]) => assert.strictEqual(RD.modelOf(p, sj), dctx.modelOf(p, sj), 'modelOf 와 같다'));
+const gd = Object.fromEntries(R.groupsDetail.map(r => [r.family, r]));
+assert.deepStrictEqual(R.groupsDetail.map(r => r.family), ['XR-Series', 'XN-Series', 'XN-L Series', 'SP-50', 'UF-Series', 'CN-Series', 'HISCL-Series', 'SP-10'].sort((a, b) => RD.FAM_ORDER.indexOf(a) - RD.FAM_ORDER.indexOf(b)), 'FAM_ORDER 순서, 건수가 있는 장비군만');
+assert.deepStrictEqual([gd['XN-Series'].preTotal, gd['XN-Series'].postTotal], [1, 0]); assert.deepStrictEqual([gd['XR-Series'].preTotal, gd['XR-Series'].postTotal], [0, 2]);
+assert.deepStrictEqual([gd['XN-L Series'].preTotal, gd['XN-L Series'].postTotal, gd['XN-L Series'].cur], [0, 1, 1], 'XN-350 → XN-L');
+assert.deepStrictEqual([gd['SP-50'].preTotal, gd['SP-50'].postTotal], [2, 2]); assert.deepStrictEqual([gd['SP-10'].preTotal, gd['SP-10'].postTotal, gd['SP-10'].prev], [0, 1, 1]);
+assert.deepStrictEqual([gd['UF-Series'].preTotal, gd['UF-Series'].postTotal], [0, 1], 'UF-5000(S/N 없음)'); assert.deepStrictEqual([gd['CN-Series'].preTotal, gd['CN-Series'].postTotal, gd['CN-Series'].cur], [1, 1, 1]); assert.deepStrictEqual([gd['HISCL-Series'].preTotal, gd['HISCL-Series'].postTotal], [1, 0]);
+assert.strictEqual(R.groupsDetail.reduce((t, r) => t + r.preTotal, 0), 5); assert.strictEqual(R.groupsDetail.reduce((t, r) => t + r.postTotal, 0), 8, '세분화 장비군 합 = 수리 건수');
+assert.strictEqual(gd['XR-Series'].post, round1(2 / 7)); assert.strictEqual(gd['XR-Series'].shareOfIncrease, round1((2 / 7) / R.increase.delta * 100), '증가 기여율 = 장비군 증가분 ÷ 전체 증가분(월평균)');
+assert.deepStrictEqual(R.groups.map(r => r.group), ['XN/XR', 'SP-50', 'SP 기타', 'CN', 'HISCL', '기타'], '기존 groups 는 그대로');
+assert.deepStrictEqual(R.otherModels, [], '이 데이터에는 「기타」 장비군이 없다');
+// 「기타」 안의 모델(otherModels) — 규칙에 안 걸린 모델과 모델 미기재
+const extra = [x(U(2025, 6, 6), REP, ['A'], 'S10', 'HJ', 'DI-60'), x(U(2026, 8, 6), REP, ['A'], 'S10', 'HJ', 'DI-60'), x(U(2026, 8, 16), REP, ['A'], 'S11', 'HK', 'di-60'), { t: U(2026, 9, 6), purpose: REP, credits: ['B'], sn: 'S12', acct: 'HL', r: { prod: '', subj: 'x/y' } }];
+const R2 = RD.build(Object.assign({}, base, { rows: rows.concat(extra) })).value, g2 = Object.fromEntries(R2.groupsDetail.map(r => [r.family, r]));
+assert.deepStrictEqual([g2['기타'].preTotal, g2['기타'].postTotal, g2['기타'].prev], [1, 3, 1], '기타: DI-60 ×(1 | 2) + 모델 미기재 1(2026-09)');
+assert.deepStrictEqual(R2.otherModels.map(m => [m.model, m.preTotal, m.postTotal]), [['DI-60', 1, 2], ['(모델 미기재)', 0, 1]], '증가분 큰 순 — 대소문자·공백 무시하고 합침');
+assert.strictEqual(R2.otherModels[0].delta, round1(2 / 7 - 1 / 12));
+assert.strictEqual(R2.groupsDetail.reduce((t, r) => t + r.postTotal, 0), R2.windows.post.total, '세분화 합 = 수리 건수(추가 행 포함)');
 // 기관 상위(증가분) — 개편 후 월평균 − 개편 전 월평균, 증가한 기관만
 assert(R.topAccounts.length <= 5 && R.topAccounts.every(a => a.delta > 0), '증가한 기관만, 최대 5');
 assert.strictEqual(R.topAccounts[0].account, 'HE', '신규 설치(HE) 2건/7개월 = 0.3 증가 — 가장 큼'); assert.strictEqual(R.topAccounts[0].delta, 0.3);

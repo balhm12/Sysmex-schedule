@@ -16,6 +16,30 @@ const GROUPS = ['XN/XR', 'SP-50', 'SP 기타', 'CN', 'HISCL', '기타'];
 const groupOfModel = m => { const s = String(m || '').toUpperCase().replace(/\s+/g, '');
   if (/^X[NR]/.test(s)) return 'XN/XR'; if (/^SP-?50/.test(s)) return 'SP-50'; if (/^SP/.test(s)) return 'SP 기타'; if (/^CN/.test(s)) return 'CN'; if (/^HISCL/.test(s)) return 'HISCL'; return '기타'; };
 
+/* 장비군 세분화(2026-11-05) — fsg-kpi.html 의 modelOf·FAM_ORDER·famOf 와 같은 규칙(tests/test_repair_drivers.js 가 대시보드 함수를 실제로 실행해 같은 결과인지 검사). 화면 순서도 FAM_ORDER. */
+const FAM_ORDER = ['XR-Series', 'XN-Series', 'XN-L Series', 'SP-50', 'UF-Series', 'UC-3500', 'CN-Series', 'CA/CS', 'HISCL-Series', 'G11', 'SP-10', 'TS-10', '기타'];
+function modelOf(prod, subj) {
+  if (prod) return prod;
+  const s = (subj || '').split('/'); return s.length > 2 ? s[1].trim() : '';
+}
+function famOf(m) {
+  const u = (m || '').toUpperCase();
+  if (!u) return '기타';                                            // 모델 미기재 포함
+  if (u.includes('G11') || u.includes('HLC') || u.includes('TOSOH')) return 'G11';
+  if (/^XN-?(3|4|5)\d\d/.test(u) || u.startsWith('XN-L')) return 'XN-L Series';
+  if (u.startsWith('XN')) return 'XN-Series';
+  if (u.startsWith('XR')) return 'XR-Series';
+  if (u.startsWith('SP-50')) return 'SP-50';
+  if (u.startsWith('SP-10')) return 'SP-10';
+  if (u.startsWith('CN')) return 'CN-Series';
+  if (u.startsWith('CA') || u.startsWith('CS') || u.startsWith('CV')) return 'CA/CS';
+  if (u.startsWith('UF') || u.startsWith('UN')) return 'UF-Series';   // UF-5000·4000·1500, UN 라인 시스템
+  if (u.startsWith('UC-3500')) return 'UC-3500';
+  if (u.includes('HISCL')) return 'HISCL-Series';                   // HISCL-5000, HISCL-800
+  if (u.startsWith('TS-10')) return 'TS-10';
+  return '기타';
+}
+
 function build(o) {
   const { rows, serial, period, REORG, P, teamOf, PV, internal, round1, monthOf, expect } = o;
   const warnings = [], endMk = P.mk(period.y, period.m);
@@ -79,6 +103,21 @@ function build(o) {
   const G = { pre: byGroup('pre'), post: byGroup('post'), cur: byGroup('cur'), prev: byGroup('prev') };
   const groups = GROUPS.map(k => { const pre = avg(G.pre[k], 'pre'), post = avg(G.post[k], 'post'), d = post - pre;
     return { group: k, preTotal: G.pre[k], postTotal: G.post[k], pre: r1(pre), post: r1(post), delta: r1(d), deltaPct: pre ? r1(d / pre * 100) : null, shareOfIncrease: dTotal ? r1(d / dTotal * 100) : null, cur: G.cur[k], prev: G.prev[k] }; });
+
+  // 장비군 세분화(2026-11-05): 대시보드 장비군(FAM_ORDER) 그대로 — groups(큰 묶음)는 바꾸지 않고 옆에 낸다. 모델 = Product(없으면 주제의 모델), 모델 미기재는 「기타」
+  const famCount = w => { const S = wset(w), g = {}, models = {}; FAM_ORDER.forEach(k => { g[k] = 0; });
+    repairs.forEach(x => { if (!S.has(mkOf(x)) || !x.credits.length) return; const m = modelOf(x.r && x.r.prod, x.r && x.r.subj), f = famOf(m); g[f] += x.credits.length;
+      if (f === '기타') { const k = m ? String(m).toUpperCase().replace(/\s+/g, '') : '(모델 미기재)'; models[k] = (models[k] || 0) + x.credits.length; } });
+    return { g, models }; };
+  const F = { pre: famCount('pre'), post: famCount('post'), cur: famCount('cur'), prev: famCount('prev') };
+  const groupsDetail = FAM_ORDER.map(k => { const pre = avg(F.pre.g[k], 'pre'), post = avg(F.post.g[k], 'post'), d = post - pre;
+    return { family: k, preTotal: F.pre.g[k], postTotal: F.post.g[k], pre: r1(pre), post: r1(post), delta: r1(d), deltaPct: pre ? r1(d / pre * 100) : null, shareOfIncrease: dTotal ? r1(d / dTotal * 100) : null, cur: F.cur.g[k], prev: F.prev.g[k] }; })
+    .filter(x => x.preTotal || x.postTotal || x.cur || x.prev);
+  // 「기타」 안에 무엇이 들어 있는지(모델 접두사 규칙에 안 걸린 모델과 모델 미기재) — 증가분 기여 큰 순 상위 8개. 모델 이름은 업무 용어라 json 에 둔다
+  const oModels = new Set(Object.keys(F.pre.models).concat(Object.keys(F.post.models)));
+  const otherModels = [...oModels].map(m => { const pre = avg(F.pre.models[m] || 0, 'pre'), post = avg(F.post.models[m] || 0, 'post'), d = post - pre;
+    return { model: m, preTotal: F.pre.models[m] || 0, postTotal: F.post.models[m] || 0, pre: r1(pre), post: r1(post), delta: r1(d), shareOfIncrease: dTotal ? r1(d / dTotal * 100) : null, _d: d }; })
+    .sort((a, b) => b._d - a._d || (a.model < b.model ? -1 : 1)).slice(0, 8).map(x => { delete x._d; return x; });
 
   // 기관(상위 5개, 증가분 기준 — 기관명만, 개인명 없음) · 팀(4팀 합계)
   const acc = (w) => { const S = wset(w), a = {}; repairs.forEach(x => { if (!S.has(mkOf(x)) || !x.credits.length || !x.acct || (internal || []).includes(x.acct)) return; a[x.acct] = (a[x.acct] || 0) + x.credits.length; }); return a; };
@@ -150,9 +189,10 @@ function build(o) {
     install12: '설치 후 12개월 이내 = Serial 설치일자(없으면 초도설치)로부터 0 ≤ 수리일 − 설치일 < 365일인 장비의 수리. 설치일을 모르는 장비는 이 항목에 들지 않는다(installKnownPct = 설치일을 아는 수리의 몫)',
     repeat: '반복 고장 장비 = 같은 S/N(+거래처)이 그 창(개편 전 12개월 / 개편 후 N개월 / 당월 …) 안에서 수리 2회 이상, 그 S/N 의 수리 전부. 창이 길수록 반복으로 잡히는 몫이 커져 개편 전(12개월)과 개편 후(N개월)의 비중은 같은 조건이 아니다 — 길이와 무관하게 보려면 repeatSameMonth(같은 달 안 2회 이상)를 본다',
     pm30: 'PM 후 30일 내 = 같은 S/N 의 PM 시작일이 수리 시작 전 30일 안(PM 은 창 밖이어도 본다). pmFollow.per100Pm = (PM 후 30일 내 수리 건수, 우선순위와 무관하게 전부) ÷ PM 건수 × 100(인정 인원 수 기준). 당월·최근 PM 은 30일 관찰이 끝나지 않아 낮게 나올 수 있다',
-    groups: '장비군 = Product 모델 접두사: XN/XR(XN-L 포함) · SP-50 · SP 기타(SP-10 등) · CN · HISCL · 기타',
+    groups: '장비군(큰 묶음) = Product 모델 접두사: XN/XR(XN-L 포함) · SP-50 · SP 기타(SP-10 등) · CN · HISCL · 기타 — 「기타」가 커서 groupsDetail 로 세분화(2026-11-05)',
+    groupsDetail: '장비군 세분화 = 대시보드 장비군(fsg-kpi.html famOf·FAM_ORDER)과 같은 규칙: XR-Series · XN-Series · XN-L Series(XN-3xx/4xx/5xx·XN-L) · SP-50 · UF-Series(UF·UN) · UC-3500 · CN-Series · CA/CS(CA·CS·CV) · HISCL-Series · G11(G11·HLC·TOSOH) · SP-10 · TS-10 · 기타. 모델 = Product(없으면 주제의 모델), 모델 미기재는 기타. otherModels = 기타 안의 모델별 건수(증가분 큰 순 상위 8개, 「(모델 미기재)」 포함)',
     caution: '정황 자료다 — 인과를 단정하지 않는다. 장비는 현재 Serial 기준이라 과거 시점의 가동 장비·설치일은 근사' };
 
-  return { value: { periodLabel: period.label, basis, windows: W, increase, groups, topAccounts, teams, activeFleet, calCompare, checks, monthsMissing: missing }, warnings };
+  return { value: { periodLabel: period.label, basis, windows: W, increase, groups, groupsDetail, otherModels, topAccounts, teams, activeFleet, calCompare, checks, monthsMissing: missing }, warnings };
 }
-module.exports = { build, groupOfModel, GROUPS };
+module.exports = { build, groupOfModel, GROUPS, FAM_ORDER, famOf, modelOf };
