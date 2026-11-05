@@ -151,6 +151,14 @@ assert.strictEqual(ct.prevTotal + ct.prevUnassigned, cm[cm.length - 2][3], '전�
 assert.strictEqual(ct.total, 3); assert.strictEqual(ct.prevTotal, 2); assert.strictEqual(ct.unassigned, 0);
 assert.deepStrictEqual([ct.remote.cur, ct.remote.prev], [1, 0], '원격 Calibration 은 따로 센다(전전월 건은 제외)'); assert(/원격/.test(ct.remote.note));
 assert.deepStrictEqual([ct.label, ct.prevLabel], ['2026-09', '2026-08']);
+// 2026-11-05: A/S 증가 요인 분해 repairDrivers — 기존 값(trendCompare·monthRows)과 같은 수리 건수, 분해 4개 합 = 수리 건수 (세부 손 계산은 test_repair_drivers.js)
+const rdv = rep.repairDrivers, rmr = rep.caseAnalysis.monthRows;
+assert(rdv && rdv.windows && rdv.windows.pre && rdv.windows.post, 'repairDrivers 있음');
+assert.strictEqual(rdv.windows.cur.total, rmr[rmr.length - 1][1], '당월 수리 = monthRows 같은 달 고장 수리'); assert.strictEqual(rdv.windows.prev.total, rmr[rmr.length - 2][1], '전월도 같음');
+assert.strictEqual(rdv.windows.pre.perMonth, rep.trendCompare.preRP); assert.strictEqual(rdv.windows.post.perMonth, rep.trendCompare.postRP, '개편 후 월평균 = trendCompare');
+Object.keys(rdv.windows).forEach(w => { const b = rdv.windows[w].buckets; assert.strictEqual(b.install12 + b.repeat + b.pm30 + b.other, rdv.windows[w].total, w + ' 분해 합'); });
+assert(Array.isArray(rep.meta.warnings) && rep.meta.warnings.some(w => /repairDrivers/.test(w)), '자료 없는 달·Serial 등은 meta.warnings 에 repairDrivers 로 남는다');
+assert.strictEqual(rep.repairDrivers.calCompare.windows.pre.calibration.total >= 0, true);
 // 같은 기준이라 기존 큰 데이터에서도 합계가 맞아야 한다
 const ctB = rep.caseAnalysis.calTeams, cmB = rep.caseAnalysis.monthRows;
 assert.strictEqual(ctB.total + ctB.unassigned, cmB[cmB.length - 1][3]); assert.strictEqual(ctB.prevTotal + ctB.prevUnassigned, cmB[cmB.length - 2][3]);
