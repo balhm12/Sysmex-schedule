@@ -30,6 +30,10 @@
 `npm test` → `tests/test_db_rules.js` 가 규칙을 그대로 돌려 58가지를 확인한다(허용·거부).
 규칙을 고치려면 `firebase/` 의 JSON을 직접 고치고 테스트를 맞춘다.
 
-## 2단계 (별도 작업)
-- KPI 쓰기를 관리자 계정 1명으로 제한: 관리자 UID가 필요하다(KPI 화면 관리자 로그인 후 표시되는 UID).
-- 읽기·쓰기를 승인된 사용자로 좁히려면 로그인 방식을 바꿔야 한다(예: 포털처럼 이름·승인 방식, 또는 App Check).
+## 2단계: KPI 쓰기를 관리자 1명으로 제한 — `database.rules.stage2.json`
+1단계와 같고 `kpi-dashboard` 쓰기만 다르다. KPI 관리자 계정(UID `sknozAsrQ4NZZyaGGPnDWZoWpSv2`) 외에는 쓸 수 없다(읽기는 그대로 로그인한 누구나).
+- 적용: 콘솔 규칙 탭에 `database.rules.stage2.json`을 붙여넣고 게시. 적용 전에 지금 규칙(1단계)을 따로 복사해 둔다.
+- 확인: KPI를 `?admin`으로 열어 관리자 로그인 → 「CRM 데이터 올리기」가 되는지, 팀장·일반 화면은 평소처럼 열리는지.
+- 되돌리기: 문제가 생기면 1단계 파일(또는 복사해 둔 규칙)을 다시 게시.
+- 관리자 계정을 바꾸면(UID 변경) 이 파일의 UID를 고치고 `tests/test_db_rules.js`의 UID도 같이 고친다.
+- 아직 남은 것: `voc-dashboard` 쓰기(쓰는 쪽 Apps Script 확인 필요), 익명 로그인한 사람이 설치·근무일정을 한 건씩 고치는 것.
