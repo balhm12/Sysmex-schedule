@@ -18,12 +18,12 @@
     --line:#DFE6F2;
     --white:#FFFFFF;
 
-    --c-install:#0B6FB8;
-    --c-install-bg:#E3F1FB;
-    --c-relocation:#D9730D;
-    --c-relocation-bg:#FDEBD8;
-    --c-eval:#6B4FBB;
-    --c-eval-bg:#ECE7F8;
+    --c-install:#009EE0;
+    --c-install-bg:#E4F5FC;
+    --c-relocation:#E8871E;
+    --c-relocation-bg:#FDEEDC;
+    --c-eval:#7A5CC4;
+    --c-eval-bg:#EFEAFA;
     --c-holiday:#D93B3B;
     --c-holiday-bg:#FCE6E6;
   }
@@ -360,186 +360,24 @@
     .app-nav a{padding:8px 11px;font-size:12px;}
   }
 
-  /* ================= 2026-11 디자인 개편 =================
-     화면 구조·색·크기만 바꾼다. 데이터·저장·동기화 코드는 그대로. */
-  :root{
-    --t-install:#0A4A7A; --t-relocation:#7A3A00; --t-evaluation:#46327F;
-    --muted:#5B6577;
-  }
-  .app{max-width:1240px;}
-  a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--blue);outline-offset:2px;}
-
-  /* 탭 */
-  .app-nav{align-items:center;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line);}
-  .app-nav a{border:0;border-radius:0;background:none;padding:0 16px;min-height:44px;display:flex;align-items:center;
-    font-size:14px;font-weight:500;color:var(--muted);margin-bottom:-1px;border-bottom:3px solid transparent;}
-  .app-nav a:hover{background:none;color:var(--navy);}
-  .app-nav a.active{background:none;color:var(--navy);font-weight:800;border-bottom-color:var(--navy);}
-  .help-btn{margin-left:auto;flex:none;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:white;
-    color:var(--navy);font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;}
-  .help-btn:hover{background:var(--blue-soft);}
-
-  /* 제목 + 구분 필터(건수 겸용) + 툴바 */
-  .top{display:grid;grid-template-columns:1fr auto;grid-template-areas:"title legend" "controls controls";gap:14px 16px;align-items:end;}
-  .top-title{grid-area:title;}
-  .top-title h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-0.3px;}
-  .top-title p{margin:4px 0 0;font-size:13px;color:var(--muted);}
-  .top .legend{grid-area:legend;flex-wrap:wrap;justify-content:flex-end;}
-  .top .controls{grid-area:controls;margin-top:0;gap:10px;align-items:center;}
-  .chip{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:white;color:var(--ink);
-    font-size:13px;font-weight:600;gap:8px;font-family:inherit;transition:none;}
-  .chip .dot{width:10px;height:10px;border-radius:3px;}
-  .chip .cnt{font-size:18px;font-weight:800;}
-  .chip[data-cat="install"] .cnt{color:var(--t-install);}
-  .chip[data-cat="relocation"] .cnt{color:var(--t-relocation);}
-  .chip[data-cat="evaluation"] .cnt{color:var(--t-evaluation);}
-  .chip[data-cat].active{background:white;color:var(--ink);border-color:var(--line);}
-  .chip:not(.active){background:var(--paper);color:var(--muted);opacity:.6;}
-  .chip:not(.active) .nm{text-decoration:line-through;}
-
-  .month-nav{padding:0;gap:0;height:44px;overflow:hidden;border-radius:10px;box-shadow:none;}
-  .month-nav button{width:44px;height:44px;border:0;border-radius:0;background:none;font-size:20px;}
-  .month-nav .label{font-size:16px;min-width:120px;}
-  .btn2,.icon-btn,.sel{height:44px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink);
-    font-family:inherit;font-size:14px;cursor:pointer;}
-  .btn2{padding:0 14px;font-weight:700;display:flex;align-items:center;gap:6px;}
-  .today-btn{color:var(--navy);}
-  .icon-btn{width:44px;padding:0;display:flex;align-items:center;justify-content:center;}
-  .btn2:hover,.icon-btn:hover{background:var(--blue-soft);border-color:var(--blue);}
-  .sel{padding:0 12px;}
-  .spacer{flex:1 1 0;}
-  .phone-only{display:none;}
-  .search-wrap{flex:1 1 260px;max-width:420px;}
-  .search-ico{position:absolute;left:12px;top:13px;color:var(--muted);pointer-events:none;}
-  .search-input{height:44px;padding:0 12px 0 38px;border:1px solid var(--line);}
-  .add-btn{height:44px;padding:0 20px;font-size:14px;font-weight:800;box-shadow:none;}
-
-  /* 본문: 달력 + 목록 */
-  .cal-layout{display:flex;gap:16px;align-items:flex-start;margin-top:16px;flex-wrap:wrap;}
-  .cal-layout .cal-card{flex:999 1 640px;min-width:0;margin-top:0;border-radius:14px;box-shadow:none;}
-  .weekday-row{background:var(--paper);border-bottom:1px solid var(--line);}
-  .weekday-row div{padding:9px 0;font-size:12px;color:var(--muted);letter-spacing:0;}
-  .weekday-row div:first-child{color:#C0392B;}
-  .weekday-row div:last-child{color:#1F5FBF;}
-  .daybg .cell{cursor:pointer;}
-  .daybg .cell.today{box-shadow:none;}
-  .daybg .cell.today .daynum{background:var(--navy);color:#fff;border-radius:12px;min-width:24px;height:24px;
-    display:inline-flex;align-items:center;justify-content:center;}
-  .daynum{min-width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;}
-  .add-day-btn{opacity:0;}
-  .daybg .cell:hover .add-day-btn,.add-day-btn:focus-visible,.daybg .cell:focus-within .add-day-btn{opacity:1;}
-  .bar{height:22px;line-height:22px;border-radius:5px;font-size:12px;padding:0 8px;box-shadow:none;
-    border-left:4px solid;color:var(--ink);}
-  .bar.install{background:var(--c-install-bg);color:var(--t-install);border-color:var(--c-install);}
-  .bar.relocation{background:var(--c-relocation-bg);color:var(--t-relocation);border-color:var(--c-relocation);}
-  .bar.evaluation{background:var(--c-eval-bg);color:var(--t-evaluation);border-color:var(--c-eval);}
-  .chip-ev{font-size:12px;padding:4px 8px;}
-  .chip-ev.install{color:var(--t-install);}
-  .chip-ev.relocation{color:var(--t-relocation);}
-  .chip-ev.evaluation{color:var(--t-evaluation);}
-  .detail-ev.install{color:var(--t-install);}
-  .detail-ev.relocation{color:var(--t-relocation);}
-  .detail-ev.evaluation{color:var(--t-evaluation);}
-
-  .side-card{flex:1 1 300px;min-width:0;background:white;border:1px solid var(--line);border-radius:14px;padding:16px;}
-  .side-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;gap:8px;}
-  .side-head h2{margin:0;font-size:16px;font-weight:800;}
-  .side-head span{font-size:13px;color:var(--muted);white-space:nowrap;}
-  .side-list{list-style:none;margin:0;padding:0;}
-  .side-item{display:flex;gap:12px;width:100%;padding:12px 0;border:0;border-top:1px solid #EEF1F7;background:none;
-    text-align:left;font-family:inherit;color:var(--ink);cursor:pointer;min-height:44px;}
-  .side-item:hover{background:var(--paper);}
-  .side-day{width:44px;flex:none;text-align:center;}
-  .side-day b{display:block;font-size:18px;font-weight:800;line-height:1.1;}
-  .side-day i{font-style:normal;font-size:11px;color:var(--muted);}
-  .side-body{min-width:0;flex:1;}
-  .side-title{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .side-meta{margin-top:3px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);flex-wrap:wrap;}
-  .tag{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-weight:700;}
-  .tag.install{background:var(--c-install-bg);color:var(--t-install);}
-  .tag.relocation{background:var(--c-relocation-bg);color:var(--t-relocation);}
-  .tag.evaluation{background:var(--c-eval-bg);color:var(--t-evaluation);}
-  .side-empty{padding:18px 0 6px;color:var(--muted);font-size:13px;text-align:center;border-top:1px solid #EEF1F7;}
-
-  /* 휴대폰용 달력(점 표시) */
-  .pgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));}
-  .pcell{height:52px;padding:4px 0 0;border:0;border-top:1px solid #F0F3F8;background:white;display:flex;flex-direction:column;
-    align-items:center;gap:4px;cursor:pointer;font-family:inherit;color:var(--ink);}
-  .pnum{width:28px;height:28px;border-radius:14px;border:2px solid transparent;display:inline-flex;align-items:center;
-    justify-content:center;font-size:14px;font-weight:700;}
-  .pcell.sun .pnum{color:#C0392B;}
-  .pcell.sat .pnum{color:#1F5FBF;}
-  .pcell.pad .pnum{color:#8A94A6;}
-  .pcell.today .pnum{border-color:var(--navy);}
-  .pcell.sel .pnum{background:var(--navy);border-color:var(--navy);color:#fff;}
-  .pdots{display:flex;gap:3px;height:6px;}
-  .pdot{width:6px;height:6px;border-radius:50%;}
-  .pdot.install{background:var(--c-install);}
-  .pdot.relocation{background:var(--c-relocation);}
-  .pdot.evaluation{background:var(--c-eval);}
-  .ev-card{display:flex;width:100%;background:white;border:1px solid var(--line);border-radius:12px;overflow:hidden;padding:0;
-    text-align:left;font-family:inherit;color:var(--ink);cursor:pointer;min-height:44px;}
-  .ev-card .stripe{width:5px;flex:none;}
-  .ev-card .stripe.install{background:var(--c-install);}
-  .ev-card .stripe.relocation{background:var(--c-relocation);}
-  .ev-card .stripe.evaluation{background:var(--c-eval);}
-  .ev-card .side-body{padding:10px 12px;}
-  .ev-card .side-title{font-size:15px;}
-  .phone-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
-
-  /* 사용법(접이식) */
-  details.guide{padding:0;}
-  details.guide>summary{list-style:none;cursor:pointer;padding:16px 22px;min-height:44px;display:flex;align-items:center;}
-  details.guide>summary::-webkit-details-marker{display:none;}
-  details.guide>summary .guide-title{margin:0;}
-  details.guide>summary::after{content:"펼치기";margin-left:auto;font-size:12px;color:var(--muted);font-weight:700;}
-  details.guide[open]>summary::after{content:"접기";}
-  details.guide .guide-grid,details.guide .guide-footnote{margin:0 22px 18px;}
-  details.guide .guide-footnote{padding-top:14px;}
-
-  /* 창(상세·입력) 눌림 크기 */
-  .panel .close{width:44px;height:44px;font-size:16px;}
-  .detail-actions button{min-height:44px;padding:0 16px;font-size:13px;}
-  .cat-opt{min-height:44px;display:flex;align-items:center;justify-content:center;}
-
-  @media(max-width:900px){
-    .top{grid-template-columns:1fr;grid-template-areas:"title" "controls" "legend";}
-    .top .legend{justify-content:flex-start;}
-    .legend{width:auto;order:0;}
-  }
+  /* 휴대폰: 달력 아래에 이번 달 일정을 목록으로 (눌러 보지 않아도 한눈에) */
+  .month-list{display:none;}
   @media(max-width:600px){
-    .app{padding:8px 8px 96px;}
-    .app-nav{gap:0;flex-wrap:nowrap;margin-bottom:10px;}
-    .app-nav a{flex:none;padding:0 8px;font-size:13px;}
-    .top{gap:10px;}
-    .top-title h1{font-size:20px;}
-    .top-title p{font-size:12px;}
-    .top .controls{gap:6px;}
-    .month-nav{order:1;width:auto;justify-content:flex-start;}
-    .month-nav .label{min-width:104px;font-size:16px;}
-    .month-nav button{width:40px;}
-    .today-btn{order:2;padding:0 12px;height:36px;border-radius:18px;font-size:13px;}
-    .spacer{order:3;}
-    .phone-only{display:flex;}
-    #searchToggle{order:4;}
-    #managerSearchBtn{order:5;width:44px;padding:0;justify-content:center;}
-    #managerSearchBtn .lbl{display:none;}
-    .search-wrap{display:none;order:6;flex:1 1 100%;max-width:none;}
-    .controls.search-open .search-wrap{display:block;}
-    #teamFilter{order:7;flex:1 1 0;font-size:16px;}
-    #exportXlsxBtn{order:8;}
-    #openAddBtn{position:fixed;right:16px;bottom:20px;z-index:30;height:52px;padding:0 22px;border-radius:26px;font-size:15px;
-      flex:none;order:0;box-shadow:0 6px 16px rgba(0,48,135,.28);}
-    .top .legend{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:8px;}
-    .chip{flex:none;padding:0 12px;font-size:13px;border-radius:22px;}
-    .cal-layout{margin-top:10px;gap:12px;}
-    .cal-layout .cal-card{flex:1 1 100%;border-radius:14px;}
-    .weekday-row div{font-size:12px;padding:8px 0;}
-    .side-card{padding:0;border:0;background:none;}
-    details.guide>summary{padding:14px 16px;}
-    details.guide .guide-grid,details.guide .guide-footnote{margin:0 16px 16px;}
+    .month-list{display:block;background:white;border:1px solid var(--line);border-radius:12px;margin-top:14px;padding:14px 12px 6px;}
+    .ml-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px;}
+    .ml-title{font-size:14px;font-weight:800;color:var(--navy);}
+    .ml-count{font-size:12px;color:var(--ink-soft);}
+    .ml-day{font-size:12px;font-weight:800;color:var(--ink-soft);margin:12px 0 5px;}
+    .ml-day.sun{color:#D93B3B;} .ml-day.sat{color:#0A6BC7;}
+    .ml-item{display:flex;flex-direction:column;width:100%;min-height:44px;margin-bottom:6px;padding:8px 10px;border:0;
+      border-left:4px solid;border-radius:8px;text-align:left;font-family:inherit;cursor:pointer;}
+    .ml-item.install{background:var(--c-install-bg);border-color:var(--c-install);color:#00537E;}
+    .ml-item.relocation{background:var(--c-relocation-bg);border-color:var(--c-relocation);color:#8C4E0C;}
+    .ml-item.evaluation{background:var(--c-eval-bg);border-color:var(--c-eval);color:#4B3585;}
+    .ml-name{font-size:13px;font-weight:700;line-height:1.35;}
+    .ml-sub{font-size:11.5px;margin-top:2px;opacity:.85;}
+    .ml-empty{padding:14px 0 10px;text-align:center;font-size:12.5px;color:var(--ink-soft);}
   }
-  @media(hover:none){ .add-day-btn{opacity:.6;} }
 </style>
 </head>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -553,7 +391,16 @@
     <a href="work-schedule.html">📅 근무일정</a>
     <a href="voc-dashboard.html">📊 만족도</a>
     <a href="fsg-kpi.html">📈 KPI</a>
-    <button type="button" class="help-btn" id="helpBtn" aria-label="사용법" title="사용법">?</button>
+  </div>
+
+  <div class="header">
+    <div>
+      <div class="eyebrow">Sysmex Korea · FSS Team</div>
+      <h1>시스템 설치 공유 캘린더</h1>
+      <p>FY26 (2026년 4월 – 2027년 3월) · 공유 캘린더</p>
+      <p style="margin-top:2px;font-size:10px;color:#8FA6D9;">만든이: FSS Team · Jun</p>
+    </div>
+    <div class="header-stats" id="headerStats"></div>
   </div>
 
   <div class="config-banner" id="configBanner" style="display:none;background:#FFF4E5;border:1.5px solid #E8871E;border-radius:12px;padding:12px 16px;margin-top:16px;font-size:12.5px;color:#8C4E0C;line-height:1.6;">
@@ -561,83 +408,35 @@
     함께 안내드린 설정 가이드를 따라 <code>FIREBASE_URL</code> 값을 채워 넣으면 팀 전체가 실시간으로 공유할 수 있습니다.
   </div>
 
-  <div class="top">
-    <div class="top-title">
-      <h1>설치일정</h1>
-      <p>FY26 (2026년 4월 – 2027년 3월) · FSS Team 공유 캘린더</p>
+  <div class="controls">
+    <div class="month-nav">
+      <button id="prevBtn">‹</button>
+      <div class="label" id="monthLabel"></div>
+      <button id="nextBtn">›</button>
+      <button class="today-btn" id="todayBtn">오늘</button>
     </div>
-    <div class="controls" id="controls">
-      <div class="month-nav">
-        <button type="button" id="prevBtn" aria-label="이전 달">‹</button>
-        <div class="label" id="monthLabel" aria-live="polite"></div>
-        <button type="button" id="nextBtn" aria-label="다음 달">›</button>
-      </div>
-      <button type="button" class="btn2 today-btn" id="todayBtn">오늘</button>
-      <button type="button" class="icon-btn phone-only" id="searchToggle" aria-label="검색" aria-expanded="false"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
-      <div class="search-wrap" id="searchWrap">
-        <svg class="search-ico" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-        <input type="text" id="searchInput" class="search-input" placeholder="병원명, 담당자, 담당팀 검색" aria-label="병원명, 담당자, 담당팀 검색">
-        <div class="search-results" id="searchResults"></div>
-      </div>
-      <div class="spacer"></div>
-      <select id="teamFilter" class="sel" aria-label="담당팀" title="선택한 팀의 일정만 표시합니다"></select>
-      <button type="button" class="btn2" id="managerSearchBtn" title="병원명으로 담당자를 찾습니다" aria-label="담당자 찾기"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span class="lbl">담당자 찾기</span></button>
-      <button type="button" class="icon-btn" id="exportXlsxBtn" aria-label="Excel 내보내기" title="현재 일정을 엑셀 파일로 내보내기 (SharePoint 리스트 등에 업로드 가능)"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></button>
-      <button type="button" class="add-btn" id="openAddBtn" aria-label="일정 추가"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>일정 추가</span></button>
+    <div class="search-wrap" id="searchWrap">
+      <input type="text" id="searchInput" class="search-input" placeholder="🔍 병원명, 담당자, 담당팀 검색">
+      <div class="search-results" id="searchResults"></div>
     </div>
-    <div class="legend" id="legend" role="group" aria-label="구분 필터"></div>
+    <div class="right-controls">
+      <div class="legend" id="teamFilter" title="선택한 팀의 일정만 표시합니다"></div>
+      <div class="legend" id="legend"></div>
+      <button class="add-btn" id="managerSearchBtn" title="병원명으로 담당자를 찾습니다" style="background:white;color:var(--navy);border:1.5px solid var(--line);box-shadow:none;">👤 담당자 찾기</button>
+      <button class="add-btn" id="exportXlsxBtn" title="현재 일정을 엑셀 파일로 내보내기 (SharePoint 리스트 등에 업로드 가능)" style="background:white;color:var(--navy);border:1.5px solid var(--line);box-shadow:none;">📊 Excel 내보내기</button>
+      <button class="add-btn" id="openAddBtn">+ 일정 추가</button>
+    </div>
   </div>
 
-  <div class="cal-layout">
   <div class="cal-card">
     <div class="weekday-row">
       <div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div>
     </div>
     <div id="weeksContainer"></div>
   </div>
-  <aside class="side-card" aria-label="일정 목록">
-    <div class="side-head"><h2 id="sideTitle"></h2><span id="sideCount"></span></div>
-    <div id="sideList"></div>
-  </aside>
-  </div>
 
-  <details class="guide" id="guideBox">
-    <summary><span class="guide-title">사용법</span></summary>
-    <div class="guide-grid">
-      <div class="guide-item">
-        <div class="guide-icon">➕</div>
-        <div class="guide-h">일정 추가</div>
-        <div class="guide-d">"+ 일정 추가" 또는 날짜 칸(휴대폰은 날짜를 누른 뒤 아래 버튼)을 눌러 → 구분·병원·기간·담당팀 입력 후 저장.</div>
-      </div>
-      <div class="guide-item">
-        <div class="guide-icon">✏️</div>
-        <div class="guide-h">수정 · 삭제</div>
-        <div class="guide-d">일정(막대·칩) 클릭 → 상세창에서 "수정" 또는 "삭제".</div>
-      </div>
-      <div class="guide-item">
-        <div class="guide-icon">📆</div>
-        <div class="guide-h">기간 일정</div>
-        <div class="guide-d">종료일을 다르게 입력하면 여러 날짜에 걸친 막대로 자동 표시됩니다.</div>
-      </div>
-      <div class="guide-item">
-        <div class="guide-icon">🎯</div>
-        <div class="guide-h">필터 · 월 이동</div>
-        <div class="guide-d">구분 칩(설치·이전설치·평가)을 눌러 항목 켜기/끄기, 팀은 목록에서 선택, ‹ › 로 월 이동.</div>
-      </div>
-      <div class="guide-item">
-        <div class="guide-icon">📊</div>
-        <div class="guide-h">Excel로 내보내기</div>
-        <div class="guide-d">"📊 Excel 내보내기" → SharePoint·Teams 등에 바로 업로드 가능한 서식으로 다운로드.</div>
-      </div>
-    </div>
-    <div class="guide-footnote">
-      <span>색상 안내</span>
-      <span class="legend-dot" style="--dot-color:#0B6FB8;">설치</span>
-      <span class="legend-dot" style="--dot-color:#D9730D;">이전설치</span>
-      <span class="legend-dot" style="--dot-color:#6B4FBB;">평가</span>
-      <span>만든이: FSS Team · Jun</span>
-    </div>
-  </details>
+  <div class="month-list" id="monthList"></div>
+
 </div>
 
 <div class="overlay" id="overlay">
@@ -1082,24 +881,26 @@ function matchTeam(e){
 }
 const teamFilterEl = document.getElementById('teamFilter');
 TEAM_FILTERS.forEach(t=>{
-  const o = document.createElement('option');
-  o.value = t; o.textContent = (t==='전체' ? '전체 팀' : t);
-  teamFilterEl.appendChild(o);
+  const chip = document.createElement('div');
+  chip.className = 'team-chip' + (t===activeTeam ? ' active' : '');
+  chip.textContent = t;
+  chip.onclick = ()=>{
+    activeTeam = t;
+    teamFilterEl.querySelectorAll('.team-chip').forEach(c=>c.classList.toggle('active', c.textContent===t));
+    render();
+  };
+  teamFilterEl.appendChild(chip);
 });
-teamFilterEl.value = activeTeam;
-teamFilterEl.onchange = ()=>{ activeTeam = teamFilterEl.value; render(); };
 
 const legendEl = document.getElementById('legend');
 Object.entries(CATS).forEach(([key,c])=>{
-  const chip = document.createElement('button');
-  chip.type = 'button';
+  const chip = document.createElement('div');
   chip.className = 'chip active';
   chip.dataset.cat = key;
-  chip.setAttribute('aria-pressed', 'true');
-  chip.innerHTML = `<span class="dot"></span><span class="nm">${c.label}</span><span class="cnt">0</span>`;
+  chip.innerHTML = `<span class="dot"></span>${c.label}`;
   chip.onclick = ()=>{
-    if(activeCats.has(key)){ activeCats.delete(key); chip.classList.remove('active'); chip.setAttribute('aria-pressed','false'); }
-    else { activeCats.add(key); chip.classList.add('active'); chip.setAttribute('aria-pressed','true'); }
+    if(activeCats.has(key)){ activeCats.delete(key); chip.classList.remove('active'); }
+    else { activeCats.add(key); chip.classList.add('active'); }
     render();
   };
   legendEl.appendChild(chip);
@@ -1139,10 +940,7 @@ function render(){
   const todayStr = todayISO();
   const weeks = buildWeeks();
 
-  const phone = isPhone();
-  const pm = `${viewYear}-${pad2(viewMonth)}`;
-  if(!selectedDate || selectedDate.slice(0,7)!==pm) selectedDate = (todayStr.slice(0,7)===pm) ? todayStr : pm+'-01';
-  (phone ? [] : weeks).forEach(week=>{
+  weeks.forEach(week=>{
     const weekStart = dateNum(week[0].date);
     const weekEnd = dateNum(week[6].date);
 
@@ -1161,7 +959,7 @@ function render(){
       r.lane = lane;
     });
     const laneCount = lanes.length;
-    const barsHeight = laneCount>0 ? laneCount*25 + 4 : 0;
+    const barsHeight = laneCount>0 ? laneCount*21 + 4 : 0;
 
     const weekRow = document.createElement('div');
     weekRow.className = 'week-row';
@@ -1188,11 +986,9 @@ function render(){
       addBtn.className = 'add-day-btn';
       addBtn.textContent = '+';
       addBtn.title = '일정 추가';
-      addBtn.setAttribute('aria-label', `${c.m}월 ${c.day}일 일정 추가`);
       addBtn.onclick = (ev)=>{ ev.stopPropagation(); openForm(null, c.date); };
       row.appendChild(addBtn);
       cell.appendChild(row);
-      cell.onclick = ()=>openForm(null, c.date);
       daybg.appendChild(cell);
     });
     weekRow.appendChild(daybg);
@@ -1207,7 +1003,7 @@ function render(){
         bar.className = 'bar ' + r.category;
         bar.style.left = `calc(${(r.colStart/7)*100}% + 3px)`;
         bar.style.width = `calc(${(r.colSpan/7)*100}% - 6px)`;
-        bar.style.top = (r.lane*25) + 'px';
+        bar.style.top = (r.lane*21) + 'px';
         bar.textContent = r.title + (r.device? ' '+r.device:'') + (r.team? ' · '+r.team:'');
         bar.onclick = ()=>openDetail(r);
         barsLayer.appendChild(bar);
@@ -1236,102 +1032,57 @@ function render(){
     container.appendChild(weekRow);
   });
 
-  if(phone) renderPhoneGrid(container, weeks, EVENTS, todayStr);
   renderStats(EVENTS);
-  renderSide(EVENTS, phone);
+  renderMonthList(EVENTS);
 }
 
-/* ---------- 화면 보조 함수 (2026-11 개편) ---------- */
-let selectedDate = null;   // 휴대폰에서 고른 날짜(YYYY-MM-DD)
-const _phoneMQ = (typeof window.matchMedia === 'function') ? window.matchMedia('(max-width:600px)') : null;
-function isPhone(){ return !!(_phoneMQ && _phoneMQ.matches); }
-if(_phoneMQ){ const _onMQ = ()=>render(); if(_phoneMQ.addEventListener) _phoneMQ.addEventListener('change', _onMQ); else if(_phoneMQ.addListener) _phoneMQ.addListener(_onMQ); }
-function visibleEvents(EVENTS){
-  return EVENTS.filter(e=>activeCats.has(e.category) && matchTeam(e) && matchEvent(e, searchQuery));
-}
-function evLine(e){ return e.title + (e.device ? ' '+e.device : ''); }
-function mkEl(tag, cls, text){ const el=document.createElement(tag); if(cls) el.className=cls; if(text!=null) el.textContent=text; return el; }
-function evMeta(e, withRange){
-  const meta = mkEl('div','side-meta');
-  meta.appendChild(mkEl('span','tag '+e.category, CAT_SHORT[e.category] || (CATS[e.category] ? CATS[e.category].label : e.category)));
-  const bits = [e.team].filter(Boolean);
-  bits.forEach(b=>{ meta.appendChild(mkEl('span',null,b)); });
-  if(withRange && e.start!==e.end) meta.appendChild(mkEl('span',null,'· '+e.start.slice(5).replace('-','/')+'~'+e.end.slice(5).replace('-','/')));
-  return meta;
-}
-function renderPhoneGrid(container, weeks, EVENTS, todayStr){
-  const vis = visibleEvents(EVENTS);
-  const grid = mkEl('div','pgrid');
-  weeks.forEach(week=>week.forEach((c,ci)=>{
-    const dayEvs = vis.filter(e=>e.start<=c.date && e.end>=c.date);
-    const btn = mkEl('button','pcell' + (c.monthOffset!==0?' pad':'') + (ci===0?' sun':'') + (ci===6?' sat':'') + (c.date===todayStr?' today':'') + (c.date===selectedDate?' sel':''));
-    btn.type = 'button';
-    btn.setAttribute('aria-label', `${c.m}월 ${c.day}일${dayEvs.length ? ', 일정 '+dayEvs.length+'건' : ''}`);
-    if(c.date===selectedDate) btn.setAttribute('aria-current','date');
-    btn.appendChild(mkEl('span','pnum',String(c.day)));
-    const dots = mkEl('span','pdots');
-    dayEvs.slice(0,3).forEach(e=>dots.appendChild(mkEl('span','pdot '+e.category)));
-    btn.appendChild(dots);
-    btn.onclick = ()=>{ selectedDate = c.date; if(c.monthOffset!==0){ viewYear=c.y; viewMonth=c.m; } render(); };
-    grid.appendChild(btn);
-  }));
-  container.appendChild(grid);
-}
-function renderSide(EVENTS, phone){
-  const vis = visibleEvents(EVENTS).sort((a,b)=> a.start<b.start?-1 : a.start>b.start?1 : CATS[a.category].order-CATS[b.category].order);
-  const list = document.getElementById('sideList');
-  const titleEl = document.getElementById('sideTitle'), countEl = document.getElementById('sideCount');
-  list.textContent = '';
-  let items, mode = phone ? 'day' : 'month';
-  if(phone){
-    const [y,m,d] = selectedDate.split('-').map(Number);
-    items = vis.filter(e=>e.start<=selectedDate && e.end>=selectedDate);
-    titleEl.textContent = `${m}월 ${d}일 (${weekdayKr(y,m,d)})` + (selectedDate===todayISO() ? ' · 오늘' : '');
-  } else {
-    const prefix = `${viewYear}-${pad2(viewMonth)}`;
-    items = vis.filter(e=> e.start.slice(0,7)===prefix || e.end.slice(0,7)===prefix);
-    titleEl.textContent = `${viewMonth}월 일정`;
-  }
-  countEl.textContent = (phone ? '' : '총 ') + items.length + '건';
-  if(items.length===0){
-    list.appendChild(mkEl('div','side-empty', phone ? '이 날은 일정이 없어요. 아래 「일정 추가」로 등록할 수 있어요.' : '이 달에는 표시할 일정이 없어요.'));
-    return;
-  }
-  const ul = mkEl('ul', phone ? 'phone-list' : 'side-list');
+// 휴대폰 전용(CSS로 PC에서는 숨김): 이번 달 일정을 날짜순 목록으로
+function renderMonthList(EVENTS){
+  const host = document.getElementById('monthList');
+  if(!host) return;
+  host.textContent = '';
+  const pm = `${viewYear}-${String(viewMonth).padStart(2,'0')}`;
+  const first = pm + '-01', last = pm + '-' + String(new Date(viewYear, viewMonth, 0).getDate()).padStart(2,'0');
+  const items = EVENTS.filter(e=> activeCats.has(e.category) && matchTeam(e) && matchEvent(e, searchQuery) && e.start<=last && e.end>=first)
+    .sort((a,b)=> (a.start<b.start?-1:a.start>b.start?1:0) || CATS[a.category].order-CATS[b.category].order);
+  const mk = (tag, cls, text)=>{ const el=document.createElement(tag); if(cls) el.className=cls; if(text!=null) el.textContent=text; return el; };
+  const head = mk('div','ml-head');
+  head.appendChild(mk('div','ml-title', `${viewMonth}월 일정`));
+  head.appendChild(mk('div','ml-count', `${items.length}건`));
+  host.appendChild(head);
+  if(items.length===0){ host.appendChild(mk('div','ml-empty','이 달에는 표시할 일정이 없습니다')); return; }
+  let lastDay = '';
   items.forEach(e=>{
-    const li = document.createElement('li');
-    const btn = mkEl('button', phone ? 'ev-card' : 'side-item');
-    btn.type = 'button';
-    btn.setAttribute('aria-label', evLine(e));
-    if(phone) btn.appendChild(mkEl('span','stripe '+e.category));
-    else {
-      const inMonth = e.start.slice(0,7)===`${viewYear}-${pad2(viewMonth)}`;
-      const dd = inMonth ? e.start : `${viewYear}-${pad2(viewMonth)}-01`;
-      const [yy,mm,day] = dd.split('-').map(Number);
-      const dayBox = mkEl('div','side-day');
-      dayBox.appendChild(mkEl('b',null,String(day)));
-      dayBox.appendChild(mkEl('i',null,weekdayKr(yy,mm,day)));
-      btn.appendChild(dayBox);
+    const day = e.start < first ? first : e.start;
+    if(day !== lastDay){
+      lastDay = day;
+      const [y,m,d] = day.split('-').map(Number);
+      const dw = new Date(y,m-1,d).getDay();
+      host.appendChild(mk('div','ml-day' + (dw===0?' sun':'') + (dw===6?' sat':''), `${m}월 ${d}일 (${weekdayKr(y,m,d)})`));
     }
-    const body = mkEl('div','side-body');
-    body.appendChild(mkEl('div','side-title', evLine(e)));
-    body.appendChild(evMeta(e, true));
-    btn.appendChild(body);
+    const btn = mk('button','ml-item '+e.category);
+    btn.type = 'button';
+    btn.appendChild(mk('div','ml-name', e.title + (e.device ? ' '+e.device : '')));
+    const bits = [CAT_SHORT[e.category] || CATS[e.category].label];
+    if(e.team) bits.push(e.team);
+    if(e.start!==e.end) bits.push(e.start.slice(5).replace('-','/') + '~' + e.end.slice(5).replace('-','/'));
+    btn.appendChild(mk('div','ml-sub', bits.join(' · ')));
     btn.onclick = ()=>openDetail(e);
-    li.appendChild(btn);
-    ul.appendChild(li);
+    host.appendChild(btn);
   });
-  list.appendChild(ul);
 }
 
 function renderStats(EVENTS){
+  const statsEl = document.getElementById('headerStats');
   const mm = String(viewMonth).padStart(2,'0');
   const prefix = `${viewYear}-${mm}`;
   const monthEvents = EVENTS.filter(e=> (e.start.startsWith(prefix) || e.end.startsWith(prefix)) && matchTeam(e));
-  Object.keys(CATS).forEach(cat=>{
-    const el = document.querySelector(`#legend .chip[data-cat="${cat}"] .cnt`);
-    if(el) el.textContent = String(monthEvents.filter(e=>e.category===cat).length);
-  });
+  const count = cat => monthEvents.filter(e=>e.category===cat).length;
+  statsEl.innerHTML = `
+    <div class="stat"><div class="num">${count('install')}</div><div class="lbl">설치</div></div>
+    <div class="stat"><div class="num">${count('relocation')}</div><div class="lbl">이전설치</div></div>
+    <div class="stat"><div class="num">${count('evaluation')}</div><div class="lbl">평가</div></div>
+  `;
 }
 
 function openDetail(e){
@@ -1917,17 +1668,11 @@ document.getElementById('managerSearchBtn').onclick = openManagerSearch;
 // (3) 탭 복귀·네트워크 복구 시 즉시 갱신 (4) 토큰 만료 자동 갱신 — 네 겹이 이미
 // 있어서 사용자가 수동으로 누를 일이 사라졌기 때문. testConnection/exportICS 함수
 // 자체는 나중에 필요하면 버튼만 다시 달면 되도록 코드에 남겨둔다.
-document.getElementById('openAddBtn').onclick = ()=>openForm(null, isPhone() && selectedDate ? selectedDate : fmtDate(viewYear, viewMonth, Math.min(new Date().getDate(),28)));
+document.getElementById('openAddBtn').onclick = ()=>openForm(null, fmtDate(viewYear, viewMonth, Math.min(new Date().getDate(),28)));
 document.getElementById('exportXlsxBtn').onclick = exportExcel;
 document.getElementById('prevBtn').onclick = ()=>{ viewMonth--; if(viewMonth===0){viewMonth=12;viewYear--;} render(); };
 document.getElementById('nextBtn').onclick = ()=>{ viewMonth++; if(viewMonth===13){viewMonth=1;viewYear++;} render(); };
-document.getElementById('todayBtn').onclick = ()=>{ const t=new Date(); viewYear=t.getFullYear(); viewMonth=t.getMonth()+1; selectedDate=todayISO(); render(); };
-document.getElementById('helpBtn').onclick = ()=>{ const g=document.getElementById('guideBox'); g.open = true; g.scrollIntoView({behavior:'smooth', block:'start'}); };
-document.getElementById('searchToggle').onclick = ()=>{
-  const c = document.getElementById('controls'); const open = c.classList.toggle('search-open');
-  document.getElementById('searchToggle').setAttribute('aria-expanded', String(open));
-  if(open) document.getElementById('searchInput').focus();
-};
+document.getElementById('todayBtn').onclick = ()=>{ const t=new Date(); viewYear=t.getFullYear(); viewMonth=t.getMonth()+1; render(); };
 
 function fmtDateLabel(dstr){
   const [y,m,d] = dstr.split('-').map(Number);
@@ -1965,7 +1710,7 @@ function renderSearchResults(){
       <div class="sr-meta">${catLabel} · ${dateTxt}${e.team? ' · '+escapeHtml(e.team) : ''}</div>`;
     item.onclick = ()=>{
       const [y,m] = e.start.split('-').map(Number);
-      viewYear = y; viewMonth = m; selectedDate = e.start;
+      viewYear = y; viewMonth = m;
       render();
       document.getElementById('searchResults').classList.remove('show');
       setTimeout(()=> openDetail(e), 150);
