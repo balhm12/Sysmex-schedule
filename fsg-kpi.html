@@ -3315,6 +3315,20 @@ async function pushShared(kind, payload, meta){
   META=m; return true;
 }
 
+/* --- 받은 암호문 캐시 ---
+   방문할 때마다 act·ser·hr·geo·eq 를 전부 받아 Firebase 다운로드가 컸다.
+   올라온 시각(meta)이 같으면 이 브라우저에 저장해 둔 암호문을 쓴다(저장되는 것도 서버와 같은 암호문). */
+function idb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('fsg-kpi-cache',1); r.onupgradeneeded=()=>r.result.createObjectStore('kv'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbGet(k){ const db=await idb(); return new Promise((res,rej)=>{ const q=db.transaction('kv').objectStore('kv').get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+async function idbSet(k,v){ const db=await idb(); return new Promise((res,rej)=>{ const t=db.transaction('kv','readwrite'); t.objectStore('kv').put(v,k); t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); }); }
+async function fbCached(kind, ver){
+  if(!ver || typeof indexedDB==='undefined') return fb(kind);
+  try{ const c=await idbGet('rec:'+kind); if(c && c.v===ver && c.rec) return c.rec; }catch(e){}
+  const rec=await fb(kind);
+  if(rec){ try{ await idbSet('rec:'+kind,{v:ver,rec}); }catch(e){} }
+  return rec;
+}
+
 /* --- 불러오기 (모두) --- */
 async function loadAll(){
   $('busy').textContent='데이터를 불러오는 중입니다'; $('busy').classList.add('on');
@@ -3323,8 +3337,8 @@ async function loadAll(){
     if(!meta||!meta.actRows){ showEmpty(ADMIN?'아직 올라온 데이터가 없습니다. 위 "CRM 데이터 올리기"로 첫 파일을 올려 주세요.':'아직 올라온 데이터가 없습니다. 담당자가 데이터를 올리면 표시됩니다.'); return; }
     if(!(await codeOk(CODE,meta))){ localStorage.removeItem(KEY_LS); CODE=null; showLock('접근 코드가 맞지 않습니다. 다시 입력해 주세요.'); return; }
     /* 자산대장·연장근무는 선택 자료 — 못 읽어도 CRM 화면은 연다 */
-    const opt=k=>fb(k).catch(e=>{ console.warn(k+' 불러오기 실패',e); return null; });
-    const [a,s,hr,geo,eq]=await Promise.all([fb('act'), meta.serSrc?opt('ser'):Promise.resolve(null), meta.hrSrc?opt('hr'):Promise.resolve(null), meta.geoSrc?opt('geo'):Promise.resolve(null), meta.eqSrc?opt('eq'):Promise.resolve(null)]);
+    const opt=(k,ver)=>fbCached(k,ver).catch(e=>{ console.warn(k+' 불러오기 실패',e); return null; });
+    const [a,s,hr,geo,eq]=await Promise.all([fbCached('act',meta.actAt||meta.updatedAt), meta.serSrc?opt('ser',meta.serAt||meta.updatedAt):Promise.resolve(null), meta.hrSrc?opt('hr',meta.updatedAt):Promise.resolve(null), meta.geoSrc?opt('geo',meta.updatedAt):Promise.resolve(null), meta.eqSrc?opt('eq',meta.updatedAt):Promise.resolve(null)]);
     RAW=fixTz(decodeEmbed(await open_(a,CODE))); SERIAL=s?decodeSer(await open_(s,CODE)):null;
     HRDATA=null; if(hr){ try{ HRDATA=await open_(hr,CODE); }catch(e){ console.warn('hr decode',e); } }
     GEO=null; if(geo){ try{ GEO=await open_(geo,CODE); GEO.src=GEO.src||meta.geoSrc; }catch(e){ console.warn('geo decode',e); } }
