@@ -1,4 +1,4 @@
-/* 설치·근무일정 DB 규칙 1단계(firebase/database.rules.stage1.json) 검증 — targaryen 으로 규칙을 그대로 돌려 본다.
+/* 설치·근무일정 DB 규칙 1·2단계(firebase/database.rules.stage1·stage2.json) 검증 — targaryen 으로 규칙을 그대로 돌려 본다.
  * 가명 데이터만 사용한다. 실행: node tests/test_db_rules.js
  */
 const assert = require('assert');
@@ -81,5 +81,26 @@ ok(!canWrite('/work-schedule-backups', null), '근무 백업 전체 삭제 금�
 
 /* ---- 현행 유지(2단계에서 좁힘) ---- */
 ok(canWrite('/kpi-dashboard/meta', { updatedAt: 'x' }) && canWrite('/voc-dashboard/data', { a: 1 }), 'KPI·만족도 쓰기는 현행 유지');
+
+
+/* ---- 2단계: KPI 쓰기는 관리자 계정(UID) 한 명만 ---- */
+const rules2 = require(path.join(__dirname, '..', 'firebase', 'database.rules.stage2.json'));
+const ADMIN = { uid: 'sknozAsrQ4NZZyaGGPnDWZoWpSv2', provider: 'password' };
+const db2 = () => targaryen.database(rules2, {}, NOW);
+const w2 = (who, p, v) => db2().as(who).write(p, v).allowed;
+const r2 = (who, p) => db2().as(who).read(p).allowed;
+ok(w2(ADMIN, '/kpi-dashboard/meta', { updatedAt: 'x' }), '관리자는 KPI 메타 저장');
+ok(w2(ADMIN, '/kpi-dashboard/act', { v: 1, data: 'x' }), '관리자는 KPI 데이터 저장');
+ok(w2(ADMIN, '/kpi-dashboard/backups/2026-11-06', { a: 1 }), '관리자는 KPI 백업 저장');
+ok(!w2(anon, '/kpi-dashboard/meta', { updatedAt: 'x' }), '익명은 KPI 쓰기 거부');
+ok(!w2(anon, '/kpi-dashboard/act', { v: 1 }), '익명은 KPI 데이터 쓰기 거부');
+ok(!w2(anon, '/kpi-dashboard', null), '익명은 KPI 전체 삭제 거부');
+ok(!w2({ uid: 'other-admin', provider: 'password' }, '/kpi-dashboard/meta', { a: 1 }), '다른 이메일 계정도 KPI 쓰기 거부');
+ok(!w2(null, '/kpi-dashboard/meta', { a: 1 }), '로그인 없으면 거부');
+ok(r2(anon, '/kpi-dashboard/meta') && r2(ADMIN, '/kpi-dashboard/act'), 'KPI 읽기는 로그인한 누구나(팀장 화면)');
+ok(!r2(null, '/kpi-dashboard/meta'), '로그인 없는 KPI 읽기 거부');
+ok(w2(anon, '/schedule-overrides/custom/user-1', ev()) && w2(anon, '/work-schedule/west/2026-11-06/가명A', entry), '설치·근무일정 쓰기는 1단계와 동일');
+ok(!w2(anon, '/schedule-overrides', snapshot) && !w2(anon, '/work-schedule', {}), '전체 덮어쓰기 금지도 1단계와 동일');
+ok(w2(anon, '/voc-dashboard/data', { a: 1 }), '만족도 쓰기는 현행 유지');
 
 console.log('test_db_rules: OK (' + pass + '개 확인)');
