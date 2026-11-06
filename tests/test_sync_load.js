@@ -4,7 +4,7 @@ const fs = require('fs'), assert = require('assert'), path = require('path');
 for (const f of ['index.html', 'work-schedule.html']) {
   const s = fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   assert(!/\},\s*20000\);/.test(s), f + ': 20초 정기 조회로 돌아감');
-  assert(/\},\s*180000\);/.test(s), f + ': 3분 정기 조회가 없음');
+  assert(/\},\s*600000\);/.test(s), f + ': 10분 정기 조회가 없음');
   assert(/setInterval\(async \(\)=>\{\s*\n\s*if\(document\.hidden\) return;/.test(s), f + ': 숨겨진 탭에서도 정기 조회함');
   assert(s.includes("scheduleRealtimeSync({throttle:true})"), f + ': 창 전환 갱신 제한 없음');
   assert(/function closeStream\(\)/.test(s) && /if\(document\.hidden \|\| es\) return;/.test(s), f + ': 숨겨진 탭의 실시간 연결을 닫지 않음');

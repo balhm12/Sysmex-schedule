@@ -3598,7 +3598,7 @@ else window.addEventListener('DOMContentLoaded', renderBuildStamp);
     _lastLoadAt = Date.now();
     await loadStorage();
     render();
-  }, 180000);   // 실시간 연결이 변경을 알려 주므로 정기 조회는 안전망(3분)
+  }, 600000);   // 실시간 연결이 변경을 알려 주므로 정기 조회는 안전망(10분). 창에 돌아오면 1분 제한으로 바로 갱신
 })();
 </script>
 </body>
