@@ -37,12 +37,12 @@
   .app{max-width:1180px;margin:0 auto;padding:28px 20px 60px;}
 
   .header{
-    background:linear-gradient(120deg,var(--navy) 0%, var(--navy-deep) 100%);
+    background:var(--navy);
     border-radius:12px;padding:14px 22px;color:white;
     display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;
     
   }
-  .header .eyebrow{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:700;margin-bottom:2px;}
+  .header .eyebrow{font-size:12px;color:#9CCBF0;font-weight:600;margin-bottom:2px;}
   .header h1{margin:0;font-size:18px;font-weight:700;letter-spacing:-0.01em;}
   .header p{margin:2px 0 0;color:#C9D8F5;font-size:11.5px;}
   .header-stats{display:flex;gap:16px;}
@@ -197,7 +197,7 @@
   .panel .sub{color:var(--ink-soft);font-size:12.5px;margin-bottom:16px;}
   .panel .close{float:right;border:none;background:var(--paper);width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px;color:var(--ink-soft);}
   .detail-ev{border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:4px solid;}
-  .detail-ev .cat-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;opacity:.85;}
+  .detail-ev .cat-label{font-size:10.5px;font-weight:700;opacity:.85;}
   .detail-ev .txt{font-size:13.5px;font-weight:600;margin-top:3px;line-height:1.4;}
   .detail-ev .meta{font-size:11px;margin-top:4px;opacity:.75;}
   .detail-ev.install{background:var(--c-install-bg);border-color:var(--c-install);color:#00537E;}
@@ -379,6 +379,8 @@
     .ml-sub{font-size:11.5px;margin-top:2px;opacity:.85;}
     .ml-empty{padding:14px 0 10px;text-align:center;font-size:12.5px;color:var(--ink-soft);}
   }
+  /* 장비 모델명(XN-1000 등)은 고정폭 숫자체로 */
+  .mdl{font-family:ui-monospace,"SF Mono",Consolas,"Liberation Mono",monospace;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:0;}
 </style>
 </head>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
@@ -862,6 +864,21 @@ async function saveStorage(){
   }
 }
 
+// 장비 모델명 표기: 앞부분의 모델(XN-1000, XR-9100, UF-5000 …)만 고정폭으로, 나머지 글은 그대로
+const MODEL_RE = /^([A-Za-z]{1,6}-?\d[A-Za-z0-9-]*)(.*)$/;
+function splitModel(dev){ const m = MODEL_RE.exec(String(dev||'')); return m ? [m[1], m[2]] : ['', String(dev||'')]; }
+function appendEvText(el, title, device, tail){
+  el.appendChild(document.createTextNode(title));
+  if(device){
+    el.appendChild(document.createTextNode(' '));
+    const [mdl, rest] = splitModel(device);
+    if(mdl){ const sp = document.createElement('span'); sp.className = 'mdl'; sp.textContent = mdl; el.appendChild(sp); }
+    if(rest) el.appendChild(document.createTextNode(rest));
+  }
+  if(tail) el.appendChild(document.createTextNode(tail));
+}
+function mdlHtml(device){ const [m, rest] = splitModel(device); return m ? `<span class="mdl">${escapeHtml(m)}</span>${escapeHtml(rest)}` : escapeHtml(device); }
+
 function getAllEvents(){
   const base = BASE_EVENTS
     .filter(e=>!deletedIds.has(e.id))
@@ -1009,7 +1026,7 @@ function render(){
         bar.style.left = `calc(${(r.colStart/7)*100}% + 3px)`;
         bar.style.width = `calc(${(r.colSpan/7)*100}% - 6px)`;
         bar.style.top = (r.lane*21) + 'px';
-        bar.textContent = r.title + (r.device? ' '+r.device:'') + (r.team? ' · '+r.team:'');
+        appendEvText(bar, r.title, r.device, r.team ? ' · '+r.team : '');
         bar.onclick = ()=>openDetail(r);
         barsLayer.appendChild(bar);
       });
@@ -1026,7 +1043,7 @@ function render(){
       dayEvents.forEach(e=>{
         const chip = document.createElement('div');
         chip.className = 'chip-ev ' + e.category;
-        chip.textContent = e.title + (e.device? ' '+e.device:'') + (e.team ? ` [${e.team}]` : '');
+        appendEvText(chip, e.title, e.device, e.team ? ` [${e.team}]` : '');
         chip.onclick = ()=>openDetail(e);
         cell.appendChild(chip);
       });
@@ -1067,7 +1084,7 @@ function renderMonthList(EVENTS){
     }
     const btn = mk('button','ml-item '+e.category);
     btn.type = 'button';
-    btn.appendChild(mk('div','ml-name', e.title + (e.device ? ' '+e.device : '')));
+    { const nm = mk('div','ml-name'); appendEvText(nm, e.title, e.device, ''); btn.appendChild(nm); }
     const bits = [CAT_SHORT[e.category] || CATS[e.category].label];
     if(e.team) bits.push(e.team);
     if(e.start!==e.end) bits.push(e.start.slice(5).replace('-','/') + '~' + e.end.slice(5).replace('-','/'));
@@ -1104,7 +1121,7 @@ function openDetail(e){
     <div class="sub">${isRange ? e.start+' ~ '+e.end : e.start}</div>
     <div class="detail-ev ${e.category}">
       <div class="cat-label">${CAT_SHORT[e.category] || CATS[e.category].label}</div>
-      <div class="txt">${escapeHtml(e.device || e.title)}</div>
+      <div class="txt">${e.device ? mdlHtml(e.device) : escapeHtml(e.title)}</div>
       ${meta}
       <div class="detail-actions">
         <button class="btn-edit">수정</button>
@@ -1711,7 +1728,7 @@ function renderSearchResults(){
     item.className = 'search-result-item';
     const dateTxt = (e.start!==e.end ? `${e.start} ~ ${e.end}` : fmtDateLabel(e.start));
     const catLabel = CATS[e.category] ? (CAT_SHORT[e.category] || CATS[e.category].label) : e.category;
-    item.innerHTML = `<div class="sr-title">${escapeHtml(e.title)}${e.device? ' · '+escapeHtml(e.device) : ''}</div>
+    item.innerHTML = `<div class="sr-title">${escapeHtml(e.title)}${e.device? ' · '+mdlHtml(e.device) : ''}</div>
       <div class="sr-meta">${catLabel} · ${dateTxt}${e.team? ' · '+escapeHtml(e.team) : ''}</div>`;
     item.onclick = ()=>{
       const [y,m] = e.start.split('-').map(Number);
