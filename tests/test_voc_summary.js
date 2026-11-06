@@ -27,6 +27,14 @@ assert.deepStrictEqual([east.n, east.visits, east.responseRate], [3, 20, 10], 'E
 assert.deepStrictEqual(s.keywords['친절'], { n: 2, pct: 40 }, '서술형 5건 중 2건'); assert.strictEqual(s.keywords['설명'].n, 2); assert.strictEqual(s.keywords['꼼꼼'].n, 1);
 assert.strictEqual(s.visitAsOf, '2026-09-20'); assert.strictEqual(s.firstDay, '2026-09-01');
 assert.strictEqual(summarizeVoc(data, ['2026-07']).n, 0, '응답 없는 기간');
+{ // 저점수 기준 날짜 전환: 10월까지 ≤2, 11월부터 ≤3
+  const d2 = { total: { '2026-10': 10, '2026-11': 10 }, visits: {}, recs: [
+    rec('2026-10-31 09:00', 'FS EAST', 'A', 'H1', 3, 5, 5), rec('2026-10-30 09:00', 'FS EAST', 'A', 'H2', 2, 5, 5),
+    rec('2026-11-01 09:00', 'FS EAST', 'B', 'H3', 3, 5, 5), rec('2026-11-02 09:00', 'FS EAST', 'B', 'H4', 4, 4, 4) ] };
+  assert.strictEqual(summarizeVoc(d2, ['2026-10']).low, 1, '10월: 3점은 저점수 아님, 2점만');
+  assert.strictEqual(summarizeVoc(d2, ['2026-11']).low, 1, '11월: 3점 이하');
+  assert.strictEqual(summarizeVoc(d2, ['2026-10', '2026-11']).low, 2, '두 달 합산은 날짜별 기준');
+}
 assert.deepStrictEqual(summarizeVoc(data, ['2026-08', '2026-09']).months, ['2026-08', '2026-09'], '여러 달 합산');
 assert.strictEqual(summarizeVoc(data, ['2026-08', '2026-09']).n, 7);
 // CLI: --file 로 읽고, 같은 폴더의 report-data 에 satisfaction 으로 합쳐 넣는다

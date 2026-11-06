@@ -22,7 +22,7 @@
 | 저장·동기화 로직, Firebase 쓰기 | `firebase-shared-web-app` |
 | 만족도 지표·VOC 집계 | `fsg-voc-survey-system`, `voc-survey-monthly-metrics` |
 | KPI 탭·지표·가중치 | `fsg-kpi-dashboard` |
-| 팀·직급·거주지 명단 | `fsg-roster` |
+| 거주지·담당 지역 명단 (팀·직급·진급 이력·신입의 원본은 `fsg-kpi.html` 의 ROSTER·GRADE_HIST·NEWBIE, csv 는 사본) | `fsg-roster` |
 | 여러 단계 작업, 이어서 하기 | GSD `/gsd-next` |
 
 ## 스킬 비교·갱신 규칙 (모든 작업 공통, 2026-11-06 사용자 지시)

@@ -6,6 +6,9 @@
 const round = (v, d) => v == null ? null : Math.round(v * Math.pow(10, d)) / Math.pow(10, d);
 const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
 const TEAMS = ['FS EAST', 'FS WEST', 'FS SOUTH', 'FS CENTRAL'];
+// 저점수 기준: 2026-11-01 응답부터 3점 이하, 그 전은 2점 이하 — voc-dashboard.html(LOW_MAX*)·Apps Script와 같은 날짜 전환 규칙
+const LOW_MAX = 3, LOW_MAX_PREV = 2, LOW_MAX_FROM = '2026-11-01';
+const lowMaxAt = ts => String(ts || '').slice(0, 10) >= LOW_MAX_FROM ? LOW_MAX : LOW_MAX_PREV;
 const DEFAULT_KEYWORDS = ['친절', '신속', '설명', '꼼꼼'];
 
 function summarizeVoc(data, months, opt) {
@@ -17,7 +20,7 @@ function summarizeVoc(data, months, opt) {
   const visitsFor = t => months.reduce((s, m) => s + (t === 'ALL' ? ((data.total || {})[m] || 0) : (((data.visits || {})[t] || {})[m] || 0)), 0);
   const stats = (R, v) => {
     const n = R.length, q = [1, 2, 3].map(i => mean(R.map(r => r['q' + i]).filter(x => x != null)));
-    const perfect = R.filter(r => r.avg === 5).length, low = R.filter(r => Math.min(r.q1, r.q2, r.q3) <= 2).length;
+    const perfect = R.filter(r => r.avg === 5).length, low = R.filter(r => Math.min(r.q1, r.q2, r.q3) <= lowMaxAt(r.ts)).length;
     const resp = visitCount(R);
     return { n, visits: v, respondedVisits: resp, responseRate: v ? round(100 * resp / v, 1) : null, avg: round(mean(R.map(r => r.avg).filter(x => x != null)), 2), q: q.map(x => round(x, 2)),
       perfect, perfectPct: n ? round(100 * perfect / n, 1) : null, low, comments: R.filter(r => r.comment && String(r.comment).trim()).length, flag: R.filter(r => r.flag).length };

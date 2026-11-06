@@ -11,7 +11,7 @@
 
 못 막는다 (2단계 이후)
 - 익명 로그인을 한 사람이 **한 건씩** 고치거나 지우는 것. 페이지 주소와 API 키가 공개라 익명 로그인은 누구나 된다.
-- `voc-dashboard`, `kpi-dashboard` 쓰기: 쓰는 쪽(Apps Script, 관리자 로그인)을 코드에서 확인하지 못해 지금 동작 그대로 둠.
+- `voc-dashboard`, `kpi-dashboard` 쓰기: 쓰는 쪽을 코드에서 확인하지 못해 지금 동작 그대로 둠. 만족도는 Apps Script 가 데이터베이스 비밀(`FIREBASE_SECRET`, 규칙을 건너뜀)로 `/voc-dashboard/data` 와 `/voc-dashboard-backups/{날짜}` 에 쓴다(비밀이 비어 있으면 `auth != null` 규칙에서 쓰기가 실패). 스크립트 속성에 비밀이 있는지는 사용자만 확인할 수 있다. `/voc-dashboard-backups` 는 30일 정리 코드가 없어 쌓인다.
 
 ## 적용 순서
 1. Firebase 콘솔 → `sysmex-system-schedule` 프로젝트 → Realtime Database → **규칙** 탭
@@ -27,7 +27,7 @@
 - 설치일정의 옛 배열 형식 자동 정리(`saveStorage`): 지금 데이터는 이미 새 형식이라 실행되지 않음
 
 ## 규칙 검증
-`npm test` → `tests/test_db_rules.js` 가 규칙을 그대로 돌려 58가지를 확인한다(허용·거부).
+`npm test` → `tests/test_db_rules.js` 가 규칙(1·2단계)을 그대로 돌려 71가지를 확인한다(허용·거부).
 규칙을 고치려면 `firebase/` 의 JSON을 직접 고치고 테스트를 맞춘다.
 
 ## 2단계: KPI 쓰기를 관리자 1명으로 제한 — `database.rules.stage2.json`
