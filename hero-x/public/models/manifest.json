@@ -1,0 +1,8 @@
+{
+  "_설명": "정식 3D 모델(.glb)을 이 폴더에 넣고 아래에 파일 이름을 적으면 게임이 그 모델을 씁니다. null 이면 코드로 그린 임시 모델을 씁니다. 자세한 방법은 README.md 참고.",
+  "player": null,
+  "_설명_player": "null = 코드로 만든 매끈한 카툰 아들 캐릭터(src/player/models/HeroModel.ts, 기본). 파일로 바꾸려면 { \"file\": \"player-chibi.glb\" }(둥근 복셀) / { \"file\": \"player-knight.glb\", \"defaultParts\": [\"1H_Sword\", \"Round_Shield\"] }(KayKit 기사, CC0) / { \"file\": \"player.glb\" }(각진 복셀).",
+  "enemies": {},
+  "bosses": {},
+  "_설명_enemies": "enemies/bosses 를 비우면 매끈한 카툰 코드 모델(src/enemies/SmoothEnemyModels.ts, SmoothBossModels.ts)을 씁니다. 복셀 파일을 다시 쓰려면 예: \"enemies\": { \"rusher\": { \"file\": \"monster-rusher.glb\" } }, \"bosses\": { \"guardian\": { \"file\": \"boss-guardian.glb\" } }. 'robot-*' 항목은 적 배치(spawns)의 skin."
+}

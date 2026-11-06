@@ -1,0 +1,161 @@
+import type { InstallHint } from '../pwa/installHint';
+import { difficultyLevels, getDifficultyPreset } from '../game/Difficulty';
+import { GameConfig, type DifficultyLevel } from '../game/GameConfig';
+
+export interface MainMenuCallbacks {
+  /** 새 게임 시작 (진행 중인 게임이 있으면 확인을 거친다) */
+  newGame: () => void;
+  /** 진행 중인 게임으로 돌아가기 */
+  continueGame: () => void;
+  openInventory: () => void;
+  openGuide: () => void;
+  openSettings: () => void;
+  /** 던전 선택 화면 열기 (이어갈 진행이 있을 때) */
+  openDungeons: () => void;
+  /** 인트로 연출 보기 */
+  playIntro: () => void;
+  /** 멈춰 둔 던전이 있는지 */
+  hasRun: () => boolean;
+  /** 이어갈 진행(멈춘 던전 또는 저장된 성장)이 있는지 (이어하기 버튼 활성화, 새 게임 확인창) */
+  hasProgress: () => boolean;
+  /** 메뉴에 보여줄 진행 요약 (없으면 빈 문자열) */
+  progressText: () => string;
+  /** 저장 상태 문구 */
+  saveNote: () => string;
+  /** 설치 안내 종류 ('prompt' 버튼 / 'ios' 안내 / 그 밖 숨김) */
+  installHint: () => InstallHint;
+  /** 설치 프롬프트 띄우기 */
+  installApp: () => Promise<unknown>;
+  difficulty: { get: () => DifficultyLevel; set: (level: DifficultyLevel) => void };
+}
+
+/**
+ * 메인 메뉴
+ * - 게임을 켜면 가장 먼저 보이고, 플레이 중 Esc 로 돌아올 수 있다.
+ * - 새 게임 / 이어하기 / 장비 / 조작 안내 / 설정 / 난이도
+ * - 진행 요약과 저장 상태(마지막 저장 시각, 손상 안내)를 보여준다.
+ * - 브라우저 게임이라 '게임 종료' 대신 탭을 닫으면 된다는 안내만 둔다.
+ */
+export class MainMenu {
+  private readonly el: HTMLDivElement;
+  private confirming = false;
+
+  constructor(parent: HTMLElement, private readonly cb: MainMenuCallbacks) {
+    const meta = GameConfig.meta;
+    const diffButtons = difficultyLevels()
+      .map((lv) => `<button type="button" class="diff-btn" data-level="${lv}">${getDifficultyPreset(lv).label}</button>`)
+      .join('');
+    this.el = document.createElement('div');
+    this.el.className = 'guide menu';
+    this.el.innerHTML = `
+      <div class="guide-panel menu-panel" role="dialog" aria-labelledby="menu-title">
+        <p class="guide-eyebrow">3D 액션 RPG</p>
+        <h1 class="guide-title" id="menu-title">${meta.title.replace(' X', ' <em>X</em>')}</h1>
+        <p class="guide-sub">${meta.subtitle} · v${meta.version}</p>
+        <p class="menu-progress" id="menu-progress" hidden></p>
+        <div class="menu-list">
+          <button class="btn" id="menu-new" type="button">새 게임</button>
+          <button class="btn secondary" id="menu-continue" type="button">이어하기</button>
+          <button class="btn secondary" id="menu-dungeons" type="button">던전 선택</button>
+          <button class="btn secondary" id="menu-inventory" type="button">장비</button>
+          <button class="btn secondary" id="menu-guide" type="button">조작 안내</button>
+          <button class="btn secondary" id="menu-settings" type="button">설정</button>
+          <button class="btn secondary" id="menu-intro" type="button">인트로 보기</button>
+          <button class="btn secondary" id="menu-install" type="button" hidden>📱 앱으로 설치</button>
+        </div>
+        <div class="menu-install-hint" id="menu-install-hint" hidden>
+          <p><b>iPhone·iPad</b>: Safari 아래쪽 <b>공유</b>(네모에서 화살표가 나오는 모양) → <b>홈 화면에 추가</b>를 누르면 앱처럼 전체 화면으로 열립니다.</p>
+          <div class="btns"><button class="btn small ghost" id="menu-install-hint-close" type="button">닫기</button></div>
+        </div>
+        <div class="diff-row"><span class="hud-label">난이도</span>${diffButtons}</div>
+        <div class="menu-confirm" id="menu-confirm" hidden>
+          <p>이어갈 진행이 있습니다. 새로 시작하면 레벨·골드·장비·기록이 초기화되고 저장 데이터도 새로 씁니다. 계속할까요?</p>
+          <div class="btns"><button class="btn small" id="menu-confirm-yes" type="button">새로 시작</button><button class="btn small ghost" id="menu-confirm-no" type="button">취소</button></div>
+        </div>
+        <p class="guide-note">던전마다 적을 모두 처치하면 보스가 나타나고, 보스를 쓰러뜨리면 클리어되어 다음 던전이 열립니다. 게임을 끝내려면 브라우저 탭을 닫으세요.</p>
+        <p class="menu-save" id="menu-save"></p>
+      </div>`;
+    parent.appendChild(this.el);
+    const q = <T extends HTMLElement>(sel: string) => this.el.querySelector(sel) as T;
+    q<HTMLButtonElement>('#menu-new').addEventListener('click', () => {
+      if (this.cb.hasProgress()) this.setConfirm(true);
+      else this.cb.newGame();
+    });
+    q<HTMLButtonElement>('#menu-confirm-yes').addEventListener('click', () => {
+      this.setConfirm(false);
+      this.cb.newGame();
+    });
+    q<HTMLButtonElement>('#menu-confirm-no').addEventListener('click', () => this.setConfirm(false));
+    q<HTMLButtonElement>('#menu-continue').addEventListener('click', () => this.cb.continueGame());
+    q<HTMLButtonElement>('#menu-inventory').addEventListener('click', () => this.cb.openInventory());
+    q<HTMLButtonElement>('#menu-guide').addEventListener('click', () => this.cb.openGuide());
+    q<HTMLButtonElement>('#menu-settings').addEventListener('click', () => this.cb.openSettings());
+    q<HTMLButtonElement>('#menu-dungeons').addEventListener('click', () => this.cb.openDungeons());
+    q<HTMLButtonElement>('#menu-intro').addEventListener('click', () => this.cb.playIntro());
+    q<HTMLButtonElement>('#menu-install').addEventListener('click', () => {
+      const hint = this.cb.installHint();
+      if (hint === 'ios') q<HTMLElement>('#menu-install-hint').hidden = false;
+      else void this.cb.installApp();
+    });
+    q<HTMLButtonElement>('#menu-install-hint-close').addEventListener('click', () => (q<HTMLElement>('#menu-install-hint').hidden = true));
+    this.el.querySelectorAll<HTMLButtonElement>('.diff-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.cb.difficulty.set(btn.dataset.level as DifficultyLevel);
+        this.refresh();
+      });
+    });
+    this.refresh();
+  }
+
+  get visible(): boolean {
+    return !this.el.hidden;
+  }
+
+  private setConfirm(on: boolean): void {
+    this.confirming = on;
+    (this.el.querySelector('#menu-confirm') as HTMLElement).hidden = !on;
+  }
+
+  /** 버튼 상태(이어하기 가능 여부, 난이도 선택 표시) 갱신 */
+  refresh(): void {
+    const hasRun = this.cb.hasRun();
+    const hasProgress = this.cb.hasProgress();
+    const cont = this.el.querySelector('#menu-continue') as HTMLButtonElement;
+    cont.disabled = !hasProgress;
+    cont.textContent = hasRun ? '이어하기' : hasProgress ? '이어하기 (던전 선택)' : '이어하기';
+    cont.title = hasProgress ? '' : '이어갈 진행이 없습니다';
+    const dg = this.el.querySelector('#menu-dungeons') as HTMLButtonElement;
+    dg.disabled = !hasProgress;
+    dg.title = hasProgress ? '' : '새 게임을 먼저 시작하세요';
+    const progress = this.el.querySelector('#menu-progress') as HTMLElement;
+    const text = this.cb.progressText();
+    progress.textContent = text;
+    progress.hidden = text === '';
+    (this.el.querySelector('#menu-save') as HTMLElement).textContent = this.cb.saveNote();
+    const hint = this.cb.installHint();
+    const install = this.el.querySelector('#menu-install') as HTMLButtonElement;
+    install.hidden = hint === 'standalone' || hint === 'none';
+    install.textContent = hint === 'ios' ? '📱 홈 화면에 추가하는 법' : '📱 앱으로 설치';
+    const current = this.cb.difficulty.get();
+    this.el.querySelectorAll<HTMLButtonElement>('.diff-btn').forEach((btn) => btn.setAttribute('aria-pressed', String(btn.dataset.level === current)));
+  }
+
+  show(): void {
+    this.setConfirm(false);
+    this.refresh();
+    this.el.hidden = false;
+  }
+
+  hide(): void {
+    this.el.hidden = true;
+  }
+
+  /** Enter 키: 확인 중이면 새로 시작, 아니면 이어하기(있으면) 또는 새 게임 */
+  pressPrimary(): void {
+    if (this.confirming) {
+      this.setConfirm(false);
+      this.cb.newGame();
+    } else if (this.cb.hasProgress()) this.cb.continueGame();
+    else this.cb.newGame();
+  }
+}
