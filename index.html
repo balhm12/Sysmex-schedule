@@ -38,27 +38,27 @@
 
   .header{
     background:linear-gradient(120deg,var(--navy) 0%, var(--navy-deep) 100%);
-    border-radius:14px;padding:14px 22px;color:white;
+    border-radius:12px;padding:14px 22px;color:white;
     display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;
-    box-shadow:0 6px 18px -10px rgba(0,48,135,0.4);
+    
   }
   .header .eyebrow{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:700;margin-bottom:2px;}
-  .header h1{margin:0;font-size:18px;font-weight:800;letter-spacing:-0.01em;}
+  .header h1{margin:0;font-size:18px;font-weight:700;letter-spacing:-0.01em;}
   .header p{margin:2px 0 0;color:#C9D8F5;font-size:11.5px;}
   .header-stats{display:flex;gap:16px;}
   .stat{text-align:right;}
-  .stat .num{font-size:17px;font-weight:800;color:white;}
+  .stat .num{font-size:17px;font-weight:700;color:white;}
   .stat .lbl{font-size:10px;color:#AFC3EF;}
 
   .controls{display:flex;justify-content:space-between;align-items:center;margin-top:22px;flex-wrap:wrap;gap:14px;}
   .month-nav{display:flex;align-items:center;gap:14px;background:white;border:1px solid var(--line);
-    border-radius:12px;padding:8px 10px;box-shadow:0 2px 8px rgba(20,40,90,0.04);}
+    border-radius:12px;padding:8px 10px;}
   .month-nav button{
-    width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--paper);
+    width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--paper);
     color:var(--navy);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;
   }
   .month-nav button:hover{background:var(--blue-soft);border-color:var(--blue);}
-  .month-nav .label{font-size:17px;font-weight:800;color:var(--navy);min-width:130px;text-align:center;}
+  .month-nav .label{font-size:17px;font-weight:700;color:var(--navy);min-width:130px;text-align:center;}
   .month-nav .today-btn{
     margin-left:6px;font-size:12px;font-weight:700;color:var(--blue);background:var(--blue-soft);
     border:1px solid var(--blue);border-radius:8px;padding:6px 10px;cursor:pointer;width:auto;height:auto;
@@ -67,13 +67,13 @@
 
   .search-wrap{position:relative;flex:1 1 220px;min-width:180px;max-width:320px;}
   .search-input{
-    width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:10px;
+    width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:8px;
     font-size:16px;font-family:inherit;color:var(--ink);background:white; /* 16px 미만이면 iOS 가 입력 때 화면을 확대한다 */
   }
   .search-input:focus{outline:none;border-color:var(--blue);}
   .search-results{
     position:absolute;top:calc(100% + 6px);left:0;right:0;background:white;
-    border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px -10px rgba(20,40,90,0.25);
+    border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px -10px rgba(20,40,90,0.25);
     max-height:320px;overflow-y:auto;z-index:40;display:none;
   }
   .search-results.show{display:block;}
@@ -88,7 +88,7 @@
 
   .client-suggest{
     position:absolute;top:100%;left:0;right:0;background:white;
-    border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px -10px rgba(20,40,90,0.25);
+    border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px -10px rgba(20,40,90,0.25);
     max-height:220px;overflow-y:auto;z-index:70;display:none;margin-top:4px;
   }
   .client-suggest.show{display:block;}
@@ -125,14 +125,14 @@
 
   .add-btn{
     display:flex;align-items:center;gap:6px;background:var(--navy);color:white;border:none;
-    border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;
-    box-shadow:0 4px 14px -6px rgba(0,48,135,0.5);transition:.15s;
+    border-radius:8px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;
+    transition:.15s;
   }
   .add-btn:hover{background:var(--navy-deep);}
 
   .cal-card{
-    background:white;border:1px solid var(--line);border-radius:18px;margin-top:18px;
-    overflow:hidden;box-shadow:0 6px 24px -14px rgba(20,40,90,0.15);
+    background:white;border:1px solid var(--line);border-radius:12px;margin-top:18px;
+    overflow:hidden;
   }
   .weekday-row{display:grid;grid-template-columns:repeat(7,1fr);background:var(--navy);}
   .weekday-row div{padding:11px 0;text-align:center;font-size:12.5px;font-weight:700;color:#CFE0FF;letter-spacing:.03em;}
@@ -157,7 +157,7 @@
     padding:1px 4px;margin-left:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70px;
   }
   .add-day-btn{
-    width:20px;height:20px;border-radius:6px;border:none;background:var(--paper);color:var(--ink-soft);
+    width:20px;height:20px;border-radius:4px;border:none;background:var(--paper);color:var(--ink-soft);
     font-size:13px;line-height:1;cursor:pointer;opacity:.5;transition:.12s;display:flex;align-items:center;justify-content:center;
     -webkit-tap-highlight-color:transparent;
   }
@@ -166,9 +166,9 @@
 
   .bars-layer{position:absolute;left:0;right:0;pointer-events:none;}
   .bar{
-    position:absolute;height:18px;border-radius:6px;font-size:10.5px;font-weight:700;line-height:18px;padding:0 8px;
+    position:absolute;height:18px;border-radius:4px;font-size:10.5px;font-weight:700;line-height:18px;padding:0 8px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:auto;cursor:pointer;color:white;
-    box-shadow:0 1px 3px rgba(0,0,0,0.15);
+    
   }
   .bar.install{background:var(--c-install);}
   .bar.relocation{background:var(--c-relocation);}
@@ -179,7 +179,7 @@
   .chips-layer .cell{border-right:1px solid var(--line);padding:2px 6px 8px;display:flex;flex-direction:column;gap:3px;background:transparent;min-width:0;overflow:hidden;}
   .chips-layer .cell:last-child{border-right:none;}
   .chip-ev{
-    font-size:10.5px;line-height:1.3;padding:3px 6px;border-radius:6px;font-weight:600;
+    font-size:10.5px;line-height:1.3;padding:3px 6px;border-radius:4px;font-weight:600;
     white-space:normal;word-break:break-word;overflow-wrap:break-word;border-left:3px solid;cursor:pointer;max-width:100%;
   }
   .chip-ev.evaluation{background:var(--c-eval-bg);color:#4B3585;border-color:var(--c-eval);}
@@ -190,14 +190,14 @@
   .overlay{position:fixed;inset:0;background:rgba(10,20,45,0.45);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
   .overlay.show{display:flex;}
   .panel{
-    background:white;border-radius:16px;max-width:460px;width:100%;max-height:85vh;overflow:auto;
+    background:white;border-radius:12px;max-width:460px;width:100%;max-height:85vh;overflow:auto;
     padding:22px 24px;box-shadow:0 24px 60px -20px rgba(0,20,60,0.5);
   }
   .panel h3{margin:0 0 4px;color:var(--navy);font-size:18px;}
   .panel .sub{color:var(--ink-soft);font-size:12.5px;margin-bottom:16px;}
   .panel .close{float:right;border:none;background:var(--paper);width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px;color:var(--ink-soft);}
-  .detail-ev{border-radius:10px;padding:10px 12px;margin-bottom:10px;border-left:4px solid;}
-  .detail-ev .cat-label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;opacity:.85;}
+  .detail-ev{border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:4px solid;}
+  .detail-ev .cat-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;opacity:.85;}
   .detail-ev .txt{font-size:13.5px;font-weight:600;margin-top:3px;line-height:1.4;}
   .detail-ev .meta{font-size:11px;margin-top:4px;opacity:.75;}
   .detail-ev.install{background:var(--c-install-bg);border-color:var(--c-install);color:#00537E;}
@@ -206,13 +206,13 @@
   .detail-ev.holiday{background:var(--c-holiday-bg);border-color:var(--c-holiday);color:#A21E1E;}
   .detail-actions{display:flex;gap:6px;margin-top:8px;}
   .detail-actions button{
-    font-size:11px;font-weight:700;border:none;border-radius:7px;padding:5px 10px;cursor:pointer;
+    font-size:11px;font-weight:700;border:none;border-radius:8px;padding:5px 10px;cursor:pointer;
   }
   .btn-edit{background:rgba(255,255,255,0.7);color:inherit;}
   .btn-delete{background:rgba(217,59,59,0.15);color:#A21E1E;}
 
   .panel-add-btn{
-    display:block;width:100%;margin-top:4px;padding:10px;border-radius:10px;border:1.5px dashed var(--line);
+    display:block;width:100%;margin-top:4px;padding:10px;border-radius:8px;border:1.5px dashed var(--line);
     background:var(--paper);color:var(--ink-soft);font-size:12.5px;font-weight:700;cursor:pointer;
   }
   .panel-add-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-soft);}
@@ -237,25 +237,26 @@
   .cat-opt.sel[data-cat="evaluation"]{background:var(--c-eval);border-color:var(--c-eval);color:white;}
   .cat-opt.sel[data-cat="holiday"]{background:var(--c-holiday);border-color:var(--c-holiday);color:white;}
   .form-actions{display:flex;gap:8px;margin-top:18px;}
-  .form-actions button{flex:1;padding:11px;border-radius:9px;border:none;font-size:13.5px;font-weight:700;cursor:pointer;}
+  .form-actions button{flex:1;padding:11px;border-radius:8px;border:none;font-size:13.5px;font-weight:700;cursor:pointer;}
   .btn-save{background:var(--navy);color:white;}
   .btn-save:hover{background:var(--navy-deep);}
   .btn-cancel{background:var(--paper);color:var(--ink-soft);border:1.5px solid var(--line) !important;}
   .save-toast{
     position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--navy);color:white;
-    padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 10px 30px -10px rgba(0,0,0,0.4);
+    padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 10px 30px -10px rgba(0,0,0,0.4);
     z-index:60;opacity:0;pointer-events:none;transition:opacity .25s;
   }
   .save-toast.show{opacity:1;}
+  .save-toast.err{background:#B42318;}
 
   footer{margin-top:22px;text-align:center;color:var(--ink-soft);font-size:11.5px;}
 
   .guide{
-    background:white;border:1px solid var(--line);border-radius:18px;margin-top:20px;
-    padding:24px 26px 22px;box-shadow:0 6px 24px -14px rgba(20,40,90,0.1);
+    background:white;border:1px solid var(--line);border-radius:12px;margin-top:20px;
+    padding:24px 26px 22px;
   }
   .guide-title{
-    font-size:15px;font-weight:800;color:var(--navy);margin-bottom:16px;
+    font-size:15px;font-weight:700;color:var(--navy);margin-bottom:16px;
     display:flex;align-items:center;gap:8px;
   }
   .guide-title::before{content:"";width:4px;height:16px;background:var(--blue);border-radius:2px;}
@@ -264,7 +265,7 @@
     background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 15px;
   }
   .guide-icon{font-size:18px;margin-bottom:6px;}
-  .guide-h{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:5px;}
+  .guide-h{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:5px;}
   .guide-d{font-size:11.8px;line-height:1.55;color:var(--ink-soft);}
   .guide-item.warn{background:var(--c-relocation-bg);border-color:var(--c-relocation);}
   .guide-item.warn .guide-h{color:#8C4E0C;}
@@ -328,7 +329,7 @@
     .chip-ev{font-size:9px;padding:2px 4px;}
     .chips-layer .cell{padding:1px 3px 6px;}
 
-    .panel{padding:18px 16px;border-radius:14px;}
+    .panel{padding:18px 16px;border-radius:12px;}
     .panel h3{font-size:16px;}
     .form-row input[type=text], .form-row input[type=date], .form-row select{
       font-size:16px; /* prevents iOS Safari auto-zoom on focus */
@@ -348,7 +349,7 @@
 
   .app-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
   .app-nav a{
-    flex:0 0 auto;padding:8px 16px;border-radius:10px;font-size:12.5px;font-weight:700;
+    flex:0 0 auto;padding:8px 16px;border-radius:8px;font-size:12.5px;font-weight:700;
     text-decoration:none;border:1.5px solid var(--line);color:var(--ink-soft);background:white;transition:.15s;
   }
   .app-nav a:hover{border-color:var(--blue);color:var(--blue);}
@@ -365,9 +366,9 @@
   @media(max-width:600px){
     .month-list{display:block;background:white;border:1px solid var(--line);border-radius:12px;margin-top:14px;padding:14px 12px 6px;}
     .ml-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px;}
-    .ml-title{font-size:14px;font-weight:800;color:var(--navy);}
+    .ml-title{font-size:14px;font-weight:700;color:var(--navy);}
     .ml-count{font-size:12px;color:var(--ink-soft);}
-    .ml-day{font-size:12px;font-weight:800;color:var(--ink-soft);margin:12px 0 5px;}
+    .ml-day{font-size:12px;font-weight:700;color:var(--ink-soft);margin:12px 0 5px;}
     .ml-day.sun{color:#D93B3B;} .ml-day.sat{color:#0A6BC7;}
     .ml-item{display:flex;flex-direction:column;width:100%;min-height:44px;margin-bottom:6px;padding:8px 10px;border:0;
       border-left:4px solid;border-radius:8px;text-align:left;font-family:inherit;cursor:pointer;}
@@ -387,10 +388,10 @@
 <body>
 <div class="app">
   <div class="app-nav">
-    <a href="index.html" class="active">🏥 설치일정</a>
-    <a href="work-schedule.html">📅 근무일정</a>
-    <a href="voc-dashboard.html">📊 만족도</a>
-    <a href="fsg-kpi.html">📈 KPI</a>
+    <a href="index.html" class="active">설치일정</a>
+    <a href="work-schedule.html">근무일정</a>
+    <a href="voc-dashboard.html">만족도</a>
+    <a href="fsg-kpi.html">KPI</a>
   </div>
 
   <div class="header">
@@ -404,7 +405,7 @@
   </div>
 
   <div class="config-banner" id="configBanner" style="display:none;background:#FFF4E5;border:1.5px solid #E8871E;border-radius:12px;padding:12px 16px;margin-top:16px;font-size:12.5px;color:#8C4E0C;line-height:1.6;">
-    ⚠ <b>공유 저장소가 아직 연결되지 않았습니다.</b> 지금은 일정을 추가/수정해도 이 브라우저를 벗어나면 사라집니다.
+    <b>공유 저장소가 아직 연결되지 않았습니다.</b> 지금은 일정을 추가/수정해도 이 브라우저를 벗어나면 사라집니다.
     함께 안내드린 설정 가이드를 따라 <code>FIREBASE_URL</code> 값을 채워 넣으면 팀 전체가 실시간으로 공유할 수 있습니다.
   </div>
 
@@ -416,14 +417,14 @@
       <button class="today-btn" id="todayBtn">오늘</button>
     </div>
     <div class="search-wrap" id="searchWrap">
-      <input type="text" id="searchInput" class="search-input" placeholder="🔍 병원명, 담당자, 담당팀 검색">
+      <input type="text" id="searchInput" class="search-input" placeholder="병원명, 담당자, 담당팀 검색">
       <div class="search-results" id="searchResults"></div>
     </div>
     <div class="right-controls">
       <div class="legend" id="teamFilter" title="선택한 팀의 일정만 표시합니다"></div>
       <div class="legend" id="legend"></div>
-      <button class="add-btn" id="managerSearchBtn" title="병원명으로 담당자를 찾습니다" style="background:white;color:var(--navy);border:1.5px solid var(--line);box-shadow:none;">👤 담당자 찾기</button>
-      <button class="add-btn" id="exportXlsxBtn" title="현재 일정을 엑셀 파일로 내보내기 (SharePoint 리스트 등에 업로드 가능)" style="background:white;color:var(--navy);border:1.5px solid var(--line);box-shadow:none;">📊 Excel 내보내기</button>
+      <button class="add-btn" id="managerSearchBtn" title="병원명으로 담당자를 찾습니다" style="background:white;color:var(--navy);border:1.5px solid var(--line);box-shadow:none;">담당자 찾기</button>
+      <button class="add-btn" id="exportXlsxBtn" title="현재 일정을 엑셀 파일로 내보내기 (SharePoint 리스트 등에 업로드 가능)" style="background:white;color:var(--navy);border:1.5px solid var(--line);box-shadow:none;">Excel 내보내기</button>
       <button class="add-btn" id="openAddBtn">+ 일정 추가</button>
     </div>
   </div>
@@ -607,10 +608,14 @@ let viewYear = _today.getFullYear(), viewMonth = _today.getMonth()+1;
 
 function showToast(msg){
   const t = document.getElementById('toast');
-  t.textContent = msg || '저장되었습니다';
+  let m = msg || '저장되었습니다';
+  const isErr = /^[⚠❌]/.test(m);
+  m = m.replace(/^[⚠❌]\s*/, '');
+  t.textContent = m;
+  t.classList.toggle('err', isErr);
   t.classList.add('show');
   clearTimeout(showToast._t);
-  showToast._t = setTimeout(()=>t.classList.remove('show'), 1600);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), isErr ? 3600 : 1600);
 }
 
 // ============================================================
@@ -824,7 +829,7 @@ async function saveStorage(){
     if(serverSize >= 10 && newSize < serverSize * 0.5){
       clearTimeout(timeoutId);
       console.error('saveStorage aborted: suspicious data shrink', {serverSize, newSize});
-      alert('⚠ 저장이 취소되었습니다.\n\n서버에는 ' + serverSize + '건의 항목이 있는데, 지금 저장하려는 내용에는 ' + newSize + '건만 있어서 데이터 손실 위험이 있습니다.\n\n브라우저를 새로고침(F5)해 최신 데이터를 먼저 불러온 후 다시 시도해주세요.');
+      alert('저장이 취소되었습니다.\n\n서버에는 ' + serverSize + '건의 항목이 있는데, 지금 저장하려는 내용에는 ' + newSize + '건만 있어서 데이터 손실 위험이 있습니다.\n\n브라우저를 새로고침(F5)해 최신 데이터를 먼저 불러온 후 다시 시도해주세요.');
       showToast('⚠ 저장 취소됨 — 브라우저 새로고침(F5) 후 다시 시도해주세요');
       return;
     }
@@ -1094,7 +1099,7 @@ function openDetail(e){
   if(e.assignee) meta += `<div class="meta">담당: ${escapeHtml(e.assignee)}</div>`;
   if(e.createdAt) meta += `<div class="meta">등록: ${fmtTimestamp(e.createdAt)}${e.creator? ' · '+escapeHtml(e.creator) : ''}</div>`;
   if(e.updatedAt && e.updatedAt !== e.createdAt) meta += `<div class="meta">최근 수정: ${fmtTimestamp(e.updatedAt)}</div>`;
-  panel.innerHTML = `<button class="close" onclick="closePanel()">✕</button>
+  panel.innerHTML = `<button class="close" onclick="closePanel()">×</button>
     <h3>${escapeHtml(e.title)}</h3>
     <div class="sub">${isRange ? e.start+' ~ '+e.end : e.start}</div>
     <div class="detail-ev ${e.category}">
@@ -1124,7 +1129,7 @@ function closePanel(){ document.getElementById('overlay').classList.remove('show
 // 바깥(배경) 클릭으로 닫히는 동작은 패널 종류에 따라 다르게 한다.
 // - 읽기용(상세보기, 담당자 찾기): 잃을 입력이 없으므로 바깥 클릭으로 닫힘 (편의)
 // - 입력용(일정 등록/수정): 실수로 바깥을 터치하면(특히 모바일) 입력 내용이
-//   통째로 사라지므로 바깥 클릭으로는 닫히지 않고 ✕/취소 버튼으로만 닫는다.
+//   통째로 사라지므로 바깥 클릭으로는 닫히지 않고 ×/취소 버튼으로만 닫는다.
 let _panelDismissable = true; // 패널을 여는 함수가 매번 설정한다
 document.getElementById('overlay').onclick = (ev)=>{
   if(ev.target.id==='overlay' && _panelDismissable) closePanel();
@@ -1139,7 +1144,7 @@ function openForm(existing, presetDate){
     title: '', device: '', team: '', assignee: ''
   };
   panel.innerHTML = `
-    <button class="close" onclick="closePanel()">✕</button>
+    <button class="close" onclick="closePanel()">×</button>
     <h3>${isEdit ? '일정 수정' : '새 일정 추가'}</h3>
     <div class="sub">${isEdit ? data.id : '필요한 정보를 입력하세요'}</div>
 
@@ -1598,7 +1603,7 @@ async function exportExcel(){
 
 async function testConnection(){
   if(!STORAGE_ENDPOINT){
-    alert('❌ FIREBASE_URL이 설정되지 않았습니다.\n\nHTML 파일에서 다음 줄을 찾아 본인의 Firebase 주소로 바꿔주세요:\nconst FIREBASE_URL = "__FIREBASE_URL__";');
+    alert('FIREBASE_URL이 설정되지 않았습니다.\n\nHTML 파일에서 다음 줄을 찾아 본인의 Firebase 주소로 바꿔주세요:\nconst FIREBASE_URL = "__FIREBASE_URL__";');
     return;
   }
   let msg = `연결 대상:\n${STORAGE_ENDPOINT}\n\n`;
@@ -1608,15 +1613,15 @@ async function testConnection(){
     const ms = Date.now()-start;
     if(res.ok){
       const data = await res.json().catch(()=>null);
-      msg += `✅ 연결 성공 (${ms}ms)\n상태 코드: ${res.status}\n`;
+      msg += `연결 성공 (${ms}ms)\n상태 코드: ${res.status}\n`;
       msg += data ? `저장된 데이터: 있음 (일정 ${((data.custom||[]).length)}건 등록됨)` : '저장된 데이터: 없음 (아직 아무도 저장한 적 없음 — 정상)';
     } else if(res.status===401 || res.status===403){
-      msg += `❌ 접근 거부됨 (상태 코드 ${res.status})\n\n원인: Firebase Realtime Database 규칙이 "테스트 모드"가 아니거나 만료되었습니다.\nFirebase 콘솔 → Realtime Database → 규칙 탭에서 read/write를 true로 설정해주세요.`;
+      msg += `접근 거부됨 (상태 코드 ${res.status})\n\n원인: Firebase Realtime Database 규칙이 "테스트 모드"가 아니거나 만료되었습니다.\nFirebase 콘솔 → Realtime Database → 규칙 탭에서 read/write를 true로 설정해주세요.`;
     } else {
-      msg += `❌ 서버 응답 오류 (상태 코드 ${res.status} ${res.statusText})\n\nFIREBASE_URL 주소가 정확한지 다시 확인해주세요.`;
+      msg += `서버 응답 오류 (상태 코드 ${res.status} ${res.statusText})\n\nFIREBASE_URL 주소가 정확한지 다시 확인해주세요.`;
     }
   }catch(err){
-    msg += `❌ 서버에 연결할 수 없습니다.\n(${err.message})\n\n가능한 원인:\n- 인터넷 연결 문제\n- 회사 방화벽/프록시가 *.firebasedatabase.app 또는 *.firebaseio.com 도메인을 차단\n- FIREBASE_URL 주소 오타\n\n회사 네트워크가 원인인지 확인하려면, 이 URL을 새 브라우저 탭에 직접 붙여넣어 열어보세요:\n${STORAGE_ENDPOINT}`;
+    msg += `서버에 연결할 수 없습니다.\n(${err.message})\n\n가능한 원인:\n- 인터넷 연결 문제\n- 회사 방화벽/프록시가 *.firebasedatabase.app 또는 *.firebaseio.com 도메인을 차단\n- FIREBASE_URL 주소 오타\n\n회사 네트워크가 원인인지 확인하려면, 이 URL을 새 브라우저 탭에 직접 붙여넣어 열어보세요:\n${STORAGE_ENDPOINT}`;
   }
   alert(msg);
 }
@@ -1625,7 +1630,7 @@ function openManagerSearch(){
   _panelDismissable = true; // 검색 편의용 — 바깥 클릭으로 닫혀도 무방
   const panel = document.getElementById('panel');
   panel.innerHTML = `
-    <button class="close" onclick="closePanel()">✕</button>
+    <button class="close" onclick="closePanel()">×</button>
     <h3>담당자 찾기</h3>
     <div class="sub">병원명(거래처명)을 입력하면 담당자를 확인할 수 있습니다.</div>
     <div class="form-row">
