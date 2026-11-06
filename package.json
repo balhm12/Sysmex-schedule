@@ -7,6 +7,7 @@
   },
   "devDependencies": {
     "jsdom": "^24.0.0",
+    "targaryen": "^3.1.0",
     "xlsx": "^0.18.5"
   }
 }
