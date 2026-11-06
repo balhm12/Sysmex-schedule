@@ -373,6 +373,17 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 @media (prefers-color-scheme:dark){.tpt tbody th,.tpb b.best,.tpt .best{color:#5AA9F0}}
 [data-theme=dark] .tpt tbody th,[data-theme=dark] .tpb b.best,[data-theme=dark] .tpt .best{color:#5AA9F0}
 [data-theme=light] .tpt tbody th,[data-theme=light] .tpb b.best,[data-theme=light] .tpt .best{color:#005BAC}
+
+/* 휴대폰: 요약 카드는 2칸으로(한 줄 1장이면 카드 4장이 화면 1.5개를 차지한다), 팀 구성 범례는 3칸 격자로 줄바꿈 정리 */
+@media (max-width:520px){
+  #prod .grid-4,#prod .grid-5{grid-template-columns:1fr 1fr;gap:10px}
+  #prod .stat{padding:12px}
+  #prod .stat .stat-value{font-size:24px}
+  #prod .stat .stat-label{font-size:12.5px}
+}
+@media (max-width:700px){
+  .glg{display:grid;grid-template-columns:repeat(3,max-content);gap:4px 12px}
+}
 </style>
 </head>
 <body>
