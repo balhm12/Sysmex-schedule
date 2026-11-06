@@ -624,13 +624,16 @@ function showToast(msg){
 // 실시간 동기화 (선택 사항, 실패해도 안전)
 // work-schedule.html과 동일한 방식: Firebase REST 스트리밍(SSE)으로
 // 변경 신호만 받고, 실제 반영은 항상 loadStorage()로 다시 받아와서 처리합니다.
-// 연결이 끊기면 자동 재연결하며, 실패해도 기존 20초 폴링이 안전망 역할을 합니다.
+// 연결이 끊기면 자동 재연결하며, 실패해도 3분 간격 정기 조회가 안전망 역할을 합니다.
 // ============================================================
 let _syncDebounceTimer = null;
-function scheduleRealtimeSync(){
+let _lastLoadAt = 0;   // 마지막으로 서버에서 전체를 받은 시각 — 창 전환 때 연달아 받지 않도록
+function scheduleRealtimeSync(opts){
+  if(opts && opts.throttle && Date.now() - _lastLoadAt < 60000) return;
   clearTimeout(_syncDebounceTimer);
   _syncDebounceTimer = setTimeout(async ()=>{
     if(document.getElementById('overlay').classList.contains('show')) return;
+    _lastLoadAt = Date.now();
     await loadStorage();
     render();
   }, 400);
@@ -638,18 +641,22 @@ function scheduleRealtimeSync(){
 function startRealtimeSync(){
   if(!STORAGE_ENDPOINT || typeof EventSource === 'undefined') return;
   let es, reconnectDelay = 2000;
+  function closeStream(){ if(es){ es.onerror = null; es.close(); es = null; } }
   function connect(){
+    if(document.hidden || es) return;   // 숨겨진 탭은 연결하지 않는다(연결마다 전체를 한 번 받는다)
     const url = STORAGE_ENDPOINT + (_idToken ? (STORAGE_ENDPOINT.indexOf('?')!==-1?'&':'?') + 'auth=' + _idToken : '');
     try{ es = new EventSource(url); }catch(e){ return; }
-    es.addEventListener('put', scheduleRealtimeSync);
-    es.addEventListener('patch', scheduleRealtimeSync);
+    let first = true;   // 연결 직후 한 번 오는 전체 전송은 이미 받은 내용이라 다시 받지 않는다
+    es.addEventListener('put', ()=>{ if(first){ first = false; return; } scheduleRealtimeSync(); });
+    es.addEventListener('patch', ()=>{ first = false; scheduleRealtimeSync(); });
     es.onopen = ()=>{ reconnectDelay = 2000; };
     es.onerror = ()=>{
-      es.close();
+      closeStream();
       setTimeout(connect, reconnectDelay);
       reconnectDelay = Math.min(reconnectDelay * 2, 30000);
     };
   }
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden) closeStream(); else connect(); });
   connect();
 }
 
@@ -744,7 +751,14 @@ function sanitizeKey(s){
 function overridesPath(subpath){
   return FIREBASE_URL + '/schedule-overrides/' + subpath + '.json';
 }
-async function backupFullSnapshot(){
+let _bkLast = 0, _bkTimer = null;
+const BACKUP_MIN_GAP = 10 * 60 * 1000;   // 전체 스냅샷은 10분에 한 번까지만(저장마다 전체를 받지 않도록). 연속 저장하면 마지막 상태로 한 번.
+function backupFullSnapshot(){
+  clearTimeout(_bkTimer);
+  const wait = Math.max(1500, BACKUP_MIN_GAP - (Date.now() - _bkLast));
+  _bkTimer = setTimeout(()=>{ _bkLast = Date.now(); doBackupFullSnapshot(); }, wait);
+}
+async function doBackupFullSnapshot(){
   try{
     const res = await fetch(STORAGE_ENDPOINT, {cache:'no-store'});
     if(res.ok){ writeDailyBackup(await res.json().catch(()=>null)); }
@@ -1770,15 +1784,17 @@ document.addEventListener('click', (ev)=>{
   // 끊어버린다. 그래서 노트북을 덮었다 열거나 다른 탭을 보다 돌아오면 한동안 옛 데이터가
   // 그대로 보일 수 있다. 화면으로 돌아온 시점과 네트워크가 복구된 시점에 즉시 다시 불러온다.
   document.addEventListener('visibilitychange', ()=>{
-    if(!document.hidden) scheduleRealtimeSync();
+    if(!document.hidden) scheduleRealtimeSync({throttle:true});
   });
-  window.addEventListener('focus', scheduleRealtimeSync);
-  window.addEventListener('online', scheduleRealtimeSync);
+  window.addEventListener('focus', ()=>scheduleRealtimeSync({throttle:true}));
+  window.addEventListener('online', ()=>scheduleRealtimeSync({throttle:true}));
   setInterval(async ()=>{
+    if(document.hidden) return;   // 안 보는 탭은 받지 않는다
     if(document.getElementById('overlay').classList.contains('show')) return; // don't disrupt active edits
+    _lastLoadAt = Date.now();
     await loadStorage();
     render();
-  }, 20000);
+  }, 180000);   // 실시간 연결이 변경을 알려 주므로 정기 조회는 안전망(3분)
 })();
 </script>
 </body>
