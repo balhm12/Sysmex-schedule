@@ -111,6 +111,9 @@ th[aria-sort="descending"]::after{content:" ▾";color:var(--accent)}
 th[aria-sort="ascending"]::after{content:" ▴";color:var(--accent)}
 td.num,th.num{text-align:right}
 .tscroll{overflow-x:auto}
+/* 옆으로 더 있는 표는 가장자리에 그림자로, 그리고 안내 글로 알린다 */
+.tscroll{background:linear-gradient(to right,var(--surface) 30%,rgba(255,255,255,0)) left center/36px 100% no-repeat local,linear-gradient(to left,var(--surface) 30%,rgba(255,255,255,0)) right center/36px 100% no-repeat local,linear-gradient(to right,rgba(0,0,0,.14),rgba(0,0,0,0)) left center/12px 100% no-repeat scroll,linear-gradient(to left,rgba(0,0,0,.14),rgba(0,0,0,0)) right center/12px 100% no-repeat scroll}
+.scroll-hint{font-size:12px;color:var(--ink-3);text-align:right;margin:4px 2px 0}
 /* 그리드 칸은 기본 min-width:auto 라 안의 표(8열) 폭만큼 늘어나 페이지가 옆으로 밀렸다 — 칸은 좁아지고 표만 .tscroll 안에서 스크롤되게 */
 .grid2>*{min-width:0}
 .panel>*{min-width:0}
@@ -360,6 +363,18 @@ const rangeLabel=()=>{
   return `${parseInt(MONTHS[0].slice(5))}–${parseInt(MONTHS[MONTHS.length-1].slice(5))}월 누적`;
 };
 
+/* 가로로 밀어야 보이는 표에 「옆으로 밀면 …」 안내를 붙이고, 한 번 밀면 숨긴다 */
+function markScroll(){
+  document.querySelectorAll('.tscroll').forEach(el=>{
+    let h=el.nextElementSibling;
+    if(!h||!h.classList.contains('scroll-hint')){
+      h=document.createElement('div');h.className='scroll-hint';h.textContent='옆으로 밀면 나머지 열이 보입니다 →';
+      el.after(h);el.addEventListener('scroll',()=>{el.dataset.scrolled='1';h.hidden=true;},{passive:true});
+    }
+    h.hidden=!(el.scrollWidth>el.clientWidth+2)||el.dataset.scrolled==='1';
+  });
+}
+window.addEventListener('resize',markScroll);
 function seg(el,opts,cur,on){el.innerHTML='';opts.forEach(([v,l])=>{const b=document.createElement('button');b.textContent=l;b.setAttribute('aria-pressed',v===cur);b.onclick=()=>on(v);el.appendChild(b);});}
 function filtered(){return DATA.recs.filter(r=>(month==='ALL'||r.month===month)&&(team==='ALL'||r.team===team));}
 function visitsFor(t,m){const ms=m==='ALL'?MONTHS:[m];if(t==='ALL')return ms.reduce((s,x)=>s+DATA.total[x],0);return ms.reduce((s,x)=>s+(DATA.visits[t]?.[x]||0),0);}
@@ -372,7 +387,7 @@ function render(){
   seg($('#segTeam'),[['ALL','전체'],...TEAMS.map(t=>[t,t.replace('FS ','')])],team,v=>{team=v;render();});
   const R=filtered();
   $('#filterHint').textContent=`${mlabel(month)} · ${team==='ALL'?'전 팀':team} · ${R.length}건`;
-  renderKPI(R);renderTeam();renderTrend(R);renderQ(R);renderBreak(R);renderFSR(R);renderVOC(R);
+  renderKPI(R);renderTeam();renderTrend(R);renderQ(R);renderBreak(R);renderFSR(R);renderVOC(R);markScroll();
 }
 $('#updated').textContent=DATA.updated;$('#hdrN').textContent=DATA.recs.length;$('#hdrV').textContent=MONTHS.reduce((s,m)=>s+DATA.total[m],0);
 
@@ -508,7 +523,8 @@ function renderMe(){
 }
 $('#fsrSearch').addEventListener('input',renderMe);
 
-let vocAll=false;
+let vocAll=false,vocExtra=0;
+const isPhoneV=()=>typeof matchMedia==='function'&&matchMedia('(max-width:600px)').matches;
 /* 테마 — Apps Script가 의견마다 붙인 다중 라벨("응대·친절, 설명·안내").
  * 분류(심각/개선요청/칭찬/단순의견)가 "조치가 필요한가"를 답한다면,
  * 테마는 "무엇에 관한 이야기인가"를 답한다. 칭찬이 대부분이라 분류만으로는
@@ -534,21 +550,21 @@ function renderVOC(R){
       present.map(t=>`<button class="tbtn" data-t="${t}" aria-pressed="${themeSel===t}">${t} <b>${cnt[t]}</b><span class="pc">${Math.round(100*cnt[t]/nThemed)}%</span></button>`).join('')+
       `<span class="hint">한 의견이 여러 테마를 가질 수 있어 합계가 ${nThemed}건을 넘습니다</span>`;
     tb.querySelectorAll('.tbtn').forEach(b=>b.onclick=()=>{
-      themeSel=b.dataset.t||null;vocAll=false;renderVOC(filtered());});
+      themeSel=b.dataset.t||null;vocAll=false;vocExtra=0;renderVOC(filtered());});
   } else tb.innerHTML='';
 
   const list=(themeSel?base.filter(r=>themesOf(r).includes(themeSel)):base)
     .sort((a,b)=>b.ts.localeCompare(a.ts));
   $('#vocHint').textContent=`${list.length}건${themeSel?` · ${themeSel}`:''} · 최신순`;
-  const lim=vocAll?list.length:24;
+  const firstN=isPhoneV()?8:24,lim=vocAll?list.length:firstN+vocExtra;
   $('#voc').innerHTML=list.length?list.slice(0,lim).map(r=>{
     const c0=cat[r.ts+'|'+r.fsr]||'';const c=c0.indexOf('심각')!==-1?'심각':c0;
     const cc=c==='칭찬'?'praise':c==='심각'?'severe':c==='개선요청'?'improve':'';
     const tw=themesOf(r);
     return `<article><div class="m"><b>${r.fsr} <span style="font-weight:400;color:var(--ink-3)">· ${r.team.replace('FS ','')}</span></b><span>${r.org}</span><span class="mono">${r.ts} · ${fmt(r.avg,1)}점</span>${c?`<span class="chip ${cc}">${c}</span>`:''}</div><p>${r.comment.replace(/</g,'&lt;')}</p>${tw.length?`<span class="tw">${tw.map(t=>`<span class="tmini">${t}</span>`).join('')}</span>`:''}</article>`;
-  }).join('')+(list.length>lim?`<button class="more" id="vocMore">나머지 ${list.length-lim}건 더 보기</button>`:'')
+  }).join('')+(list.length>lim?`<button class="more" id="vocMore">${isPhoneV()?`더 보기 · 남은 ${list.length-lim}건`:`나머지 ${list.length-lim}건 더 보기`}</button>`:'')
    :`<div class="empty">${themeSel?`"${themeSel}" 테마의 의견이 없습니다.`:'해당 조건의 서술형 의견이 없습니다.'}</div>`;
-  const mb=$('#vocMore');if(mb)mb.onclick=()=>{vocAll=true;renderVOC(filtered());};
+  const mb=$('#vocMore');if(mb)mb.onclick=()=>{if(isPhoneV()){vocExtra+=12;if(firstN+vocExtra>=list.length)vocAll=true;}else vocAll=true;renderVOC(filtered());};
 }
 
 // tooltip
@@ -556,7 +572,7 @@ const tip=$('#tip');
 document.addEventListener('mousemove',e=>{const t=e.target.closest('[data-tip]');if(t){tip.textContent=t.dataset.tip;tip.classList.add('on');tip.style.left=Math.min(e.clientX+12,innerWidth-tip.offsetWidth-8)+'px';tip.style.top=(e.clientY+14)+'px';}else tip.classList.remove('on');});
 const btn=$('#btnRefresh');
 function applyData(d){Object.keys(DATA).forEach(k=>delete DATA[k]);Object.keys(d).forEach(k=>DATA[k]=d[k]);
-  $('#updated').textContent=DATA.updated;$('#hdrN').textContent=DATA.recs.length;$('#hdrV').textContent=Object.keys(DATA.total).reduce((s,m)=>s+DATA.total[m],0);vocAll=false;
+  $('#updated').textContent=DATA.updated;$('#hdrN').textContent=DATA.recs.length;$('#hdrV').textContent=Object.keys(DATA.total).reduce((s,m)=>s+DATA.total[m],0);vocAll=false;vocExtra=0;vocExtra=0;
   const sn=$('#scopeNote');
   const parts=[];
   if(DATA.startMonth) parts.push(`집계 대상: ${parseInt(DATA.startMonth.slice(5))}월부터 (${parseInt(DATA.startMonth.slice(5))-1}월은 시범운영 기간이라 제외).`);
