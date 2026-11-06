@@ -485,6 +485,18 @@
     .app-nav{gap:6px;}
     .app-nav a{padding:8px 11px;font-size:12px;}
   }
+
+  /* 사용 편의성(2026-11): 작은 글자 키우기, 눌리는 칸 키우기 */
+  .panel .close{width:44px;height:44px;font-size:16px;}
+  .month-nav .today-btn,#viewMonthBtn,#viewWeekBtn{min-height:36px;}
+  .notes-help{min-height:36px;padding:6px 10px;font-size:12px;}
+  .team-tab .tt-count{font-size:11px;}
+  @media(max-width:600px){
+    table.weeksched td.labelcell{width:48px;min-width:48px;max-width:48px;font-size:10px;line-height:1.15;}
+    table.weeksched td.datecell .dlabel{font-size:10.5px;}
+    table.weeksched td.wcell{font-size:11px;}
+    .team-tab .tt-count{font-size:10.5px;}
+  }
 </style>
 </head>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
