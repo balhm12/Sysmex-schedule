@@ -47,7 +47,7 @@
 - 1단계 내용: 전체·폴더·팀 통째 쓰기·삭제 금지, 한 건 단위 경로만 허용, 값 형식 검사. `voc-dashboard`·`kpi-dashboard` 쓰기는 쓰는 쪽을 확인하지 못해 현행 유지.
 - 규칙을 고치면 `tests/test_db_rules.js`(targaryen)를 같이 고친다. 새 경로에 쓰는 코드를 추가하면 규칙에도 그 경로를 넣어야 저장된다.
 - 복구 도구(`restore*.html`, `fss복구.html`)는 전체·팀 단위로 쓰므로 1단계 규칙에서는 막힌다. 복구 때만 규칙을 잠깐 예전 것(`auth != null`)으로 되돌린다.
-- KPI 가중치: 화면(부서원 KPI → 가중치 설정, `?admin`)에서 관리자가 바꾼다. 저장 위치 `kpi-dashboard/weights`, 「적용 시작월」부터의 활동에만 적용(지난 달 점수는 그대로). 계산은 `buildProdData`의 `opt.weights`(원본), 월간보고 엔진 `report-data.js`는 같은 값을 Firebase에서 읽는다(`--weights 파일|none`). 가중치 관리자 2명은 `firebase/database.rules.stage3.json`(두 번째 관리자 UID 반영됨)이고 CRM 올리기는 기존 관리자만. 코드 기본값(`SCORE_W`·`GRADE_W`)은 시작월 이전 활동의 값이다. 화면 오른쪽 위 「관리자」 버튼을 누르면 `?admin`으로 다시 열리고(「관리자 끄기」로 되돌림) 누구나 누를 수 있지만 올리기·저장은 관리자 로그인과 규칙이 막는다. 관리자 비밀번호는 같은 창의 「비밀번호 변경」(현재 비밀번호로 다시 로그인한 뒤 변경, `changeAdminPw`, `tests/test_admin_pw.js`)에서 바꾼다.
+- KPI 가중치: 화면(부서원 KPI → 가중치 설정, `?admin`)에서 관리자가 바꾼다. 저장 위치 `kpi-dashboard/weights`, 「적용 시작월」부터의 활동에만 적용(지난 달 점수는 그대로). 계산은 `buildProdData`의 `opt.weights`(원본), 월간보고 엔진 `report-data.js`는 같은 값을 Firebase에서 읽는다(`--weights 파일|none`). 가중치 관리자 2명은 `firebase/database.rules.stage3.json`(두 번째 관리자 UID 반영됨)이고 CRM 올리기는 기존 관리자만. 코드 기본값(`SCORE_W`·`GRADE_W`)은 시작월 이전 활동의 값이다. 화면 오른쪽 위 「관리자」 버튼을 누르면 `?admin`으로 다시 열리고(「관리자 끄기」로 되돌림) 누구나 누를 수 있지만 올리기·저장은 관리자 로그인과 규칙이 막는다. 비밀번호 변경 진입점은 두 곳(「관리자 로그인」 칸의 로그인 뒤 「비밀번호 변경」 버튼, 가중치 창 위쪽 「비밀번호 변경」). 관리자 비밀번호는 같은 창의 「비밀번호 변경」(현재 비밀번호로 다시 로그인한 뒤 변경, `changeAdminPw`, `tests/test_admin_pw.js`)에서 바꾼다.
 - 한계: 익명 로그인한 사람이 한 건씩 고치는 것은 못 막는다. KPI 관리자 UID 제한은 stage2 파일에 있고(콘솔에 게시해야 적용), 로그인 방식 변경(익명 로그인 제한)은 아직 안 했다.
 
 ## 화면 규칙 (2026-11 다듬기)

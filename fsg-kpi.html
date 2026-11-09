@@ -445,7 +445,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 </div></header>
 
 <dialog id="wgtDlg" class="wdlg" aria-labelledby="wgtTitle"><div class="wd-in">
-  <div class="wd-head"><h2 id="wgtTitle">가중치 설정</h2><button type="button" class="wd-x" id="wgtClose" aria-label="닫기">×</button></div>
+  <div class="wd-head"><h2 id="wgtTitle">가중치 설정 · 비밀번호</h2><button type="button" class="wd-x" id="wgtClose" aria-label="닫기">×</button></div>
   <p class="wd-note">KPI 종합 점수의 업무·직급 가중치를 바꿉니다. 바꾼 값은 「적용 시작월」부터의 활동에만 쓰이고, 그 전 달 점수는 그대로입니다.</p>
   <div id="wgtLogin">
     <div class="wd-row"><input type="text" id="wgtEmail" placeholder="이메일" autocomplete="username" aria-label="관리자 이메일" style="flex:1;min-width:170px">
@@ -454,7 +454,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
     <div class="wd-msg" id="wgtLoginMsg" role="status"></div>
   </div>
   <div id="wgtBody" hidden>
-    <p class="wd-sub" id="wgtWho"></p>
+    <div class="wd-row" style="justify-content:space-between;margin-bottom:8px"><span class="wd-sub" id="wgtWho"></span><button type="button" class="lbtn" id="wgtPwLink">비밀번호 변경</button></div>
     <div class="wd-row"><label for="wgtFrom">적용 시작월</label><input type="month" id="wgtFrom" placeholder="YYYY-MM" pattern="\d{4}-\d{2}"></div>
     <div class="wd-hint" id="wgtFromHint" aria-live="polite"></div>
     <table class="wd-tbl fx"><colgroup><col><col style="width:84px"><col style="width:100px"></colgroup><caption>업무 가중치</caption><thead><tr><th scope="col">업무</th><th scope="col" class="n">현재</th><th scope="col" class="n">새 값</th></tr></thead><tbody id="wgtScore"></tbody></table>
@@ -482,6 +482,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
       <input type="password" id="admPw" placeholder="비밀번호" autocomplete="current-password" style="flex:1;min-width:140px">
       <button class="lbtn" id="admBtn">로그인</button>
     </div><div class="st" id="admSt"></div>
+    <div style="margin-top:8px" id="admPwRow" hidden><button class="lbtn" id="admPwBtn" type="button">비밀번호 변경</button> <span style="color:var(--muted);font-size:12px">이 계정의 비밀번호를 바꿉니다</span></div>
   </div>
   <div class="drops">
     <div class="drop" id="dropAct" tabindex="0" role="button" aria-label="약속/활동 파일 선택">
@@ -3483,7 +3484,7 @@ async function doAdminLogin(){
   $('admSt').textContent='로그인 중...';
   try{ const uid=await adminLogin(e,p); $('admPw').value='';
     $('admSt').innerHTML=`<span class="good">${esc(ADMIN_EMAIL)} 로그인됨</span> <span style="color:var(--muted)">UID: ${esc(uid)} (Firebase 규칙에 넣는 값)</span>`+(uid===KPI_MAIN_ADMIN_UID?'':'<br><span style="color:var(--muted)">이 계정은 가중치 설정만 할 수 있습니다(부서원 KPI 탭 → 가중치 설정). 데이터 올리기는 쓸 수 없습니다.</span>');
-    ADMIN_UID=uid; if(uid===KPI_MAIN_ADMIN_UID) document.querySelectorAll('.drops .drop').forEach(d=>{d.style.opacity='';d.style.pointerEvents='';});
+    ADMIN_UID=uid; $('admPwRow').hidden=false; if(uid===KPI_MAIN_ADMIN_UID) document.querySelectorAll('.drops .drop').forEach(d=>{d.style.opacity='';d.style.pointerEvents='';});
   }catch(err){ $('admSt').innerHTML=`<span class="bad">${esc(err.message)}</span>`; }
 }
 
@@ -3591,11 +3592,15 @@ async function wgtLogin(){
   try{ ADMIN_UID=await adminLogin(e,p); $('wgtPw').value=''; m.textContent=''; showWgtBody(); }
   catch(err){ m.className='wd-msg bad'; m.textContent=err.message; }
 }
-function openWgt(){
-  const dlg=$('wgtDlg'); if(ADMIN_TOKEN&&Date.now()<ADMIN_EXP) showWgtBody(); else showWgtLogin();
-  if(!dlg.open) dlg.showModal(); setTimeout(()=>{ const f=$(ADMIN_TOKEN?'wgtFrom':'wgtEmail'); if(f) f.focus(); },30);
+function gotoPw(){ const b=$('wgtPwBox'); b.open=true; b.scrollIntoView({block:'center'}); setTimeout(()=>$('pwCur').focus(),30); }
+function openWgt(pw){
+  const dlg=$('wgtDlg'), on=ADMIN_TOKEN&&Date.now()<ADMIN_EXP; if(on) showWgtBody(); else showWgtLogin();
+  if(!dlg.open) dlg.showModal();
+  if(pw&&on) setTimeout(gotoPw,30); else setTimeout(()=>{ const f=$(on?'wgtFrom':'wgtEmail'); if(f) f.focus(); },30);
 }
 window.openWgt=openWgt;
+$('wgtPwLink').addEventListener('click',gotoPw);
+$('admPwBtn').addEventListener('click',()=>openWgt(true));
 $('wgtClose').addEventListener('click',()=>$('wgtDlg').close());
 $('wgtLoginBtn').addEventListener('click',wgtLogin); $('wgtPw').addEventListener('keydown',e=>{ if(e.key==='Enter') wgtLogin(); });
 $('wgtFrom').addEventListener('input',()=>{ wgtHint(); if(/^\d{4}-\d{2}$/.test($('wgtFrom').value)) fillWgt($('wgtFrom').value); });
