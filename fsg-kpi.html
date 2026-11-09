@@ -418,7 +418,11 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 .wd-prev table{margin-top:6px}
 .wd-hist h3{margin:14px 0 4px;font-size:14px}
 .wd-hist td button{font:inherit;font-size:12.5px;height:32px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--bad-t);cursor:pointer}
-@media (max-width:520px){.wd-in{padding:12px 12px 14px}.wd-tbl input[type=number]{height:44px;width:84px}.wd-in input[type=text],.wd-in input[type=password],.wd-in input[type=month]{height:44px}.wd-save,.wdlg .lbtn{height:44px}.wd-row input{flex:1;min-width:0}}
+.wd-pw{margin-top:14px;border-top:1px solid var(--grid);padding-top:10px}
+.wd-pw summary{cursor:pointer;font-weight:700;font-size:14px;min-height:32px;display:flex;align-items:center}
+.wd-pw .wd-row{margin:8px 0 0}.wd-pw label{font-weight:400;min-width:124px;font-size:13px}
+.wd-pw input[type=password]{flex:1;min-width:150px;max-width:260px}
+@media (max-width:520px){.wd-in{padding:12px 12px 14px}.wd-pw label{min-width:100%}.wd-pw input[type=password]{max-width:none}.wd-tbl input[type=number]{height:44px;width:84px}.wd-in input[type=text],.wd-in input[type=password],.wd-in input[type=month]{height:44px}.wd-save,.wdlg .lbtn{height:44px}.wd-row input{flex:1;min-width:0}}
 </style>
 </head>
 <body>
@@ -457,6 +461,14 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
     <div class="wd-msg" id="wgtMsg" role="status"></div>
     <div class="wd-prev" id="wgtPrev" aria-live="polite"></div>
     <div class="wd-hist"><h3>적용 이력</h3><table class="wd-tbl"><thead><tr><th scope="col">시작월</th><th scope="col">바뀐 값</th><th scope="col">설정</th><th scope="col"><span class="sr-only">삭제</span></th></tr></thead><tbody id="wgtHist"></tbody></table></div>
+    <details class="wd-pw" id="wgtPwBox"><summary>비밀번호 변경</summary>
+      <p class="wd-sub" style="margin:6px 0 0">이 관리자 계정의 로그인 비밀번호를 바꿉니다. 8자 이상, 현재 비밀번호를 한 번 더 확인합니다.</p>
+      <div class="wd-row"><label for="pwCur">현재 비밀번호</label><input type="password" id="pwCur" autocomplete="current-password"></div>
+      <div class="wd-row"><label for="pwNew">새 비밀번호</label><input type="password" id="pwNew" autocomplete="new-password"></div>
+      <div class="wd-row"><label for="pwNew2">새 비밀번호 확인</label><input type="password" id="pwNew2" autocomplete="new-password"></div>
+      <div class="wd-act"><button type="button" class="lbtn" id="pwBtn">비밀번호 변경</button></div>
+      <div class="wd-msg" id="pwMsg" role="status"></div>
+    </details>
   </div>
 </div></dialog>
 
@@ -3568,6 +3580,7 @@ function showWgtBody(){
   $('wgtWho').textContent=`${ADMIN_EMAIL} 로그인됨 · UID: ${ADMIN_UID}`;
   const d=new Date(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth()+1); $('wgtFrom').value=d.toISOString().slice(0,7);
   WGT_DEF=null; fillWgt($('wgtFrom').value); wgtHist(); wgtMsg('');
+  ['pwCur','pwNew','pwNew2'].forEach(i=>{ $(i).value=''; }); $('pwMsg').textContent=''; $('wgtPwBox').open=false;
 }
 async function wgtLogin(){
   const e=$('wgtEmail').value.trim(), p=$('wgtPw').value, m=$('wgtLoginMsg');
@@ -3588,6 +3601,31 @@ $('wgtDlg').addEventListener('input',e=>{ if(e.target.matches('input[data-sc]'))
 $('wgtSave').addEventListener('click',wgtSave); $('wgtPreview').addEventListener('click',wgtPreview);
 $('wgtDefault').addEventListener('click',()=>{ WGT_DEF=WGT_DEF||wgtDefaults(); document.querySelectorAll('#wgtDlg input[data-sc]').forEach(i=>{ const b=WGT_DEF.base[i.dataset.sc][i.dataset.k]; if(b!=null) i.value=wgtFmt(b); }); wgtMark(); wgtMsg('기본값을 채웠습니다. 저장하면 이 값이 적용됩니다.'); });
 $('wgtHist').addEventListener('click',e=>{ const b=e.target.closest('button[data-del]'); if(b) wgtDelete(b.dataset.del); });
+
+/* 관리자 비밀번호 변경 — 현재 비밀번호로 다시 로그인해 확인한 뒤 accounts:update (로그인한 지 오래돼 거부되는 일을 피함) */
+async function changeAdminPw(cur,nw){
+  const key=FIREBASE_API_KEY, H={'Content-Type':'application/json'};
+  let r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+key,{method:'POST',headers:H,body:JSON.stringify({email:ADMIN_EMAIL,password:cur,returnSecureToken:true})});
+  let d=await r.json();
+  if(!r.ok) throw new Error(/INVALID|PASSWORD|CREDENTIAL/.test((d.error&&d.error.message)||'')?'현재 비밀번호가 맞지 않습니다.':'현재 비밀번호를 확인하지 못했습니다. 잠시 뒤 다시 시도해 주세요.');
+  r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:update?key='+key,{method:'POST',headers:H,body:JSON.stringify({idToken:d.idToken,password:nw,returnSecureToken:true})});
+  const u=await r.json();
+  if(!r.ok){ const m=(u.error&&u.error.message)||'';
+    throw new Error(/WEAK_PASSWORD/.test(m)?'새 비밀번호가 너무 약합니다. 더 길게 만들어 주세요.':/TOO_MANY/.test(m)?'시도가 너무 많습니다. 잠시 뒤 다시 시도해 주세요.':'비밀번호를 바꾸지 못했습니다. 잠시 뒤 다시 시도해 주세요.'); }
+  if(u.idToken){ ADMIN_TOKEN=u.idToken; ADMIN_EXP=Date.now()+(parseInt(u.expiresIn||'3600',10)-60)*1000; }
+}
+async function doPwChange(){
+  const cur=$('pwCur').value, a=$('pwNew').value, b=$('pwNew2').value, m=$('pwMsg'), set=(t,c)=>{ m.textContent=t; m.className='wd-msg'+(c?' '+c:''); };
+  if(!cur||!a||!b){ set('세 칸을 모두 입력해 주세요.','bad'); return; }
+  if(a.length<8){ set('새 비밀번호는 8자 이상으로 해 주세요.','bad'); return; }
+  if(a!==b){ set('새 비밀번호 두 칸이 서로 다릅니다.','bad'); return; }
+  if(a===cur){ set('현재 비밀번호와 다른 값으로 해 주세요.','bad'); return; }
+  $('pwBtn').disabled=true; set('바꾸는 중...');
+  try{ await changeAdminPw(cur,a); ['pwCur','pwNew','pwNew2'].forEach(i=>$(i).value=''); set('비밀번호를 바꿨습니다. 다음 로그인부터 새 비밀번호를 쓰세요.','good'); }
+  catch(e){ set(e.message,'bad'); }
+  finally{ $('pwBtn').disabled=false; }
+}
+$('pwBtn').addEventListener('click',doPwChange);
 async function initShare(){
   if(!FIREBASE_URL){ showEmpty('설정이 필요합니다: 파일 안의 FIREBASE_URL에 Firebase Realtime Database 주소를 넣어 주세요.'); return; }
   if(ADMIN){ $('openUpl').hidden=false;
