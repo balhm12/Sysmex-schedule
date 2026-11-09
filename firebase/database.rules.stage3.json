@@ -1,0 +1,423 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "schedule-overrides": {
+      ".read": "auth != null",
+      "custom": {
+        "$id": {
+          ".write": "auth != null",
+          ".validate": "newData.hasChildren(['id','category','start','end','title'])",
+          "id": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "category": {
+            ".validate": "newData.val() === 'install' || newData.val() === 'relocation' || newData.val() === 'evaluation' || newData.val() === 'holiday'"
+          },
+          "start": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+          },
+          "end": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+          },
+          "title": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "device": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "team": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "assignee": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "creator": {
+            ".validate": "newData.isString() && newData.val().length <= 100"
+          },
+          "createdAt": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "updatedAt": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          }
+        }
+      },
+      "edited": {
+        "$id": {
+          ".write": "auth != null",
+          ".validate": "newData.hasChildren(['id','category','start','end','title'])",
+          "id": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "category": {
+            ".validate": "newData.val() === 'install' || newData.val() === 'relocation' || newData.val() === 'evaluation' || newData.val() === 'holiday'"
+          },
+          "start": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+          },
+          "end": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+          },
+          "title": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "device": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "team": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "assignee": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "creator": {
+            ".validate": "newData.isString() && newData.val().length <= 100"
+          },
+          "createdAt": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "updatedAt": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          }
+        }
+      },
+      "deleted": {
+        "$id": {
+          ".write": "auth != null",
+          ".validate": "newData.val() === true"
+        }
+      },
+      "clients": {
+        "$key": {
+          ".write": "auth != null",
+          ".validate": "newData.hasChildren(['client'])",
+          "client": {
+            ".validate": "newData.isString() && newData.val().length <= 100"
+          },
+          "manager": {
+            ".validate": "newData.isString() && newData.val().length <= 100"
+          },
+          "team": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          }
+        }
+      }
+    },
+    "schedule-backups": {
+      ".read": "auth != null",
+      "$date": {
+        ".write": "auth != null",
+        ".validate": "$date.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.hasChildren()"
+      }
+    },
+    "work-schedule": {
+      ".read": "auth != null",
+      "west": {
+        "$date": {
+          "$name": {
+            ".write": "auth != null",
+            ".validate": "$date.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.hasChildren() && $name.length <= 40",
+            "night": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "weekend": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "am1": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "am2": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "pm1": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "pm2": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            }
+          }
+        }
+      },
+      "east": {
+        "$date": {
+          "$name": {
+            ".write": "auth != null",
+            ".validate": "$date.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.hasChildren() && $name.length <= 40",
+            "night": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "weekend": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "am1": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "am2": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "pm1": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "pm2": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            }
+          }
+        }
+      },
+      "central": {
+        "$date": {
+          "$name": {
+            ".write": "auth != null",
+            ".validate": "$date.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.hasChildren() && $name.length <= 40",
+            "night": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "weekend": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "am1": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "am2": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "pm1": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "pm2": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            }
+          }
+        }
+      },
+      "south": {
+        "$date": {
+          "$name": {
+            ".write": "auth != null",
+            ".validate": "$date.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.hasChildren() && $name.length <= 40",
+            "night": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "weekend": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "am1": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "am2": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "pm1": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "pm2": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            }
+          }
+        }
+      },
+      "fss": {
+        "$date": {
+          "$name": {
+            ".write": "auth != null",
+            ".validate": "$date.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.hasChildren() && $name.length <= 40",
+            "night": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "weekend": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "am1": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "am2": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "pm1": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "pm2": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            }
+          }
+        }
+      },
+      "fsom": {
+        "$date": {
+          "$name": {
+            ".write": "auth != null",
+            ".validate": "$date.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.hasChildren() && $name.length <= 40",
+            "night": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "weekend": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
+            "am1": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "am2": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "pm1": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "pm2": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            }
+          }
+        }
+      },
+      "teamRoster": {
+        "$team": {
+          ".write": "auth != null",
+          ".validate": "$team.matches(/^(west|east|central|south|fss|fsom)$/) && newData.hasChildren()",
+          "$i": {
+            ".validate": "newData.hasChildren(['name'])",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "role": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "nickname": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            }
+          }
+        }
+      },
+      "notes": {
+        "$team": {
+          "$id": {
+            ".write": "auth != null",
+            ".validate": "$team.matches(/^(west|east|central|south|fss|fsom)$/) && newData.hasChildren(['date','text'])",
+            "date": {
+              ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+            },
+            "text": {
+              ".validate": "newData.isString() && newData.val().length <= 4000"
+            },
+            "inst": {
+              ".validate": "newData.isString() && newData.val().length <= 200"
+            },
+            "device": {
+              ".validate": "newData.isString() && newData.val().length <= 200"
+            },
+            "author": {
+              ".validate": "newData.isString() && newData.val().length <= 100"
+            },
+            "status": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "cat": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "doneAt": {
+              ".validate": "newData.isString() && newData.val().length <= 12"
+            },
+            "ts": {
+              ".validate": "newData.isNumber()"
+            },
+            "updatedAt": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            }
+          }
+        }
+      }
+    },
+    "work-schedule-backups": {
+      ".read": "auth != null",
+      "$date": {
+        ".write": "auth != null",
+        ".validate": "$date.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.hasChildren()"
+      }
+    },
+    "voc-dashboard": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "kpi-dashboard": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.uid === 'sknozAsrQ4NZZyaGGPnDWZoWpSv2'",
+      "weights": {
+        "items": {
+          "$m": {
+            ".write": "auth != null && (auth.uid === 'sknozAsrQ4NZZyaGGPnDWZoWpSv2' || auth.uid === 'HBUnInhKjzMRicdpRIiV7Gn7p2d2')",
+            ".validate": "newData.hasChildren(['score','grade','at','by']) && $m.matches(/^[0-9]{4}-(0[1-9]|1[0-2])$/)",
+            "score": {
+              "고장 수리": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              "장비 설치": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              "성능 평가·인증 지원": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              "장비 이전 설치": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              "Calibration": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              "PM": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              "장비 철수": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              "고객 요청": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              "기타": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              ".validate": "newData.hasChildren()",
+              "$other": {
+                ".validate": "false"
+              }
+            },
+            "grade": {
+              "T4": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              "T3": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              "T2": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              "T1": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              "팀장": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10"
+              },
+              ".validate": "newData.hasChildren()",
+              "$other": {
+                ".validate": "false"
+              }
+            },
+            "at": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "by": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "$other": {
+              ".validate": "false"
+            }
+          }
+        },
+        "rev": {
+          ".write": "auth != null && (auth.uid === 'sknozAsrQ4NZZyaGGPnDWZoWpSv2' || auth.uid === 'HBUnInhKjzMRicdpRIiV7Gn7p2d2')",
+          ".validate": "newData.isString() && newData.val().length <= 40"
+        },
+        "$other": {
+          ".validate": "false"
+        }
+      }
+    }
+  }
+}

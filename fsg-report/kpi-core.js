@@ -104,9 +104,30 @@ function buildProdData(RAW, ROSTER, opt){
     if (hs && t != null){ hs.slice().sort(function(a,b){ return b[0]-a[0]; }).forEach(function(h){ if (t < h[0]) g = h[1]; }); }
     return g;
   }
+  /* 화면에서 바꾼 가중치(2026-11): opt.weights = [{from:'YYYY-MM', score:{묶음:값}, grade:{직급:값}}].
+     활동 달이 시작월 이후면 그 값, 그 전은 앞 묶음(없으면 위 코드 기본값). 화면 설정은 「묶음」 단위이고 묶음 → 목적 목록은 여기 한 곳이 원본이다. */
+  var WGT_GROUPS = [['고장 수리',['고장 수리']],['장비 설치',['장비 설치']],
+    ['성능 평가·인증 지원',['설치/데모 평가','Evaluation','EVALUATION','인증 지원','Accreditation Support','Proficiency Test']],
+    ['장비 이전 설치',['장비 이전 설치']],['Calibration',['Calibration']],['PM',['PM']],['장비 철수',['장비 철수']],
+    ['고객 요청',['고객 요청','고객 요구 사항 지원']],['기타',['기타']]];
+  function groupVals(sc){ var o = {}; WGT_GROUPS.forEach(function(g){ o[g[0]] = sc[g[1][0]]; }); return o; }
+  var WGT_SETS = [{from:'0000-00', score:SCORE_W, grade:GRADE_W}];
+  (opt.weights || []).slice().sort(function(a,b){ return a.from < b.from ? -1 : a.from > b.from ? 1 : 0; }).forEach(function(w){
+    var prev = WGT_SETS[WGT_SETS.length-1], sc = Object.assign({}, prev.score), gr = Object.assign({}, prev.grade);
+    WGT_GROUPS.forEach(function(g){ var v = w.score && w.score[g[0]]; if (typeof v === 'number' && isFinite(v)) g[1].forEach(function(p){ sc[p] = v; }); });
+    Object.keys(gr).forEach(function(k){ var v = w.grade && w.grade[k]; if (typeof v === 'number' && isFinite(v)) gr[k] = v; });
+    WGT_SETS.push({from:w.from, score:sc, grade:gr});
+  });
+  function setAt(t){
+    if (WGT_SETS.length === 1 || t == null) return WGT_SETS[0];
+    var k = mkOf(t), s = WGT_SETS[0];
+    for (var i = 1; i < WGT_SETS.length; i++){ if (WGT_SETS[i].from <= k) s = WGT_SETS[i]; else break; }
+    return s;
+  }
   function weight(purpose, person, t){
-    var w = (purpose != null && Object.prototype.hasOwnProperty.call(SCORE_W, purpose)) ? SCORE_W[purpose] : SCORE_W['기타'];
-    return w + (GRADE_W[gradeAtMs(person, t)] || 0);
+    var S = setAt(t);
+    var w = (purpose != null && Object.prototype.hasOwnProperty.call(S.score, purpose)) ? S.score[purpose] : S.score['기타'];
+    return w + (S.grade[gradeAtMs(person, t)] || 0);
   }
   /* 장비 모델 → 그룹 */
   var GROUP_RULES = [[/^HISCL/,'HISCL'],[/^HLC-?723/,'A1c'],[/^RF-500/,null],[/^(CA|CS|CN)-/,'COA'],
@@ -459,6 +480,8 @@ function buildProdData(RAW, ROSTER, opt){
     buckets:BUCKETS, bucket_label:BUCKET_LABEL, ot_buckets:OT_BUCKETS, ot_bucket_label:OT_BUCKET_LABEL,
     benchmarks:{mttr_target:120, revisit_target:15.0, ftfr_target:90.0},
     person:person, team:team, company:company, revisit:revisit, ot:OT,
+    weights:{groups:WGT_GROUPS.map(function(g){ return g[0]; }), base:{score:groupVals(SCORE_W), grade:Object.assign({}, GRADE_W)},
+      items:WGT_SETS.slice(1).map(function(x){ return {from:x.from, score:groupVals(x.score), grade:Object.assign({}, x.grade)}; })},
     revisit_snapshot_date:today, data_snapshot_date:today};
 }
 

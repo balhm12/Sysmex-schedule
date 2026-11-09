@@ -13,6 +13,9 @@
  *   --roster   로스터 CSV(fsg-roster 형식: 번호,팀,직급,성명,…). 없으면 ../fsg-kpi.html 의 ROSTER 상수(대시보드와 같은 명단)
  *   --eq       「FSG_FSR_담당기관관리표_YYYYMMDD_정리본.xlsx」 FSR 담당기관 관리표 정리본(담당 장비, 「담당기관 마스터」 시트의 수식 계산값). --dir 에 있으면 자동.
  *              없거나 못 읽으면 json 의 peopleKpi.units.equip 은 비고 meta.warnings 에 이유만 남긴다(멈추지 않는다). 담당자·기관명이 있어 Drive 로 올리지 않는다
+ *   --weights  KPI 가중치 설정(대시보드 「가중치 설정」에서 바꾼 값). 기본 = Firebase(kpi-dashboard/weights)에서 읽음(익명 로그인, 읽기만).
+ *              파일 경로(대시보드 저장 형식 {items:{'2026-12':{score,grade}}} 또는 [{from,score,grade}]) 를 주면 그 파일, none 이면 코드 기본값만.
+ *              못 읽으면 기본값으로 계산하고 meta.warnings 에 남긴다(환경변수 FSG_NO_NET=1 이면 읽지 않음 — 테스트용)
  *   --cut      CRM 추출일 YYYY-MM-DD. 없으면 활동 파일명의 날짜, 그것도 없으면 오늘. 그 뒤로 잡힌 예정 약속을 뺀다
  *   --out      출력 폴더(기본 fsg-report/out). report-data_<기간>.json 과 검산_<기간>.xlsx 를 쓴다
  *
@@ -50,7 +53,32 @@ function loadProdConsts() {
   const office = grab(/const OFFICE = (\{[\s\S]*?\});/), gh = grab(/const GRADE_HIST=(\[[\s\S]*?\]\]);/), nb = grab(/const NEWBIE=(\[[^\]]*\]);/);
   return { office: office ? eval('(' + office + ')') : {}, gradeHist: gh ? eval('(' + gh + ')') : [], newbie: nb ? eval(nb) : [] };
 }
-function main() {
+/* 가중치 설정 → [{from,score,grade}] (시작월 순). 대시보드가 저장한 모양과 배열 모양을 모두 받는다 */
+function parseWeights(w) {
+  if (!w) return [];
+  const list = Array.isArray(w) ? w : Object.keys(w.items || {}).map(k => Object.assign({ from: k }, w.items[k]));
+  return list.filter(x => x && /^\d{4}-(0[1-9]|1[0-2])$/.test(x.from)).map(x => ({ from: x.from, score: x.score || {}, grade: x.grade || {} })).sort((a, b) => a.from < b.from ? -1 : a.from > b.from ? 1 : 0);
+}
+async function loadWeightSettings(o) {
+  if (o.weights === 'none' || process.env.FSG_NO_NET === '1') return { list: [], source: '기본값(코드)', warn: null };
+  if (typeof o.weights === 'string' && o.weights !== 'firebase') {
+    try { return { list: parseWeights(JSON.parse(fs.readFileSync(o.weights, 'utf8').replace(/^\uFEFF/, ''))), source: path.basename(o.weights), warn: null }; }
+    catch (e) { throw new Error('--weights 파일을 읽지 못했습니다: ' + e.message); }
+  }
+  const html = fs.readFileSync(path.join(__dirname, '..', 'fsg-kpi.html'), 'utf8'), g = k => (html.match(new RegExp("const " + k + " = '([^']*)'")) || [])[1];
+  const url = g('FIREBASE_URL'), key = g('FIREBASE_API_KEY'), dp = g('DATA_PATH') || 'kpi-dashboard';
+  try {
+    const a = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ returnSecureToken: true }), signal: AbortSignal.timeout(15000) });
+    if (!a.ok) throw new Error('익명 로그인 ' + a.status);
+    const tok = (await a.json()).idToken;
+    const r = await fetch(url.replace(/\/$/, '') + '/' + dp + '/weights.json?auth=' + tok, { signal: AbortSignal.timeout(15000) });
+    if (!r.ok) throw new Error('읽기 ' + r.status);
+    return { list: parseWeights(await r.json()), source: 'Firebase kpi-dashboard/weights', warn: null };
+  } catch (e) {
+    return { list: [], source: '기본값(코드)', warn: '가중치 설정을 읽지 못해 기본값(코드)으로 계산했습니다 — 대시보드 점수와 다를 수 있음(' + e.message + '). 화면에서 가중치를 바꿨다면 --weights 파일을 지정하거나 네트워크를 확인하세요' };
+  }
+}
+async function main() {
   const o = args(process.argv.slice(2));
   if (!o.period || o.help) { console.log(fs.readFileSync(__filename, 'utf8').split('*/')[0].replace(/^\/\*|^ \* ?/gm, '')); process.exit(o.period ? 0 : 1); }
   const period = parsePeriod(o.period);
@@ -77,14 +105,17 @@ function main() {
   const serial = serPath ? R.parseSerial(fs.readFileSync(serPath)) : null;
   const calendar = calPath ? INS.readCalendarRows(table(calPath), R.toMs) : null;
   const prod = o.roster ? null : loadProdConsts();
+  const wset = prod ? await loadWeightSettings(o) : { list: [], source: '', warn: null };
+  if (prod) prod.weights = wset.list;
   /* 담당 장비(관리표 정리본) — 못 읽어도 보고서 전체는 만든다: 이유를 meta.warnings 에 남기고 equip 은 비운다 */
-  const warnings = []; let equip = null;
+  const warnings = wset.warn ? [wset.warn] : []; let equip = null;
   if (!prod) { /* --roster 로 명단을 따로 준 경우 부서원 KPI 를 계산하지 않으므로 담당 장비도 생략 */ }
   else if (!eqPath) warnings.push('관리표 없음 — 담당 장비 생략(폴더에 「…담당기관관리표…정리본.xlsx」가 없음)');
   else { try { equip = EQC.parseEq(fs.readFileSync(eqPath), path.basename(eqPath)); } catch (e) { warnings.push('관리표를 읽지 못함 — 담당 장비 생략: ' + e.message); } }
   const rep = buildReport({ raw: act.rows, roster, period, cut, serial, calendar, prod, equip });
   rep.meta.warnings = (rep.meta.warnings || []).concat(warnings, equip ? ['담당 장비는 현재 관리표 기준(' + equip.src + ') — 과거 기간과 시점이 다름'] : []);
   rep.meta.inputs = { equip: !!equip };
+  if (prod) rep.meta.weights = { source: wset.source, from: wset.list.map(x => x.from) };
   /* 덱 10장 「8월 대비」 등 전월 비교용: 같은 입력으로 전월(한 달) 기준을 한 번 더 계산해 필요한 부분만 붙인다 */
   if (period.months.length === 1) {
     const pm = require('./lib/period').prevMonth(period), pp = parsePeriod(pm.y + '-' + String(pm.m).padStart(2, '0'));
@@ -127,5 +158,5 @@ function main() {
   (rep.meta.warnings || []).filter(w => /관리표/.test(w) && !EQ).forEach(w => console.log('⚠ ' + w));
   console.log(`출력: ${out}`);
 }
-if (require.main === module) { try { main(); } catch (e) { console.error('오류:', e.message); process.exit(1); } }
-module.exports = { loadRosterCsv, loadRosterFromDashboard };
+if (require.main === module) { main().catch(e => { console.error('오류:', e.message); process.exit(1); }); }
+module.exports = { loadRosterCsv, loadRosterFromDashboard, parseWeights };

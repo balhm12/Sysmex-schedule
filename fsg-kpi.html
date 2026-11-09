@@ -384,6 +384,41 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 @media (max-width:700px){
   .glg{display:grid;grid-template-columns:repeat(3,max-content);gap:4px 12px}
 }
+/* 가중치 설정 창(관리자) */
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wdlg{width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 24px);padding:0;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)}
+.wdlg::backdrop{background:rgba(15,21,29,.55)}
+.wd-in{padding:16px 18px 18px;overflow:auto;max-height:calc(100vh - 26px)}
+.wd-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+.wd-head h2{margin:0;font-size:18px;font-weight:700}
+.wd-x{font:inherit;font-size:22px;line-height:1;width:44px;height:44px;border:0;background:transparent;color:var(--muted);cursor:pointer;border-radius:4px}
+.wd-note{margin:0 0 12px;color:var(--muted);font-size:13px}
+.wd-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 4px}
+.wd-row label{font-weight:700}
+.wd-in input[type=text],.wd-in input[type=password],.wd-in input[type=month]{font:inherit;height:36px;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text)}
+.wd-hint{font-size:12.5px;min-height:18px;margin:2px 0 12px}
+.wd-hint.warn{color:var(--warn-t)}.wd-hint.ok{color:var(--muted)}
+.wd-tbl{width:100%;border-collapse:collapse;margin:0 0 14px;font-size:14px}
+.wd-tbl caption{text-align:left;font-weight:700;padding:6px 0}
+.wd-tbl th,.wd-tbl td{padding:4px 8px;border-bottom:1px solid var(--grid);text-align:left;font-weight:400}
+.wd-tbl thead th{color:var(--muted);font-size:12px;font-weight:400}
+.wd-tbl td.n,.wd-tbl th.n{text-align:right;font-variant-numeric:tabular-nums}
+.wd-tbl tbody th{color:var(--text);font-size:14px}
+.wd-tbl.fx{table-layout:fixed}
+.wd-hist td:last-child{white-space:nowrap;text-align:right}.wd-hist td:first-child{white-space:nowrap}
+.wd-tbl input[type=number]{font:inherit;width:78px;height:36px;text-align:right;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-variant-numeric:tabular-nums}
+.wd-tbl input[type=number].chg{border-color:var(--primary);background:var(--tint)}
+.wd-tbl input[type=number]:invalid{border-color:var(--bad)}
+.wd-sub{color:var(--muted);font-size:12px}
+.wd-act{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}
+.wd-save{font:inherit;font-size:13px;font-weight:700;padding:0 18px;height:36px;border:1px solid var(--primary);border-radius:4px;background:var(--primary);color:#fff;cursor:pointer}
+.wdlg .lbtn{height:36px}
+.wd-msg{min-height:20px;font-size:13px;margin:0 0 10px}.wd-msg.bad{color:var(--bad-t)}.wd-msg.good{color:var(--good-t)}
+.wd-prev{margin:0 0 12px;font-size:13px}
+.wd-prev table{margin-top:6px}
+.wd-hist h3{margin:14px 0 4px;font-size:14px}
+.wd-hist td button{font:inherit;font-size:12.5px;height:32px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--bad-t);cursor:pointer}
+@media (max-width:520px){.wd-in{padding:12px 12px 14px}.wd-tbl input[type=number]{height:44px;width:84px}.wd-in input[type=text],.wd-in input[type=password],.wd-in input[type=month]{height:44px}.wd-save,.wdlg .lbtn{height:44px}.wd-row input{flex:1;min-width:0}}
 </style>
 </head>
 <body>
@@ -403,9 +438,31 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
   <button class="hbtn" id="openUpl" aria-expanded="false" hidden>CRM 데이터 올리기</button>
 </div></header>
 
+<dialog id="wgtDlg" class="wdlg" aria-labelledby="wgtTitle"><div class="wd-in">
+  <div class="wd-head"><h2 id="wgtTitle">가중치 설정</h2><button type="button" class="wd-x" id="wgtClose" aria-label="닫기">×</button></div>
+  <p class="wd-note">KPI 종합 점수의 업무·직급 가중치를 바꿉니다. 바꾼 값은 「적용 시작월」부터의 활동에만 쓰이고, 그 전 달 점수는 그대로입니다.</p>
+  <div id="wgtLogin">
+    <div class="wd-row"><input type="text" id="wgtEmail" placeholder="이메일" autocomplete="username" aria-label="관리자 이메일" style="flex:1;min-width:170px">
+      <input type="password" id="wgtPw" placeholder="비밀번호" autocomplete="current-password" aria-label="비밀번호" style="flex:1;min-width:130px">
+      <button type="button" class="lbtn" id="wgtLoginBtn">로그인</button></div>
+    <div class="wd-msg" id="wgtLoginMsg" role="status"></div>
+  </div>
+  <div id="wgtBody" hidden>
+    <p class="wd-sub" id="wgtWho"></p>
+    <div class="wd-row"><label for="wgtFrom">적용 시작월</label><input type="month" id="wgtFrom" placeholder="YYYY-MM" pattern="\d{4}-\d{2}"></div>
+    <div class="wd-hint" id="wgtFromHint" aria-live="polite"></div>
+    <table class="wd-tbl fx"><colgroup><col><col style="width:84px"><col style="width:100px"></colgroup><caption>업무 가중치</caption><thead><tr><th scope="col">업무</th><th scope="col" class="n">현재</th><th scope="col" class="n">새 값</th></tr></thead><tbody id="wgtScore"></tbody></table>
+    <table class="wd-tbl fx"><colgroup><col><col style="width:84px"><col style="width:100px"></colgroup><caption>직급 가중치 (건마다 더함)</caption><thead><tr><th scope="col">직급</th><th scope="col" class="n">현재</th><th scope="col" class="n">새 값</th></tr></thead><tbody id="wgtGrade"></tbody></table>
+    <div class="wd-act"><button type="button" class="wd-save" id="wgtSave">저장</button><button type="button" class="lbtn" id="wgtPreview">미리보기</button><button type="button" class="lbtn" id="wgtDefault">기본값으로</button></div>
+    <div class="wd-msg" id="wgtMsg" role="status"></div>
+    <div class="wd-prev" id="wgtPrev" aria-live="polite"></div>
+    <div class="wd-hist"><h3>적용 이력</h3><table class="wd-tbl"><thead><tr><th scope="col">시작월</th><th scope="col">바뀐 값</th><th scope="col">설정</th><th scope="col"><span class="sr-only">삭제</span></th></tr></thead><tbody id="wgtHist"></tbody></table></div>
+  </div>
+</div></dialog>
+
 <section id="upl"><div class="wrap">
   <div id="admBox" class="drop" style="cursor:default;margin-bottom:14px">
-    <b>관리자 로그인</b><p>데이터를 올릴 수 있는 계정은 Firebase에 등록된 관리자 한 명뿐입니다. 접근 코드와는 별개입니다.</p>
+    <b>관리자 로그인</b><p>CRM 데이터는 관리자 한 명만 올릴 수 있고, 가중치 설정은 관리자 두 명이 할 수 있습니다. 접근 코드와는 별개입니다.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
       <input type="text" id="admEmail" placeholder="이메일" autocomplete="username" style="flex:1;min-width:180px">
       <input type="password" id="admPw" placeholder="비밀번호" autocomplete="current-password" style="flex:1;min-width:140px">
@@ -720,9 +777,30 @@ function buildProdData(RAW, ROSTER, opt){
     if (hs && t != null){ hs.slice().sort(function(a,b){ return b[0]-a[0]; }).forEach(function(h){ if (t < h[0]) g = h[1]; }); }
     return g;
   }
+  /* 화면에서 바꾼 가중치(2026-11): opt.weights = [{from:'YYYY-MM', score:{묶음:값}, grade:{직급:값}}].
+     활동 달이 시작월 이후면 그 값, 그 전은 앞 묶음(없으면 위 코드 기본값). 화면 설정은 「묶음」 단위이고 묶음 → 목적 목록은 여기 한 곳이 원본이다. */
+  var WGT_GROUPS = [['고장 수리',['고장 수리']],['장비 설치',['장비 설치']],
+    ['성능 평가·인증 지원',['설치/데모 평가','Evaluation','EVALUATION','인증 지원','Accreditation Support','Proficiency Test']],
+    ['장비 이전 설치',['장비 이전 설치']],['Calibration',['Calibration']],['PM',['PM']],['장비 철수',['장비 철수']],
+    ['고객 요청',['고객 요청','고객 요구 사항 지원']],['기타',['기타']]];
+  function groupVals(sc){ var o = {}; WGT_GROUPS.forEach(function(g){ o[g[0]] = sc[g[1][0]]; }); return o; }
+  var WGT_SETS = [{from:'0000-00', score:SCORE_W, grade:GRADE_W}];
+  (opt.weights || []).slice().sort(function(a,b){ return a.from < b.from ? -1 : a.from > b.from ? 1 : 0; }).forEach(function(w){
+    var prev = WGT_SETS[WGT_SETS.length-1], sc = Object.assign({}, prev.score), gr = Object.assign({}, prev.grade);
+    WGT_GROUPS.forEach(function(g){ var v = w.score && w.score[g[0]]; if (typeof v === 'number' && isFinite(v)) g[1].forEach(function(p){ sc[p] = v; }); });
+    Object.keys(gr).forEach(function(k){ var v = w.grade && w.grade[k]; if (typeof v === 'number' && isFinite(v)) gr[k] = v; });
+    WGT_SETS.push({from:w.from, score:sc, grade:gr});
+  });
+  function setAt(t){
+    if (WGT_SETS.length === 1 || t == null) return WGT_SETS[0];
+    var k = mkOf(t), s = WGT_SETS[0];
+    for (var i = 1; i < WGT_SETS.length; i++){ if (WGT_SETS[i].from <= k) s = WGT_SETS[i]; else break; }
+    return s;
+  }
   function weight(purpose, person, t){
-    var w = (purpose != null && Object.prototype.hasOwnProperty.call(SCORE_W, purpose)) ? SCORE_W[purpose] : SCORE_W['기타'];
-    return w + (GRADE_W[gradeAtMs(person, t)] || 0);
+    var S = setAt(t);
+    var w = (purpose != null && Object.prototype.hasOwnProperty.call(S.score, purpose)) ? S.score[purpose] : S.score['기타'];
+    return w + (S.grade[gradeAtMs(person, t)] || 0);
   }
   /* 장비 모델 → 그룹 */
   var GROUP_RULES = [[/^HISCL/,'HISCL'],[/^HLC-?723/,'A1c'],[/^RF-500/,null],[/^(CA|CS|CN)-/,'COA'],
@@ -1075,6 +1153,8 @@ function buildProdData(RAW, ROSTER, opt){
     buckets:BUCKETS, bucket_label:BUCKET_LABEL, ot_buckets:OT_BUCKETS, ot_bucket_label:OT_BUCKET_LABEL,
     benchmarks:{mttr_target:120, revisit_target:15.0, ftfr_target:90.0},
     person:person, team:team, company:company, revisit:revisit, ot:OT,
+    weights:{groups:WGT_GROUPS.map(function(g){ return g[0]; }), base:{score:groupVals(SCORE_W), grade:Object.assign({}, GRADE_W)},
+      items:WGT_SETS.slice(1).map(function(x){ return {from:x.from, score:groupVals(x.score), grade:Object.assign({}, x.grade)}; })},
     revisit_snapshot_date:today, data_snapshot_date:today};
 }
 // node 테스트용
@@ -1111,6 +1191,27 @@ var GROUP_COLOR = { 'CBC':'var(--s1)', 'COA':'var(--s2)', 'HISCL':'var(--s3)', '
 var BUCKET_COLOR = { '고장수리':'var(--s1)', 'PM':'var(--s3)', '설치이전':'var(--s4)', 'Cal평가':'var(--s5)', '기타':'var(--text-muted)' };
 var OT_BUCKET_COLOR = { '고장수리':'var(--s1)', 'PM':'var(--s3)', '설치':'var(--s4)', '이전철수':'var(--s2)', 'Cal평가':'var(--s5)', '기타':'var(--text-muted)' };
 var MONTH_LABEL = {}; if (DATA.trend_labels) DATA.trend_labels.forEach(function(l,i){ MONTH_LABEL[i+1] = l; }); else for (var _m=1;_m<=12;_m++) MONTH_LABEL[_m] = _m+'월';
+/* KPI 종합 점수 안내문의 가중치 문구 — 설정(DATA.weights)에서 만든다. 값이 같은 항목은 한데 묶는다 */
+function weightLine(W){
+  if (!W) return '';
+  var cur = W.base, ym = new Date().toISOString().slice(0,7), later = [];
+  (W.items||[]).forEach(function(it){ if (it.from <= ym) cur = it; else later.push(it); });
+  var GR = ['T4','T3','T2','T1','팀장'];
+  function join(names, o){
+    var vals = []; names.forEach(function(n){ if (vals.indexOf(o[n]) < 0) vals.push(o[n]); });
+    vals.sort(function(a,b){ return b-a; });
+    return vals.map(function(v){ return names.filter(function(n){ return o[n] === v; }).join('·') + ' ' + v; }).join(', ');
+  }
+  function diff(from, to){
+    var d = []; W.groups.forEach(function(g){ if (from.score[g] !== to.score[g]) d.push(g + ' ' + from.score[g] + ' → ' + to.score[g]); });
+    GR.forEach(function(g){ if (from.grade[g] !== to.grade[g]) d.push('직급 ' + g + ' ' + from.grade[g] + ' → ' + to.grade[g]); });
+    return d.join(', ');
+  }
+  var t = '업무: ' + join(W.groups, cur.score) + ' · 직급: ' + join(GR, cur.grade);
+  var prev = cur;
+  later.forEach(function(it){ var d = diff(prev, it); if (d) t += ' <b>(' + it.from.slice(0,4) + '년 ' + (+it.from.slice(5)) + '월부터 ' + d + ')</b>'; prev = it; });
+  return t;
+}
 function PL(p){ return (DATA.period_label && DATA.period_label[p]) || p; }
 
 var state = { tab:'overview', period:'이번 년도', team:'FS WEST', person:null, personSearch:'', sortKey:'total', sortDir:'desc', hospSortKey:'this_revisit', hospSortDir:'desc', lbSortKey:'score', lbSortDir:'desc' };
@@ -1483,10 +1584,10 @@ function renderOverview(){
 
   var html = '';
   html += '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'+
-    '<div><b>KPI 종합 점수</b> = 건마다 (업무 가중치 + 직급 가중치)의 합계. 업무: 고장 수리·장비 설치·성능 평가/인증 지원 3, 장비 이전 설치 2, Calibration·PM·장비 철수·고객 요청 0.5, 기타 0.2 · 직급: T4·팀장 0.6, T3 0.4, T2 0.2, T1 0(진급자는 시행일부터 새 직급 적용). 그 밖의 목적(원격 Calibration·GMCS·부품 등)은 기타(0.2)로 계산하고, 온라인 정기점검은 건수·점수에서 뺍니다. 장비 그룹을 알 수 없는 건(모델 없음·미분류·RF-500)은 「기타」 그룹입니다. 담당자·필수 참석자 기준, 취소 건 제외. 재방문율·FTFR은 거래처별 비율의 팀 평균입니다.'+
+    '<div><b>KPI 종합 점수</b> = 건마다 (업무 가중치 + 직급 가중치)의 합계. '+weightLine(DATA.weights)+'(진급자는 시행일부터 새 직급 적용). 그 밖의 목적(원격 Calibration·GMCS·부품 등)은 기타(0.2)로 계산하고, 온라인 정기점검은 건수·점수에서 뺍니다. 장비 그룹을 알 수 없는 건(모델 없음·미분류·RF-500)은 「기타」 그룹입니다. 담당자·필수 참석자 기준, 취소 건 제외. 재방문율·FTFR은 거래처별 비율의 팀 평균입니다.'+
     ' MTTR은 일정표 예약 시간 기준(참고용)입니다.'+(DATA.provisional ? ' <b>최근 14일은 FTFR 확인 기간이 끝나지 않아 잠정치</b>입니다.' : '')+(DATA.ex_lead ? ' 순위에서 팀장·신입을 뺐습니다.' : '')+' 팀 비교의 <b>1인당 점수·직급 보정 지수</b>(개인 점수 ÷ FSG 같은 직급 중앙값 × 100)는 팀장·신입을 뺀 값입니다. CENTRAL·SOUTH의 사무소(대전·광주, 부산·대구)는 팀별 분석에서 참고로 봅니다.'+
     ' <b>필수 참석자</b>도 담당자와 같은 가중치로 점수·건수에 들어갑니다(팀 합계는 동행 건이 사람 수만큼 반영).'+
-    (DATA.no_att ? ' 지금 데이터에는 필수 참석자 열이 없어 담당자만 반영됐습니다. <b>CRM 파일을 다시 올리면 반영</b>됩니다.' : '')+'</div></div>';
+    (DATA.no_att ? ' 지금 데이터에는 필수 참석자 열이 없어 담당자만 반영됐습니다. <b>CRM 파일을 다시 올리면 반영</b>됩니다.' : '')+(DATA.admin_weights ? ' <button type="button" class="lbtn" onclick="openWgt()">가중치 설정</button>' : '')+'</div></div>';
 
   html += '<div class="block grid grid-4">'+
     statTile('총 처리 건수', fmt(totalCase), '건', deltaBadge(totalCase, totalCasePrevYoY, null), DATA.period_label[period])+
@@ -3343,6 +3444,7 @@ async function loadAll(){
     HRDATA=null; if(hr){ try{ HRDATA=await open_(hr,CODE); }catch(e){ console.warn('hr decode',e); } }
     GEO=null; if(geo){ try{ GEO=await open_(geo,CODE); GEO.src=GEO.src||meta.geoSrc; }catch(e){ console.warn('geo decode',e); } }
     EQD=null; if(eq){ try{ EQD=await open_(eq,CODE); EQD.src=EQD.src||meta.eqSrc; }catch(e){ console.warn('eq decode',e); } }
+    await loadWeights();
     META=meta; SRC={act:meta.actSrc,ser:s?meta.serSrc:null,hr:HRDATA?meta.hrSrc:null,at:meta.updatedAt,embedded:false};
     $('empty').hidden=true; refresh(); showMain();
   }catch(err){ const net=err instanceof TypeError;
@@ -3357,17 +3459,135 @@ async function submitCode(){
   $('lock').hidden=true; $('lockIn').value=''; await loadAll();
 }
 async function poll(){ // 5분마다 새 데이터 확인
-  try{ const m=await fb('meta'); if(m&&META&&m.updatedAt!==META.updatedAt) await loadAll(); }catch(e){}
+  try{ const m=await fb('meta'); if(m&&META&&m.updatedAt!==META.updatedAt){ await loadAll(); return; }
+    const r=await fb('weights/rev'); if((r||'')!==WGT_REV){ await loadWeights(); applyWeights(); }
+  }catch(e){}
 }
 async function doAdminLogin(){
   const e=$('admEmail').value.trim(), p=$('admPw').value;
   if(!e||!p){ $('admSt').innerHTML='<span class="bad">이메일과 비밀번호를 입력해 주세요.</span>'; return; }
   $('admSt').textContent='로그인 중...';
   try{ const uid=await adminLogin(e,p); $('admPw').value='';
-    $('admSt').innerHTML=`<span class="good">${esc(ADMIN_EMAIL)} 로그인됨</span> <span style="color:var(--muted)">UID: ${esc(uid)} (Firebase 규칙에 넣는 값)</span>`;
-    document.querySelectorAll('.drops .drop').forEach(d=>{d.style.opacity='';d.style.pointerEvents='';});
+    $('admSt').innerHTML=`<span class="good">${esc(ADMIN_EMAIL)} 로그인됨</span> <span style="color:var(--muted)">UID: ${esc(uid)} (Firebase 규칙에 넣는 값)</span>`+(uid===KPI_MAIN_ADMIN_UID?'':'<br><span style="color:var(--muted)">이 계정은 가중치 설정만 할 수 있습니다(부서원 KPI 탭 → 가중치 설정). 데이터 올리기는 쓸 수 없습니다.</span>');
+    ADMIN_UID=uid; if(uid===KPI_MAIN_ADMIN_UID) document.querySelectorAll('.drops .drop').forEach(d=>{d.style.opacity='';d.style.pointerEvents='';});
   }catch(err){ $('admSt').innerHTML=`<span class="bad">${esc(err.message)}</span>`; }
 }
+
+/* ===== 가중치 설정 (관리자 2명) =====
+   - 저장 위치: kpi-dashboard/weights/items/{YYYY-MM}(그 달부터 적용하는 한 묶음) + weights/rev(바꾼 시각, 다른 화면이 새로 읽는 신호).
+   - 계산은 buildProdData 의 opt.weights 가 담당하고, 월간보고 엔진도 같은 값을 읽는다(fsg-report/report-data.js). */
+const KPI_MAIN_ADMIN_UID='sknozAsrQ4NZZyaGGPnDWZoWpSv2';   // 데이터 올리기까지 되는 관리자(Firebase 규칙의 UID와 같음, 비밀값 아님). 다른 관리자는 가중치만
+let ADMIN_UID='', WGT_ITEMS={}, WGT_REV='';
+const WGT_GRADES=['T4','T3','T2','T1','팀장'];
+function WGT_LIST(){ return Object.keys(WGT_ITEMS).sort().map(k=>({from:k,score:WGT_ITEMS[k].score||{},grade:WGT_ITEMS[k].grade||{}})); }
+async function loadWeights(){
+  try{ const w=await fb('weights'); WGT_ITEMS=(w&&w.items)||{}; WGT_REV=(w&&w.rev)||''; }
+  catch(e){ console.warn('가중치 설정을 읽지 못해 기본값으로 계산합니다',e); WGT_ITEMS={}; WGT_REV=''; }
+}
+function applyWeights(){ PROD_DIRTY=true; if(VIEW==='prod'&&!$('prod').hidden) renderProd(); }
+const wgtMonth=()=>new Date().toISOString().slice(0,7);
+/* 설정 창에 보여 줄 기준값 = 그 달에 적용 중인 묶음(없으면 코드 기본값). 코드 기본값은 buildProdData 가 알려 준다 */
+function wgtDefaults(){ const P=buildProdData([],PROD_ROSTER,{teams:PROD_UNITS,teamGroups:PROD_GROUPS,sel:[],cmp:[],trend:[],labels:{}}); return P.weights; }
+function wgtEffective(W,ym){ let cur=W.base; WGT_LIST().forEach(it=>{ if(it.from<=ym) cur={score:Object.assign({},cur.score,it.score),grade:Object.assign({},cur.grade,it.grade)}; }); return cur; }
+function wgtFmt(v){ return String(Math.round(v*100)/100); }
+function wgtRows(W,cur,base){
+  const row=(id,label,k,sc)=>`<tr><th scope="row">${esc(label)}</th><td class="n">${wgtFmt(cur[k])}</td><td class="n"><input type="number" inputmode="decimal" step="0.1" min="0" max="10" data-k="${esc(k)}" data-sc="${sc}" data-base="${wgtFmt(cur[k])}" value="${wgtFmt(cur[k])}" aria-label="${esc(label)} 새 값"></td></tr>`;
+  return {score:W.groups.map(g=>row('s',g,g,'score')).join(''), grade:WGT_GRADES.map(g=>row('g',g,g,'grade')).join('')};
+}
+let WGT_DEF=null;
+function fillWgt(ym){
+  WGT_DEF=WGT_DEF||wgtDefaults(); const cur=wgtEffective(WGT_DEF,ym);
+  const a=wgtRows(WGT_DEF,cur.score,0), b=wgtRows(WGT_DEF,cur.grade,0);
+  $('wgtScore').innerHTML=a.score; $('wgtGrade').innerHTML=b.grade;
+  /* 직급은 같은 함수가 점수 표에도 만들어 버리므로 따로 채운다 */
+  $('wgtScore').querySelectorAll('input').forEach(i=>i.dataset.sc='score');
+  $('wgtGrade').querySelectorAll('input').forEach(i=>i.dataset.sc='grade');
+  $('wgtPrev').innerHTML=''; wgtHint();
+}
+function wgtHint(){
+  const f=$('wgtFrom').value, h=$('wgtFromHint'), ym=wgtMonth();
+  if(!/^\d{4}-\d{2}$/.test(f)){ h.textContent='시작월을 정해 주세요.'; h.className='wd-hint warn'; return; }
+  if(f<=ym){ h.textContent=`${f.replace('-','년 ')}월은 이미 지난 달(또는 이번 달)입니다. 저장하면 그 달부터의 점수가 새 값으로 다시 계산되어 이미 본 숫자가 바뀝니다.`; h.className='wd-hint warn'; }
+  else{ h.textContent='지난 달 점수는 그대로이고, 이 달부터 새 값으로 계산됩니다.'; h.className='wd-hint ok'; }
+}
+function wgtRead(){
+  const out={score:{},grade:{}}; let bad='';
+  document.querySelectorAll('#wgtDlg input[data-sc]').forEach(i=>{ const v=parseFloat(i.value);
+    if(!isFinite(v)||v<0||v>10){ bad=`${i.dataset.k}: 0~10 사이 숫자로 입력해 주세요.`; i.setAttribute('aria-invalid','true'); } else { i.removeAttribute('aria-invalid'); out[i.dataset.sc][i.dataset.k]=Math.round(v*100)/100; } });
+  if(bad) throw new Error(bad); return out;
+}
+function wgtMark(){ document.querySelectorAll('#wgtDlg input[data-sc]').forEach(i=>i.classList.toggle('chg',i.value!==i.dataset.base)); }
+function wgtMsg(t,cls){ const m=$('wgtMsg'); m.textContent=t||''; m.className='wd-msg'+(cls?' '+cls:''); }
+function wgtDiff(prev,cur,groups){
+  const d=[]; groups.forEach(g=>{ if(prev.score[g]!==cur.score[g]) d.push(`${g} ${wgtFmt(prev.score[g])} → ${wgtFmt(cur.score[g])}`); });
+  WGT_GRADES.forEach(g=>{ if(prev.grade[g]!==cur.grade[g]) d.push(`${g} 직급 ${wgtFmt(prev.grade[g])} → ${wgtFmt(cur.grade[g])}`); });
+  return d.length?d.join(', '):'바뀐 값 없음';
+}
+function wgtHist(){
+  WGT_DEF=WGT_DEF||wgtDefaults(); const W=WGT_DEF, ym=wgtMonth(); let prev=W.base; const rows=[];
+  WGT_LIST().forEach(it=>{ const cur={score:Object.assign({},prev.score,it.score),grade:Object.assign({},prev.grade,it.grade)}; const meta=WGT_ITEMS[it.from]||{};
+    rows.push(`<tr><td>${esc(it.from.replace('-','.'))}</td><td>${esc(wgtDiff(prev,cur,W.groups))}</td><td class="wd-sub">${esc(meta.by||'')} ${esc((meta.at||'').slice(0,10))}</td><td class="n">${it.from>=ym&&ADMIN_TOKEN?`<button type="button" data-del="${esc(it.from)}" aria-label="${esc(it.from)} 설정 삭제">삭제</button>`:''}</td></tr>`); prev=cur; });
+  $('wgtHist').innerHTML=rows.length?rows.join(''):'<tr><td colspan="4" class="wd-sub">저장된 변경이 없습니다. 지금은 기본값으로 계산합니다.</td></tr>';
+}
+function wgtOpts(S,list){ return prodOpts(S,list); }
+async function wgtPreview(){
+  let v; try{ v=wgtRead(); }catch(e){ wgtMsg(e.message,'bad'); return; }
+  const ms=D.months, last=ms[ms.length-1], S={sel:[last],cmp:[shiftMonth(last,-1)],trend:rangeMk(shiftMonth(last,-11),last),label:last,cmpLabel:'',short:'',prov:false,end:last};
+  const sums=P=>{ const o={}; TEAMS.forEach(t=>o[t]=0); let all=0; ROSTER.forEach(r=>{ const p=P.person[r[0]]; if(!p) return; const x=(p.score||{})['이번 년도']||0; all+=x; if(o[r[1]]!=null) o[r[1]]+=x; }); o['전체']=all; return o; };
+  $('wgtPrev').textContent='계산 중...';
+  await new Promise(r=>setTimeout(r,20));
+  const A=sums(buildProdData(D.raw,PROD_ROSTER,wgtOpts(S,WGT_LIST()))), B=sums(buildProdData(D.raw,PROD_ROSTER,wgtOpts(S,[{from:'0000-01',score:v.score,grade:v.grade}])));
+  const row=k=>{ const d=B[k]-A[k], pc=A[k]?d/A[k]*100:0; return `<tr><th scope="row">${esc(k==='전체'?'FSG 전체':k)}</th><td class="n">${fmt(Math.round(A[k]))}</td><td class="n">${fmt(Math.round(B[k]))}</td><td class="n">${d>=0?'+':''}${pc.toFixed(1)}%</td></tr>`; };
+  $('wgtPrev').innerHTML=`<b>${esc(last.replace('-','년 '))}월 활동에 이 값을 적용하면</b> (점수 합계)<table class="wd-tbl"><thead><tr><th scope="col">구분</th><th scope="col" class="n">현재 값</th><th scope="col" class="n">새 값</th><th scope="col" class="n">변화</th></tr></thead><tbody>${['전체'].concat(TEAMS).map(row).join('')}</tbody></table>`;
+}
+async function wgtSave(){
+  let v; try{ v=wgtRead(); }catch(e){ wgtMsg(e.message,'bad'); return; }
+  const f=$('wgtFrom').value; if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(f)){ wgtMsg('적용 시작월을 정해 주세요.','bad'); return; }
+  if(!ADMIN_TOKEN||Date.now()>=ADMIN_EXP){ wgtMsg('로그인이 끝났습니다(1시간). 다시 로그인해 주세요.','bad'); showWgtLogin(); return; }
+  if(f<=wgtMonth() && !confirm(`${f.replace('-','년 ')}월은 이미 지난 달(또는 이번 달)입니다.\n저장하면 그 달부터의 점수가 모두 다시 계산됩니다. 계속할까요?`)) return;
+  const now=new Date().toISOString(), item={score:v.score,grade:v.grade,at:now,by:(ADMIN_EMAIL||'').split('@')[0]};
+  $('wgtSave').disabled=true; wgtMsg('저장 중...');
+  try{
+    await fb('weights/items/'+f,{method:'PUT',body:JSON.stringify(item)});
+    await fb('weights/rev',{method:'PUT',body:JSON.stringify(now)});
+    WGT_ITEMS[f]=item; WGT_REV=now; wgtHist(); wgtMark(); fillWgt(f);
+    wgtMsg(`저장했습니다. ${f.replace('-','년 ')}월부터 적용됩니다.`,'good'); applyWeights();
+  }catch(e){ wgtMsg(e.message||'저장하지 못했습니다.','bad'); }
+  finally{ $('wgtSave').disabled=false; }
+}
+async function wgtDelete(f){
+  if(!confirm(`${f.replace('-','년 ')}월부터의 가중치 변경을 지울까요?`)) return;
+  try{ const now=new Date().toISOString();
+    await fb('weights/items/'+f,{method:'PUT',body:'null'}); await fb('weights/rev',{method:'PUT',body:JSON.stringify(now)});
+    delete WGT_ITEMS[f]; WGT_REV=now; wgtHist(); fillWgt($('wgtFrom').value||wgtMonth()); wgtMsg('지웠습니다.','good'); applyWeights();
+  }catch(e){ wgtMsg(e.message||'지우지 못했습니다.','bad'); }
+}
+function showWgtLogin(){ $('wgtLogin').hidden=false; $('wgtBody').hidden=true; }
+function showWgtBody(){
+  $('wgtLogin').hidden=true; $('wgtBody').hidden=false;
+  $('wgtWho').textContent=`${ADMIN_EMAIL} 로그인됨 · UID: ${ADMIN_UID}`;
+  const d=new Date(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth()+1); $('wgtFrom').value=d.toISOString().slice(0,7);
+  WGT_DEF=null; fillWgt($('wgtFrom').value); wgtHist(); wgtMsg('');
+}
+async function wgtLogin(){
+  const e=$('wgtEmail').value.trim(), p=$('wgtPw').value, m=$('wgtLoginMsg');
+  if(!e||!p){ m.className='wd-msg bad'; m.textContent='이메일과 비밀번호를 입력해 주세요.'; return; }
+  m.className='wd-msg'; m.textContent='로그인 중...';
+  try{ ADMIN_UID=await adminLogin(e,p); $('wgtPw').value=''; m.textContent=''; showWgtBody(); }
+  catch(err){ m.className='wd-msg bad'; m.textContent=err.message; }
+}
+function openWgt(){
+  const dlg=$('wgtDlg'); if(ADMIN_TOKEN&&Date.now()<ADMIN_EXP) showWgtBody(); else showWgtLogin();
+  if(!dlg.open) dlg.showModal(); setTimeout(()=>{ const f=$(ADMIN_TOKEN?'wgtFrom':'wgtEmail'); if(f) f.focus(); },30);
+}
+window.openWgt=openWgt;
+$('wgtClose').addEventListener('click',()=>$('wgtDlg').close());
+$('wgtLoginBtn').addEventListener('click',wgtLogin); $('wgtPw').addEventListener('keydown',e=>{ if(e.key==='Enter') wgtLogin(); });
+$('wgtFrom').addEventListener('input',()=>{ wgtHint(); if(/^\d{4}-\d{2}$/.test($('wgtFrom').value)) fillWgt($('wgtFrom').value); });
+$('wgtDlg').addEventListener('input',e=>{ if(e.target.matches('input[data-sc]')) wgtMark(); });
+$('wgtSave').addEventListener('click',wgtSave); $('wgtPreview').addEventListener('click',wgtPreview);
+$('wgtDefault').addEventListener('click',()=>{ WGT_DEF=WGT_DEF||wgtDefaults(); document.querySelectorAll('#wgtDlg input[data-sc]').forEach(i=>{ const b=WGT_DEF.base[i.dataset.sc][i.dataset.k]; if(b!=null) i.value=wgtFmt(b); }); wgtMark(); wgtMsg('기본값을 채웠습니다. 저장하면 이 값이 적용됩니다.'); });
+$('wgtHist').addEventListener('click',e=>{ const b=e.target.closest('button[data-del]'); if(b) wgtDelete(b.dataset.del); });
 async function initShare(){
   if(!FIREBASE_URL){ showEmpty('설정이 필요합니다: 파일 안의 FIREBASE_URL에 Firebase Realtime Database 주소를 넣어 주세요.'); return; }
   if(ADMIN){ $('openUpl').hidden=false;
@@ -3461,18 +3681,19 @@ function renderProd(){
   } else if(window.__prodRender) window.__prodRender();
 }
 /* 부서원 계산(buildProdData)을 한 번만 — 서비스 탭 「팀별 1인당 생산성」과 부서원 탭이 같은 결과를 씀 */
+function prodOpts(S, weights){ return {hr:HRDATA, teams:PROD_UNITS, teamGroups:PROD_GROUPS, gradeNow:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), exclAvg:ROSTER.filter(r=>r[2]==='팀장'||NEWBIE.includes(r[0])).map(r=>r[0]), otEndHour:PROD_END_H, gradeHist:GRADE_HIST, weights:weights, holidays:KR_HOLIDAYS, shift:SHIFT, shiftInfo:SHIFT_INFO, sel:S.sel, cmp:S.cmp, trend:S.trend,
+      labels:{'이번 년도':S.label,'직전 년도':S.cmpLabel,'전체 누적':'전체 기간'}}; }
 function ensureProd(){
   if(!RAW||!D) return false;
   if(PROD_DIRTY||!PROD){
     const S=prodSelection();
-    PROD=buildProdData(D.raw, PROD_ROSTER, {hr:HRDATA, teams:PROD_UNITS, teamGroups:PROD_GROUPS, gradeNow:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), exclAvg:ROSTER.filter(r=>r[2]==='팀장'||NEWBIE.includes(r[0])).map(r=>r[0]), otEndHour:PROD_END_H, gradeHist:GRADE_HIST, holidays:KR_HOLIDAYS, shift:SHIFT, shiftInfo:SHIFT_INFO, sel:S.sel, cmp:S.cmp, trend:S.trend,
-      labels:{'이번 년도':S.label,'직전 년도':S.cmpLabel,'전체 누적':'전체 기간'}});
+    PROD=buildProdData(D.raw, PROD_ROSTER, prodOpts(S, WGT_LIST()));
     Object.assign(PROD,{no_att:!RAW.some(r=>r.att), raw_n:RAW.length, tz_fixed:RAW.tzFixed||0, src:SRC.act, cmp_short:S.short, provisional:S.prov,
       trend_labels:S.trend.map(m=>m.slice(2,4)+'.'+m.slice(5)), trend_names:['최근 12개월','전년 동월'],
       /* 월별 추이 마지막 달이 CRM 추출일이 속한 달이면 아직 집계 중(진행 중) */
       trend_partial:(()=>{const lm=S.trend[S.trend.length-1], c=D.excl&&D.excl.cut; return c&&lm&&c.slice(0,7)===lm?{idx:S.trend.length, month:+lm.slice(5), cut:c}:null;})(),
       move:GEO?moveData():null, eq:EQD?{by:eqByPerson(EQD.rows), src:EQD.src||'', made:EQD.made||'', n:EQD.rows.length}:null, sel_months:S.sel, cmp_months:S.cmp, trend_months:S.trend,
-      grade:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), promoted:Object.fromEntries(GRADE_HIST.filter(([n,d])=>S.sel.includes(d.slice(0,7))).map(([n,d,prev])=>[n,prev+'→'+rosterMap[n].grade+' ('+d.slice(5).replace('-','/')+')'])), newbie:NEWBIE, ex_lead:$('pExLead').checked});
+      grade:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), promoted:Object.fromEntries(GRADE_HIST.filter(([n,d])=>S.sel.includes(d.slice(0,7))).map(([n,d,prev])=>[n,prev+'→'+rosterMap[n].grade+' ('+d.slice(5).replace('-','/')+')'])), newbie:NEWBIE, ex_lead:$('pExLead').checked, admin_weights:ADMIN});
     $('pCmp').innerHTML=`비교 기간: ${esc(S.cmpLabel)}<br>직급 표시: 현재 · 직급 가중치: 진급자는 시행일부터 새 직급`;
     PROD_DIRTY=false; PROD_SHOWN=false; return true;
   }

@@ -103,4 +103,42 @@ ok(w2(anon, '/schedule-overrides/custom/user-1', ev()) && w2(anon, '/work-schedu
 ok(!w2(anon, '/schedule-overrides', snapshot) && !w2(anon, '/work-schedule', {}), '전체 덮어쓰기 금지도 1단계와 동일');
 ok(w2(anon, '/voc-dashboard/data', { a: 1 }), '만족도 쓰기는 현행 유지');
 
+/* ---- 3단계: 가중치 설정은 관리자 2명, 나머지 KPI 쓰기는 기존 관리자 1명 ---- */
+const WUID = 'HBUnInhKjzMRicdpRIiV7Gn7p2d2';   // 가중치 관리자(smkim07) 계정의 UID — 규칙 파일의 값과 같아야 한다
+const raw3 = require('fs').readFileSync(path.join(__dirname, '..', 'firebase', 'database.rules.stage3.json'), 'utf8');
+ok(!/REPLACE_WITH/.test(raw3), '3단계 규칙에 자리표시(REPLACE_WITH_…)가 남아 있으면 안 됨');
+ok(raw3.split(WUID).length - 1 === 2, '3단계 규칙에 가중치 관리자 UID 2곳');
+const rules3 = JSON.parse(raw3);
+const WADM = { uid: WUID, provider: 'password' };
+const db3 = d => targaryen.database(rules3, d || {}, NOW);
+const w3 = (who, p, v, d) => db3(d).as(who).write(p, v).allowed;
+const r3 = (who, p) => db3().as(who).read(p).allowed;
+const wItem = (o) => Object.assign({ score: { '고장 수리': 3.5, 'PM': 1, '성능 평가·인증 지원': 3 }, grade: { T4: 0.6, T3: 0.4, '팀장': 0.6 }, at: '2026-11-09T00:00:00.000Z', by: 'smkim07' }, o || {});
+ok(w3(WADM, '/kpi-dashboard/weights/items/2026-12', wItem()), '가중치 관리자는 시작월 묶음 저장');
+ok(w3(WADM, '/kpi-dashboard/weights/rev', '2026-11-09T00:00:00.000Z'), '가중치 관리자는 rev(바뀐 시각) 저장');
+ok(w3(ADMIN, '/kpi-dashboard/weights/items/2026-12', wItem()), '기존 관리자도 가중치 저장');
+ok(w3(WADM, '/kpi-dashboard/weights/items/2026-12', null, { 'kpi-dashboard': { weights: { items: { '2026-12': wItem() } } } }), '가중치 관리자는 묶음 삭제');
+ok(!w3(WADM, '/kpi-dashboard/meta', { updatedAt: 'x' }), '가중치 관리자는 KPI 메타 쓰기 거부');
+ok(!w3(WADM, '/kpi-dashboard/act', { v: 1 }), '가중치 관리자는 CRM 데이터 쓰기 거부');
+ok(!w3(WADM, '/kpi-dashboard/backups/2026-11-09', { a: 1 }), '가중치 관리자는 KPI 백업 쓰기 거부');
+ok(!w3(WADM, '/kpi-dashboard', null), '가중치 관리자는 KPI 전체 삭제 거부');
+ok(!w3(WADM, '/kpi-dashboard/weights', { rev: 'x' }), '가중치 전체 덮어쓰기 거부(한 묶음 단위로만)');
+ok(!w3(WADM, '/kpi-dashboard/weights/items', null), '묶음 전체 삭제 거부');
+ok(!w3(anon, '/kpi-dashboard/weights/items/2026-12', wItem()), '익명은 가중치 쓰기 거부');
+ok(!w3({ uid: 'other-admin', provider: 'password' }, '/kpi-dashboard/weights/rev', 'x'), '다른 계정은 가중치 쓰기 거부');
+ok(!w3(null, '/kpi-dashboard/weights/rev', 'x'), '로그인 없으면 거부');
+ok(!w3(WADM, '/kpi-dashboard/weights/items/abc', wItem()), '시작월 형식이 아니면 거부');
+ok(!w3(WADM, '/kpi-dashboard/weights/items/2026-13', wItem()), '13월 거부');
+ok(!w3(WADM, '/kpi-dashboard/weights/items/2026-12', wItem({ score: { '고장 수리': 11 } })), '10 초과 값 거부');
+ok(!w3(WADM, '/kpi-dashboard/weights/items/2026-12', wItem({ score: { '고장 수리': -1 } })), '음수 거부');
+ok(!w3(WADM, '/kpi-dashboard/weights/items/2026-12', wItem({ score: { '고장 수리': '3' } })), '숫자가 아닌 값 거부');
+ok(!w3(WADM, '/kpi-dashboard/weights/items/2026-12', wItem({ score: { '없는 업무': 1 } })), '정해지지 않은 업무 이름 거부');
+ok(!w3(WADM, '/kpi-dashboard/weights/items/2026-12', wItem({ grade: { T9: 1 } })), '정해지지 않은 직급 거부');
+ok(!w3(WADM, '/kpi-dashboard/weights/items/2026-12', wItem({ by: undefined })), '설정한 사람 없으면 거부');
+ok(!w3(WADM, '/kpi-dashboard/weights/items/2026-12', Object.assign(wItem(), { extra: 1 })), '정해지지 않은 항목 거부');
+ok(r3(anon, '/kpi-dashboard/weights') && r3(anon, '/kpi-dashboard/weights/rev') && r3(WADM, '/kpi-dashboard/meta'), '읽기는 로그인한 누구나');
+ok(!r3(null, '/kpi-dashboard/weights'), '로그인 없는 읽기 거부');
+ok(w3(ADMIN, '/kpi-dashboard/meta', { updatedAt: 'x' }) && !w3(anon, '/kpi-dashboard/meta', { updatedAt: 'x' }), '기존 관리자만 데이터 올리기(2단계와 동일)');
+ok(w3(anon, '/schedule-overrides/custom/user-1', ev()) && !w3(anon, '/schedule-overrides', snapshot), '설치일정 규칙은 그대로');
+
 console.log('test_db_rules: OK (' + pass + '개 확인)');
