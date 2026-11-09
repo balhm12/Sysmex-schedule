@@ -104,8 +104,12 @@ ok(!w2(anon, '/schedule-overrides', snapshot) && !w2(anon, '/work-schedule', {})
 ok(w2(anon, '/voc-dashboard/data', { a: 1 }), '만족도 쓰기는 현행 유지');
 
 /* ---- 3단계: 가중치 설정은 관리자 2명, 나머지 KPI 쓰기는 기존 관리자 1명 ---- */
-const rules3 = JSON.parse(require('fs').readFileSync(path.join(__dirname, '..', 'firebase', 'database.rules.stage3.json'), 'utf8').split('REPLACE_WITH_WEIGHT_ADMIN_UID').join('weight-admin-uid'));
-const WADM = { uid: 'weight-admin-uid', provider: 'password' };
+const WUID = 'HBUnInhKjzMRicdpRIiV7Gn7p2d2';   // 가중치 관리자(smkim07) 계정의 UID — 규칙 파일의 값과 같아야 한다
+const raw3 = require('fs').readFileSync(path.join(__dirname, '..', 'firebase', 'database.rules.stage3.json'), 'utf8');
+ok(!/REPLACE_WITH/.test(raw3), '3단계 규칙에 자리표시(REPLACE_WITH_…)가 남아 있으면 안 됨');
+ok(raw3.split(WUID).length - 1 === 2, '3단계 규칙에 가중치 관리자 UID 2곳');
+const rules3 = JSON.parse(raw3);
+const WADM = { uid: WUID, provider: 'password' };
 const db3 = d => targaryen.database(rules3, d || {}, NOW);
 const w3 = (who, p, v, d) => db3(d).as(who).write(p, v).allowed;
 const r3 = (who, p) => db3().as(who).read(p).allowed;

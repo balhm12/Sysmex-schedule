@@ -343,7 +343,7 @@
       "weights": {
         "items": {
           "$m": {
-            ".write": "auth != null && (auth.uid === 'sknozAsrQ4NZZyaGGPnDWZoWpSv2' || auth.uid === 'REPLACE_WITH_WEIGHT_ADMIN_UID')",
+            ".write": "auth != null && (auth.uid === 'sknozAsrQ4NZZyaGGPnDWZoWpSv2' || auth.uid === 'HBUnInhKjzMRicdpRIiV7Gn7p2d2')",
             ".validate": "newData.hasChildren(['score','grade','at','by']) && $m.matches(/^[0-9]{4}-(0[1-9]|1[0-2])$/)",
             "score": {
               "고장 수리": {
@@ -411,7 +411,7 @@
           }
         },
         "rev": {
-          ".write": "auth != null && (auth.uid === 'sknozAsrQ4NZZyaGGPnDWZoWpSv2' || auth.uid === 'REPLACE_WITH_WEIGHT_ADMIN_UID')",
+          ".write": "auth != null && (auth.uid === 'sknozAsrQ4NZZyaGGPnDWZoWpSv2' || auth.uid === 'HBUnInhKjzMRicdpRIiV7Gn7p2d2')",
           ".validate": "newData.isString() && newData.val().length <= 40"
         },
         "$other": {
