@@ -3565,7 +3565,7 @@ async function wgtDelete(f){
 function showWgtLogin(){ $('wgtLogin').hidden=false; $('wgtBody').hidden=true; }
 function showWgtBody(){
   $('wgtLogin').hidden=true; $('wgtBody').hidden=false;
-  $('wgtWho').textContent=`${ADMIN_EMAIL} 로그인됨`;
+  $('wgtWho').textContent=`${ADMIN_EMAIL} 로그인됨 · UID: ${ADMIN_UID}`;
   const d=new Date(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth()+1); $('wgtFrom').value=d.toISOString().slice(0,7);
   WGT_DEF=null; fillWgt($('wgtFrom').value); wgtHist(); wgtMsg('');
 }
