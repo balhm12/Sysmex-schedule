@@ -56,6 +56,7 @@ node fsg-report/report-data.js --period FY2026Q2 --activity "2. 모든 약속_�
 ```
 - `--period` 2026-09 · 2026-07~2026-09 · FY2026Q2 (회계 분기, 4월 시작)
 - `--dir` 폴더에서 파일명(약속_활동 / Serial)으로 종류를 구분해 최신 파일(파일명 날짜 → 수정 시각)을 쓴다
+- `--weights` KPI 가중치 설정. 기본은 Firebase `kpi-dashboard/weights`(대시보드 「가중치 설정」에서 바꾼 값)를 익명으로 읽는다. 못 읽으면 코드 기본값으로 계산하고 `meta.warnings`에 남긴다. 파일(`{items:{'2026-12':{score,grade}}}` 또는 `[{from,score,grade}]`)을 주면 그 값, `none`이면 기본값만(환경변수 `FSG_NO_NET=1`도 같음)
 - `--serial` Serial No 자산대장. `--dir` 폴더에 있으면 파일명(Serial)으로 자동 선택. 서비스 케이스 파일은 쓰지 않는다(있어도 무시)
 - `--calendar` 설치 공유캘린더 내보내기(`시스템설치_공유캘린더_YYYYMMDD.xlsx`). `--dir`에 있으면 파일명(캘린더)으로 자동 선택. 이름이 다른 짝은 자동 연결하고 검산 xlsx 「자동연결」 탭에 적는다
 - `--roster` 로스터 CSV(fsg-roster `references/roster.csv` 형식). 없으면 `fsg-kpi.html`의 ROSTER(대시보드와 같은 명단)

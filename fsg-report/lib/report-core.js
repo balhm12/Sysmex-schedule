@@ -253,7 +253,7 @@ function buildReport(opt) {
     const gradeNow = {}; roster.forEach(r => gradeNow[r[0]] = r[2]);
     const newbie = pr.newbie || [];
     const prod = buildProdData(RAWC, prodRoster, { teams: units, teamGroups: groups, gradeNow, exclAvg: roster.filter(r => r[2] === '팀장' || newbie.indexOf(r[0]) >= 0).map(r => r[0]),
-      gradeHist: pr.gradeHist || [], sel, cmp, labels: { '이번 년도': period.label, '직전 년도': '직전 기간', '전체 누적': '전체 기간' } });
+      gradeHist: pr.gradeHist || [], weights: pr.weights || [], sel, cmp, labels: { '이번 년도': period.label, '직전 년도': '직전 기간', '전체 누적': '전체 기간' } });
     const label = u => { const m = String(u || '').match(/^FS (\S+)(?: (\S+))?$/); return m ? (m[2] ? m[1][0] + m[1].slice(1).toLowerCase() + '·' + m[2] : m[1][0] + m[1].slice(1).toLowerCase()) : u; };
     const list = Object.keys(prod.person).map(n => { const p = prod.person[n], cur = p.score['이번 년도'] || 0, prev = p.score['직전 년도'] || 0;
       return { name: n, unit: p.team, unitLabel: label(p.team), grade: gradeNow[n] || '', newbie: newbie.indexOf(n) >= 0, score: cur, count: p.total_case['이번 년도'] || 0, prevScore: prev, deltaPct: prev > 0 ? round1((cur / prev - 1) * 100) : null }; })

@@ -1,4 +1,5 @@
 // compare-sheet(시트 사본 대조)와 report-data CLI 의 동작 — 합성 시트 사본으로 왕복 검증
+process.env.FSG_NO_NET = '1';   // 가중치 설정을 Firebase 에서 읽지 않는다(테스트는 네트워크 없이)
 const assert = require('assert'), fs = require('fs'), os = require('os'), path = require('path'), cp = require('child_process'), XLSX = require('xlsx');
 const { compareWorkbook, settingCut, monthLabel } = require('../fsg-report/compare-sheet');
 const R = require('../fsg-report/lib/read-crm');
