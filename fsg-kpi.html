@@ -498,7 +498,7 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
     </div>
     <div class="drop" id="dropHr" tabindex="0" role="button" aria-label="연장근무현황 파일 선택">
       <b>연장근무 (선택)</b>
-      <p>인사 「직원 월별 연장근무현황」(성명·1월~12월, 시간.분, 파일명에 연도) 또는 「연장근로」 월별 시트 파일(Apr-26 …, 시간만 읽고 수당·금액 열은 읽지 않음). 넣으면 부서원 KPI의 OT 시간이 이 자료 기준이 됩니다. 올린 달만 바뀌고 다른 달은 그대로 합쳐지며, 월별 연장근로 파일이 있는 달은 신청 현황으로 덮지 않습니다.</p>
+      <p>인사 「직원 월별 연장근무현황」(성명·1월~12월, 시간.분, 파일명에 연도가 있으면 그 연도, 없으면 파일 저장일로 추정해 알려 줌) 또는 「연장근로」 월별 시트 파일(Apr-26 …, 시간만 읽고 수당·금액 열은 읽지 않음). 넣으면 부서원 KPI의 OT 시간이 이 자료 기준이 됩니다. 올린 달만 바뀌고 다른 달은 그대로 합쳐지며, 월별 연장근로 파일이 있는 달은 신청 현황으로 덮지 않습니다.</p>
       <div class="st" id="stHr">선택된 파일 없음</div>
     </div>
     <div class="drop" id="dropGeo" tabindex="0" role="button" aria-label="이동거리 좌표 파일 선택">
@@ -3264,20 +3264,29 @@ function mergeHr(old, nw){
   const srcs=[]; Object.keys(ms).sort().forEach(mk=>{ const x=ms[mk], last=srcs[srcs.length-1]; if(last && last.src===x.src) last.last=mk; else srcs.push({kind:x.kind, src:x.src, asof:x.asof, first:mk, last:mk}); });
   return {h, ms, srcs, src:srcs.map(x=>x.src).join(' + '), asof:(srcs.filter(x=>x.kind!=='mon').pop()||{}).asof||null};
 }
-function parseHr(buf, fname){
+function parseHr(buf, fname, mtime){
   { const wb=XLSX.read(buf,{type:'array',cellDates:false,dense:true}); const p=parseOtMonthly(wb, fname); if(p) return p; }
   const t=xlsxRows(buf,['성명']); if(!t) throw new Error("'성명' 열이 있는 시트를 찾지 못했습니다. 직원 월별 연장근무현황 파일인지 확인해 주세요.");
-  const ym=String(fname||'').match(/(20\d{2})/); if(!ym) throw new Error('파일명에서 연도(YYYY)를 찾지 못했습니다. 예: 직원 월별연장근무현황_2026_10_7.xlsx');
-  const year=ym[1], h=t.h, iN=h.findIndex(c=>c==='성명'), mc={};
-  h.forEach((c,i)=>{ const m=String(c).match(/^(\d{1,2})\s*월$/); if(m) mc[i]=year+'-'+String(+m[1]).padStart(2,'0'); });
-  if(!Object.keys(mc).length) throw new Error("'1월'~'12월' 열을 찾지 못했습니다.");
+  const h=t.h, iN=h.findIndex(c=>c==='성명'), cols=[];
+  h.forEach((c,i)=>{ const m=String(c).match(/^(\d{1,2})\s*월$/); if(m) cols.push([i,+m[1]]); });
+  if(!cols.length) throw new Error("'1월'~'12월' 열을 찾지 못했습니다.");
+  /* 연도: 파일명(20XX)이 우선. 이 형식은 파일 안에 연도가 없고 파일명에도 없는 경우가 있어(2026-11-09 사용자 파일) 파일 저장일로 추정한다.
+     5명 이상 값이 있는 달만 자료 달로 본다(hrCovOf와 같은 기준 — 미리 신청된 11·12월 몇 건은 세지 않음). 그런 가장 늦은 달이
+     저장일의 달보다 뒤이면 아직 오지 않은 달이므로 전년도로 본다. 추정했으면 화면에 알린다. */
+  const ym=String(fname||'').match(/(20\d{2})/); let year, yearNote='';
+  if(ym) year=ym[1];
+  else { const cnt={}; for(const r of t.rows) for(const [i,mo] of cols){ const v=parseFloat(r[i]); if(isFinite(v)&&v>0) cnt[mo]=(cnt[mo]||0)+1; }
+    const latest=Math.max(0,...Object.keys(cnt).filter(mo=>cnt[mo]>=5).map(Number));
+    const d=mtime?new Date(mtime):new Date(); let y=d.getFullYear(); if(latest>d.getMonth()+1) y--;
+    year=String(y); yearNote='파일명에 연도가 없어 '+y+'년으로 읽음(파일 저장일 기준) — 틀리면 파일명에 연도를 넣어 다시 올려 주세요'; }
+  const mc={}; cols.forEach(([i,mo])=>{ mc[i]=year+'-'+String(mo).padStart(2,'0'); });
   const out={};
   for(const r of t.rows){ const n=String(r[iN]??'').trim(); if(!n) continue; const o=out[n]||(out[n]={});
     for(const i in mc){ const v=parseFloat(r[i]); if(!isFinite(v)||v<=0) continue; const hh=Math.floor(v), mm=Math.round((v-hh)*100);
       o[mc[i]]=(o[mc[i]]||0)+hh+(mm<60?mm/60:mm/100); } }
   if(!Object.keys(out).length) throw new Error('읽을 수 있는 행이 없습니다.');
   const dt=String(fname||'').match(/(20\d{2})[_.\-](\d{1,2})[_.\-](\d{1,2})/);
-  return {h:out, src:fname, kind:'req', upto:dt?dt[1]+'-'+String(+dt[2]).padStart(2,'0'):null, asof:dt?dt[1]+'-'+String(+dt[2]).padStart(2,'0')+'-'+String(+dt[3]).padStart(2,'0'):null};
+  return {h:out, src:fname, kind:'req', yearNote, upto:dt?dt[1]+'-'+String(+dt[2]).padStart(2,'0'):null, asof:dt?dt[1]+'-'+String(+dt[2]).padStart(2,'0')+'-'+String(+dt[3]).padStart(2,'0'):null};
 }
 function parseSerial(buf){
   const t=xlsxRows(buf,null); if(!t) throw new Error('시트를 읽지 못했습니다.');
@@ -3295,8 +3304,8 @@ async function handleFile(kind, file){
     const buf=new Uint8Array(await file.arrayBuffer());
     let msg;
     if(kind==='act'){ RAW=fixTz(parseActivity(buf)); SRC.act=file.name; SRC.embedded=false; msg=`${file.name}: ${fmt(RAW.length)}행 읽음`; }
-    else if(kind==='hr'){ const nw=parseHr(buf,file.name), c=hrCovOf(nw); HRDATA=mergeHr(HRDATA, nw); SRC.hr=HRDATA.src;
-      msg=`${file.name}: ${nw.kind==='mon'?'월별 연장근로':'연장근무 신청'} ${fmt(Object.keys(nw.h).length)}명, ${c[0]||''}~${c[c.length-1]||''} 읽음(기존 자료와 합침: ${HRDATA.srcs.map(x=>(x.kind==='mon'?'월별 ':'신청 ')+x.first+'~'+x.last).join(' + ')})`; }
+    else if(kind==='hr'){ const nw=parseHr(buf,file.name,file.lastModified), c=hrCovOf(nw); HRDATA=mergeHr(HRDATA, nw); SRC.hr=HRDATA.src;
+      msg=`${file.name}: ${nw.kind==='mon'?'월별 연장근로':'연장근무 신청'} ${fmt(Object.keys(nw.h).length)}명, ${c[0]||''}~${c[c.length-1]||''} 읽음(기존 자료와 합침: ${HRDATA.srcs.map(x=>(x.kind==='mon'?'월별 ':'신청 ')+x.first+'~'+x.last).join(' + ')})`+(nw.yearNote?' ['+nw.yearNote+']':''); }
     else if(kind==='geo'){ GEO=parseGeo(buf,file.name); SRC.geo=file.name; PROD_DIRTY=true; msg=`${file.name}: 기관 ${fmt(Object.keys(GEO.acct).length)}곳 · 직원 ${fmt(Object.keys(GEO.home).length)}명 좌표 읽음`; }
     else if(kind==='eq'){ EQD=parseEq(buf,file.name); SRC.eq=file.name; PROD_DIRTY=true; msg=`${file.name}: 기관 ${fmt(EQD.rows.length)}곳 · 장비 ${fmt(EQD.rows.reduce((a,r)=>a+r[3],0))}대 읽음`; }
     else { const all=parseSerial(buf); SERIAL=all.filter(x=>x.state==='사용'); SRC.ser=file.name; msg=`${file.name}: 장비 ${fmt(all.length)}대 중 '사용' ${fmt(SERIAL.length)}대`; }
