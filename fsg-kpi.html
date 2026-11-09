@@ -388,9 +388,10 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 }
 /* 가중치 설정 창(관리자) */
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.wdlg{width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 24px);padding:0;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)}
+.wdlg{width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 24px);padding:0;overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)}
 .wdlg::backdrop{background:rgba(15,21,29,.55)}
-.wd-in{padding:16px 18px 18px;overflow:auto;max-height:calc(100vh - 26px)}
+.wd-in{position:relative;padding:16px 18px 18px;overflow-y:auto;overscroll-behavior:contain;max-height:calc(100vh - 26px)}
+body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 페이지는 스크롤하지 않음(스크롤이 겹쳐 헷갈리던 것) */
 .wd-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
 .wd-head h2{margin:0;font-size:18px;font-weight:700}
 .wd-x{font:inherit;font-size:22px;line-height:1;width:44px;height:44px;border:0;background:transparent;color:var(--muted);cursor:pointer;border-radius:4px}
@@ -407,7 +408,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 .wd-tbl td.n,.wd-tbl th.n{text-align:right;font-variant-numeric:tabular-nums}
 .wd-tbl tbody th{color:var(--text);font-size:14px}
 .wd-tbl.fx{table-layout:fixed}
-.wd-hist td:last-child{white-space:nowrap;text-align:right}.wd-hist td:first-child{white-space:nowrap}
+.wd-hist td:last-child:not([colspan]){white-space:nowrap;text-align:right}.wd-hist td:first-child:not([colspan]){white-space:nowrap}
 .wd-tbl input[type=number]{font:inherit;width:78px;height:36px;text-align:right;padding:0 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-variant-numeric:tabular-nums}
 .wd-tbl input[type=number].chg{border-color:var(--primary);background:var(--tint)}
 .wd-tbl input[type=number]:invalid{border-color:var(--bad)}
