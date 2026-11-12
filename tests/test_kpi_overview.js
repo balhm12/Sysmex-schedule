@@ -52,7 +52,10 @@ assert(/\.dsx\{--ovp:var\(--primary\)\}/.test(html) && /#ov \.ovkpi,\.dsx \.ovkp
 // 최종 개선(사무소 중심·그래프 유형): 사무소 행은 PROD 를 읽기만 하고, 도트 플롯·100% 누적 막대·더 보기 요소가 있다
 const orgCode = between('function orgRows(mode){', 'function renderOrgTop');
 assert(/PROD\.team\[u\]/.test(orgCode) && /PROD_UNITS/.test(orgCode) && !/revisitAvg|kpiCore\(|buildProdData\(/.test(orgCode), '사무소 행이 PROD 만 읽지 않음');
-['famRvDots','orgMode','ogMix','proOgBars','proOgTbl','cPm','insPerf','instMore','fInstOver','lbMore'].forEach(id => assert(html.includes('id="' + id + '"'), id + ' 없음'));
+['famRvDots','orgAllBtn','proAllBtn','ogMix','proOgBars','proOgTbl','cPm','insPerf','instMore','fInstOver','lbMore'].forEach(id => assert(html.includes('id="' + id + '"'), id + ' 없음'));
+// 팀·사무소 트리: 팀을 누르면 사무소로 나뉜다(펼침·선택은 화면 공통), 값은 orgRows(PROD) 그대로
+assert(/function orgTree\(\)/.test(html) && /function orgPick\(k\)/.test(html) && /aria-expanded/.test(between('function renderOrgTop', 'function chronicList')), '팀·사무소 트리 없음');
+assert(!/orgRows\('office'\), tp=/.test(html), 'Proactive 가 예전 사무소 고정 목록을 씀');
 assert(/function dsBars/.test(html) && /0에서 시작하지 않음/.test(html), '도트 플롯에 축 범위 안내가 없음');
 assert(/\$\{ADMIN\?`, 원본 \$\{SRC\.act\}`:''\}/.test(html), '원본 파일명이 일반 사용자 헤더에 노출됨');
 assert(/function chronicList/.test(html) && !/revisitAvg/.test(between('function chronicList', 'function renderProTop')), '반복 고장 목록이 새 계산식을 씀');
