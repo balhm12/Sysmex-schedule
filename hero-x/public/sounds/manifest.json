@@ -1,0 +1,31 @@
+{
+  "_설명": "정식 음원 파일(.ogg/.mp3/.wav)을 이 폴더에 넣고 아래에 파일 이름을 적으면 게임이 그 소리를 씁니다. null 이면 코드로 합성한 소리를 씁니다. 자세한 방법은 README.md 참고.",
+  "sfx": {
+    "melee": null,
+    "ranged": null,
+    "enemyHit": null,
+    "kill": null,
+    "hurt": null,
+    "pickup": null,
+    "equip": null,
+    "heal": null,
+    "levelup": null,
+    "chest": null,
+    "jump": null,
+    "dash": null,
+    "bossAppear": null,
+    "slam": null,
+    "boom": null,
+    "summon": null,
+    "clear": null,
+    "defeat": null,
+    "ui": null
+  },
+  "music": {
+    "menu": null,
+    "forest": null,
+    "cave": null,
+    "fortress": null,
+    "boss": null
+  }
+}
