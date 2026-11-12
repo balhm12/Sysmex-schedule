@@ -8,7 +8,12 @@
 - 배포: GitHub Pages, `main` 브랜치 루트. **`main`에 푸시하면 즉시 배포된다** — 수정은 브랜치 + PR로.
 - `restore*.html`, `fss복구.html`, `bulk_*_tool.html`은 데이터를 통째로 쓰는 관리자 도구다. 손대기 전에 사용자에게 확인한다.
 - 사용자 환경: Windows 11 + PowerShell.
-- `apps-script/survey_analysis.gs` = 만족도 시트(고객만족도조사_구글서베이_Trial)에 붙은 Apps Script 전체 코드다. `main` 에 올라가면 GitHub Actions 가 clasp 로 그 프로젝트에 올린다 — **편집기에서 직접 고치지 말고 이 파일을 고친다**(설정은 `apps-script/README.md`). 배포 전에 편집기 코드를 받아 `apps-script/.deployed.sha256` 과 대조하고, 다르면 **올리지 않고 멈춘다**(편집기 직접 수정으로 기능이 사라진 사고가 두 번 있었다 — README 참고).
+- `apps-script/survey_analysis.gs` = 만족도 시트(고객만족도조사_구글서베이_Trial)에 붙은 Apps Script 전체 코드다. `main` 에 올라가면 GitHub Actions 가 clasp 로 그 프로젝트에 올린다 — **편집기에서 직접 고치지 말고 이 파일을 고친다**(설정은 `apps-script/README.md`). 배포 전에 편집기 코드를 받아 `apps-script/.deployed.sha256` 과 대조하고, 다르면 **올리지 않고 멈춘다**(편집기 직접 수정으로 기능이 사라진 사고가 세 번 있었다 — README 참고).
+- **웹 앱은 편집기 코드(Head)가 아니라 「배포된 버전」의 얼린 코드로 돈다.** 이 프로젝트의 PC 「FSG 대시보드 올리기」 입구(`doPost`·`uploadCore_`)는 **버전 2** 로 돌고 있었고, 편집기에서는 2026-10-26 이후 어느 붙여넣기에서 **함수 45개가 통째로 사라진 상태**였다(2026-11-12 발견·복구). 그래서:
+  - **「배포 → 배포 관리 → 수정(연필) → 새 버전」을 누르지 않는다.** 누르면 그 배포가 현재 Head 로 교체된다. Head 가 불완전하면 PC 업로드가 즉시 끊긴다.
+  - 같은 이유로 GitHub Secret `VOC_DEPLOYMENT_ID` 는 **넣지 않는다**(넣으면 push 마다 `clasp deploy -i` 로 배포를 갈아치운다). 웹 앱을 일부러 새로 배포할 때만 사용자가 직접 한다.
+  - 배포된 버전의 코드는 Actions → Deploy Apps Script (만족도) → Run workflow → `pull_version` 에 버전 번호를 넣어 받아 볼 수 있다(아티팩트, 올리지는 않는다).
+  - 사라지면 조용히 멈추는 것들(`tests/test_crm_folder.js` 가 함수 존재까지 확인): CRM 폴더 읽기·변환 캐시, CRM 자동 가져오기(2시간), PC 업로드 입구, 허브 시트 읽기, 6분 한도 대응 단계 실행.
 
 ## 데이터 안전 (가장 중요)
 - 전체 데이터를 읽어 다시 쓰는(`set`) 코드를 만들지 않는다. 바뀐 키만 `update`한다.
