@@ -369,6 +369,12 @@
   .notes-table tr.is-carried:hover td{background:#FEF6DC;}
   .notes-date.is-red{color:#DC2626;}
   .notes-date.is-close{color:#8A5A12;}
+  /* 주간 보기 날짜 칸의 Close day 표시 (평일 줄이라 구분 칸에 적을 자리가 없습니다).
+     휴대폰에서는 날짜 칸이 좁아 nowrap이면 옆 칸까지 삐져나오므로 낱말 단위로 줄바꿈합니다. */
+  table.weeksched td.datecell .dnote{
+    display:block;margin-top:2px;font-size:11px;font-weight:700;color:#8A5A12;
+    white-space:normal;word-break:keep-all;line-height:1.2;
+  }
   .notes-origin{font-size:10px;font-weight:600;color:var(--ink-soft);margin-top:2px;}
   .notes-donetag{
     display:inline-block;font-size:9.5px;font-weight:700;color:#15803D;background:#DCFCE7;
@@ -904,7 +910,7 @@ const INSTITUTION_LIST = ["(사)부산의료선교회세계로병원", "(사)한
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 42; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
+const BUILD_VERSION = 43; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1001,9 +1007,15 @@ const COMPANY_OFFDAYS = {
 };
 // 그날 쉬는 날이면 이름을 돌려줍니다 (공휴일이 먼저). 쉬는 날 판정은 모두 이 함수를 씁니다 —
 // 두 표를 각각 뒤지면 한쪽을 빠뜨려 회사 휴일에 근무일처럼 칸이 열리는 일이 생깁니다.
+// 그날 붙는 이름 (공휴일이 먼저). 표시용입니다.
 function offDayName(d){ return HOLIDAYS_KR[d] || COMPANY_OFFDAYS[d] || ''; }
-// 공휴일(붉은색)과 회사 휴일(모래색)을 색으로 구분하기 위한 판정. 공휴일이 먼저입니다.
+// 공휴일(붉은색)과 Close day(모래색)를 색으로 구분하기 위한 판정.
 function isCloseDay(d){ return !HOLIDAYS_KR[d] && !!COMPANY_OFFDAYS[d]; }
+// 근무 칸을 닫는 '쉬는 날'은 주말과 공휴일뿐입니다.
+// Close day는 회사 휴일이지만 입력은 평일과 똑같이 받습니다 — 그날 나와서 일하거나
+// 휴가·당직을 적어야 하는 사람이 있어서, 칸을 닫아 두면 아무것도 기록할 수 없습니다.
+// 그래서 Close day는 색과 이름으로 '표시'만 하고, 양식은 평일 그대로 둡니다.
+function isNonWorkingDay(d){ return isWeekendDate(d) || !!HOLIDAYS_KR[d]; }
 
 // ============================================================
 // 상태
@@ -1305,7 +1317,7 @@ function addDaysStr(dstr, n){ const d=new Date(dstr+'T00:00:00'); d.setDate(d.ge
 function getMonday(dstr){ const d=new Date(dstr+'T00:00:00'); const day=d.getDay(); const diff = day===0 ? -6 : 1-day; d.setDate(d.getDate()+diff); return fmtDate(d.getFullYear(), d.getMonth()+1, d.getDate()); }
 function nextWorkday(dstr){
   let nd = addDaysStr(dstr, 1);
-  while(isWeekendDate(nd) || offDayName(nd)){ nd = addDaysStr(nd, 1); }
+  while(isNonWorkingDay(nd)){ nd = addDaysStr(nd, 1); }
   return nd;
 }
 function daysInMonth(y,m){ return new Date(y,m,0).getDate(); }
@@ -2170,7 +2182,7 @@ function renderNightBanner(){
   const el = document.getElementById('nightBanner');
   const team = TEAMS[currentTeam];
   const t = todayISO();
-  const todayIsOffDay = isWeekendDate(t) || !!offDayName(t);
+  const todayIsOffDay = isNonWorkingDay(t);
 
   function tag(m){ return currentTeam==='all' ? (' [' + TEAMS[memberTeam(m)].label.replace('FS ','') + ']') : ''; }
 
@@ -2386,7 +2398,7 @@ function renderMonthGrid(){
       const entry = Object.assign(blankEntry(), getEntry(mTeam, dstr, m.name));
       const td = document.createElement('td');
       td.className = 'daycell' + (dstr===todayStr?' today':'') +
-        (holi ? (isCloseDay(dstr)?' closeday-col':' holiday-col') : (weekend?' weekend-col':''));
+        (isCloseDay(dstr) ? ' closeday-col' : (holi?' holiday-col':(weekend?' weekend-col':'')));
       td.dataset.date = dstr;
       td.dataset.name = m.name;
       if(dutyOnlyView) fillDayCellDutyOnly(td, entry, mTeam); else fillDayCell(td, entry, mTeam);
@@ -2434,13 +2446,15 @@ function renderWeekGrid(){
     tr.dataset.date = dstr;
     if(opts.groupStart) tr.classList.add('daygroup-start');
     if(dstr===todayStr) tr.classList.add('today-row');
-    if(offDayName(dstr)) tr.classList.add(isCloseDay(dstr) ? 'closeday-row' : 'holiday-row');
+    if(isCloseDay(dstr)) tr.classList.add('closeday-row');
+    else if(offDayName(dstr)) tr.classList.add('holiday-row');
     else if(isWeekendDate(dstr)) tr.classList.add('weekend-row');
     if(opts.dateLabel){
       const dateTd = document.createElement('td');
       dateTd.className = 'datecell';
       if(opts.rowSpan && opts.rowSpan > 1) dateTd.rowSpan = opts.rowSpan;
-      dateTd.innerHTML = '<span class="dlabel">' + opts.dateLabel + '</span>';
+      dateTd.innerHTML = '<span class="dlabel">' + opts.dateLabel + '</span>' +
+        (opts.dateNote ? '<span class="dnote">' + opts.dateNote + '</span>' : '');
       tr.appendChild(dateTd);
     }
     const labelTd = document.createElement('td');
@@ -2485,11 +2499,13 @@ function renderWeekGrid(){
     const wk = weekdayKr(y,mo,da);
     const dateLabel = mo + '/' + da + ' (' + wk + ')';
     const holi = offDayName(dstr);
+    // Close day는 평일 줄로 나오므로, 날짜 칸 아래에 이름을 적어 표시합니다.
+    const dateNote = isCloseDay(dstr) ? escapeHtml(COMPANY_OFFDAYS[dstr]) : '';
 
-    if(!isWeekendDate(dstr) && !holi){
+    if(!isNonWorkingDay(dstr)){
       if(!dutyOnlyView){
         addRow(dstr, SLOT_LABELS.am1,
-          (td,m)=>slotCell(td, memberTeam(m), dstr, m.name, 'am1'), {groupStart:true, dateLabel, rowSpan:5});
+          (td,m)=>slotCell(td, memberTeam(m), dstr, m.name, 'am1'), {groupStart:true, dateLabel, dateNote, rowSpan:5});
         addRow(dstr, SLOT_LABELS.am2, (td,m)=>slotCell(td, memberTeam(m), dstr, m.name, 'am2'));
         addRow(dstr, SLOT_LABELS.pm1, (td,m)=>slotCell(td, memberTeam(m), dstr, m.name, 'pm1'));
         addRow(dstr, SLOT_LABELS.pm2, (td,m)=>slotCell(td, memberTeam(m), dstr, m.name, 'pm2'));
@@ -2513,16 +2529,10 @@ function renderWeekGrid(){
             td.innerHTML = html;
           } else { td.classList.add('empty'); td.textContent='-'; }
           if(!nightMatchesFilter(e.night, mtk)) td.classList.add('wcell-dim');
-        }, {groupStart:true, dateLabel, rowSpan:1});
+        }, {groupStart:true, dateLabel, dateNote, rowSpan:1});
       }
     } else {
-      // Close day는 이름만 적습니다 — '휴무 ·'를 덧붙이면 휴대폰의 좁은 구분 칸에서
-      // 세 줄이 되어 그 줄만 높아집니다. 색과 '근무 칸이 없는 것'이 이미 쉬는 날을 말해 줍니다.
-      const rowLabel = holi
-        ? (isCloseDay(dstr)
-            ? '<span style="color:#8A5A12;">' + holi + '</span>'
-            : '휴일 <span style="color:#A21E1E;">· ' + holi + '</span>')
-        : '주말 · 구분';
+      const rowLabel = holi ? ('휴일 <span style="color:#A21E1E;">· ' + holi + '</span>') : '주말 · 구분';
       addRow(dstr, rowLabel, (td,m)=>{
         const mtk = memberTeam(m);
         const e = getEntry(mtk,dstr,m.name);
@@ -2690,7 +2700,7 @@ function openEditor(team, date, name){
   const y=parts[0], m=parts[1], d=parts[2];
   const wk = weekdayKr(y,m,d);
   const weekend = isWeekendDate(date);
-  const isOffDay = weekend || !!offDayName(date);
+  const isOffDay = isNonWorkingDay(date);
   const member = TEAMS[team].members.find(mm=>mm.name===name);
 
   // 슬롯마다 "누가 · 언제" 넣었는지 라벨 옆에 작게 붙입니다.

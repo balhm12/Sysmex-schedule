@@ -1,11 +1,12 @@
-// 회사 자체 휴일(Close day, 2026-12-28~31)이 주말·공휴일과 똑같이 '쉬는 날'로 다뤄지는지 확인합니다.
-// 법정 공휴일이 아니라 회사가 정한 날이라, 공휴일 표와 따로 두되 동작은 같아야 합니다.
-//  1) 네 날짜가 모두 쉬는 날로 잡히고 이름이 'Close day'다
-//  2) 평일 판정을 쓰는 곳(석/야 다음 근무일 찾기)이 이 날들을 건너뛴다
-//  3) 근무표에서 그날은 오전1~오후2 칸이 열리지 않고 '휴일' 줄로 나온다
-//  4) 편집창에서도 쉬는 날로 다뤄진다 (주말/휴일 구분 칸이 보임)
-//  5) 공휴일 표는 그대로다 (회사 휴일이 공휴일로 섞이지 않음)
-//  6) 설치일정(index.html) 달력에서도 쉬는 날로 표시된다
+// 회사 자체 휴일(Close day, 2026-12-28~31)을 확인합니다.
+// 달력에 이름과 색으로 '표시'만 하고, 근무 입력은 평일과 똑같이 받습니다 —
+// 그날 나와서 일하거나 휴가·당직을 적어야 하는 사람이 있어서 칸을 닫으면 안 됩니다.
+//  1) 네 날짜에 'Close day' 이름이 붙고, 공휴일 표와는 따로다
+//  2) 근무 칸을 닫는 '쉬는 날'에는 들어가지 않는다 (석/야 다음 근무일 찾기가 건너뛰지 않음)
+//  3) 주간 보기에서 평일과 같은 줄(오전1~오후2·야간)로 나오고, 날짜 칸에 이름이 보인다
+//  4) 편집창도 평일 양식이다 (오전1~오후2가 보이고 주말/휴일 구분 칸은 안 보임)
+//  5) 색은 공휴일(붉은색)과 다르다
+//  6) 설치일정(index.html) 달력에도 이름이 표시된다
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
 
@@ -47,16 +48,20 @@ function boot(file) {
     if (window.eval(`!!HOLIDAYS_KR['${d}']`)) throw new Error(d + ' 가 공휴일 표에 들어감 (회사 휴일과 공휴일은 구분해야 함)');
   });
   if (window.eval("HOLIDAYS_KR['2026-12-25']") !== '크리스마스') throw new Error('공휴일 표가 바뀜');
-  console.log('5) 공휴일 표는 그대로, 회사 휴일은 따로 ✓');
+  console.log('1-2) 공휴일 표는 그대로, Close day는 따로 ✓');
 
-  // 2) 다음 근무일 찾기가 이 날들을 건너뛴다 (석/야 연쇄 입력이 휴무일에 OFF를 쓰지 않도록)
-  //    12/24(목) 다음 근무일 → 12/25 공휴일·주말·12/28~31 회사휴무를 지나 2027-01-04(월)
-  //    (2027-01-01 신정은 공휴일)
+  // 2) Close day는 근무일이므로 '쉬는 날' 판정에 들어가지 않는다
+  CLOSE.forEach(d => {
+    if (window.eval(`isNonWorkingDay('${d}')`)) throw new Error(d + ' 가 쉬는 날로 잡힘 (평일이어야 함)');
+  });
+  if (!window.eval("isNonWorkingDay('2026-12-25')")) throw new Error('공휴일이 쉬는 날이 아님');
+  if (!window.eval("isNonWorkingDay('2026-12-26')")) throw new Error('토요일이 쉬는 날이 아님');
+  //    12/24(목) 다음 근무일 → 12/25 공휴일·주말을 지나 12/28(월) = Close day(근무일)
   const nd = window.eval("nextWorkday('2026-12-24')");
-  if (nd !== '2027-01-04') throw new Error('다음 근무일이 휴무를 건너뛰지 않음: ' + nd);
-  console.log('2) 다음 근무일 찾기가 회사 휴무를 건너뜀 (12/24 → ' + nd + ') ✓');
+  if (nd !== '2026-12-28') throw new Error('다음 근무일이 Close day를 건너뜀: ' + nd + ' (평일로 다뤄야 함)');
+  console.log('2) Close day는 근무일 — 다음 근무일 찾기가 건너뛰지 않음 (12/24 → ' + nd + ') ✓');
 
-  // 3) 주간 보기 — 그날은 근무 칸이 열리지 않고 휴일 줄로 나온다
+  // 3) 주간 보기 — 평일과 같은 줄 구성 + 날짜 칸에 Close day 표시
   window.eval("viewMode='week'; weekAnchor='2026-12-28'; render();");
   await new Promise(r => setTimeout(r, 200));
   const rows = [...doc.querySelectorAll('tr[data-date]')];
@@ -64,20 +69,25 @@ function boot(file) {
   CLOSE.forEach(d => {
     const dayRows = rows.filter(tr => tr.dataset.date === d);
     if (!dayRows.length) throw new Error(d + ' 줄이 근무표에 없음');
-    // 공휴일(holiday-row, 붉은색)과 색이 달라야 하므로 closeday-row 로 표시된다
-    if (!dayRows.some(tr => tr.classList.contains('closeday-row'))) {
-      throw new Error(d + ' 이 Close day 줄(closeday-row)로 표시되지 않음');
-    }
-    if (dayRows.some(tr => tr.classList.contains('holiday-row'))) {
-      throw new Error(d + ' 이 공휴일 줄로 표시됨 (색이 공휴일과 같아짐)');
-    }
-    const labels = dayRows.map(tr => tr.textContent);
-    if (labels.some(t => t.includes('오전1') || t.includes('오후2'))) {
-      throw new Error(d + ' 에 오전1~오후2 근무 칸이 열림 (쉬는 날이어야 함)');
-    }
-    if (!labels.join(' ').includes('Close day')) throw new Error(d + ' 줄에 Close day 표기가 없음: ' + labels.join(' | '));
+    const labels = dayRows.map(tr => tr.textContent).join(' | ');
+    // 평일과 똑같이 오전1~오후2·야간 줄이 있어야 한다
+    ['오전1', '오전2', '오후1', '오후2', '야간'].forEach(sl => {
+      if (!labels.includes(sl)) throw new Error(d + ' 에 ' + sl + ' 칸이 없음 (평일과 같아야 함): ' + labels);
+    });
+    if (labels.includes('주말 · 구분')) throw new Error(d + ' 이 주말/휴일 줄로 나옴');
+    // 색은 Close day 색, 공휴일 색이 아니어야 한다
+    if (!dayRows.some(tr => tr.classList.contains('closeday-row'))) throw new Error(d + ' 이 Close day 색으로 표시되지 않음');
+    if (dayRows.some(tr => tr.classList.contains('holiday-row'))) throw new Error(d + ' 이 공휴일 색으로 표시됨');
+    // 날짜 칸에 이름이 보여야 한다
+    const note = dayRows.map(tr => tr.querySelector('.datecell .dnote')).find(Boolean);
+    if (!note || note.textContent.trim() !== 'Close day') throw new Error(d + ' 날짜 칸에 Close day 표시가 없음');
   });
-  console.log('3) 주간 보기에서 휴일 줄로 나오고 근무 칸이 열리지 않음 ✓');
+  // 비교: 공휴일(1/1)은 지금까지대로 근무 칸이 닫힌다
+  const nyRows = rows.filter(tr => tr.dataset.date === '2027-01-01');
+  if (nyRows.length && nyRows.map(tr => tr.textContent).join(' ').includes('오전1')) {
+    throw new Error('공휴일(1/1)에 근무 칸이 열림');
+  }
+  console.log('3) 주간 보기에서 평일과 같은 줄 + 날짜 칸에 Close day 표시 ✓');
 
   // 3-2) 월간 보기 — 그 날짜 열 머리글이 휴일로 표시된다
   window.eval("viewYear=2026; viewMonth=12; viewMode='month'; render();");
@@ -94,9 +104,9 @@ function boot(file) {
   const th25 = ths[25];
   if (!th25 || !th25.classList.contains('holi')) throw new Error('12/25(공휴일) 머리글이 공휴일 색이 아님');
   if (th25.classList.contains('closeday')) throw new Error('공휴일이 Close day 색으로 바뀜');
-  console.log('3-2) 월간 보기: Close day와 공휴일(12/25)이 서로 다른 색으로 표시됨 ✓');
+  console.log('5) 월간 보기: Close day와 공휴일(12/25)이 서로 다른 색으로 표시됨 ✓');
 
-  // 4) 편집창에서도 쉬는 날 (주말/휴일 구분 칸이 보이고 오전/오후는 감춰짐)
+  // 4) 편집창도 평일 양식 — 오전1~오후2가 보이고 주말/휴일 구분 칸은 안 보인다
   const anyName = window.eval("(TEAMS.west.members[0]||{}).name || ''");
   if (!anyName) throw new Error('테스트 전제 실패: 팀원이 없음');
   window.openEditor('west', CLOSE[0], anyName);
@@ -104,23 +114,28 @@ function boot(file) {
   const ampm = doc.getElementById('ampmRows');
   const wkRow = doc.getElementById('weekendRow');
   if (!ampm || !wkRow) throw new Error('편집창 구성을 못 찾음');
-  if (ampm.style.display !== 'none') throw new Error('회사 휴무일인데 오전1~오후2 칸이 보임');
-  if (wkRow.style.display === 'none') throw new Error('회사 휴무일인데 주말/휴일 구분 칸이 안 보임');
+  if (ampm.style.display === 'none') throw new Error('Close day인데 오전1~오후2 칸이 안 보임 (평일 양식이어야 함)');
+  if (wkRow.style.display !== 'none') throw new Error('Close day인데 주말/휴일 구분 칸이 보임');
   window.closePanel();
-  console.log('4) 편집창에서도 쉬는 날로 다뤄짐 ✓');
+  // 비교: 공휴일은 지금까지대로 주말/휴일 양식
+  window.openEditor('west', '2026-12-25', anyName);
+  await new Promise(r => setTimeout(r, 80));
+  if (doc.getElementById('ampmRows').style.display !== 'none') throw new Error('공휴일인데 오전1~오후2 칸이 보임');
+  window.closePanel();
+  console.log('4) 편집창이 평일 양식 (공휴일은 그대로 휴일 양식) ✓');
 
   // 6) 설치일정 달력에서도 쉬는 날로 표시된다
   const dom2 = boot('index.html');
   await new Promise(r => setTimeout(r, 900));
   CLOSE.forEach(d => {
     const name = dom2.window.eval(`offDayName('${d}')`);
-    if (name !== 'Close day') throw new Error('설치일정에서 ' + d + ' 가 Close day로 안 잡힘: ' + JSON.stringify(name));
+    if (name !== 'Close day') throw new Error('설치일정에서 ' + d + ' 에 Close day 이름이 안 붙음: ' + JSON.stringify(name));
   });
   if (dom2.window.eval("!!HOLIDAYS_KR['2026-12-28']")) throw new Error('설치일정 공휴일 표에 회사 휴일이 섞임');
   if (!dom2.window.eval("isCloseDay('2026-12-28')")) throw new Error('설치일정에서 12/28이 Close day로 구분되지 않음');
   if (dom2.window.eval("isCloseDay('2026-12-25')")) throw new Error('설치일정에서 공휴일이 Close day로 잡힘');
-  console.log('6) 설치일정(index.html)에서도 쉬는 날로 잡힘 ✓');
+  console.log('6) 설치일정(index.html)에도 Close day로 표시됨 ✓');
 
-  console.log('\n✅ 회사 자체 휴일(12/28~31)이 주말·공휴일과 같이 쉬는 날로 다뤄짐');
+  console.log('\n✅ Close day(12/28~31): 이름·색으로 표시되고, 근무 입력은 평일과 같음');
   process.exit(0);
 })().catch(e => { console.error('\n❌ 테스트 실패:', e.message); process.exit(1); });
