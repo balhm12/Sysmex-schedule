@@ -135,6 +135,15 @@ const CONFIG = {
   CRM_FORM_TYPE: '서비스 요청',   // 학술 요청·온라인 고객지원·영업 요청 등은 FSR 현장 서비스가 아니므로 제외
   CRM_STATUS_DONE: '완료됨',      // 취소됨·시작됨 건은 방문건수에서 제외
 
+  // PC 「FSG 대시보드 올리기」가 CRM 파일을 올리는 Drive 폴더. 이름·URL 모두 됨.
+  // 스크립트 속성 CRM_FOLDER 가 있으면 그 값이 우선하고, '-' 면 폴더를 쓰지 않는다.
+  CRM_FOLDER: 'CRM_원본',
+
+  // 진행 중인 달은 방문건수에 넣지 않는다. 월중에 집계하면 분모가 덜 찬 상태로 들어가
+  // 응답률이 실제보다 높게 보이고, 달이 끝난 뒤 값이 또 바뀐다.
+  // (포털 만족도 카드는 방문건수가 없는 달을 「방문 건수 집계 전」으로 안내한다.)
+  VISITS_SKIP_CURRENT_MONTH: true,
+
   // 방문건수 집계 시작 월 (이 월 이전 데이터는 방문건수 시트에 남기지 않는다).
   // CRM 내보내기에 과거 이력이 통째로 들어 있으면 2024년치까지 1,000행 넘게 쌓여
   // 시트를 알아보기 어려워진다. 조사가 시작된 2026-08부터만 관리한다.
@@ -878,16 +887,18 @@ function loadFsrVisits_(ss, monthFilter) {
  * "방문건수" 시트의 월별 총 방문 건수를 자동으로 채운다(기존 수기 입력값을 덮어씀). */
 function importCrmVisits() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const crm = ss.getSheetByName(SHEETS.CRM);
-  if (!crm || crm.getLastRow() < 2) {
+  // Drive 폴더(PC 올리기가 넣는 곳) 를 먼저 읽고, 없으면 CRM원본 탭으로 넘어간다.
+  const src = loadCrmTable_();
+  if (!src.data) {
     alert_(
-      '❌ "CRM원본" 시트를 찾을 수 없습니다.\n\n' +
-      'CRM에서 내보낸 "모든 약속/활동" 파일을 구글 시트로 가져오기 하거나,\n' +
-      '해당 데이터를 "CRM원본"이라는 이름의 시트에 붙여넣은 뒤 다시 실행해 주세요.');
+      '❌ CRM 원본을 읽지 못했습니다.\n\n' + (src.note || '') + '\n\n' +
+      '메뉴 「CRM 폴더 지정…」으로 폴더를 정하거나,\n' +
+      'CRM 내보내기 데이터를 "CRM원본" 시트에 붙여넣은 뒤 다시 실행해 주세요.');
     return;
   }
+  CRM_LAST_SOURCE = src.source + (src.note ? ' (' + src.note + ')' : '');
 
-  const data = crm.getDataRange().getValues();
+  const data = src.data;
   const head = data[0].map(String);
   const idx = (name) => head.indexOf(name);
   const col = {
@@ -913,6 +924,10 @@ function importCrmVisits() {
   const byTeamMonth = {}; // { 'YYYY-MM|팀': 건수 }
   const byFsrMonth = {};  // { 'YYYY-MM|FSR': 건수 } — 개인별 응답률 분모
   const seenVisit = {};   // '날짜|담당자|거래처' — 같은 방문의 중복 장비 행 제거용
+  // 진행 중인 달(= 오늘이 속한 달)은 건너뛴다. 월중에 돌리면 분모가 덜 찬 상태로 들어가
+  // 응답률이 실제보다 높게 보이고, 달이 끝난 뒤 값이 또 바뀐다.
+  const skipMonth = CONFIG.VISITS_SKIP_CURRENT_MONTH
+    ? Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM') : '';
   let matched = 0;
 
   for (let i = 1; i < data.length; i++) {
@@ -925,6 +940,7 @@ function importCrmVisits() {
 
     const m = Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM');
     if (CONFIG.VISITS_START_MONTH && m < CONFIG.VISITS_START_MONTH) continue;  // 집계 시작 월 이전 제외
+    if (skipMonth && m >= skipMonth) continue;   // 진행 중인 달은 넣지 않는다 (분모가 덜 찬 값이 들어가지 않게)
 
     const dayKeyPre = Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd');
     if (CONFIG.VISITS_START_DATE && dayKeyPre < CONFIG.VISITS_START_DATE) continue;  // 조사 개시일 이전 제외
@@ -1065,7 +1081,9 @@ function importCrmVisits() {
 
   alert_(
     '✅ CRM 방문건수 가져오기 완료!\n\n' +
+    (CRM_LAST_SOURCE ? '· 읽은 곳: ' + CRM_LAST_SOURCE + '\n' : '') +
     '· 집계 대상: ' + matched + '건 (상태=완료됨, 양식 타입=서비스 요청, 목적=수리·점검)\n' +
+    (skipMonth ? '· ' + skipMonth + '(진행 중인 달)은 넣지 않았습니다 — 달이 끝난 뒤 들어갑니다.\n' : '') +
     '· ' + Object.keys(byMonth).length + '개월 분량이 "방문건수" 시트에 반영되었습니다.\n' +
     '· 팀별 월간 건수는 "방문건수" 시트 우측(E열~)에서 확인할 수 있습니다.\n\n' +
     '※ 집계 대상 목적은 CONFIG.CRM_ONSITE_PURPOSES에서 조정할 수 있습니다 (예: Calibration 포함).');
@@ -1080,15 +1098,16 @@ function importCrmVisits() {
  *       이후에는 진짜 오탈자·약칭만 DB미등록으로 남아 검토 대상이 줄어든다. */
 function seedOrgDbFromCrm() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const crm = ss.getSheetByName(SHEETS.CRM);
-  if (!crm || crm.getLastRow() < 2) {
+  const src = loadCrmTable_();
+  if (!src.data) {
     alert_(
-      '❌ "CRM원본" 시트를 찾을 수 없습니다.\n\n' +
-      'CRM 내보내기 데이터를 "CRM원본" 시트에 먼저 준비한 뒤 다시 실행해 주세요.');
+      '❌ CRM 원본을 읽지 못했습니다.\n\n' + (src.note || '') + '\n\n' +
+      '메뉴 「CRM 폴더 지정…」으로 폴더를 정하거나,\n' +
+      'CRM 내보내기 데이터를 "CRM원본" 시트에 먼저 준비해 주세요.');
     return;
   }
 
-  const data = crm.getDataRange().getValues();
+  const data = src.data;
   const head = data[0].map(String);
   const idx = (name) => head.indexOf(name);
   const col = { account: idx('거래처'), assignee: idx('담당자') };
@@ -2917,6 +2936,217 @@ function setupLowFollowSync() {
 }
 
 
+let CRM_LAST_SOURCE = '';   // 마지막으로 읽은 CRM 원본 출처 (완료 알림에 적는다)
+/* ============ CRM 원본 읽기 — Drive 폴더 우선 ============
+ * 2026-11-12 복구. 2026-10-26 에 같은 기능을 만들었으나 이후 편집기에 코드를 통째로
+ * 붙여넣는 과정에서 사라졌다(스킬 문서에만 남아 있었다). 같은 일이 다시 없도록
+ * 이제 이 파일은 저장소에서만 고치고 clasp 가 올린다.
+ *
+ * 읽는 순서
+ *   ① Drive 폴더(기본 이름 CRM_원본) 의 「약속_활동」 xlsx — PC 「FSG 대시보드 올리기」가 올리는 곳
+ *   ② 이 시트의 CRM원본 탭 (폴더가 없거나 읽기에 실패하면)
+ * 어느 쪽을 읽었는지는 호출한 쪽에 알려 주고, 실패해도 ②로 넘어가 멈추지 않는다.
+ *
+ * xlsx 는 그대로 못 읽어 구글 시트로 변환해야 한다 —
+ * **편집기 「서비스(+)」에 Drive API 를 추가**하고 첫 실행에서 권한을 허용해야 한다.
+ * 변환본은 읽은 뒤 바로 휴지통으로 보낸다.
+ */
+
+/* 폴더 지정: 스크립트 속성 CRM_FOLDER > CONFIG.CRM_FOLDER. '-' 면 폴더를 쓰지 않는다. */
+function crmFolderSetting_() {
+  const p = PropertiesService.getScriptProperties().getProperty('CRM_FOLDER');
+  const v = String(p != null && p !== '' ? p : (CONFIG.CRM_FOLDER || '')).trim();
+  return v;
+}
+
+/* 이름·URL·ID 어느 것으로 적어도 폴더를 찾는다. 못 찾으면 null. */
+function crmFolder_() {
+  const v = crmFolderSetting_();
+  if (!v || v === '-') return null;
+  const m = /[-\w]{25,}/.exec(v);                 // URL 이나 ID 를 적은 경우
+  if (m) { try { return DriveApp.getFolderById(m[0]); } catch (e) { /* 이름으로 다시 */ } }
+  const it = DriveApp.getFoldersByName(v);
+  return it.hasNext() ? it.next() : null;
+}
+
+/* 파일 이름에서 날짜를 뽑는다 — '2026_11_12', '2026-11-12', '20261112' 모두 인정.
+ * 없으면 빈 문자열(그 경우 Drive 수정 시각으로 비교한다). */
+function crmFileDate_(name) {
+  const m = /(20\d{2})[._\-]?(0[1-9]|1[0-2])[._\-]?(0[1-9]|[12]\d|3[01])/.exec(String(name || ''));
+  return m ? m[1] + '-' + m[2] + '-' + m[3] : '';
+}
+
+/* 활동 파일인가 — 「약속」과 「활동」이 모두 들어간 xlsx. Serial No·케이스·캘린더는 제외. */
+function crmIsActivityFile_(name) {
+  const n = String(name || '');
+  if (!/\.xlsx$/i.test(n)) return false;
+  if (/serial/i.test(n)) return false;
+  return n.indexOf('약속') !== -1 && n.indexOf('활동') !== -1;
+}
+
+/* 폴더에서 쓸 파일을 고른다 — 가장 새로운 날짜의 활동 파일 전부.
+ * CRM 내보내기는 40,000행 제한 때문에 기간을 나눠 여러 개로 나오기도 해서,
+ * 같은 날짜 파일이 여럿이면 모두 읽어 합친다(같은 행은 아래에서 한 번만 센다). */
+function crmPickFiles_(folder) {
+  const all = [];
+  const it = folder.getFiles();
+  while (it.hasNext()) {
+    const f = it.next();
+    const name = f.getName();
+    if (!crmIsActivityFile_(name)) continue;
+    all.push({ f: f, name: name, d: crmFileDate_(name), at: f.getLastUpdated().getTime() });
+  }
+  if (!all.length) return [];
+  const dated = all.filter(x => x.d);
+  if (dated.length) {
+    const newest = dated.map(x => x.d).sort().pop();
+    return dated.filter(x => x.d === newest).map(x => x.f);
+  }
+  all.sort((a, b) => b.at - a.at);                // 날짜가 이름에 없으면 수정 시각
+  return [all[0].f];
+}
+
+/* xlsx → 임시 구글 시트. 읽은 뒤 반드시 crmDropTemp_ 로 지운다. */
+function crmConvert_(file) {
+  if (typeof Drive === 'undefined' || !Drive.Files) {
+    throw new Error('Drive API 서비스가 꺼져 있습니다 — 편집기 왼쪽 「서비스(+)」에서 Drive API 를 추가하고 다시 실행해 주세요.');
+  }
+  const blob = file.getBlob();
+  const meta = { title: '[임시변환] ' + file.getName(), mimeType: MimeType.GOOGLE_SHEETS };
+  // Drive 고급 서비스는 v2(insert)·v3(create) 둘 다 쓰이므로 있는 쪽을 쓴다.
+  const created = Drive.Files.insert
+    ? Drive.Files.insert(meta, blob)
+    : Drive.Files.create({ name: meta.title, mimeType: meta.mimeType }, blob);
+  return created.id;
+}
+
+function crmDropTemp_(id) {
+  if (!id) return;
+  try { DriveApp.getFileById(id).setTrashed(true); } catch (e) { Logger.log('임시 변환본 삭제 실패: ' + e); }
+}
+
+/* 30분 넘은 [임시변환] 파일 청소 — 실행이 중간에 끊기면 남는다(파일당 수 MB). */
+function crmSweepTemps_() {
+  const limit = Date.now() - 30 * 60 * 1000;
+  try {
+    const files = DriveApp.searchFiles('title contains "[임시변환]" and trashed = false');
+    while (files.hasNext()) {
+      const f = files.next();
+      if (f.getLastUpdated().getTime() < limit) f.setTrashed(true);
+    }
+  } catch (e) { Logger.log('임시 변환본 청소 건너뜀: ' + e); }
+}
+
+/* CRM 표를 읽어 [헤더, …행] 으로 돌려준다 — 기존 코드가 쓰던 모양 그대로.
+ * 돌려주는 값: { data: [[헤더],[행]…], source: '설명', files: [파일명] }
+ * 폴더를 읽지 못하면 CRM원본 탭으로 넘어간다(이유는 note 에 담는다). */
+function loadCrmTable_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const out = { data: null, source: '', files: [], note: '' };
+
+  const folder = crmFolder_();
+  if (folder) {
+    let tempIds = [];
+    try {
+      crmSweepTemps_();
+      const picked = crmPickFiles_(folder);
+      if (!picked.length) {
+        out.note = '폴더 「' + folder.getName() + '」에 약속_활동 파일이 없습니다.';
+      } else {
+        let head = null; const rows = []; const seen = {};
+        picked.forEach(function (f) {
+          const id = crmConvert_(f);
+          tempIds.push(id);
+          const vals = SpreadsheetApp.openById(id).getSheets()[0].getDataRange().getValues();
+          if (vals.length < 2) return;
+          if (!head) head = vals[0].map(String);
+          for (let i = 1; i < vals.length; i++) {
+            // 같은 기간을 두 번 내보낸 파일이 섞여도 같은 행은 한 번만 센다
+            const key = vals[i].join('\u0001');
+            if (seen[key]) continue;
+            seen[key] = true;
+            rows.push(vals[i]);
+          }
+          out.files.push(f.getName());
+        });
+        if (head && rows.length) {
+          out.data = [head].concat(rows);
+          out.source = 'Drive 폴더 「' + folder.getName() + '」 · 파일 ' + out.files.length + '개';
+          return out;
+        }
+        out.note = '폴더에서 읽은 행이 없습니다.';
+      }
+    } catch (err) {
+      out.note = 'Drive 폴더를 읽지 못했습니다 — ' + err.message;
+    } finally {
+      tempIds.forEach(crmDropTemp_);
+    }
+  } else if (crmFolderSetting_() === '-') {
+    out.note = 'CRM 폴더를 쓰지 않도록 설정되어 있습니다.';
+  } else {
+    out.note = 'CRM 폴더 「' + (crmFolderSetting_() || '(지정 안 됨)') + '」을 찾지 못했습니다.';
+  }
+
+  // ② CRM원본 탭
+  const crm = ss.getSheetByName(SHEETS.CRM);
+  if (crm && crm.getLastRow() > 1) {
+    out.data = crm.getDataRange().getValues();
+    out.source = '이 시트의 「' + SHEETS.CRM + '」 탭';
+    return out;
+  }
+  return out;   // data = null
+}
+
+/* 메뉴: CRM 폴더 지정 */
+function setCrmFolder() {
+  const ui = SpreadsheetApp.getUi();
+  const cur = crmFolderSetting_();
+  const r = ui.prompt('CRM 폴더 지정',
+    'PC 「FSG 대시보드 올리기」가 CRM 파일을 올리는 Drive 폴더입니다.\n' +
+    '폴더 이름(예: CRM_원본) 또는 폴더 URL 을 넣으세요. 폴더를 쓰지 않으려면 - 한 글자.\n\n' +
+    '지금 값: ' + (cur || '(지정 안 됨)'),
+    ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  const v = r.getResponseText().trim();
+  PropertiesService.getScriptProperties().setProperty('CRM_FOLDER', v);
+  diagnoseCrmSource();
+}
+
+/* 메뉴: 진단 — 어디서 읽는지, 몇 행인지, 필요한 열이 있는지 */
+function diagnoseCrmSource() {
+  const t = loadCrmTable_();
+  if (!t.data) {
+    alert_('❌ CRM 원본을 읽지 못했습니다.\n\n' + (t.note || '') +
+      '\n\n「CRM 폴더 지정…」으로 폴더를 정하거나, CRM원본 탭에 데이터를 넣어 주세요.');
+    return;
+  }
+  const head = t.data[0].map(String);
+  const need = ['상태', '양식 타입', '시작 시간', '담당자', '약속/활동 목적'];
+  const missing = need.filter(n => head.indexOf(n) === -1);
+  const iStart = head.indexOf('시작 시간');
+  let last = '';
+  if (iStart >= 0) {
+    for (let i = 1; i < t.data.length; i++) {
+      const d = t.data[i][iStart];
+      if (d instanceof Date) {
+        const s = Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd HH:mm');
+        if (s > last) last = s;
+      }
+    }
+  }
+  alert_('CRM 원본 연결 확인\n\n' +
+    '· 읽은 곳: ' + t.source + '\n' +
+    (t.files.length ? '· 파일: ' + t.files.join(', ') + '\n' : '') +
+    (t.note ? '· 참고: ' + t.note + '\n' : '') +
+    '· 행 수: ' + (t.data.length - 1) + '\n' +
+    '· 가장 늦은 시작 시간: ' + (last || '(없음)') + '\n' +
+    (missing.length
+      ? '\n⚠️ 빠진 열: ' + missing.join(', ') +
+        '\n   CRM 내보내기를 「전체 열」 보기로 다시 받아 주세요 — 이 열이 없으면 방문건수가 0건이 됩니다.'
+      : '\n필요한 열이 모두 있습니다.'));
+}
+
+
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('📊 만족도 조사')
     .addItem('🔄 전체 갱신 (CRM·매칭·대시보드)', 'runAllUpdates')
@@ -2930,6 +3160,8 @@ function onOpen() {
     .addItem('폼 FSR 드롭다운 실명 교체', 'updateFormFsrDropdown')
     .addItem('응답 확인 메시지 설정', 'setFormConfirmationMessage')
     .addItem('CRM 방문건수 가져오기', 'importCrmVisits')
+    .addItem('CRM 폴더 지정…', 'setCrmFolder')
+    .addItem('진단: CRM 원본 연결 확인', 'diagnoseCrmSource')
     .addItem('기관명DB CRM 거래처로 채우기', 'seedOrgDbFromCrm')
     .addItem('유사매칭 승인 반영', 'applyApprovedFuzzyMappings')
     .addItem('FSR명단 시트 갱신 (진급·인사이동)', 'syncRosterSheet')
