@@ -131,6 +131,7 @@
   table.sched thead th.sun{color:#FFB4B4;}
   table.sched thead th.sat{color:#AFD8FF;}
   table.sched thead th.holi{background:#7A1E1E;}
+  table.sched thead th.closeday{background:#8A5A12;}
   table.sched thead th .wk{display:block;font-size:9.5px;font-weight:600;opacity:.85;}
 
   table.sched td.namecell{
@@ -145,6 +146,7 @@
   table.sched td.daycell:hover{outline:2px solid var(--blue);outline-offset:-2px;}
   table.sched td.daycell.weekend-col{background:#DCE7FB;}
   table.sched td.daycell.holiday-col{background:#FAD8D8;}
+  table.sched td.daycell.closeday-col{background:#FBEBD2;}
   table.sched td.daycell.today{background:var(--blue-soft);}
   table.sched td.daycell.cell-dim{opacity:.15;}
   /* 선택 셀 십자 음영 */
@@ -191,6 +193,10 @@
   table.weeksched tr.holiday-row td.datecell{background:#FAD8D8;}
   table.weeksched tr.holiday-row td.labelcell{background:#FAD8D8;}
   table.weeksched tr.holiday-row td.wcell{background:#FAD8D8;}
+  /* 회사 휴일(Close day) — 공휴일(붉은색)·주말(파란색)과 구분되는 모래색 */
+  table.weeksched tr.closeday-row td.datecell{background:#FBEBD2;}
+  table.weeksched tr.closeday-row td.labelcell{background:#FBEBD2;}
+  table.weeksched tr.closeday-row td.wcell{background:#FBEBD2;}
   table.weeksched tr.today-row td.datecell{background:var(--blue-soft);}
   table.weeksched tr.today-row td.labelcell{background:var(--blue-soft);}
   table.weeksched tr.today-row td.wcell{background:var(--blue-soft);}
@@ -362,6 +368,7 @@
   .notes-table tr.is-carried td{background:#FFFBEB;}
   .notes-table tr.is-carried:hover td{background:#FEF6DC;}
   .notes-date.is-red{color:#DC2626;}
+  .notes-date.is-close{color:#8A5A12;}
   .notes-origin{font-size:10px;font-weight:600;color:var(--ink-soft);margin-top:2px;}
   .notes-donetag{
     display:inline-block;font-size:9.5px;font-weight:700;color:#15803D;background:#DCFCE7;
@@ -465,7 +472,7 @@
     table.weeksched thead th.datecol{width:46px;min-width:46px;max-width:46px;font-size:9px;padding:6px 3px;white-space:normal;line-height:1.1;}
     table.weeksched thead th.labelcol{left:46px;width:40px;min-width:40px;max-width:40px;font-size:8.5px;padding:6px 3px;white-space:normal;line-height:1.1;}
     table.weeksched td.datecell{width:46px;min-width:46px;max-width:46px;padding:3px 3px;font-size:9.5px;font-weight:700;color:var(--navy);white-space:normal;line-height:1.1;}
-    table.weeksched td.labelcell{left:46px;width:40px;min-width:40px;max-width:40px;padding:3px 3px;font-size:8px;white-space:normal;line-height:1.1;}
+    table.weeksched td.labelcell{left:46px;width:40px;min-width:40px;max-width:40px;padding:3px 3px;font-size:8px;white-space:normal;line-height:1.1;word-break:keep-all;}
     table.weeksched td.datecell .dlabel{font-size:9.5px;font-weight:700;color:var(--navy);white-space:normal;line-height:1.05;}
     table.weeksched td.wcell{font-size:10.5px;padding:4px 6px;min-height:22px;min-width:78px;}
     .wbadge{font-size:9.5px;padding:2px 5px;}
@@ -492,7 +499,7 @@
   .notes-help{min-height:36px;padding:6px 10px;font-size:12px;}
   .team-tab .tt-count{font-size:11px;}
   @media(max-width:600px){
-    table.weeksched td.labelcell{width:48px;min-width:48px;max-width:48px;font-size:10px;line-height:1.15;}
+    table.weeksched td.labelcell{width:48px;min-width:48px;max-width:48px;font-size:10px;line-height:1.15;word-break:keep-all;}
     table.weeksched td.datecell .dlabel{font-size:10.5px;}
     table.weeksched td.wcell{font-size:11px;}
     .team-tab .tt-count{font-size:10.5px;}
@@ -897,7 +904,7 @@ const INSTITUTION_LIST = ["(사)부산의료선교회세계로병원", "(사)한
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 41; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
+const BUILD_VERSION = 42; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -985,6 +992,18 @@ const HOLIDAYS_KR = {
   '2027-10-03':'개천절','2027-10-04':'대체공휴일','2027-10-09':'한글날',
   '2027-12-25':'크리스마스','2027-12-27':'대체공휴일',
 };
+
+// 회사 자체 휴일(Close Day) — 법정 공휴일은 아니지만 회사가 쉬기로 정한 날.
+// 달력에서는 주말·공휴일과 똑같이 '근무하지 않는 날'로 다루고, 이름만 따로 보여 줍니다.
+// 해마다 회사가 새로 정하므로 확정된 해만 적습니다 (2027년분은 정해지면 추가).
+const COMPANY_OFFDAYS = {
+  '2026-12-28':'Close day','2026-12-29':'Close day','2026-12-30':'Close day','2026-12-31':'Close day',
+};
+// 그날 쉬는 날이면 이름을 돌려줍니다 (공휴일이 먼저). 쉬는 날 판정은 모두 이 함수를 씁니다 —
+// 두 표를 각각 뒤지면 한쪽을 빠뜨려 회사 휴일에 근무일처럼 칸이 열리는 일이 생깁니다.
+function offDayName(d){ return HOLIDAYS_KR[d] || COMPANY_OFFDAYS[d] || ''; }
+// 공휴일(붉은색)과 회사 휴일(모래색)을 색으로 구분하기 위한 판정. 공휴일이 먼저입니다.
+function isCloseDay(d){ return !HOLIDAYS_KR[d] && !!COMPANY_OFFDAYS[d]; }
 
 // ============================================================
 // 상태
@@ -1286,7 +1305,7 @@ function addDaysStr(dstr, n){ const d=new Date(dstr+'T00:00:00'); d.setDate(d.ge
 function getMonday(dstr){ const d=new Date(dstr+'T00:00:00'); const day=d.getDay(); const diff = day===0 ? -6 : 1-day; d.setDate(d.getDate()+diff); return fmtDate(d.getFullYear(), d.getMonth()+1, d.getDate()); }
 function nextWorkday(dstr){
   let nd = addDaysStr(dstr, 1);
-  while(isWeekendDate(nd) || HOLIDAYS_KR[nd]){ nd = addDaysStr(nd, 1); }
+  while(isWeekendDate(nd) || offDayName(nd)){ nd = addDaysStr(nd, 1); }
   return nd;
 }
 function daysInMonth(y,m){ return new Date(y,m,0).getDate(); }
@@ -1619,11 +1638,12 @@ function renderNotes(){
       const p = eff.split('-');
       const wk = weekdayKr(+p[0], +p[1], +p[2]);
       const red = isWeekendDate(eff) || !!HOLIDAYS_KR[eff];
+      const close = isCloseDay(eff);
       const o = n.date.split('-');
       const origin = (eff !== n.date)
         ? '<div class="notes-origin" title="이 일이 생긴 날">발생 ' + escapeHtml(o[1] + '/' + o[2]) + '</div>' : '';
       return '<tr' + (n.carried ? ' class="is-carried"' : '') + '>' +
-        '<td class="notes-date' + (red?' is-red':'') + '">' +
+        '<td class="notes-date' + (red?' is-red':'') + (close?' is-close':'') + '">' +
           (n.carried ? '<span class="notes-carry" title="이전 기간에 등록됐지만 아직 끝나지 않은 건">이월</span>' : '') +
           (n.status === '완료' && n.doneAt ? '<span class="notes-donetag" title="끝낸 날">완료</span>' : '') +
           escapeHtml(p[1] + '/' + p[2]) + ' (' + escapeHtml(wk) + ')' + origin + '</td>' +
@@ -1749,7 +1769,7 @@ async function exportNotesExcel(){
     const eff = noteEffDate(n);
     const p = eff.split('-').map(Number);
     const wk = weekdayKr(p[0], p[1], p[2]);
-    const red = isWeekendDate(eff) || !!HOLIDAYS_KR[eff];
+    const red = isWeekendDate(eff) || !!offDayName(eff);
     const dateCell = (n.carried ? '이월 ' : '') + eff + (eff !== n.date ? ' (발생 ' + n.date + ')' : '');
     const vals = [dateCell, wk, TEAMS[n.team] ? TEAMS[n.team].label : n.team,
                   noteCatLabel(n.cat), n.inst, n.device, n.status, n.doneAt || '', n.author, n.text];
@@ -2150,7 +2170,7 @@ function renderNightBanner(){
   const el = document.getElementById('nightBanner');
   const team = TEAMS[currentTeam];
   const t = todayISO();
-  const todayIsOffDay = isWeekendDate(t) || !!HOLIDAYS_KR[t];
+  const todayIsOffDay = isWeekendDate(t) || !!offDayName(t);
 
   function tag(m){ return currentTeam==='all' ? (' [' + TEAMS[memberTeam(m)].label.replace('FS ','') + ']') : ''; }
 
@@ -2336,9 +2356,9 @@ function renderMonthGrid(){
   for(let d=1; d<=nDays; d++){
     const dstr = fmtDate(viewYear, viewMonth, d);
     const wk = weekdayKr(viewYear, viewMonth, d);
-    const holi = HOLIDAYS_KR[dstr];
+    const holi = offDayName(dstr);
     const th = document.createElement('th');
-    th.className = (wk==='일'?'sun ':'') + (wk==='토'?'sat ':'') + (holi?'holi':'');
+    th.className = (wk==='일'?'sun ':'') + (wk==='토'?'sat ':'') + (holi ? (isCloseDay(dstr)?'closeday':'holi') : '');
     th.title = holi || '';
     th.innerHTML = d + '<span class="wk">' + wk + '</span>';
     trh.appendChild(th);
@@ -2362,10 +2382,11 @@ function renderMonthGrid(){
       const dstr = fmtDate(viewYear, viewMonth, d);
       const wk = weekdayKr(viewYear, viewMonth, d);
       const weekend = (wk==='일'||wk==='토');
-      const holi = HOLIDAYS_KR[dstr];
+      const holi = offDayName(dstr);
       const entry = Object.assign(blankEntry(), getEntry(mTeam, dstr, m.name));
       const td = document.createElement('td');
-      td.className = 'daycell' + (dstr===todayStr?' today':'') + (holi?' holiday-col':(weekend?' weekend-col':''));
+      td.className = 'daycell' + (dstr===todayStr?' today':'') +
+        (holi ? (isCloseDay(dstr)?' closeday-col':' holiday-col') : (weekend?' weekend-col':''));
       td.dataset.date = dstr;
       td.dataset.name = m.name;
       if(dutyOnlyView) fillDayCellDutyOnly(td, entry, mTeam); else fillDayCell(td, entry, mTeam);
@@ -2413,7 +2434,7 @@ function renderWeekGrid(){
     tr.dataset.date = dstr;
     if(opts.groupStart) tr.classList.add('daygroup-start');
     if(dstr===todayStr) tr.classList.add('today-row');
-    if(HOLIDAYS_KR[dstr]) tr.classList.add('holiday-row');
+    if(offDayName(dstr)) tr.classList.add(isCloseDay(dstr) ? 'closeday-row' : 'holiday-row');
     else if(isWeekendDate(dstr)) tr.classList.add('weekend-row');
     if(opts.dateLabel){
       const dateTd = document.createElement('td');
@@ -2463,7 +2484,7 @@ function renderWeekGrid(){
     const y=parts[0], mo=parts[1], da=parts[2];
     const wk = weekdayKr(y,mo,da);
     const dateLabel = mo + '/' + da + ' (' + wk + ')';
-    const holi = HOLIDAYS_KR[dstr];
+    const holi = offDayName(dstr);
 
     if(!isWeekendDate(dstr) && !holi){
       if(!dutyOnlyView){
@@ -2495,7 +2516,13 @@ function renderWeekGrid(){
         }, {groupStart:true, dateLabel, rowSpan:1});
       }
     } else {
-      const rowLabel = holi ? ('휴일 <span style="color:#A21E1E;">· ' + holi + '</span>') : '주말 · 구분';
+      // Close day는 이름만 적습니다 — '휴무 ·'를 덧붙이면 휴대폰의 좁은 구분 칸에서
+      // 세 줄이 되어 그 줄만 높아집니다. 색과 '근무 칸이 없는 것'이 이미 쉬는 날을 말해 줍니다.
+      const rowLabel = holi
+        ? (isCloseDay(dstr)
+            ? '<span style="color:#8A5A12;">' + holi + '</span>'
+            : '휴일 <span style="color:#A21E1E;">· ' + holi + '</span>')
+        : '주말 · 구분';
       addRow(dstr, rowLabel, (td,m)=>{
         const mtk = memberTeam(m);
         const e = getEntry(mtk,dstr,m.name);
@@ -2663,7 +2690,7 @@ function openEditor(team, date, name){
   const y=parts[0], m=parts[1], d=parts[2];
   const wk = weekdayKr(y,m,d);
   const weekend = isWeekendDate(date);
-  const isOffDay = weekend || !!HOLIDAYS_KR[date];
+  const isOffDay = weekend || !!offDayName(date);
   const member = TEAMS[team].members.find(mm=>mm.name===name);
 
   // 슬롯마다 "누가 · 언제" 넣었는지 라벨 옆에 작게 붙입니다.
