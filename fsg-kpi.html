@@ -524,8 +524,8 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 #ov .ovpc .ovl{font-size:14px}#ov .ovpc .ovv{font-size:28px;margin-top:2px}
 #ov .ovpc.ovnd{background:var(--card);border-left:1px dashed var(--muted)}
 #ov .ovpc.ovnd .ovv{font-size:15px;font-weight:700;color:var(--muted);margin-top:8px}
-@media (max-width:600px){body[data-view=ov] header.top .sub{display:none}body[data-view=ov] .vtabs .vinfo #info{display:none}body[data-view=ov] .vtabs .vinfo{justify-content:flex-start}body[data-view=ov] .vtabs .vinfo .vbtns{width:100%}body[data-view=ov] .vtabs .vinfo .lbtn{flex:1}
-  body[data-view=ov] #svcBar .wrap{flex-wrap:nowrap;gap:8px;padding-top:8px;padding-bottom:8px}body[data-view=ov] #svcBar .f{flex:1;min-width:0}body[data-view=ov] #svcBar .f:first-child{flex:1.7}body[data-view=ov] #svcBar .f select{width:100%}}
+@media (max-width:600px){body[data-view] header.top .sub{display:none}body[data-view=ov] .vtabs .vinfo #info{display:none}body[data-view] .vtabs .vinfo{justify-content:flex-start}body[data-view] .vtabs .vinfo .vbtns{width:100%}body[data-view] .vtabs .vinfo .lbtn{flex:1}
+  #svcBar .wrap{flex-wrap:nowrap;gap:8px;padding-top:8px;padding-bottom:8px}#svcBar .f{flex:1;min-width:0}#svcBar .f:first-child{flex:1.7}#svcBar .f select{width:100%}}
 @media (max-width:1000px){#ov .ovg-a,#ov .ovg-b{grid-template-columns:1fr}#ov .ovkpi{grid-template-columns:repeat(2,1fr)}#ov .ovkc:nth-child(3){border-left:0}#ov .ovkc:nth-child(n+3){border-top:1px solid var(--border)}#ov .ovpro{grid-template-columns:repeat(2,1fr)}#ov .ovpc:nth-child(odd){border-left:0}#ov .ovpc:nth-child(n+3){border-top:1px solid var(--border)}}
 @media (max-width:600px){#ov .ovtitle h2{font-size:20px}#ov .ovkc{padding:12px 10px 10px}#ov .ovv{font-size:30px}#ov .ovh{display:none}#ov .ovcard{padding:12px}#ov .ovgrid{gap:12px}
   #ov .ovdw{grid-template-columns:1fr}#ov .ovdw svg{max-width:190px;margin:0 auto;display:block}#ov .ovhb{grid-template-columns:84px 1fr 100px}#ov .ovseg button,#ov .ovhl button{height:44px}#ov .ovtab th button{min-height:44px}
@@ -640,7 +640,7 @@ body[data-view=prd] #prodTabs [data-tab=team],body[data-view=prd] #prodTabs [dat
   <button class="vt" role="tab" id="vtSq" data-view="sq" aria-selected="false" aria-controls="mainArea">Service Quality<small>서비스 품질</small></button>
   <button class="vt" role="tab" id="vtOrg" data-view="org" aria-selected="false" aria-controls="mainArea">Organization<small>팀·사무소</small></button>
   <button class="vt" role="tab" id="vtPrd" data-view="prd" aria-selected="false" aria-controls="prod">Productivity<small>개인·업무부하</small></button>
-  <button class="vt" role="tab" id="vtEqp" data-view="eqp" aria-selected="false" aria-controls="mainArea">Equipment<small>장비</small></button>
+  <button class="vt" role="tab" id="vtEqp" data-view="eqp" aria-selected="false" aria-controls="mainArea">Instrument<small>장비</small></button>
   <button class="vt" role="tab" id="vtPro" data-view="pro" aria-selected="false" aria-controls="mainArea">Proactive Service<small>예방 서비스</small></button>
   </div>
   <div class="vinfo"><div id="info"></div><div class="vbtns"><button class="lbtn" id="adminToggle" aria-label="관리자 화면으로 전환">관리자</button><button class="lbtn" id="changeCode">접근 코드 변경</button></div></div>
@@ -3817,7 +3817,7 @@ async function initShare(){
 function refresh(){
   prepare(); buildPeriods();
   $('sub').textContent=`데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)} (CRM 추출일 ${D.excl.cut}까지${D.excl.future?`, 이후 예정 ${fmt(D.excl.future)}건 제외`:''}), 원본 ${SRC.act}`;
-  $('info').innerHTML=`활동 ${fmt(D.rawN)}건${SERIAL?`, 자산대장 '사용' ${fmt(SERIAL.length)}대`:''}<br>최종 업데이트 ${SRC.at||'-'}`;
+  $('info').innerHTML=`활동 ${fmt(D.rawN)}건${SERIAL?`, 자산대장 '사용' ${fmt(SERIAL.length)}대`:''}<br>자료 CRM ${esc((D.excl&&D.excl.cut)||'-')} 기준 · 최종 업데이트 ${SRC.at||'-'}`;
   render();
   buildProdPeriods(); PROD_DIRTY=true; if(!$('prod').hidden) renderProdFor(); if(VIEW==='ov') renderOv();
 }
@@ -3849,7 +3849,7 @@ $('changeCode').addEventListener('click',()=>{try{localStorage.removeItem(KEY_LS
 
 /* ===== 탭: 서비스 운영 KPI | 부서원 KPI — 같은 CRM 데이터(RAW)로 둘 다 계산 ===== */
 const VIEW_LS='fsg-kpi-view';
-const SCREENS={ov:{hash:'#overview'},sq:{hash:'#service-quality',scr:'sq'},org:{hash:'#organization',scr:'org',prod:'team'},prd:{hash:'#people',prod:'overview',tabs:['overview','person','ot','move']},eqp:{hash:'#equipment',scr:'eqp',prod:'equip'},pro:{hash:'#proactive',scr:'pro'}};
+const SCREENS={ov:{hash:'#overview'},sq:{hash:'#service-quality',scr:'sq'},org:{hash:'#organization',scr:'org',prod:'team'},prd:{hash:'#people',prod:'overview',tabs:['overview','person','ot','move']},eqp:{hash:'#instrument',scr:'eqp',prod:'equip'},pro:{hash:'#proactive',scr:'pro'}};
 const VIEW_ALIAS={svc:'sq',prod:'prd'};   /* 예전 저장값·주소(#people)를 새 화면으로 */
 let VIEW=(()=>{ const h=location.hash; for(const k in SCREENS) if(SCREENS[k].hash===h) return k; let v=null; try{v=localStorage.getItem(VIEW_LS);}catch(e){} v=VIEW_ALIAS[v]||v; return SCREENS[v]?v:'ov'; })();
 let PROD=null, PROD_DIRTY=true;
