@@ -35,7 +35,7 @@ assert(!/y2:/.test(trend) && !/yAxisID/.test(trend), '추이 그래프에 두 �
 assert(ovCode.includes('tgSt(') && ovCode.includes('TARGET_FTFR') && ovCode.includes('TARGET_REV') && ovCode.includes('TARGET_MTTR'));
 // 4-2) Chart.js 그래프 전체에 두 번째 축(yAxisID·y2:axis)이 하나도 없어야 한다(2026-11-12 — 단위가 다른 지표는 그래프를 나눈다)
 assert(!/yAxisID/.test(html) && !/y2:axis\(/.test(html), 'Chart.js 그래프에 두 번째 축이 남아 있음');
-['cFam', 'cFamRv', 'cFamTrend', 'cVol', 'cIdx', 'cQual', 'cMttr'].forEach(id => assert(html.includes("upsert('" + id + "'"), id + ' 그래프가 사라짐'));
+['cFam', 'cFamTrend', 'cVol', 'cIdx', 'cQual', 'cMttr', 'cRev', 'cPm'].forEach(id => assert(html.includes("upsert('" + id + "'"), id + ' 그래프가 사라짐'));
 // 5) 보고용 보기(2026-11-12) — Overview 만 보고서 모양으로 인쇄, 다른 화면 인쇄는 그대로
 ['rptHead', 'ovRptBtn', 'rptPrint', 'ovrfoot', 'ovrpt'].forEach(k => assert(html.includes(k), k + ' 없음'));
 assert(html.includes('@page{size:A4'), 'A4 인쇄 설정 없음');
@@ -49,5 +49,11 @@ assert(html.includes('id="${pf}Off"') && html.includes('사무소 표시'), '사
 ['sq','prd','org','eqp','pro'].forEach(k => assert(new RegExp(k + ":\\{hash:'[^']+'[^}]*dsx:1").test(html), k + ' 화면에 dsx 가 꺼져 있음'));
 assert(/\.dsx\{--ovp:var\(--primary\)\}/.test(html) && /#ov \.ovkpi,\.dsx \.ovkpi/.test(html), 'Overview CSS 가 .dsx 로 공유되지 않음');
 ['orgKpi','ogBars','ogTbl','proKpi','proRisk','tChr','sqKpiQ','sqKpiW','insKpis','eqpTitle','orgTitle','proTitle','sqTitle','prodTitle'].forEach(id => assert(html.includes('id="' + id + '"'), id + ' 없음'));
+// 최종 개선(사무소 중심·그래프 유형): 사무소 행은 PROD 를 읽기만 하고, 도트 플롯·100% 누적 막대·더 보기 요소가 있다
+const orgCode = between('function orgRows(mode){', 'function renderOrgTop');
+assert(/PROD\.team\[u\]/.test(orgCode) && /PROD_UNITS/.test(orgCode) && !/revisitAvg|kpiCore\(|buildProdData\(/.test(orgCode), '사무소 행이 PROD 만 읽지 않음');
+['famRvDots','orgMode','ogMix','proOgBars','proOgTbl','cPm','insPerf','instMore','fInstOver','lbMore'].forEach(id => assert(html.includes('id="' + id + '"'), id + ' 없음'));
+assert(/function dsBars/.test(html) && /0에서 시작하지 않음/.test(html), '도트 플롯에 축 범위 안내가 없음');
+assert(/\$\{ADMIN\?`, 원본 \$\{SRC\.act\}`:''\}/.test(html), '원본 파일명이 일반 사용자 헤더에 노출됨');
 assert(/function chronicList/.test(html) && !/revisitAvg/.test(between('function chronicList', 'function renderProTop')), '반복 고장 목록이 새 계산식을 씀');
 console.log('test_kpi_overview: OK (업무 유형 묶음 ' + Object.keys(core).length + '개 kpiCore 와 일치 · 새 계산식 없음 · 화면 전환·주소 · 목표·상태 기준 공유)');
