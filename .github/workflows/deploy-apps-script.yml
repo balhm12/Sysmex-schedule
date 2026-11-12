@@ -81,7 +81,7 @@ jobs:
           printf '{"scriptId":"%s","rootDir":"."}' "$SCRIPT_ID" > .clasp.json
           echo "### 배포 목록 (갱신 전)" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          clasp deployments | tee deployments.txt >> "$GITHUB_STEP_SUMMARY"
+          clasp deployments | tee deployments.txt | tee -a "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           if [ "$WANT" = "list" ]; then
             echo "::notice::배포 목록만 확인했습니다 — 아무것도 바꾸지 않았습니다."
@@ -94,7 +94,7 @@ jobs:
           clasp deploy -i "$WANT" -d "repo ${GITHUB_SHA::7}"
           echo "### 갱신 뒤" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          clasp deployments >> "$GITHUB_STEP_SUMMARY"
+          clasp deployments | tee -a "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           rm -f ~/.clasprc.json
 
