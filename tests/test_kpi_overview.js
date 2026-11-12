@@ -44,5 +44,10 @@ assert(bp.includes("VIEW==='ov'"), 'beforeprint 가 Overview 에서만 보고용
 assert(!/\bov(?:Rpt)?[^\n]*revisitAvg/.test(ovCode), '보고용 코드에 새 계산식');
 // 사무소 표기: PROD(부서원 계산)의 사무소 값만 읽고 새 계산식을 만들지 않는다
 assert(/offOf=/.test(ovCode) && /PROD\.team\[u\]/.test(ovCode) && /PROD\.revisit/.test(ovCode), '사무소 행이 PROD 를 읽지 않음');
-assert(html.includes('id="ovOff"') && html.includes('사무소 표시'), '사무소 표시 체크박스 없음');
+assert(html.includes('id="${pf}Off"') && html.includes('사무소 표시'), '사무소 표시 체크박스 없음');
+// 화면 통일: .dsx 는 Service Quality·Productivity·Organization·Instrument·Proactive 에서 켜고 Overview 는 #ov 규칙을 그대로 쓴다
+['sq','prd','org','eqp','pro'].forEach(k => assert(new RegExp(k + ":\\{hash:'[^']+'[^}]*dsx:1").test(html), k + ' 화면에 dsx 가 꺼져 있음'));
+assert(/\.dsx\{--ovp:var\(--primary\)\}/.test(html) && /#ov \.ovkpi,\.dsx \.ovkpi/.test(html), 'Overview CSS 가 .dsx 로 공유되지 않음');
+['orgKpi','ogBars','ogTbl','proKpi','proRisk','tChr','sqKpiQ','sqKpiW','insKpis','eqpTitle','orgTitle','proTitle','sqTitle','prodTitle'].forEach(id => assert(html.includes('id="' + id + '"'), id + ' 없음'));
+assert(/function chronicList/.test(html) && !/revisitAvg/.test(between('function chronicList', 'function renderProTop')), '반복 고장 목록이 새 계산식을 씀');
 console.log('test_kpi_overview: OK (업무 유형 묶음 ' + Object.keys(core).length + '개 kpiCore 와 일치 · 새 계산식 없음 · 화면 전환·주소 · 목표·상태 기준 공유)');
