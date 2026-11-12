@@ -153,7 +153,58 @@ ok(crmRange_([[new Date('2026-10-05')], [new Date('2026-10-01')]], 0).lo === new
   'crmRange_ 가 가장 이른 시각을 못 찾음');
 ok(crmRange_([['값']], -1) === null, '열이 없으면 null 이어야 함');
 
-/* ---------- 5. 메뉴 ---------- */
+/* ---------- 5. 올린 직후 집계 예약 (2026-11-12) ----------
+ * 올리기는 파일을 폴더에 넣는 것까지만 했기 때문에, 올린 뒤 최대 2시간(트리거가 꺼져 있으면
+ * 영원히) 반영되지 않았다. 아래가 깨지면 그 상태로 조용히 돌아간다.
+ */
+['uploadScheduleRefresh_', 'uploadRefreshTrigger', 'crmNeedsWait_'].forEach(f =>
+  ok(code.indexOf('\nfunction ' + f + '(') !== -1, f + ' 가 없음 — 올린 뒤 집계가 즉시 돌지 않는다'));
+
+const schedFn = grab('uploadScheduleRefresh_');
+ok(/after\(60 \* 1000\)/.test(schedFn), '예약이 1분 뒤가 아님');
+ok(/'uploadRefreshTrigger'/.test(schedFn) && /already/.test(schedFn),
+  '이미 예약돼 있는지 보지 않음 — 트리거가 쌓인다');
+ok(/ts\.length >= 18/.test(schedFn), '프로젝트 트리거 20개 제한을 막지 않음');
+ok(/autoCrmRefreshTrigger'\)\) return 'off'/.test(schedFn),
+  '자동 가져오기를 꺼 둬도 예약한다 — 끄기가 끄기가 아니게 된다');
+ok(/try \{[\s\S]*catch \(e\) \{ return 'error'/.test(schedFn),
+  '예약이 실패하면 올리기 자체가 실패한다 — 파일은 이미 저장됐으므로 성공으로 둬야 한다');
+
+const trigFn = grab('uploadRefreshTrigger');
+ok(trigFn.indexOf('deleteTrigger') < trigFn.indexOf('autoCrmRefresh('),
+  '집계보다 먼저 자기 트리거를 지우지 않음 — 집계가 실패하면 트리거가 남는다');
+
+/* 활동 파일만 예약해야 한다 (Serial No 는 KPI 용, 보고 데이터는 집계와 무관) */
+ok(/\(isCrm && \/약속_활동\/\.test\(name\)\) \? uploadScheduleRefresh_\(\) : ''/.test(code),
+  'uploadCore_ 가 활동 파일만 골라 예약하지 않음');
+/* 같은 파일이 이미 있으면 그 자리에서 돌려보내므로 예약하지 않는다 */
+ok(/dup: true[\s\S]{0,120}집계할 것이 없다/.test(code), '같은 파일(dup)에도 집계를 예약하려 한다');
+
+ok(/EVERY_MIN: 10/.test(code), '안전망 주기가 10분이 아님');
+ok(/everyMinutes\(AUTO_CRM_\.EVERY_MIN\)/.test(code), '주기 트리거가 분 단위가 아님');
+ok(!/EVERY_HOURS/.test(code), '예전 EVERY_HOURS 가 남아 있음');
+/* 「끄기」가 올리기 예약까지 지워야 한다 */
+ok(/uploadRefreshTrigger'\) \{ ScriptApp\.deleteTrigger\(t\); n\+\+/.test(grab('removeAutoCrmTrigger')),
+  '「끄기」가 올리기 직후 예약을 지우지 않음');
+
+/* 전송 중 대기: PC 올리기로 검증된 파일은 기다리지 않는다 */
+const waitFn = new Function(
+  'const AUTO_CRM_ = { MIN_AGE_MS: 3 * 60 * 1000 };\n' + grab('crmNeedsWait_') + '\nreturn crmNeedsWait_;')();
+const NOW = 1_700_000_000_000;
+ok(waitFn({ updated: NOW - 10_000, verified: false }, NOW) === true,
+  '방금 올라온 미검증 파일은 기다려야 한다 (전송 중일 수 있음)');
+ok(waitFn({ updated: NOW - 10_000, verified: true }, NOW) === false,
+  'PC 올리기로 검증된 파일은 기다리지 않아야 한다 — 이게 막히면 1분 예약이 헛돈다');
+ok(waitFn({ updated: NOW - 5 * 60 * 1000, verified: false }, NOW) === false,
+  '3분이 지난 파일은 기다리지 않아야 한다');
+
+/* 검증 표시는 uploadCore_ 가 적는 설명과 글자 그대로 맞아야 한다 */
+ok(/\/\^sha256:\[0-9a-f\]\{64\} · PC 업로드\/\.test\(desc\)/.test(code),
+  'crmListFiles_ 의 검증 판정이 없거나 모양이 다름');
+ok(/file\.setDescription\('sha256:' \+ sha \+ ' · PC 업로드 ' \+ crmNowStr_\(\)\)/.test(code),
+  "uploadCore_ 가 적는 설명이 바뀜 — crmListFiles_ 의 검증 판정과 어긋난다");
+
+/* ---------- 6. 메뉴 ---------- */
 const menu = /function onOpen\(\)[\s\S]*?addToUi\(\);/.exec(code);
 ok(!!menu, 'onOpen 메뉴를 찾지 못함');
 [
