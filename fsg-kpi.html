@@ -68,7 +68,7 @@ h2.sec small{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:8px
 .kpi .l .pv{font-size:11px;font-weight:700;color:#fff;background:var(--warn);border-radius:3px;padding:0 5px;margin-left:4px;vertical-align:1px}
 .kpi .v{font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:var(--primary);line-height:1.15;margin-top:4px}
 .kpi .v small{font-size:15px;margin-left:2px}
-.kpi .dl{font-size:12.5px;margin-top:2px;font-weight:700}
+.kpi .dl{font-size:12px;margin-top:2px;font-weight:500;color:var(--muted)}
 .kpi .cap{font-size:11.5px;color:var(--muted);margin-top:8px;border-top:1px solid var(--border);padding-top:6px}
 .up{color:var(--good)}.down{color:var(--bad)}.flat{color:var(--muted)}.neu{color:var(--muted)}
 .kpi.tg-good,.kpi.s-good{border-top-color:var(--good)}.kpi.tg-bad,.kpi.s-bad{border-top-color:var(--bad)}.kpi.s-warn{border-top-color:var(--warn)}
@@ -76,9 +76,9 @@ h2.sec small{font-size:12.5px;color:var(--muted);font-weight:400;margin-left:8px
 /* 카드는 위쪽 띠 색만 바꾼다(사용자 요청 2026-10-07): 초록 = 잘됨, 빨강 = 안 됨 */
 .kpi.s-good,.kpi.s-bad,.kpi.s-warn,.hc.s-good,.hc.s-bad{border-top-width:4px}
 .kpi .l{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
-.chip{margin-left:auto;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap;line-height:1.6}
-.chip.good{background:var(--good);color:#fff}.chip.bad{background:var(--bad);color:#fff}.chip.warn{background:var(--warn);color:#fff}
-.chip.good::before{content:'✓ '}.chip.bad::before{content:'! '}
+.chip{margin-left:auto;font-size:12px;font-weight:700;padding:1px 8px;border-radius:4px;white-space:nowrap;line-height:1.6}
+.chip.good{background:#E6F5E8;color:#26782D}.chip.bad{background:#FCE9E8;color:#C8312E}.chip.warn{background:#FDF1D8;color:#8F5C06}.chip.none{background:#EEF1F4;color:#5A6571}
+
 .up{color:var(--good-t)}.down{color:var(--bad-t)}
 td.good{color:var(--good-t);font-weight:700}td.bad{color:var(--bad-t);font-weight:700;background:var(--bad-bg)}
 .hc.s-good{border-top:4px solid var(--good)}.hc.s-bad{border-top:4px solid var(--bad)}
@@ -241,7 +241,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 #prod .delta-up{color:var(--critical);}
 #prod .delta-down{color:var(--good);}
 #prod .delta-flat{color:var(--text-muted);}
-#prod .pill{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; padding:3px 8px;
+#prod .pill{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:3px 8px;
     border-radius:999px; letter-spacing:.02em;}
 #prod .pill.good{background:var(--good-soft); color:var(--good);}
 #prod .pill.warn{background:var(--warning-soft); color:var(--warning);}
@@ -264,8 +264,8 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 #prod svg.chart .axis-label{fill:var(--text-muted);}
 #prod svg.chart .grid-line{stroke:var(--border-soft); stroke-width:1;}
 #prod svg.chart .target-line{stroke:var(--text-muted); stroke-width:1.3; stroke-dasharray:3 3;}
-#prod .bar-label{font-size:10.5px; font-weight:600;}
-#prod .value-label{font-size:10.5px; font-weight:600; fill:var(--text-primary) !important;}
+#prod .bar-label{font-size:11px; font-weight:600;}
+#prod .value-label{font-size:11px; font-weight:600; fill:var(--text-primary) !important;}
 #prod .tooltip{position:fixed; pointer-events:none; background:var(--text-primary); color:var(--bg);
     font-size:11.5px; font-family:'IBM Plex Mono','Noto Sans KR',monospace; padding:7px 10px; border-radius:8px;
     box-shadow:var(--shadow); z-index:1000; opacity:0; transition:opacity .1s; max-width:220px; line-height:1.5;}
@@ -275,7 +275,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
     text-transform:uppercase; padding:8px 10px; border-bottom:1px solid var(--border); cursor:pointer; white-space:nowrap;
     position:sticky; top:0; background:var(--surface);}
 #prod table.data-table th.num, #prod table.data-table td.num{text-align:right; font-family:'IBM Plex Mono',monospace;}
-#prod table.data-table th span.arrow{font-size:9px; margin-left:3px; color:var(--accent);}
+#prod table.data-table th span.arrow{font-size:11px; margin-left:3px; color:var(--accent);}
 #prod table.data-table td{padding:9px 10px; border-bottom:1px solid var(--border-soft);}
 #prod table.data-table tbody tr:hover{background:var(--surface-2); cursor:pointer;}
 #prod table.data-table tbody tr.self-row{background:var(--accent-soft);}
@@ -294,12 +294,12 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 #prod .person-list{width:220px; flex:none; background:var(--surface); border:1px solid var(--border-soft); border-radius:14px;
     padding:10px; max-height:520px; overflow-y:auto; box-shadow:var(--shadow);}
 @media (max-width:800px){#prod .person-list{width:100%; max-height:200px;}}
-#prod .person-list .team-group-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); font-weight:700; padding:8px 8px 4px;}
+#prod .person-list .team-group-label{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); font-weight:700; padding:8px 8px 4px;}
 #prod .person-item{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 10px; border-radius:8px;
     cursor:pointer; font-size:12.5px; font-weight:500;}
 #prod .person-item:hover{background:var(--surface-2);}
 #prod .person-item.active{background:var(--accent-soft); color:var(--accent); font-weight:700;}
-#prod .person-item .mini{font-size:10.5px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace;}
+#prod .person-item .mini{font-size:11px; color:var(--text-muted); font-family:'IBM Plex Mono',monospace;}
 #prod .person-item.active .mini{color:var(--accent);}
 #prod .person-main{flex:1; min-width:0;}
 #prod .person-header{display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:16px; flex-wrap:wrap;}
@@ -353,7 +353,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 @media (max-width:900px){#prodBar .info{margin-left:0;text-align:left}#prodBar{position:static}}
 #prod .more-btn{display:block;width:100%;margin-top:6px;padding:8px;border:1px solid var(--border-soft);border-radius:8px;background:var(--surface-2);color:var(--accent);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 #prod .more-btn:hover{background:var(--accent-soft)}
-#prod .gtag{display:inline-block;font-size:10.5px;font-weight:700;padding:0 5px;border-radius:3px;margin-left:5px;vertical-align:1px;background:var(--surface-2);color:var(--text-secondary)}
+#prod .gtag{display:inline-block;font-size:11px;font-weight:700;padding:0 5px;border-radius:3px;margin-left:5px;vertical-align:1px;background:var(--surface-2);color:var(--text-secondary)}
 #prod .gtag.lead{background:var(--tint);color:var(--primary)}
 #prod .gtag.new{background:var(--warning-soft);color:var(--warning)}
 #prod .dpos{color:var(--good-t);font-weight:700}#prod .dneg{color:var(--bad-t);font-weight:700}
@@ -439,6 +439,10 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 .wd-pw .wd-row{margin:8px 0 0}.wd-pw label{font-weight:400;min-width:124px;font-size:13px}
 .wd-pw input[type=password]{flex:1;min-width:150px;max-width:260px}
 @media (max-width:520px){.wd-in{padding:12px 12px 14px}.wd-pw label{min-width:100%}.wd-pw input[type=password]{max-width:none}.wd-tbl input[type=number]{height:44px;width:84px}.wd-in input[type=text],.wd-in input[type=password],.wd-in input[type=month]{height:44px}.wd-save,.wdlg .lbtn{height:44px}.wd-row input{flex:1;min-width:0}}
+#prod .empty-note{text-align:left;border:1px dashed var(--border);background:var(--surface-2);border-radius:6px;padding:14px 16px;font-size:13px;color:var(--text-secondary)}
+#prod .empty-note b{color:var(--text-primary)}
+#prod td.dpos span,#prod td.dneg span{background:none !important;color:var(--text-secondary) !important;padding:0 !important}
+@media (max-width:600px){#prod #lbTable th:nth-child(4),#prod #lbTable td:nth-child(4),#prod #lbTable th:nth-child(7),#prod #lbTable td:nth-child(7),#prod #lbTable .score-bar-track{display:none}#prod #lbTable .score-cell{min-width:0}}
 </style>
 </head>
 <body>
@@ -531,13 +535,13 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
   <input type="file" id="fGeo" accept=".json" hidden>
   <input type="file" id="fEq" accept=".xlsx" hidden>
   <div class="uplfoot">
-    <span>엑셀은 이 브라우저에서 읽어 집계에 필요한 열만 정리한 뒤, 접근 코드로 암호화해서 저장소에 올립니다. 팀장 화면은 5분 안에(또는 새로고침 시) 자동 반영됩니다.</span>
+    <span>엑셀은 이 브라우저에서 읽어 집계에 필요한 열만 정리한 뒤, 접근 코드로 암호화해서 저장소에 올립니다. 5분 안에 자동 반영(새로고침하면 바로).</span>
   </div>
 </div></section>
 
 <nav class="vtabs" id="vtabs" hidden><div class="wrap" role="tablist" aria-label="대시보드 선택">
   <button class="vt" role="tab" id="vtSvc" data-view="svc" aria-selected="true" aria-controls="mainArea">서비스 운영 KPI<small>전체 운영 현황</small></button>
-  <button class="vt" role="tab" id="vtProd" data-view="prod" aria-selected="false" aria-controls="prod">부서원 KPI<small>개인별 서비스 지수</small></button>
+  <button class="vt" role="tab" id="vtProd" data-view="prod" aria-selected="false" aria-controls="prod">부서원 KPI<small>개인별 KPI 점수</small></button>
   <div class="vinfo"><div id="info"></div><div class="vbtns"><button class="lbtn" id="adminToggle" aria-label="관리자 화면으로 전환">관리자</button><button class="lbtn" id="changeCode">접근 코드 변경</button></div></div>
 </div></nav>
 <div class="bar" id="svcBar"><div class="wrap">
@@ -570,7 +574,7 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
   <h2 class="sec">12개월 추이 <small id="trendSub"></small></h2>
   <div class="grid">
     <section class="panel">
-      <h3>고장 수리와 PM, 예방정비 지수</h3>
+      <h3>고장 수리·PM 건수와 예방정비 지수</h3>
       
       <div class="cv"><canvas id="cVol"></canvas></div>
     </section>
@@ -769,7 +773,7 @@ function kpiCore(RAW, ROSTER, opt){
     revisitAvg:revisitAvg, acctRates:acctRates, rates:rates, pct:pct, avg:avg, rnd:rnd, purposeOf:purposeOf};
 }
 
-/* ===== 부서원 KPI (개인별 서비스 지수) 집계 =====
+/* ===== 부서원 KPI (개인별 KPI 점수) 집계 =====
    김성민 FSG KPI 대시보드(scripts/extract.py + finalize.py)의 계산을 브라우저로 옮긴 것.
    입력: RAW 행 {st,t,e,own,err,acct,sn,prod,purp,subj,ft}  (t/e = 벽시계 시각을 UTC ms로 둔 값)
    출력: 부서원 탭 렌더러(initProdDashboard)가 쓰는 DATA 객체 — finalize.py 출력과 같은 모양 */
@@ -1271,7 +1275,7 @@ function pctStr(n){ return (n===null||n===undefined||isNaN(n)) ? '—' : n.toFix
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function deltaBadge(cur, prev, higherIsBetter){
-  if (cur === null || prev === null || prev === undefined || cur === undefined || prev === 0) return '<span class="pill neutral">신규</span>';
+  if (cur === null || prev === null || prev === undefined || cur === undefined || prev === 0) return '<span class="pill neutral">비교 자료 없음</span>';
   var d = ((cur - prev) / Math.abs(prev)) * 100;
   var up = d > 0.5, down = d < -0.5;
   var good = higherIsBetter ? up : down;
@@ -1284,7 +1288,7 @@ function deltaBadge(cur, prev, higherIsBetter){
 
 function targetPill(value, target, mode){
   // mode: 'lower-better' (mttr, revisit) or 'higher-better' (ftfr)
-  if (value === null || value === undefined) return '<span class="pill neutral">데이터없음</span>';
+  if (value === null || value === undefined) return '<span class="pill neutral">자료 없음</span>';
   var ok = mode === 'higher-better' ? value >= target : value <= target;
   var close = mode === 'higher-better' ? value >= target*0.92 : value <= target*1.15;
   var cls = ok ? 'good' : (close ? 'warn' : 'bad');
@@ -1341,7 +1345,7 @@ function barChart(container, cats, values, colors, opts){
   for (var i=0;i<=ticks;i++){
     var gy = padT + innerH - (innerH*i/ticks);
     svg.appendChild(svgEl('line', {class:'grid-line', x1:padL, x2:W-padR, y1:gy, y2:gy}));
-    var t = svgEl('text', {x:padL-8, y:gy+3, 'text-anchor':'end', 'font-size':'10'});
+    var t = svgEl('text', {x:padL-8, y:gy+3, 'text-anchor':'end', 'font-size':'11'});
     t.textContent = fmt(Math.round(maxV*i/ticks));
     svg.appendChild(t);
   }
@@ -1370,7 +1374,7 @@ function barChart(container, cats, values, colors, opts){
   if (opts.targetLine){
     var ty = padT + innerH - innerH*(opts.targetLine/maxV);
     svg.appendChild(svgEl('line', {class:'target-line', x1:padL, x2:W-padR, y1:ty, y2:ty}));
-    var tt = svgEl('text', {x:W-padR, y:ty-4, 'text-anchor':'end', 'font-size':'10', fill:resolveVar('var(--text-muted)')});
+    var tt = svgEl('text', {x:W-padR, y:ty-4, 'text-anchor':'end', 'font-size':'11', fill:resolveVar('var(--text-muted)')});
     tt.textContent = (opts.targetText || '목표')+' '+opts.targetLine+(opts.unit||'');
     svg.appendChild(tt);
   }
@@ -1393,7 +1397,7 @@ function groupedBarChart(container, cats, seriesArr, opts){
   for (var i=0;i<=ticks;i++){
     var gy = padT + innerH - (innerH*i/ticks);
     svg.appendChild(svgEl('line', {class:'grid-line', x1:padL, x2:W-padR, y1:gy, y2:gy}));
-    var t = svgEl('text', {x:padL-8, y:gy+3, 'text-anchor':'end', 'font-size':'10'});
+    var t = svgEl('text', {x:padL-8, y:gy+3, 'text-anchor':'end', 'font-size':'11'});
     t.textContent = fmt(Math.round(maxV*i/ticks));
     svg.appendChild(t);
   }
@@ -1437,7 +1441,7 @@ function lineChart(container, months, seriesArr, opts){
   for (var i=0;i<=ticks;i++){
     var gy = padT + innerH - (innerH*i/ticks);
     svg.appendChild(svgEl('line', {class:'grid-line', x1:padL, x2:W-padR, y1:gy, y2:gy}));
-    var t = svgEl('text', {x:padL-8, y:gy+3, 'text-anchor':'end', 'font-size':'10'});
+    var t = svgEl('text', {x:padL-8, y:gy+3, 'text-anchor':'end', 'font-size':'11'});
     t.textContent = fmt(Math.round(maxV*i/ticks));
     svg.appendChild(t);
   }
@@ -1450,7 +1454,7 @@ function lineChart(container, months, seriesArr, opts){
   months.forEach(function(m, idx){
     var isLive = live && m === live.idx;
     if (step > 1 && (n-1-idx) % step !== 0) return;
-    var lbl = svgEl('text', {class:'axis-label', x:xFor(idx), y:H-8, 'text-anchor':'middle', 'font-size':'10'});
+    var lbl = svgEl('text', {class:'axis-label', x:xFor(idx), y:H-8, 'text-anchor':'middle', 'font-size':'11'});
     if (isLive){ lbl.setAttribute('fill', liveTxt); lbl.setAttribute('font-weight', '700'); }
     lbl.textContent = MONTH_LABEL[m];
     svg.appendChild(lbl);
@@ -1500,7 +1504,7 @@ function lineChart(container, months, seriesArr, opts){
   container.appendChild(svg);
   if (livePt){   /* 점 위에 「10월 진행 중」 꼬리표 — 오른쪽 끝을 넘지 않게 왼쪽으로 붙이고, 위가 좁으면 아래로 */
     var g = svgEl('g', {'pointer-events':'none'});
-    var tx = svgEl('text', {'font-size':'10.5', 'font-weight':'700', fill:liveTxt});
+    var tx = svgEl('text', {'font-size':'11', 'font-weight':'700', fill:liveTxt});
     tx.textContent = live.month+'월 진행 중';
     g.appendChild(tx); svg.appendChild(g);
     var tw = tx.getBBox ? tx.getBBox().width : 60; if (!tw) tw = 60;
@@ -1527,7 +1531,7 @@ function rankStripChart(container, rows, opts){
   var svg = svgEl('svg', {class:'chart', viewBox:'0 0 '+W+' '+H, height:H});
   var col = resolveVar(opts.color || 'var(--accent)'), muted = resolveVar('var(--text-muted)'), track = resolveVar('var(--surface-2)') || '#eef1f5';
   [0, 0.5, 1].forEach(function(f){ var gx = x0 + tw*f; svg.appendChild(svgEl('line', {class:'grid-line', x1:gx, x2:gx, y1:padT, y2:H-padB+4}));
-    var t = svgEl('text', {x:gx, y:H-6, 'text-anchor':f===0?'start':f===1?'end':'middle', 'font-size':'10', fill:muted}); t.textContent = f===1 ? 'FSG 최고' : f===0 ? '0' : '최고의 50%'; svg.appendChild(t); });
+    var t = svgEl('text', {x:gx, y:H-6, 'text-anchor':f===0?'start':f===1?'end':'middle', 'font-size':'11', fill:muted}); t.textContent = f===1 ? 'FSG 최고' : f===0 ? '0' : '최고의 50%'; svg.appendChild(t); });
   rows.forEach(function(r, i){
     var cy = padT + i*rowH + rowH/2, mx = r.max || 0, X = function(v){ return x0 + (mx ? Math.min(v, mx)/mx : 0)*tw; };
     var lb = svgEl('text', {x:0, y:cy+4, class:'axis-label', 'font-size':'12', 'font-weight':'600'}); lb.textContent = r.label; svg.appendChild(lb);
@@ -1619,8 +1623,8 @@ function renderOverview(){
     (DATA.no_att ? ' 지금 데이터에는 필수 참석자 열이 없어 담당자만 반영됐습니다. <b>CRM 파일을 다시 올리면 반영</b>됩니다.' : '')+(DATA.admin_weights ? ' <button type="button" class="lbtn" onclick="openWgt()">가중치 설정</button>' : '')+'</div></div>';
 
   html += '<div class="block grid grid-4">'+
-    statTile('총 처리 건수', fmt(totalCase), '건', deltaBadge(totalCase, totalCasePrevYoY, null), DATA.period_label[period])+
-    statTile('평균 MTTR (고장수리)', fmt1(mttr), '분', deltaBadge(mttr, mttrPrevYoY, false)+' '+targetPill(mttr, DATA.benchmarks.mttr_target, 'lower-better'), '목표 '+DATA.benchmarks.mttr_target+'분 이내 · 500분 초과 건 제외')+
+    statTile('처리 건수', fmt(totalCase), '건', deltaBadge(totalCase, totalCasePrevYoY, null), DATA.period_label[period])+
+    statTile('MTTR (고장 수리)', fmt1(mttr), '분', deltaBadge(mttr, mttrPrevYoY, false)+' '+targetPill(mttr, DATA.benchmarks.mttr_target, 'lower-better'), '목표 '+DATA.benchmarks.mttr_target+'분 이내 · 500분 초과 건 제외')+
     statTile('평균 재방문율', pctStr(avgRevisit), '', targetPill(avgRevisit, DATA.benchmarks.revisit_target, 'lower-better'), 'FSG 전체 거래처 평균 (목표 '+DATA.benchmarks.revisit_target+'% 이하)')+
     statTile('평균 FTFR', pctStr(avgFtfr), '', targetPill(avgFtfr, DATA.benchmarks.ftfr_target, 'higher-better'), 'FSG 전체 거래처 평균 (목표 '+DATA.benchmarks.ftfr_target+'% 이상)')+
     '</div>';
@@ -1638,7 +1642,7 @@ function renderOverview(){
     chartCard('trend-chart', '월별 처리 건수 추이', ''+(DATA.trend_names?DATA.trend_names.join(' vs '):'이번 년도 vs 직전 년도')+' · 전사')+
     '</div>';
 
-  html += '<div class="block"><div class="block-head"><h2>팀별 재방문율 / FTFR 개요</h2><span class="hint">고장수리+점검 기준, "'+PL(period)+'" 스냅샷</span></div>'+
+  html += '<div class="block"><div class="block-head"><h2>팀별 재방문율 / FTFR 개요</h2><span class="hint">고장 수리+PM 기준, "'+PL(period)+'" 스냅샷</span></div>'+
     '<div class="grid grid-4" id="teamRevisitCards"></div></div>';
 
   el.innerHTML = html;
@@ -1703,6 +1707,7 @@ function renderLeaderboardTable(period){
   });
   if (DATA.ex_lead) rows = rows.filter(function(r){ return r.grade !== '팀장' && !r.isNew; });
   var maxScore = Math.max(1, Math.max.apply(null, rows.map(function(r){return r.score;})));
+  var _rk = rows.slice().sort(function(a,b){return b.score-a.score;}); rows.forEach(function(r){ r.rank = _rk.indexOf(r)+1; });
   var key = state.lbSortKey, dir = state.lbSortDir;
   rows.sort(function(a,b){
     var av = a[key], bv = b[key];
@@ -1720,7 +1725,7 @@ function renderLeaderboardTable(period){
     {k:'grade', label:'직급'},
     {k:'score', label:'KPI 종합 점수', num:true},
     {k:'delta', label:(DATA.cmp_short||'증감'), num:true},
-    {k:'total', label:'총 처리건수', num:true},
+    {k:'total', label:'처리 건수', num:true},
   ];
   var thead = '<thead><tr>'+cols.map(function(c){
     if (c.k==='rank') return '<th>#</th>';
@@ -1728,12 +1733,12 @@ function renderLeaderboardTable(period){
     return '<th class="'+(c.num?'num':'')+'" data-key="'+c.k+'">'+c.label+arrow+'</th>';
   }).join('')+'</tr></thead>';
   var tbody = '<tbody>'+rows.map(function(r, i){
-    var rankCls = i===0?'top1':(i===1?'top2':(i===2?'top3':''));
+    var rankCls = r.rank===1?'top1':(r.rank===2?'top2':(r.rank===3?'top3':''));
     var pct = Math.max(2, Math.round(r.score/maxScore*100));
     var color = resolveVar(TEAM_COLOR[r.team]);
     var isSelf = r.name === state.person;
     return '<tr class="'+(isSelf?'self-row':'')+'" data-person="'+esc(r.name)+'">'+
-      '<td><span class="rank-badge '+rankCls+'">'+(i+1)+'</span></td>'+
+      '<td><span class="rank-badge '+rankCls+'">'+r.rank+'</span></td>'+
       '<td>'+esc(r.name)+(r.grade==='팀장'?'<span class="gtag lead">팀장</span>':'')+(r.isNew?'<span class="gtag new">신입</span>':'')+'</td>'+
       '<td><span style="color:'+color+';font-weight:600;font-size:11.5px;">'+DATA.team_short[r.team]+'</span></td>'+
       '<td>'+esc(r.grade)+((DATA.promoted||{})[r.name]?'<span class="gtag" title="'+esc(DATA.promoted[r.name])+' 진급">진급</span>':'')+'</td>'+
@@ -1781,13 +1786,13 @@ function renderTeam(){
   var reliable = DATA.revisit[team].reliable;
 
   html += '<div class="block grid grid-4">'+
-    statTile('총 처리 건수', fmt(teamData.total_case[period]), '건', null, team+' · '+PL(period))+
-    statTile('평균 MTTR (고장수리)', fmt1(mttr), '분', targetPill(mttr, DATA.benchmarks.mttr_target,'lower-better'), '목표 '+DATA.benchmarks.mttr_target+'분 이내')+
+    statTile('처리 건수', fmt(teamData.total_case[period]), '건', null, team+' · '+PL(period))+
+    statTile('MTTR (고장 수리)', fmt1(mttr), '분', targetPill(mttr, DATA.benchmarks.mttr_target,'lower-better'), '목표 '+DATA.benchmarks.mttr_target+'분 이내')+
     statTile('재방문율', pctStr(rv.revisit), '', reliable?targetPill(rv.revisit, DATA.benchmarks.revisit_target,'lower-better'):'<span class="pill warn">확인필요</span>', reliable?('목표 '+DATA.benchmarks.revisit_target+'% 이하'):'원본 시트 수식 오류 — 참고용')+
     statTile('FTFR', pctStr(rv.ftfr), '', reliable?targetPill(rv.ftfr, DATA.benchmarks.ftfr_target,'higher-better'):'', reliable?('목표 '+DATA.benchmarks.ftfr_target+'% 이상'):'&nbsp;')+
     '</div>';
 
-  if (TGROUPS[topOf(team)]) html += '<div class="block"><div class="block-head"><h2>사무소 비교</h2><span class="hint">'+DATA.team_short[topOf(team)]+' · '+PL(period)+' · 1인당 값은 팀장·신입 제외 · 사무소는 인원이 4~5명이라 한두 사람의 변화가 크게 반영됩니다(참고용)</span></div>'+
+  if (TGROUPS[topOf(team)]) html += '<div class="block"><div class="block-head"><h2>사무소 비교</h2><span class="hint">'+DATA.team_short[topOf(team)]+' · '+PL(period)+' · 1인당 값은 팀장·신입 제외 · 사무소는 4~5명 기준이라 참고용</span></div>'+
     '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="officeTable"></table></div></div>';
   html += '<div class="block grid grid-2">'+
     chartCard('team-group-chart', '비즈니스(장비 그룹)별 처리 건수', PL(period))+
@@ -1800,7 +1805,7 @@ function renderTeam(){
     '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="rankTable"></table></div></div>';
 
   var hospTotal = DATA.revisit[team].total_hospital_count || DATA.revisit[team].hospitals.length;
-  html += '<div class="block"><div class="block-head"><h2>담당 병원별 재방문율 / FTFR</h2><span class="hint">고장수리+점검 기준(방문 3건 이상) · '+team+' 서비스 건수 상위 '+DATA.revisit[team].hospitals.length+'개 병원 (전체 '+hospTotal+'개 중)</span></div>'+
+  html += '<div class="block"><div class="block-head"><h2>담당 병원별 재방문율 / FTFR</h2><span class="hint">고장 수리+PM 기준(방문 3건 이상) · '+team+' 서비스 건수 상위 '+DATA.revisit[team].hospitals.length+'개 병원 (전체 '+hospTotal+'개 중)</span></div>'+
     '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="hospTable"></table></div></div>';
 
   el.innerHTML = html;
@@ -1853,7 +1858,7 @@ function renderRankTable(team, period){
     {k:'rank', label:'#', num:false},
     {k:'name', label:'이름', num:false},
     {k:'score', label:'KPI 점수', num:true},
-    {k:'total', label:'총 처리건수', num:true},
+    {k:'total', label:'처리 건수', num:true},
     {k:'repair', label:'고장수리', num:true},
     {k:'pm', label:'PM', num:true},
     {k:'mttr', label:'MTTR(분)', num:true},
@@ -1952,7 +1957,7 @@ function renderPerson(){
   el.innerHTML = html;
 
   var listEl = document.getElementById('personList');
-  var searchHtml = '<input class="search" style="width:100%;margin-bottom:10px;" placeholder="이름 검색..." id="personSearchInput" value="'+esc(state.personSearch)+'">';
+  var searchHtml = '<input class="search" style="width:100%;margin-bottom:10px;" placeholder="이름 검색" id="personSearchInput" value="'+esc(state.personSearch)+'">';
   listEl.insertAdjacentHTML('beforeend', searchHtml);
   DATA.teams.forEach(function(t){
     var members = DATA.team[t].members.filter(function(m){ return m.indexOf(state.personSearch) !== -1; });
@@ -1974,7 +1979,7 @@ function renderPerson(){
   });
 
   if (!state.person || !DATA.person[state.person]){
-    document.getElementById('personDetail').innerHTML = '<div class="empty-note">왼쪽에서 팀원을 선택하세요.</div>';
+    document.getElementById('personDetail').innerHTML = '<div class="empty-note">목록에서 선택하세요.</div>';
     return;
   }
   var pe = DATA.person[state.person];
@@ -1999,8 +2004,8 @@ function renderPerson(){
 
   html2 += '<div class="block grid grid-5">'+
     statTile('KPI 종합 점수', fmt1(score), '점', deltaBadge(score, scorePrevYoY, true), (gi!=null?'직급 보정 지수 <b>'+fmt1(gi)+'</b> (100 = FSG 같은 직급 중앙값) · ':'')+PL(period))+
-    statTile('총 처리 건수', fmt(total), '건', deltaBadge(total, totalPrevYoY, null), PL(period))+
-    statTile('평균 MTTR (고장수리)', fmt1(mttr), '분', deltaBadge(mttr, mttrPrevYoY, false)+' '+targetPill(mttr, DATA.benchmarks.mttr_target,'lower-better'), '목표 '+DATA.benchmarks.mttr_target+'분 이내')+
+    statTile('처리 건수', fmt(total), '건', deltaBadge(total, totalPrevYoY, null), PL(period))+
+    statTile('MTTR (고장 수리)', fmt1(mttr), '분', deltaBadge(mttr, mttrPrevYoY, false)+' '+targetPill(mttr, DATA.benchmarks.mttr_target,'lower-better'), '목표 '+DATA.benchmarks.mttr_target+'분 이내')+
     statTile('소속팀 재방문율', pctStr(rv.revisit), '', reliable?targetPill(rv.revisit, DATA.benchmarks.revisit_target,'lower-better'):'<span class="pill warn">확인필요</span>', '팀 평균 참고치 (개인별 데이터 아님)')+
     statTile('소속팀 FTFR', pctStr(rv.ftfr), '', reliable?targetPill(rv.ftfr, DATA.benchmarks.ftfr_target,'higher-better'):'', '팀 평균 참고치 (개인별 데이터 아님)')+
     '</div>';
@@ -2011,7 +2016,7 @@ function renderPerson(){
     '</div>';
   html2 += '<div class="block grid grid-2">'+
     chartCard('p-svc-chart', '서비스 유형별 처리 건수', PL(period))+
-    chartCard('p-mttr-chart', 'MTTR by 장비 그룹 (고장수리)', PL(period)+' · 목표 '+DATA.benchmarks.mttr_target+'분')+
+    chartCard('p-mttr-chart', '장비 그룹별 MTTR (고장 수리)', PL(period)+' · 목표 '+DATA.benchmarks.mttr_target+'분')+
     '</div>';
   html2 += '<div class="block">'+chartCard('p-trend-chart', '월별 처리 건수 추이', ''+(DATA.trend_names?DATA.trend_names.join(' vs '):'이번 년도 vs 직전 년도')+'')+'</div>';
   var po = DATA.ot && DATA.ot.person[state.person] ? DATA.ot.person[state.person].p : null;
@@ -2052,7 +2057,7 @@ function renderPerson(){
     accShow.map(function(a,i){ var pv = accPrev[a[0]] || 0, d = a[1]-pv;
       return '<tr><td><span class="rank-badge" style="margin-right:8px;">'+(i+1)+'</span>'+esc(a[0])+'</td><td class="num">'+fmt(a[1])+'</td><td class="num" style="color:var(--text-muted)">'+(d===0?'–':(d>0?'+':'')+fmt(d))+'</td></tr>'; }).join('')+
     '</tbody></table>'+
-    (accAll.length > 6 ? '<button type="button" id="accMoreBtn" class="more-btn">'+(state.accMore ? '접기' : '더보기 ('+(accAll.length-6)+'곳 더)')+'</button>' : '')
+    (accAll.length > 6 ? '<button type="button" id="accMoreBtn" class="more-btn">'+(state.accMore ? '접기' : '더 보기 ('+(accAll.length-6)+'곳 더)')+'</button>' : '')
     : '<div class="empty-note">이 기간에 방문 기록이 없습니다.</div>')+'</div></div>';
 
   detail.innerHTML = html2;
@@ -2259,7 +2264,7 @@ function renderOTTable(period, names){
 function renderMove(){
   var el = document.getElementById('panel-move'), M = DATA.move;
   var info = '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div>';
-  if (!M){ el.innerHTML = info+'<b>이동거리 좌표가 아직 없습니다.</b> 관리자가 「이동거리 좌표」 파일을 올리면 표시됩니다.</div></div>'; return; }
+  if (!M){ el.innerHTML = '<div class="empty-note"><b>이동거리 좌표가 아직 없습니다.</b> 관리자가 「이동거리 좌표」 파일을 올리면 표시됩니다.</div>'; return; }
   var period = state.period, scope = state.mvScope || 'ALL';
   var monthsOf = function(p){ return p === '직전 년도' ? DATA.cmp_months : p === '전체 누적' ? null : DATA.sel_months; };
   var sum = function(n, months){ var m = M.per[n] || {}, o = {km:0, days:0, vis:0};
@@ -2312,7 +2317,7 @@ function renderMove(){
 function renderEquip(){
   var el = document.getElementById('panel-equip'), Q = DATA.eq;
   var info = '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div>';
-  if (!Q){ el.innerHTML = info+'<b>담당기관 관리표가 아직 없습니다.</b> 관리자가 「담당기관 관리표」 파일을 올리면 표시됩니다.</div></div>'; return; }
+  if (!Q){ el.innerHTML = '<div class="empty-note"><b>담당기관 관리표가 아직 없습니다.</b> 관리자가 「담당기관 관리표」 파일을 올리면 표시됩니다.</div>'; return; }
   var period = state.period, scope = state.eqScope || 'ALL', FL = ['CBC','유린','응고','면역'];
   var zero = function(){ return {inst:0,eq:0,sB:0,sU:0,sC:0,CBC:0,'유린':0,'응고':0,'면역':0}; };
   var of = function(n){ return Q.by[n] || zero(); };
@@ -2659,25 +2664,24 @@ function isProvisional(months){ return monthEnd(months[months.length-1]) + WIN >
 
 /* ===== KPI 카드 ===== */
 function delta(cur, prev, unit, better, label){
-  if(cur==null||prev==null) return `<div class="dl neu">${label} 자료 없음</div>`;
+  if(cur==null||prev==null) return `<div class="dl neu">${label} 비교 자료 없음</div>`;
   const d=cur-prev;
   if(unit==='%p'){
-    if(Math.abs(d)<0.1) return `<div class="dl flat">${label}과 거의 동일</div>`;
-    const cls= better===0?'neu':((d>0)===(better>0)?'up':'down');
-    return `<div class="dl ${cls}">${label} 대비 ${d>0?'+':''}${d.toFixed(1)}%p</div>`;
+    if(Math.abs(d)<0.1) return `<div class="dl flat">${label}과 같음</div>`;
+    return `<div class="dl neu">${label} 대비 ${d>0?'▲':'▼'} ${Math.abs(d).toFixed(1)}%p</div>`;
   }
   const pct= prev? d/prev*100 : null;
-  if(pct!=null&&Math.abs(pct)<0.5) return `<div class="dl flat">${label}과 거의 동일</div>`;
-  const cls= better===0?'neu':((d>0)===(better>0)?'up':'down');
-  return `<div class="dl ${cls}">${label} 대비 ${d>0?'+':''}${unit==='분'?d.toFixed(1)+'분':fmt(d)+'건'}${pct!=null?` (${pct>0?'+':''}${pct.toFixed(1)}%)`:''}</div>`;
+  if(pct!=null&&Math.abs(pct)<0.5) return `<div class="dl flat">${label}과 같음</div>`;
+  return `<div class="dl neu">${label} 대비 ${d>0?'▲':'▼'} ${unit==='분'?Math.abs(d).toFixed(1)+'분':fmt(Math.abs(d))+'건'}${pct!=null?` (${Math.abs(pct).toFixed(1)}%)`:''}</div>`;
 }
 /* 카드 상태: 목표가 있으면 목표 달성 여부, 없으면 비교 기간 대비 개선·악화 */
-function tgSt(v, target, higher){ if(v==null) return {}; const ok=higher?v>=target:v<=target; return ok?{st:'good',chip:'목표 달성'}:{st:'bad',chip:'목표 미달'}; }
-function dirSt(cur, prev, better, unit){ if(cur==null||prev==null||!better) return {}; const d=cur-prev;
+function tgSt(v, target, higher){ if(v==null) return {}; const ok=higher?v>=target:v<=target; if(ok) return {st:'good',chip:'달성'}; const near=higher?v>=target*0.92:v<=target*1.15; return near?{st:'warn',chip:'근접'}:{st:'bad',chip:'미달'}; }
+function dirSt(cur, prev, better, unit){ return {};  /* 증감은 색으로 평가하지 않음(2026-11-12 결정). 목표가 없는 지표는 칩 없이 캡션에 「목표 없음」 */
+  if(cur==null||prev==null||!better) return {}; const d=cur-prev;
   const small=unit==='%p'?Math.abs(d)<0.1:(prev?Math.abs(d/prev*100)<0.5:d===0); if(small) return {};
   return ((d>0)===(better>0))?{st:'good',chip:'개선'}:{st:'bad',chip:'악화'}; }
 function card(label, val, suffix, dl, cap, opt={}){
-  return `<div class="kpi ${opt.st?'s-'+opt.st:''}"><div class="l">${label}${opt.prov?'<span class="pv">잠정</span>':''}</div><div class="v">${val}${suffix?`<small>${suffix}</small>`:''}</div>${dl}${cap?`<div class="cap">${cap}</div>`:''}</div>`;
+  return `<div class="kpi ${opt.st?'s-'+opt.st:''}"><div class="l">${label}${opt.prov?'<span class="pv">잠정</span>':''}${opt.chip?`<span class="chip ${opt.st||'none'}">${opt.chip}</span>`:''}</div><div class="v">${val}${suffix?`<small>${suffix}</small>`:''}</div>${dl}${cap?`<div class="cap">${cap}</div>`:''}</div>`;
 }
 
 let charts={};
@@ -2734,16 +2738,16 @@ function render(){
 
   $('kpis').innerHTML=[
     card('서비스 활동', fmt(cur.total), '건', delta(cur.total,prv.total,'건',0,pp.label), `Calibration ${fmt(cur.cal)} · 기타 ${fmt(cur.total-cur.rep-cur.pm-cur.cal)}`),
-    card('고장 수리', fmt(cur.rep), '건', delta(cur.rep,prv.rep,'건',-1,pp.label), '적을수록 좋음', dirSt(cur.rep,prv.rep,-1,'건')),
-    card('PM', fmt(cur.pm), '건', delta(cur.pm,prv.pm,'건',1,pp.label), '많을수록 좋음', dirSt(cur.pm,prv.pm,1,'건')),
-    card('예방정비 지수', f1(cur.idx), '%', delta(cur.idx,prv.idx,'%p',1,pp.label), 'PM ÷ (PM + 고장 수리)', dirSt(cur.idx,prv.idx,1,'%p')),
+    card('고장 수리', fmt(cur.rep), '건', delta(cur.rep,prv.rep,'건',-1,pp.label), '목표 없음', dirSt(cur.rep,prv.rep,-1,'건')),
+    card('PM', fmt(cur.pm), '건', delta(cur.pm,prv.pm,'건',1,pp.label), '목표 없음', dirSt(cur.pm,prv.pm,1,'건')),
+    card('예방정비 지수', f1(cur.idx), '%', delta(cur.idx,prv.idx,'%p',1,pp.label), 'PM ÷ (PM + 고장 수리) · 목표 없음', dirSt(cur.idx,prv.idx,1,'%p')),
     card('FTFR', f1(cur.ftfr), '%', delta(cur.ftfr,prv.ftfr,'%p',1,pp.label), `목표 ${TARGET_FTFR}% 이상`, Object.assign({prov}, tgSt(cur.ftfr,TARGET_FTFR,true))),
     card('재방문율', f1(cur.rev), '%', delta(cur.rev,prv.rev,'%p',-1,pp.label), `목표 ${TARGET_REV}% 이하`, tgSt(cur.rev,TARGET_REV,false)),
     card('MTTR', f1(cur.mttr), '분', delta(cur.mttr,prv.mttr,'분',-1,pp.label), `목표 ${TARGET_MTTR}분 이하`, tgSt(cur.mttr,TARGET_MTTR,false)),
   ].join('');
   $('na').innerHTML=''
     +calNote(p,team)
-    +(prov?`<span style="color:var(--warn);border-color:var(--warn)">잠정: FTFR 확인 기간(14일) 미경과</span>`:'');
+    +(prov?`<span style="color:var(--warn);border-color:var(--warn)">잠정치 · 최근 14일 포함</span>`:'');
 
   /* 12개월 추이 */
   const _l=D.months[D.months.length-1], end=p.months.filter(m=>m<=_l).pop()||_l; const tm=[]; for(let i=11;i>=0;i--) tm.push(shiftMonth(end,-i));
@@ -2805,12 +2809,12 @@ function render(){
   renderDQ(p);
 }
 
-function calNote(p,team){   // Cal 시즌 월과 다음 달은 예방정비 지수 변동 주석 (확정 규칙)
+function calNote(p,team){   // Calibration 집중 달 월과 다음 달은 예방정비 지수 변동 주석 (확정 규칙)
   const chk=mk=>{const c=stats([mk],team).cal; const ref=[];for(let i=1;i<=12;i++){const m=shiftMonth(mk,-i);if(D.months.includes(m))ref.push(stats([m],team).cal);}
     const avg=ref.length?ref.reduce((a,b)=>a+b,0)/ref.length:0; return avg&&c>=avg*1.5;};
   for(const mk of p.months){
-    if(chk(mk)) return `<span style="color:var(--warn);border-color:var(--warn)">Cal 시즌(${mk}): 예방정비 지수 일시 상승</span>`;
-    const pm=shiftMonth(mk,-1); if(D.months.includes(pm)&&chk(pm)) return `<span style="color:var(--warn);border-color:var(--warn)">전월 Cal 시즌 영향: 예방정비 지수 하락 가능</span>`;
+    if(chk(mk)) return `<span style="color:var(--warn);border-color:var(--warn)">Calibration 집중 달(${mk}): 예방정비 지수 일시 상승</span>`;
+    const pm=shiftMonth(mk,-1); if(D.months.includes(pm)&&chk(pm)) return `<span style="color:var(--warn);border-color:var(--warn)">전월 Calibration 집중 달 영향: 예방정비 지수 하락 가능</span>`;
   }
   return '';
 }
@@ -2826,7 +2830,7 @@ function renderOrg(p, team){
   cards.push(`<div class="tc${team?'':' sel'}" role="button" tabindex="0" data-team="" aria-pressed="${!team}" title="FSG 전체 데이터 보기"><div class="n">FSG 전체</div><div class="hc2">${ROSTER.length}<small>명</small></div><div class="ld">4개 팀</div>${gbar(ROSTER)}
     <div class="act">활동 인원 <b>${allAct}명</b></div></div>`);
   $('teams').innerHTML=cards.join('');
-  $('orgSub').textContent=`FSG 로스터 ${ROSTER_DATE} 시행 기준 · 카드를 누르면 그 팀 데이터로 바뀝니다`;
+  $('orgSub').textContent=`FSG 로스터 ${ROSTER_DATE} 시행 기준 · 카드를 누르면 그 팀만 봅니다`;
 }
 function serStats(months, team, sn){
   const ms=new Set(months); let n=0,f=0,d=0; const units=new Set();
@@ -2908,7 +2912,7 @@ function renderHealth(end, p){
   }
   $('health').innerHTML=h.join('');
 }
-function hc(l,v,c,good){return `<div class="hc ${v==null?'':good===true?'s-good':good===false?'s-bad':''}"><div class="l">${l}</div><div class="v ${v==null?'off':''}">${v==null?'자산대장 필요':v}</div>${c?`<div class="c">${c}</div>`:''}</div>`;}
+function hc(l,v,c,good){return `<div class="hc ${v==null?'':good===true?'s-good':good===false?'s-bad':''}"><div class="l">${l}</div><div class="v ${v==null?'off':''}">${v==null?'자산대장 미등록':v}</div>${c?`<div class="c">${c}</div>`:''}</div>`;}
 
 function renderErrors(p, team){
   const ms=new Set(p.months); const famC={};
@@ -2920,7 +2924,7 @@ function renderErrors(p, team){
   $('errSub').textContent=`${p.label}, ${team||'FSG 전체'}`;
   upsert('cFam',{data:{labels:fk,datasets:[
     {type:'bar',label:'고장 수리',data:fk.map(f=>famC[f].n),backgroundColor:'#005BAC',yAxisID:'y',order:2},
-    {type:'line',label:'재방문율(%) — 빨강 15% 초과·초록 이하',data:fk.map(f=>famC[f].s?+(famC[f].f/famC[f].s*100).toFixed(1):null),showLine:false,pointRadius:6,pointHoverRadius:8,pointBorderWidth:2,pointBorderColor:'#FFFFFF',borderColor:'#E7413E',backgroundColor:'#E7413E',pointBackgroundColor:fk.map(f=>{const r=famC[f].s?famC[f].f/famC[f].s*100:null;return r!=null&&r>TARGET_REV?'#E7413E':'#3FBA46';}),yAxisID:'y2',order:1}]},
+    {type:'line',label:'재방문율(%) · 15% 초과는 빨강',data:fk.map(f=>famC[f].s?+(famC[f].f/famC[f].s*100).toFixed(1):null),showLine:false,pointRadius:6,pointHoverRadius:8,pointBorderWidth:2,pointBorderColor:'#FFFFFF',borderColor:'#E7413E',backgroundColor:'#E7413E',pointBackgroundColor:fk.map(f=>{const r=famC[f].s?famC[f].f/famC[f].s*100:null;return r!=null&&r>TARGET_REV?'#E7413E':'#3FBA46';}),yAxisID:'y2',order:1}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text'),sort:(p,q)=>p.datasetIndex-q.datasetIndex}}},
       scales:{x:axis({grid:{display:false},ticks:{color:css('--text'),autoSkip:false}}),y:axis({beginAtZero:true}),y2:axis({position:'right',grid:{display:false},min:0,ticks:{color:css('--text'),callback:v=>v+'%'}})}}});
   const sel=$('fErrFam'), cur=sel.value; const opts=fk; sel.innerHTML='<option value="">전체</option>'+opts.map(f=>`<option>${esc(f)}</option>`).join(''); if(opts.includes(cur)) sel.value=cur;
@@ -3473,7 +3477,7 @@ async function loadAll(){
   $('busy').textContent='데이터를 불러오는 중입니다'; $('busy').classList.add('on');
   try{
     const meta=await fb('meta');
-    if(!meta||!meta.actRows){ showEmpty(ADMIN?'아직 올라온 데이터가 없습니다. 위 "CRM 데이터 올리기"로 첫 파일을 올려 주세요.':'아직 올라온 데이터가 없습니다. 담당자가 데이터를 올리면 표시됩니다.'); return; }
+    if(!meta||!meta.actRows){ showEmpty(ADMIN?'아직 올라온 데이터가 없습니다. 위 「CRM 데이터 올리기」로 첫 파일을 올려 주세요.':'아직 올라온 데이터가 없습니다. 담당자가 데이터를 올리면 표시됩니다.'); return; }
     if(!(await codeOk(CODE,meta))){ localStorage.removeItem(KEY_LS); CODE=null; showLock('접근 코드가 맞지 않습니다. 다시 입력해 주세요.'); return; }
     /* 자산대장·연장근무는 선택 자료 — 못 읽어도 CRM 화면은 연다 */
     const opt=(k,ver)=>fbCached(k,ver).catch(e=>{ console.warn(k+' 불러오기 실패',e); return null; });
