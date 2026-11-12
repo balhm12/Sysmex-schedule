@@ -6,7 +6,9 @@
  *  · FSR 44명 명단(팀/직급) 내장 → 'FSR명단' 시트 자동 생성·매핑
  *  · 대시보드: KPI, 팀별/개인별/직급별(팀장·T4 통합)/지역/형태/모델/월별 집계
  *  · 서술형 4단계 자동 분류 (심각/개선요청/칭찬/단순의견) + 심각 적색 강조
- *  · 저점수(≤3점) 응답 즉시 관리자 메일 알림 (2026-10: 기준 2 → 3)
+ *  · 저점수 응답 즉시 메일 알림 — 관리자 + 담당 FSR의 팀장
+ *    (기준: 2026-10-31 접수까지 ≤2점, 2026-11-01 접수부터 ≤3점. 응답 접수일로 갈린다)
+ *  · 메뉴 "저점수 알림 시험 발송" — 가짜 응답 1건으로 알림 경로 전체를 확인
  *  · 기간별 보고서: 월(YYYY-MM) / 분기(YYYY-Qn) / 전체 — 전기 대비 증감 포함
  *  · 매월 1일 전월 보고서 자동 생성 + 요약 메일 (메뉴에서 1회 설정)
  *
@@ -1210,9 +1212,13 @@ function onFormSubmitHandler(e) {
   }
 }
 
-/* 저점수 즉시 알림 */
-function lowScoreAlert_(e) {
-  if (!CONFIG.ALERT_EMAILS.length || !e || !e.namedValues) return;
+/* 저점수 즉시 알림
+ * isTest=true면 제목에 [시험]을 붙이고 본문 맨 위에 시험 발송임을 밝힌다.
+ * 판정·수신자 구성·발송은 실제와 완전히 같은 경로를 쓴다 — 시험용 우회로를 따로
+ * 만들면 그 우회로만 검증되고 정작 실제 경로는 확인되지 않기 때문이다.
+ * 발송한 수신자 배열을 돌려준다(발송하지 않았으면 null). */
+function lowScoreAlert_(e, isTest) {
+  if (!CONFIG.ALERT_EMAILS.length || !e || !e.namedValues) return null;
   const nv = e.namedValues;
   const get = (kw) => {
     const k = Object.keys(nv).find(x => x.indexOf(kw) !== -1);
@@ -1226,7 +1232,7 @@ function lowScoreAlert_(e) {
   ];
   const lowMax = lowMaxAt_(new Date());
   const low = scores.filter(s => s.v > 0 && s.v <= lowMax);
-  if (!low.length) return;
+  if (!low.length) return null;
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const roster = loadRoster_(ss);
@@ -1248,9 +1254,17 @@ function lowScoreAlert_(e) {
     const k = String(addr).trim().toLowerCase();
     if (k && !seenTo[k]) { seenTo[k] = true; recipients.push(addr); }
   });
-  if (!recipients.length) return;
+  if (!recipients.length) return null;
 
-  const body =
+  const testNote = isTest
+    ? '────────────────────────────────────\n' +
+      '※ 시험 발송입니다. 실제 고객 응답이 아닙니다.\n' +
+      '   저점수 알림이 담당 팀장에게 제대로 도착하는지\n' +
+      '   확인하기 위한 것이므로 조치하지 않아도 됩니다.\n' +
+      '────────────────────────────────────\n\n'
+    : '';
+
+  const body = testNote +
     tier.label + ' — 만족도 저점수 응답이 접수되었습니다.\n\n' +
     '· 기관: ' + get(K.org) + (region ? ' (' + region + ')' : '') + '\n' +
     '· 담당 FSR: ' + fsrName + ' (' + info.team + ' / ' + info.grade + ')\n' +
@@ -1268,7 +1282,91 @@ function lowScoreAlert_(e) {
 
   // 모든 수신자를 to에 함께 넣어 1통으로 발송 — 팀장과 관리자가 서로 수신 사실을 알 수 있고,
   // 회신 시 대화가 갈라지지 않는다.
-  MailApp.sendEmail(recipients.join(','), tier.subjectTag + ' ' + get(K.org) + ' — ' + fsrName, body);
+  MailApp.sendEmail(recipients.join(','),
+    (isTest ? '[시험] ' : '') + tier.subjectTag + ' ' + get(K.org) + ' — ' + fsrName, body);
+  return recipients;
+}
+
+/* ────────── 저점수 알림 경로 시험 발송 (메뉴) ──────────
+ * 왜 필요한가: 실제 저점수 응답이 매우 드물다. 9·10월 두 달을 합쳐 문항 최저 3점이
+ * 1건, 2점 이하는 0건이었다. 그래서 알림 경로 전체 — 그 시점의 기준값 판정,
+ * FSR명단 조회, 팀별 팀장 매핑, 긴급도 판정, MailApp 발송 — 가 한 번도 끝까지
+ * 돌아본 적이 없다. 첫 저점수 응답이 들어오는 날 경로가 막혀 있는 것을 알게 되면
+ * 골든타임을 그대로 놓친다.
+ *
+ * 이 함수는 가짜 응답 한 건을 만들어 lowScoreAlert_()에 그대로 통과시킨다.
+ * 시트에는 아무것도 쓰지 않는다 — lowScoreAlert_()는 FSR명단과 거래처지역만 읽는다.
+ * 점수는 lowMaxAt_(오늘)로 정하므로 11/1 전환 전후 어느 쪽에서 실행해도 그 시점
+ * 기준에 걸린다. 11/1 이후에 실행하면 ≤3 기준이 실제로 발동하는지까지 확인된다. */
+function testLowScoreAlert() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const teams = Object.keys(CONFIG.TEAM_LEAD_EMAILS);
+
+  const ans = ui.prompt('저점수 알림 시험 발송',
+    '어느 팀으로 시험할까요? 번호를 입력하세요.\n\n' +
+    teams.map((t, i) => (i + 1) + '. ' + t + '  →  ' + CONFIG.TEAM_LEAD_EMAILS[t]).join('\n') +
+    '\n\n입력한 팀의 팀장과 관리자(' + CONFIG.ALERT_EMAILS.join(', ') + ')에게' +
+    '\n제목 앞에 [시험]이 붙은 메일 1통이 갑니다.' +
+    '\n취소하면 아무것도 보내지 않습니다.',
+    ui.ButtonSet.OK_CANCEL);
+  if (ans.getSelectedButton() !== ui.Button.OK) return;
+
+  const team = teams[Number(String(ans.getResponseText()).trim()) - 1];
+  if (!team) { ui.alert('번호를 잘못 입력했습니다. 발송하지 않았습니다.'); return; }
+
+  // 담당 FSR은 FSR명단에 실제로 있는 그 팀 사람을 쓴다. 가상의 이름을 넣으면
+  // 명단 조회가 실패해 팀을 못 찾고, 팀장 매핑이 건너뛰어진 채 관리자에게만
+  // 발송된다 — 정작 확인하려던 경로가 빠진 시험이 된다.
+  const roster = loadRoster_(ss);
+  const member = Object.keys(roster).map(k => roster[k])
+    .filter(p => String(p.team).toUpperCase() === String(team).toUpperCase())[0];
+  if (!member) {
+    ui.alert('FSR명단에서 ' + team + ' 소속 인원을 찾지 못했습니다.\n' +
+             '메뉴 "FSR명단 시트 갱신"을 먼저 실행해 보세요.');
+    return;
+  }
+
+  // 응답 시트 머리글에 들어 있는 키워드로 가짜 namedValues를 만든다.
+  // lowScoreAlert_()가 머리글 키워드로 열을 찾으므로 실제와 같은 키를 써야 한다.
+  const lowScore = lowMaxAt_(new Date());
+  const K = COLUMN_KEYWORDS;
+  const vals = {};
+  vals[K.region] = '(시험)';
+  vals[K.org]    = '[시험] 알림 경로 확인';
+  vals[K.fsr]    = member.name;
+  vals[K.model]  = '(시험)';
+  vals[K.type]   = '(시험)';
+  vals[K.q1]     = String(lowScore);   // 이 점수가 그 시점 기준에 걸린다
+  vals[K.q2]     = '5';
+  vals[K.q3]     = '5';
+  vals[K.txt]    = '저점수 알림 발송 경로를 확인하기 위한 시험 응답입니다. 실제 고객 의견이 아닙니다.';
+  const nv = {};
+  Object.keys(vals).forEach(k => { nv[k] = [vals[k]]; });
+
+  let sent = null, err = '';
+  try {
+    sent = lowScoreAlert_({ namedValues: nv }, true);
+  } catch (e2) {
+    err = String(e2);
+  }
+
+  if (err) {
+    ui.alert('발송에 실패했습니다.\n\n' + err +
+             '\n\n이 오류가 실제 저점수 응답에서도 그대로 발생합니다. 수정이 필요합니다.');
+  } else if (!sent || !sent.length) {
+    ui.alert('알림이 발송되지 않았습니다.\n\n' +
+             '오늘 적용 기준은 문항 최저 ' + lowScore + '점 이하이고 시험 응답도 ' +
+             lowScore + '점으로 넣었으므로, 판정이 아니라 수신자 구성이나 열 머리글 ' +
+             '인식에서 막힌 것입니다. CONFIG와 응답 시트 머리글을 확인하세요.');
+  } else {
+    ui.alert('시험 발송 완료\n\n' +
+             '· 적용 기준: 문항 최저 ' + lowScore + '점 이하\n' +
+             '· 대상 팀: ' + team + '\n' +
+             '· 수신자: ' + sent.join(', ') + '\n\n' +
+             '받은 편지함에서 제목이 "[시험]"으로 시작하는 메일을 확인하세요.\n' +
+             '몇 분 내에 오지 않으면 스팸함도 확인해 보세요.');
+  }
 }
 
 /* ====================== 3. 대시보드 자동 분석 ====================== */
@@ -2827,6 +2925,7 @@ function onOpen() {
     .addItem('기간별 보고서 생성 (월/분기/전체)', 'generatePeriodReport')
     .addItem('매월 1일 자동 보고 설정', 'installMonthlyTrigger')
     .addItem('월간 보고 메일 다시 보내기 (게시물 첨부)', 'resendMonthlyMail')
+    .addItem('저점수 알림 시험 발송 (경로 확인)', 'testLowScoreAlert')
     .addSeparator()
     .addItem('폼 FSR 드롭다운 실명 교체', 'updateFormFsrDropdown')
     .addItem('응답 확인 메시지 설정', 'setFormConfirmationMessage')
