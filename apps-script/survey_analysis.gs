@@ -3052,7 +3052,10 @@ function crmListFiles_(folder) {
   while (it.hasNext()) {
     const f = it.next(), name = f.getName();
     if (!OK[f.getMimeType()] || /^\[(임시변환|CRM변환캐시)\]/.test(name) || /^~\$/.test(name)) continue;
-    out.push({ file: f, name: name, mime: f.getMimeType(), updated: f.getLastUpdated().getTime(), dateKey: crmFileDateKey_(name) });
+    // 설명에 sha256 과 'PC 업로드' 가 있으면 uploadCore_ 가 크기·체크섬을 확인하고 만든 완전한 파일이다
+    let desc = ''; try { desc = String(f.getDescription() || ''); } catch (e) {}
+    out.push({ file: f, name: name, mime: f.getMimeType(), updated: f.getLastUpdated().getTime(),
+               dateKey: crmFileDateKey_(name), verified: /^sha256:[0-9a-f]{64} · PC 업로드/.test(desc) });
   }
   return out;
 }
@@ -3298,7 +3301,14 @@ function diagnoseCrmSource() {
 
 /* ====================== CRM 업로드 입구 — 웹 앱 (2026-10-27) ======================
  * PC 바탕화면 아이콘(FSG 대시보드 올리기)이 CRM 파일을 Drive 「CRM_원본」 폴더로 올릴 때 쓰는 입구.
- * 사용자가 파일을 Drive 창으로 끌어다 놓는 손일을 없앤다. 올라온 파일은 기존 「CRM 자동 가져오기」(2시간마다)가 처리한다.
+ * 사용자가 파일을 Drive 창으로 끌어다 놓는 손일을 없앤다.
+ *
+ * 2026-11-12: 올리기는 파일을 폴더에 넣는 것까지만 하고 집계는 「CRM 자동 가져오기」가 했기 때문에,
+ *   올린 뒤 최대 2시간(또는 트리거가 꺼져 있으면 영원히) 반영되지 않았다. 이제 활동 파일이
+ *   올라오면 uploadScheduleRefresh_ 가 1분 뒤 집계를 한 번 예약한다. doPost 안에서 바로 돌리지
+ *   않는 이유는 그 함수 위에 적어 두었다. 자동 가져오기를 꺼 두면 예약하지 않는다.
+ *   ※ 이 입구는 **배포된 버전의 코드**로 돈다 — 여기를 고치면 「배포 관리 › 수정 › 새 버전」으로
+ *     다시 배포해야 반영된다(그 전까지는 10분 주기 트리거가 처리한다).
  *
  * 2026-10-27 추가: CRM 파일뿐 아니라 보고 데이터(`report-data_<기간>.json`, `검산_<기간>.xlsx`)도 받는다 — 내 드라이브 「FSG_report_out/<기간>」 폴더에
  *   저장(없으면 만든다). 프로젝트(채팅)가 Drive 커넥터로 읽거나 사용자가 내려받아 올린다. 같은 이름은 최신 것으로 바뀐다(이전 것은 휴지통).
@@ -3318,6 +3328,27 @@ function uploadReportFolder_(period) {
   const rootIt = DriveApp.getRootFolder().getFoldersByName('FSG_report_out');
   const top = rootIt.hasNext() ? rootIt.next() : DriveApp.getRootFolder().createFolder('FSG_report_out');
   return sub(top, period);
+}
+/* 올리기가 끝나면 1분 뒤에 집계를 한 번 예약한다.
+ * · doPost 안에서 집계를 바로 돌리지 않는 이유: 전체 갱신은 수십 초~수 분이 걸려
+ *   PC 쪽이 응답을 기다리다 멈춘 것처럼 보이고, 웹 앱 실행 시간 제한에도 걸린다.
+ * · 1분을 두는 이유: PC 가 활동·Serial 파일을 잇달아 올리므로 묶음이 끝나길 기다린다.
+ * · 트리거는 실행되면 스스로 지운다(프로젝트 트리거 20개 제한). 이미 예약돼 있으면 더 만들지 않는다.
+ * 실패해도 올리기 자체는 성공으로 둔다 — 10분 주기 트리거가 안전망이다. */
+function uploadScheduleRefresh_() {
+  try {
+    const ts = ScriptApp.getProjectTriggers();
+    if (!ts.some(t => t.getHandlerFunction() === 'autoCrmRefreshTrigger')) return 'off';   // 자동 가져오기를 꺼 둔 상태면 예약하지 않는다
+    if (ts.some(t => t.getHandlerFunction() === 'uploadRefreshTrigger')) return 'already';
+    if (ts.length >= 18) return 'full';
+    ScriptApp.newTrigger('uploadRefreshTrigger').timeBased().after(60 * 1000).create();
+    return 'scheduled';
+  } catch (e) { return 'error'; }
+}
+/* 예약 진입점 — 자기 트리거를 먼저 지우고(집계가 실패해도 남지 않게) 집계한다 */
+function uploadRefreshTrigger() {
+  try { ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'uploadRefreshTrigger') ScriptApp.deleteTrigger(t); }); } catch (e) {}
+  autoCrmRefresh({});
 }
 function uploadCore_(req) {
   const props = PropertiesService.getScriptProperties(), want = props.getProperty('UPLOAD_TOKEN') || '';
@@ -3339,13 +3370,16 @@ function uploadCore_(req) {
   let replaced = 0;
   while (same.hasNext()) {
     const f = same.next();
-    if (String(f.getDescription() || '').indexOf('sha256:' + sha) === 0) return { ok: true, dup: true, id: f.getId() };   // 같은 파일이 이미 있음
+    if (String(f.getDescription() || '').indexOf('sha256:' + sha) === 0) return { ok: true, dup: true, id: f.getId() };   // 같은 파일이 이미 있음 — 집계할 것이 없다
     f.setTrashed(true); replaced++;   // 같은 이름인데 내용이 다르면 이전 것은 휴지통으로(복구 가능)
   }
   const file = folder.createFile(Utilities.newBlob(bytes, /\.json$/.test(name) ? 'application/json' : UPLOAD_.XLSX, name));
   file.setDescription('sha256:' + sha + ' · PC 업로드 ' + crmNowStr_());
   props.setProperty('UPLOAD_LAST', JSON.stringify({ at: crmNowStr_(), name: name, size: bytes.length }));
-  return { ok: true, dup: false, id: file.getId(), replaced: replaced };
+  // 활동 파일만 집계를 예약한다 (Serial No 는 KPI 대시보드용, 보고 데이터는 집계와 무관)
+  const refresh = (isCrm && /약속_활동/.test(name)) ? uploadScheduleRefresh_() : '';
+  if (refresh === 'scheduled') props.setProperty('UPLOAD_SCHED', crmNowStr_());
+  return { ok: true, dup: false, id: file.getId(), replaced: replaced, refresh: refresh };
 }
 function doPost(e) {
   try { return uploadReply_(uploadCore_(JSON.parse(e.postData.contents))); }
@@ -3388,8 +3422,14 @@ function showUploadStatus() {
  *  - 올라온 지 3분이 안 된 파일은 다음 확인으로 미룬다(업로드·동기화 중인 파일을 읽지 않도록)
  *  - 같은 파일로는 한 번만 시도한다(실패해도 2시간마다 되풀이하지 않음) — 실패하면 소유자에게 메일, 하루 한 번까지
  *  - 시간 트리거에서는 팝업을 띄울 수 없으므로 runUpdateSteps_()의 조용한 모드를 쓴다 */
-const AUTO_CRM_ = { MIN_AGE_MS: 3 * 60 * 1000, EVERY_HOURS: 2, MAIL_COOLDOWN_MS: 24 * 3600 * 1000 };
+/* EVERY_MIN: 수동으로 Drive 에 넣은 파일을 위한 안전망 주기(분). PC 올리기는 doPost 가
+ * 올린 직후 한 번만 예약하므로 이 주기를 기다리지 않는다(uploadScheduleRefresh_).
+ * MIN_AGE_MS: 아직 전송 중인 파일을 읽지 않으려는 대기. PC 올리기로 들어온 파일은
+ * uploadCore_ 가 크기·SHA-256 을 확인한 뒤 통째로 만들므로 이 대기가 필요 없다(verified). */
+const AUTO_CRM_ = { MIN_AGE_MS: 3 * 60 * 1000, EVERY_MIN: 10, MAIL_COOLDOWN_MS: 24 * 3600 * 1000 };
 function crmNowStr_() { return Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm'); }
+/* 전송이 끝나길 기다려야 하는 파일인가. PC 올리기로 검증된 파일은 기다리지 않는다. */
+function crmNeedsWait_(c, now) { return !c.verified && (now - c.updated) < AUTO_CRM_.MIN_AGE_MS; }
 function crmAutoState_() {
   const fr = crmFindFolder_();
   if (fr.error) return { error: fr.error };
@@ -3397,7 +3437,7 @@ function crmAutoState_() {
   const picks = crmPickActFiles_(crmListFiles_(fr.folder));
   if (!picks.length) return { none: '폴더에 활동 파일(이름에 "약속_활동")이 없음' };
   const now = Date.now();
-  return { sig: picks.map(c => c.name + '|' + c.updated).join(';'), names: picks.map(c => c.name), pending: picks.some(c => now - c.updated < AUTO_CRM_.MIN_AGE_MS), folder: fr.folder.getName() };
+  return { sig: picks.map(c => c.name + '|' + c.updated).join(';'), names: picks.map(c => c.name), pending: picks.some(c => crmNeedsWait_(c, now)), folder: fr.folder.getName() };
 }
 function crmAutoMail_(subject, lines) {
   const props = PropertiesService.getScriptProperties();
@@ -3441,13 +3481,17 @@ function autoCrmRefresh(opts) {
 function autoCrmRefreshTrigger() { autoCrmRefresh({}); }   // 시간 트리거 진입점(트리거가 넘기는 이벤트 객체는 쓰지 않는다)
 function installAutoCrmTrigger() {
   ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'autoCrmRefreshTrigger') ScriptApp.deleteTrigger(t); });
-  ScriptApp.newTrigger('autoCrmRefreshTrigger').timeBased().everyHours(AUTO_CRM_.EVERY_HOURS).create();
-  alert_('✅ CRM 자동 가져오기를 켰습니다.\n\n' + AUTO_CRM_.EVERY_HOURS + '시간마다 Drive 폴더 "' + (crmFolderSpec_() || 'CRM_원본') + '"를 확인해, 새 활동 파일이 올라오면 「전체 갱신」과 같은 작업을 자동으로 합니다.\n' +
+  ScriptApp.newTrigger('autoCrmRefreshTrigger').timeBased().everyMinutes(AUTO_CRM_.EVERY_MIN).create();
+  alert_('✅ CRM 자동 가져오기를 켰습니다.\n\n' +
+         '· PC 「FSG 대시보드 올리기」로 올리면 올린 직후(약 1분 뒤) 자동으로 집계합니다.\n' +
+         '· 그 밖에 Drive 폴더 "' + (crmFolderSpec_() || 'CRM_원본') + '"에 직접 넣은 파일은 ' + AUTO_CRM_.EVERY_MIN + '분마다 확인해 처리합니다.\n' +
+         '· 새 활동 파일이 없으면 폴더만 보고 바로 끝냅니다.\n\n' +
          '켠 뒤 첫 확인에서 현재 파일을 한 번 처리합니다. 문제가 생기면 시트 소유자에게 메일이 갑니다.\n\n지금 바로 확인하려면 「CRM 자동 가져오기: 지금 확인」을 실행하세요.');
 }
 function removeAutoCrmTrigger() {
   let n = 0; ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'autoCrmRefreshTrigger') { ScriptApp.deleteTrigger(t); n++; } });
-  alert_(n ? '✅ CRM 자동 가져오기를 껐습니다. 이제 필요할 때 「🔄 전체 갱신」을 직접 실행하세요.' : '자동 가져오기가 켜져 있지 않았습니다.');
+  ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'uploadRefreshTrigger') { ScriptApp.deleteTrigger(t); n++; } });   // 올리기 직후 예약도 함께 지운다
+  alert_(n ? '✅ CRM 자동 가져오기를 껐습니다. PC 올리기로 올린 파일도 자동 집계되지 않습니다 — 필요할 때 「🔄 전체 갱신」을 직접 실행하세요.' : '자동 가져오기가 켜져 있지 않았습니다.');
 }
 function runAutoCrmNow() {
   const r = autoCrmRefresh({});
@@ -3459,8 +3503,12 @@ function showAutoCrmStatus() {
   const on = ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'autoCrmRefreshTrigger');
   let last = null; try { last = JSON.parse(props.getProperty('CRM_AUTO_LAST') || 'null'); } catch (e) {}
   let st; try { st = crmAutoState_(); } catch (e) { st = { error: e.message }; }
-  const lines = ['CRM 자동 가져오기: ' + (on ? '켜짐 (' + AUTO_CRM_.EVERY_HOURS + '시간마다 확인)' : '꺼짐 — 메뉴 「CRM 자동 가져오기 켜기」')];
+  const sched = ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'uploadRefreshTrigger');
+  const lines = ['CRM 자동 가져오기: ' + (on ? '켜짐 (PC 올리기 직후 + ' + AUTO_CRM_.EVERY_MIN + '분마다 확인)' : '꺼짐 — 메뉴 「CRM 자동 가져오기 켜기」')];
+  if (!on) lines.push('  ⚠️ 꺼져 있으면 PC 「FSG 대시보드 올리기」로 올려도 집계되지 않습니다(파일만 폴더에 들어갑니다).');
   lines.push('마지막 확인: ' + (props.getProperty('CRM_AUTO_CHECKED') || '(아직 없음)'));
+  lines.push('PC 올리기: ' + (props.getProperty('UPLOAD_LAST') ? (function () { try { const u = JSON.parse(props.getProperty('UPLOAD_LAST')); return u.at + ' · ' + u.name; } catch (e) { return '(기록 읽기 실패)'; } })() : '(아직 없음)')
+             + (sched ? '\n  → 올리기 직후 집계가 예약돼 있습니다 (1분 안에 실행)' : ''));
   const pg = updJson_('UPD_PROGRESS', null), rs = updJson_('UPD_RESUME', null);
   if (pg) lines.push('전체 갱신: ' + (pg.done ? pg.at + ' 정상 종료' : '⚠️ ' + pg.at + ' 「' + pg.step + '」 단계에서 멈춤 (지금 실행 중이 아니라면 시간 초과로 끊긴 것)'));
   if (rs) lines.push('이어서 할 단계 대기: ' + rs.keys.join(' → ') + ' (' + rs.at + ' 예약)');
