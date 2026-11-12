@@ -1,0 +1,65 @@
+# apps-script/survey_analysis.gs 가 바뀌어 main 에 올라오면
+# 만족도 시트(고객만족도조사_구글서베이_Trial)에 붙은 Apps Script 에 코드를 올린다.
+#
+# 필요한 비밀값 (GitHub → Settings → Secrets and variables → Actions):
+#   VOC_CLASPRC_JSON  PC 에서 `npx @google/clasp login` 후 생긴 ~/.clasprc.json 의 내용 전체
+#   VOC_SCRIPT_ID     Apps Script 편집기 → 프로젝트 설정 → 스크립트 ID
+#   VOC_DEPLOYMENT_ID (선택) 대시보드 JSON 웹앱 배포 ID — 있으면 같은 URL 로 새 버전까지 배포
+#
+# 비밀값이 하나라도 없으면 올리지 않고 안내만 남긴다(설정 전에도 PR 검사는 돈다).
+# clasp 는 프로젝트의 코드 파일을 통째로 바꾸므로, 처음 올리기 전에
+# 편집기의 현재 코드가 이 저장소 파일과 같은지 확인한다.
+name: Deploy Apps Script (만족도)
+on:
+  push:
+    branches: [main]
+    paths: [apps-script/survey_analysis.gs]
+  workflow_dispatch:
+concurrency: deploy-voc-apps-script
+jobs:
+  gas:
+    runs-on: ubuntu-latest
+    if: github.repository == 'balhm12/Sysmex-schedule'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+
+      - name: 문법 확인
+        run: node -e "new Function(require('fs').readFileSync('apps-script/survey_analysis.gs','utf8'));console.log('syntax ok')"
+
+      - name: 비밀값 확인
+        id: check
+        env:
+          CLASPRC: ${{ secrets.VOC_CLASPRC_JSON }}
+          SCRIPT_ID: ${{ secrets.VOC_SCRIPT_ID }}
+        run: |
+          if [ -z "$CLASPRC" ] || [ -z "$SCRIPT_ID" ]; then
+            echo "ready=no" >> "$GITHUB_OUTPUT"
+            echo "::notice::VOC_CLASPRC_JSON · VOC_SCRIPT_ID 가 아직 없습니다 — 문법 확인만 하고 올리지 않았습니다."
+          else
+            echo "ready=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 올리기
+        if: steps.check.outputs.ready == 'yes'
+        env:
+          CLASPRC: ${{ secrets.VOC_CLASPRC_JSON }}
+          SCRIPT_ID: ${{ secrets.VOC_SCRIPT_ID }}
+          DEPLOYMENT_ID: ${{ secrets.VOC_DEPLOYMENT_ID }}
+        run: |
+          printf '%s' "$CLASPRC" > ~/.clasprc.json
+          npm i -g @google/clasp@2.4.2 >/dev/null
+          mkdir -p gas && cd gas
+          printf '{"scriptId":"%s","rootDir":"."}' "$SCRIPT_ID" > .clasp.json
+          # 먼저 받아서 프로젝트 설정(appsscript.json)을 그대로 쓴다
+          clasp pull
+          echo "--- 올리기 전 프로젝트 파일 ---"; ls
+          # 코드 파일은 survey_analysis.gs 하나로 통일한다
+          find . -maxdepth 1 \( -name '*.js' -o -name '*.gs' \) -delete
+          cp ../apps-script/survey_analysis.gs Code.js
+          clasp push -f
+          if [ -n "$DEPLOYMENT_ID" ]; then
+            clasp deploy -i "$DEPLOYMENT_ID" -d "${GITHUB_SHA::7}"
+          fi
+          rm -f ~/.clasprc.json
