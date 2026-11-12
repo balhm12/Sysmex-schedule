@@ -33,4 +33,10 @@ const trend = between("upsert('cVol'", 'renderOrg(p, team);');
 assert(!/y2:/.test(trend) && !/yAxisID/.test(trend), '추이 그래프에 두 번째 축이 있음');
 // 4) 상태·목표는 서비스 탭과 같은 값(TARGET_*)과 tgSt 를 쓴다
 assert(ovCode.includes('tgSt(') && ovCode.includes('TARGET_FTFR') && ovCode.includes('TARGET_REV') && ovCode.includes('TARGET_MTTR'));
+// 5) 보고용 보기(2026-11-12) — Overview 만 보고서 모양으로 인쇄, 다른 화면 인쇄는 그대로
+['rptHead', 'ovRptBtn', 'rptPrint', 'ovrfoot', 'ovrpt'].forEach(k => assert(html.includes(k), k + ' 없음'));
+assert(html.includes('@page{size:A4'), 'A4 인쇄 설정 없음');
+const bp = between("addEventListener('beforeprint'", "addEventListener('afterprint'");
+assert(bp.includes("VIEW==='ov'"), 'beforeprint 가 Overview 에서만 보고용으로 바꾸지 않음');
+assert(!/\bov(?:Rpt)?[^\n]*revisitAvg/.test(ovCode), '보고용 코드에 새 계산식');
 console.log('test_kpi_overview: OK (업무 유형 묶음 ' + Object.keys(core).length + '개 kpiCore 와 일치 · 새 계산식 없음 · 화면 전환·주소 · 목표·상태 기준 공유)');

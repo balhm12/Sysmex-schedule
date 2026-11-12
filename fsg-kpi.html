@@ -539,6 +539,67 @@ body[data-view=org] #prodTabs,body[data-view=eqp] #prodTabs{display:none}
 body[data-view=org] .pfoot,body[data-view=eqp] .pfoot{display:none}
 body[data-view=pro] #kpis .kpi:nth-child(1),body[data-view=pro] #kpis .kpi:nth-child(n+5){display:none}
 body[data-view=prd] #prodTabs [data-tab=team],body[data-view=prd] #prodTabs [data-tab=equip]{display:none}
+/* ===== 보고용 보기 (본사 보고서 방식, 2026-11-12 시안) — Overview 를 A4 보고서처럼. 화면에서는 「보고용 보기」, 인쇄하면 자동 ===== */
+.rptbar,.rptHead,.ovrh,.ovrpt,.ovrfoot,.ovsn{display:none}
+#ov .ovtitle{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+#ov .ovtb2 button{border:1px solid var(--border);background:var(--surface);border-radius:6px;height:36px;padding:0 14px;font:inherit;font-size:13px;font-weight:700;color:var(--ovp);cursor:pointer;white-space:nowrap}
+@page{size:A4;margin:12mm}
+body.rpt{background:#fff !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body.rpt .appbar,body.rpt header.top,body.rpt #vtabs,body.rpt #svcBar,body.rpt #prodBar,body.rpt .ovtitle,body.rpt .ovtrcard,body.rpt .ovtools,body.rpt .ovhl button,body.rpt #lock,body.rpt #empty,body.rpt #mainArea,body.rpt #prod{display:none !important}
+body.rpt .rptbar{display:flex;gap:10px;align-items:center;justify-content:flex-end;padding:8px 16px;background:#F3F7FA;border-bottom:1px solid #D9E3EA;font-size:13px;color:#65717D;position:sticky;top:0;z-index:9}
+body.rpt .rptbar span{margin-right:auto}
+body.rpt .rptbar button{border:1px solid #B5B6B6;background:#fff;border-radius:6px;height:36px;padding:0 14px;font:inherit;font-size:13px;font-weight:700;color:#005BAC;cursor:pointer}
+body.rpt #ov{--surface:#fff;--text:#3F3F3F;--muted:#65717D;--border:#D9E3EA;--card:#F7F9FC;--tint:#EAF6FD;--grid:#E3EAF0;--primary:#005BAC;--ovp:#005BAC;--good-t:#26782D;--good-bg:#E6F5E8;--warn-t:#8F5C06;--warn-bg:#FDF1D8;--bad-t:#C8312E;--bad-bg:#FCE9E8;
+  display:block;max-width:794px;margin:0 auto;padding:0 0 24px;background:#fff;color:#3F3F3F;font-size:12.5px}
+body.rpt #ov .rptHead{display:flex;min-height:96px;margin-bottom:12px}
+body.rpt #ov .rptHead .rl{flex:0 0 190px;background:#005BAC;color:#fff;padding:14px 16px;display:flex;flex-direction:column;justify-content:flex-end}
+body.rpt #ov .rptHead img{height:22px;width:auto;align-self:flex-start;margin-bottom:auto}
+body.rpt #ov .rptHead small{font-size:11.5px;opacity:.9}body.rpt #ov .rptHead b{font-size:22px;font-weight:500;line-height:1.2}
+body.rpt #ov .rptHead .rr{flex:1;background:#C7E8FA;padding:14px 18px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+body.rpt #ov .rptHead h1{margin:0;font-size:20px;font-weight:600;color:#005BAC}
+body.rpt #ov .rptHead p{margin:0;font-size:13px;font-weight:500;color:#005BAC}
+body.rpt #ov .rptHead span{font-size:11.5px;color:#4a5560}
+body.rpt #ov .ovrh,body.rpt #ov .ovsn{display:block}
+body.rpt #ov .ovrh{margin:14px 0 8px;font-size:14.5px;font-weight:600;color:#005BAC;padding-bottom:4px;border-bottom:1px solid #005BAC}
+body.rpt #ov .ovrh i,body.rpt #ov .ovsn{font-style:normal;font-size:10.5px;font-weight:600;letter-spacing:.06em;color:#65717D;margin-right:8px;display:inline}
+body.rpt #ov .ovrh span{font-size:11px;font-weight:400;color:#65717D;margin-left:8px}
+body.rpt #ov .ovkpi{border:1px solid #005BAC;border-top:1px solid #005BAC;margin-top:0}
+body.rpt #ov .ovkc{text-align:center;align-items:center;border-left:1px solid #005BAC;background:none !important;cursor:default}
+body.rpt #ov .ovkc:first-child{border-left:0}body.rpt #ov .ovkc::after{display:none}
+body.rpt #ov .ovl{justify-content:center;flex-direction:column;gap:2px}
+body.rpt #ov .ovv{font-size:34px}
+body.rpt #ov .ovkpi{grid-template-columns:repeat(4,1fr)}
+body.rpt #ov .ovkc{border-left:1px solid #005BAC;border-top:0;padding:12px 8px 10px}body.rpt #ov .ovkc:first-child{border-left:0}
+body.rpt #ov .ovpro{grid-template-columns:repeat(5,1fr)}
+body.rpt #ov .ovpc{border-left:1px solid #D9E3EA;border-top:0}body.rpt #ov .ovpc:first-child{border-left:0}body.rpt #ov .ovpc.ovnd{border-left:1px dashed #B5B6B6}
+body.rpt #ov .ovpc .ovl{font-size:12px}body.rpt #ov .ovpc .ovv{font-size:22px}body.rpt #ov .ovpc.ovnd .ovv{font-size:12.5px;margin-top:6px}body.rpt #ov .ovpc .ovh{display:block;font-size:10.5px}
+body.rpt #ov .ovdw{grid-template-columns:116px 1fr;gap:8px}body.rpt #ov .ovlg{font-size:11.5px}body.rpt #ov .ovlg td{white-space:nowrap;padding:5px 3px}body.rpt #ov .ovlg td:first-child{white-space:normal}
+body.rpt #ov .ovg-b{grid-template-columns:1fr 1fr}
+body.rpt #ov .ovrpt{display:block}
+body.rpt #ov .ovrcs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+body.rpt #ov .ovrt{font-size:13px;font-weight:500;color:#3F3F3F;padding-bottom:3px;border-bottom:1px solid #B5B6B6}
+body.rpt #ov .ovrbig{font-size:26px;font-weight:300;color:#005BAC;line-height:1.2;margin-top:4px}body.rpt #ov .ovrbig small{font-size:12px;margin-left:2px}
+body.rpt #ov .ovrsub{font-size:11px;color:#65717D;margin-bottom:2px}
+body.rpt #ov .ovgrid{gap:14px;margin-top:12px}
+body.rpt #ov .ovg-a,body.rpt #ov .ovg-b{grid-template-columns:1fr 1fr}
+body.rpt #ov .ovg-a{grid-template-columns:1fr}
+body.rpt #ov .ovcard{border:0;padding:0;break-inside:avoid;background:#fff}
+body.rpt #ov .ovcard h3{font-size:14.5px}
+body.rpt #ov .ovsub{display:none}
+body.rpt #ov .ovhl li{padding:6px 0}body.rpt #ov .ovhl li{grid-template-columns:auto 1fr}
+body.rpt #ov .ovdw{grid-template-columns:150px 1fr;gap:10px}
+body.rpt #ov .ovhb{cursor:default;padding:3px 4px;min-height:0}
+body.rpt #ov .ovtab th button{cursor:default;padding:7px 8px;min-height:0}
+body.rpt #ov .ovtab td{padding:7px 8px}
+body.rpt #ov .ovtab tr.row{cursor:default}
+body.rpt #ov .ovpro{grid-template-columns:repeat(5,1fr)}
+body.rpt #ov .ovpc{padding:10px 10px}body.rpt #ov .ovpc .ovv{font-size:24px}
+body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1px solid #D9E3EA;font-size:10.5px;color:#65717D;line-height:1.5}
+@media print{
+  body.rpt .rptbar{display:none !important}
+  body.rpt #ov{max-width:none}
+  body.rpt #ov .ovcard,body.rpt #ov .ovkpi,body.rpt #ov .ovrc,body.rpt #ov .ovpro,body.rpt #ov .ovtw{break-inside:avoid}
+}
 </style>
 </head>
 <body>
@@ -662,6 +723,7 @@ body[data-view=prd] #prodTabs [data-tab=team],body[data-view=prd] #prodTabs [dat
   <input type="password" id="lockIn" autocomplete="current-password" aria-label="접근 코드"><button id="lockBtn">열기</button>
   <div id="lockMsg" class="bad" role="alert"></div></div></div>
 <section id="empty" class="wrap" hidden><div class="panel" style="margin-top:24px"><p id="emptyMsg" style="margin:0"></p></div></section>
+<div class="rptbar"><span>보고용 보기 — 인쇄하면 A4 한 부로 나옵니다</span><button type="button" id="rptBack">화면으로 돌아가기</button><button type="button" id="rptPrint">PDF로 저장 (인쇄)</button></div>
 <main class="wrap" id="ov" role="tabpanel" aria-labelledby="vtOv" hidden></main>
 <main class="wrap" id="mainArea" hidden>
   <h2 class="sec" data-scr="org">팀 구성 <small id="orgSub"></small></h2>
@@ -3986,30 +4048,40 @@ function renderOv(){
   T.forEach(x=>OV_K.slice(0,3).forEach(o=>{ const v=x.s[o.k], st=ovSt(o,v); if(st.st==='bad'||st.st==='warn') al.push({n:x.n,o,v,st}); }));
   al.sort((a,b)=>(a.st.st==='bad'?0:1)-(b.st.st==='bad'?0:1));
   const ch=ovChronic(end,team);
+  const logoEl=document.querySelector('header.top img'), logoSrc=logoEl?logoEl.src:'';
+  const kpSt=OV_K.slice(0,3).map(o=>ovSt(o,cur[o.k]).st), nOk=kpSt.filter(x=>x==='good').length, nNear=kpSt.filter(x=>x==='warn').length, nBad=kpSt.filter(x=>x==='bad').length;
+  const rptSum='FTFR·재방문율·MTTR 목표 3개 중 '+nOk+'개 달성'+(nNear?', '+nNear+'개 근접':'')+(nBad?', '+nBad+'개 미달':'');
+  const rptDate=new Date().toISOString().slice(0,10);
+  const rptTr=['ftfr','rev','mttr'].map(k=>{ const o=OV_K.find(x=>x.k===k); const arr=ts.map(t=>t[k]);
+    return `<div class="ovrc"><div class="ovrt">${o.n}</div><div class="ovrbig">${ovF(o,cur[k])}<small>${o.u}</small></div><div class="ovrsub">${ovDelta(o,cur[k],prv[k],lab)} · 목표 ${o.tl()}</div>${ovSvg(arr,tl,o.t(),o,380,200)}</div>`; }).join('');
   root.innerHTML=`
-  <div class="ovtitle"><div><h2>Overview</h2><p>${esc(p.label)} · ${esc(scope)} · 비교 ${esc(lab)} · 자료 CRM ${esc((D.excl&&D.excl.cut)||'-')} 기준${SRC&&SRC.at?' · 업데이트 '+esc(SRC.at):''}${prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div></div>
+  <div class="ovtitle"><div><h2>Overview</h2><p>${esc(p.label)} · ${esc(scope)} · 비교 ${esc(lab)} · 자료 CRM ${esc((D.excl&&D.excl.cut)||'-')} 기준${SRC&&SRC.at?' · 업데이트 '+esc(SRC.at):''}${prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div><div class="ovtb2"><button type="button" id="ovRptBtn">보고용 보기</button></div></div>
+  <div class="rptHead"><div class="rl"><img alt="Sysmex" src="${logoSrc}"><small>FSG KPI</small><b>Overview</b></div><div class="rr"><h1>${esc(p.label)} 서비스 운영 현황</h1><p>${esc(rptSum)}</p><span>${esc(scope)} · 비교 ${esc(lab)} · 자료 CRM ${esc((D.excl&&D.excl.cut)||'-')} 기준 · 작성 ${esc(rptDate)}</span></div></div>
+  <h3 class="ovrh"><i>SECTION 01</i>Key Service Performance</h3>
   <section class="ovkpi" id="ovKpi" role="tablist" aria-label="핵심 지표 4개. 선택하면 아래 추이 그래프가 바뀝니다">${OV_K.map(o=>{ const v=cur[o.k], st=ovSt(o,v);
     return `<button class="ovkc" role="tab" aria-selected="${o.k===OV.metric}" data-k="${o.k}"><span class="ovl">${o.n}${st.chip?`<span class="ovchip ${st.st}">${st.chip}</span>`:''}</span>
       <span class="ovv">${ovF(o,v)}<small>${o.u}</small></span><span class="ovt">${o.t()==null?'목표 없음':'목표 '+o.tl()+' · '+ovGap(o,v)}</span><span class="ovd">${ovDelta(o,v,prv[o.k],lab)}</span><span class="ovh">${o.h}</span></button>`; }).join('')}</section>
+  <section class="ovrpt"><h3 class="ovrh"><i>SECTION 02</i>Service Quality Trend <span>최근 12개월 · 점선은 목표</span></h3><div class="ovrcs">${rptTr}</div></section>
   <div class="ovgrid ovg-a">
-    <section class="ovcard" aria-labelledby="ovh2"><h3 id="ovh2"><span id="ovTrT"></span><span class="ovtools"><span class="ovseg" role="group" aria-label="기간 범위"><button data-r="6">6개월</button><button data-r="12">12개월</button></span></span></h3>
+    <section class="ovcard ovtrcard" aria-labelledby="ovh2"><h3 id="ovh2"><span id="ovTrT"></span><span class="ovtools"><span class="ovseg" role="group" aria-label="기간 범위"><button data-r="6">6개월</button><button data-r="12">12개월</button></span></span></h3>
       <div class="ovsum" id="ovSum"></div><div class="ovchart" id="ovBox"></div><p class="ovnote" id="ovTrN"></p></section>
     <section class="ovcard" aria-labelledby="ovh6"><h3 id="ovh6">확인이 필요한 곳</h3><p class="ovnote" style="margin:0 0 4px">팀별로 목표에 못 미치거나 근접한 항목입니다.</p>
       ${al.length?`<ul class="ovhl">${al.slice(0,6).map(a=>`<li><span class="ovchip ${a.st.st}">${a.st.chip}</span><div><b>${esc(a.n)} ${a.o.n} ${ovF(a.o,a.v)}${a.o.u}</b><span class="ovs">목표 ${a.o.tl()}</span></div><button data-t="${esc(a.n)}">팀 보기</button></li>`).join('')}</ul>`:'<p class="ovnote">목표에 못 미치는 팀이 없습니다.</p>'}</section>
   </div>
   <div class="ovgrid ovg-b">
-    <section class="ovcard" aria-labelledby="ovh3"><h3 id="ovh3">업무 유형 <span class="ovsub">${esc(p.label)} · 취소·온라인 정기점검 제외</span></h3>
+    <section class="ovcard" aria-labelledby="ovh3"><h3 id="ovh3"><i class="ovsn">SECTION 03</i>업무 유형 <span class="ovsub">${esc(p.label)} · 취소·온라인 정기점검 제외</span></h3>
       <div class="ovdw"><div id="ovDn"></div><table class="ovlg" id="ovLg"><tbody>${OV_ACT.map((a,i)=>`<tr><td><span class="ovsw" style="background:${a[2]}"></span>${a[1]}</td><td>${fmt(act[a[0]])}건</td><td>${aTot?(act[a[0]]/aTot*100).toFixed(1):'-'}%</td><td>${actP[a[0]]===act[a[0]]?'':(act[a[0]]>actP[a[0]]?'▲ ':'▼ ')+fmt(Math.abs(act[a[0]]-actP[a[0]]))}</td></tr>`).join('')}<tr class="tot"><td>합계</td><td>${fmt(aTot)}건</td><td>100%</td><td>${aTot===aTotP?'':(aTot>aTotP?'▲ ':'▼ ')+fmt(Math.abs(aTot-aTotP))}</td></tr></tbody></table></div></section>
-    <section class="ovcard" aria-labelledby="ovh4"><h3 id="ovh4">조직 비교 <span class="ovtools"><span class="ovseg ovscroll" id="ovMseg" role="group" aria-label="비교 지표"></span></span></h3><div id="ovBars"></div></section>
+    <section class="ovcard" aria-labelledby="ovh4"><h3 id="ovh4"><i class="ovsn">SECTION 04</i>조직 비교 <span class="ovtools"><span class="ovseg ovscroll" id="ovMseg" role="group" aria-label="비교 지표"></span></span></h3><div id="ovBars"></div></section>
   </div>
   <section class="ovcard" style="margin-top:14px" aria-labelledby="ovh4b"><h3 id="ovh4b">팀 비교표 <span class="ovsub">머리글을 누르면 정렬 · 행을 누르면 그 팀만 봅니다</span></h3><div class="ovtw" id="ovTbl"></div>
     <p class="ovnote">팀 인원이 달라 건수만으로 성과를 판단하지 않습니다. 1인당 값과 가중치 업무량(1인당 KPI 점수)은 팀장·신입을 뺀 인원 기준입니다. 야간·휴일·이동거리는 부서원 KPI에서 함께 봅니다.</p></section>
-  <section class="ovcard" style="margin-top:14px" aria-labelledby="ovh5"><h3 id="ovh5">예방 서비스</h3>
+  <section class="ovcard" style="margin-top:14px" aria-labelledby="ovh5"><h3 id="ovh5"><i class="ovsn">SECTION 05</i>예방 서비스</h3>
     <div class="ovpro"><div class="ovpc"><div class="ovl">PM 실적</div><div class="ovv">${fmt(cur.pm)}<small>건</small></div><div class="ovh">${cur.pm===prv.pm?lab+'과 같음':lab+' 대비 '+(cur.pm>prv.pm?'▲ ':'▼ ')+fmt(Math.abs(cur.pm-prv.pm))+'건'}</div></div>
       <div class="ovpc"><div class="ovl">예방정비 지수</div><div class="ovv">${f1(cur.idx)}<small>%</small></div><div class="ovh">PM ÷ (PM + 고장 수리) · 목표 없음</div></div>
       <div class="ovpc"><div class="ovl">반복 고장 장비</div><div class="ovv">${fmt(ch.chronic)}<small>대</small></div><div class="ovh">12개월 내 3회 이상 고장${SERIAL?' · 자산대장 사용 장비':' · 자산대장 미등록(CRM 이력 기준)'}</div></div>
       <div class="ovpc ovnd"><div class="ovl">위험 장비</div><div class="ovv">${ch.risk==null?'자산대장 미등록':fmt(ch.risk)+'<small>대</small>'}</div><div class="ovh">반복 고장 + 최근 90일 안에 고장${ch.risk==null?' · 자산대장을 올리면 표시':''}</div></div>
-      <div class="ovpc ovnd"><div class="ovl">표준 사전점검</div><div class="ovv">집계하지 않음</div><div class="ovh">CRM 활동 목적에 구분이 없습니다</div></div></div></section>`;
+      <div class="ovpc ovnd"><div class="ovl">표준 사전점검</div><div class="ovv">집계하지 않음</div><div class="ovh">CRM 활동 목적에 구분이 없습니다</div></div></div></section>
+  <div class="ovrfoot">자료: CRM 「모든 약속/활동」 · FTFR = 한 번에 고친 비율, 재방문율 = 14일 안 재방문 비율, MTTR = 고장 수리 평균 소요 시간 · 근접 기준: 목표의 92%(높을수록 좋은 지표) / 115%(낮을수록 좋은 지표) · 업무 유형은 취소·온라인 정기점검 제외, 담당자·필수 참석자 각각 1건 · 최근 14일의 FTFR·재방문율은 잠정치 · 작성: FSS Team</div>`;
   // 추이
   const o=OV_K.find(x=>x.k===OV.metric), n=OV.range, arr=ts.map(s=>s[o.k]).slice(-n), lb=tl.slice(-n), tg=o.t();
   const nn=arr.filter(v=>v!=null), avg=nn.length?nn.reduce((a,b)=>a+b,0)/nn.length:null;
@@ -4029,8 +4101,14 @@ function renderOv(){
   root.querySelectorAll('.ovkc').forEach(b=>b.onclick=()=>{ OV.metric=b.dataset.k; renderOv(); });
   root.querySelectorAll('[data-r]').forEach(b=>{ b.setAttribute('aria-pressed',+b.dataset.r===OV.range); b.onclick=()=>{ OV.range=+b.dataset.r; renderOv(); }; });
   root.querySelectorAll('.ovhl button').forEach(b=>b.onclick=()=>{ $('fTeam').value=b.dataset.t; renderOv(); $('ovh4').scrollIntoView({behavior:'smooth',block:'center'}); });
+  const rb=$('ovRptBtn'); if(rb) rb.onclick=()=>setRpt(true);
   ovOrg();
 }
+function setRpt(on){ document.body.classList.toggle('rpt',!!on); window.scrollTo(0,0); }
+$('rptBack').addEventListener('click',()=>setRpt(false)); $('rptPrint').addEventListener('click',()=>window.print());
+let _rptTmp=false;
+addEventListener('beforeprint',()=>{ if(VIEW==='ov'&&!document.body.classList.contains('rpt')){ document.body.classList.add('rpt'); _rptTmp=true; } });
+addEventListener('afterprint',()=>{ if(_rptTmp){ document.body.classList.remove('rpt'); _rptTmp=false; } });
 function ovDonut(segs,tot){ const S=190,R=S/2-4,r=R*0.62,c=S/2; let a0=-Math.PI/2, s=`<svg viewBox="0 0 ${S} ${S}" width="100%" role="img" aria-label="업무 유형별 구성비">`;
   if(!tot) return s+`<text x="${c}" y="${c}" text-anchor="middle" font-size="13" fill="var(--muted)">자료 없음</text></svg>`;
   segs.forEach(g=>{ if(!g.v) return; const a1=a0+g.v/tot*Math.PI*2-(g.v===tot?1e-4:0), L=(a1-a0)>Math.PI?1:0, P=(a,q)=>[c+q*Math.cos(a),c+q*Math.sin(a)];
