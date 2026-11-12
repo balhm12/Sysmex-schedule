@@ -445,95 +445,96 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 @media (max-width:600px){#prod #lbTable th:nth-child(4),#prod #lbTable td:nth-child(4),#prod #lbTable th:nth-child(7),#prod #lbTable td:nth-child(7),#prod #lbTable .score-bar-track{display:none}#prod #lbTable .score-cell{min-width:0}}
 /* ===== Overview (2026-11-12 시안) — 본사 보고서 방식: 파랑 큰 숫자 + 작은 단위 + 회색 증감 + 연한 파랑 머리글 표. 색은 페이지 변수(다크 모드 포함)를 따른다 ===== */
 #ov{--ovp:var(--primary);padding-top:14px;padding-bottom:40px}
+.dsx{--ovp:var(--primary)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #ov{--ovp:#5AA9F0}}
 :root[data-theme="dark"] #ov{--ovp:#5AA9F0}
-#ov .ovtitle h2{margin:0;font-size:24px;color:var(--ovp);font-weight:700}
-#ov .ovtitle p{margin:2px 0 12px;font-size:13.5px;color:var(--muted)}
-#ov .ovpv{color:var(--warn-t,#8F5C06);font-weight:700}
-#ov .ovkpi{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--primary);display:grid;grid-template-columns:repeat(4,1fr)}
-#ov .ovkc{all:unset;box-sizing:border-box;cursor:pointer;padding:14px 16px 12px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:2px;position:relative;min-height:44px}
-#ov .ovkc:first-child{border-left:0}
-#ov .ovkc:hover{background:var(--card)}
-#ov .ovkc[aria-selected=true]{background:var(--tint)}
-#ov .ovkc[aria-selected=true]::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--primary)}
-#ov .ovkc:focus-visible,#ov button:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
-#ov .ovl{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:15px;font-weight:700;color:var(--ovp)}
-#ov .ovv{font-size:36px;font-weight:300;color:var(--ovp);line-height:1.15;letter-spacing:-.02em;font-family:Arial,'Malgun Gothic',sans-serif}
-#ov .ovv small{font-size:15px;font-weight:400;margin-left:3px}
-#ov .ovt{font-size:13px;color:var(--text)}
-#ov .ovd{font-size:12px;color:var(--muted)}
-#ov .ovh{font-size:12px;color:var(--muted)}
-#ov .ovchip{font-size:12px;font-weight:700;padding:1px 8px;border-radius:4px;line-height:20px;white-space:nowrap}
-#ov .ovchip.good{background:var(--good-bg,#E6F5E8);color:var(--good-t,#26782D)}
-#ov .ovchip.warn{background:var(--warn-bg,#FDF1D8);color:var(--warn-t,#8F5C06)}
-#ov .ovchip.bad{background:var(--bad-bg,#FCE9E8);color:var(--bad-t,#C8312E)}
-#ov .ovchip.none{background:var(--card);color:var(--muted)}
-#ov .ovgrid{display:grid;gap:14px;margin-top:14px}
-#ov .ovg-a{grid-template-columns:2fr 1fr}#ov .ovg-b{grid-template-columns:1fr 1fr}
-#ov .ovgrid>*{min-width:0}
-#ov .ovcard{background:var(--surface);border:1px solid var(--border);padding:14px 16px;min-width:0}
-#ov .ovcard h3{margin:0 0 10px;font-size:16px;font-weight:700;color:var(--ovp);padding-bottom:6px;border-bottom:1px solid var(--primary);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
-#ov .ovsub{font-size:12px;font-weight:400;color:var(--muted)}
-#ov .ovtools{margin-left:auto;display:flex;min-width:0;max-width:100%}
-#ov .ovseg{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--surface)}
-#ov .ovseg button{border:0;background:var(--surface);padding:0 12px;height:34px;font:inherit;font-size:12.5px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
-#ov .ovseg button+button{border-left:1px solid var(--border)}
-#ov .ovseg button[aria-pressed=true]{background:var(--tint);color:var(--ovp);font-weight:700}
-#ov .ovscroll{overflow-x:auto;scrollbar-width:none;max-width:100%}
-#ov .ovsum{display:flex;gap:6px 22px;flex-wrap:wrap;margin:0 0 6px;font-size:13px;color:var(--muted)}
-#ov .ovsum b{color:var(--text);margin-left:4px}
-#ov .ovchart{position:relative}
-#ov .ovtip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--primary);padding:5px 9px;font-size:12.5px;color:var(--text);white-space:nowrap;transform:translate(-50%,-100%);display:none}
-#ov .ovtip b{color:var(--ovp)}
-#ov .ovnote{font-size:12px;color:var(--muted);margin:8px 0 0}
-#ov .ovhl{margin:0;padding:0;list-style:none}
-#ov .ovhl li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--border)}
-#ov .ovhl li:first-child{border-top:0}
-#ov .ovhl b{display:block;font-size:14px;color:var(--text)}#ov .ovhl .ovs{font-size:12px;color:var(--muted)}
-#ov .ovhl button{border:1px solid var(--border);background:var(--surface);border-radius:6px;height:36px;padding:0 12px;font:inherit;font-size:13px;font-weight:700;color:var(--ovp);cursor:pointer;white-space:nowrap}
-#ov .ovdw{display:grid;grid-template-columns:190px 1fr;gap:16px;align-items:center}
-#ov .ovlg{width:100%;border-collapse:collapse;font-size:13px}
-#ov .ovlg td{padding:7px 6px;border-bottom:1px solid var(--border);text-align:right}
-#ov .ovlg td:first-child{text-align:left;font-weight:700;color:var(--text)}
-#ov .ovlg tr.tot td{border-top:1px solid var(--muted);font-weight:700}
-#ov .ovsw{display:inline-block;width:10px;height:10px;margin-right:8px}
-#ov .ovhb{all:unset;box-sizing:border-box;display:grid;grid-template-columns:92px 1fr 124px;gap:10px;align-items:center;width:100%;padding:6px 4px;cursor:pointer;min-height:36px;font-size:13px;border-radius:4px}
-#ov .ovhb:hover{background:var(--card)}#ov .ovhb.sel{background:var(--tint)}
-#ov .ovhn{font-weight:700;color:var(--text);white-space:nowrap}
-#ov .ovht{position:relative;height:14px;background:var(--card)}
-#ov .ovht i{position:absolute;left:0;top:0;bottom:0;background:var(--muted);opacity:.55}
-#ov .ovhb.sel .ovht i{background:var(--primary);opacity:1}
-#ov .ovht u{position:absolute;top:-4px;bottom:-4px;width:0;border-left:1.5px dashed var(--text);text-decoration:none}
-#ov .ovhv{text-align:right;font-weight:700;color:var(--text);white-space:nowrap}
-#ov .ovhv em{font-style:normal;font-size:11.5px;margin-left:6px}
-#ov .ovhv em.good{color:var(--good-t,#26782D)}#ov .ovhv em.warn{color:var(--warn-t,#8F5C06)}#ov .ovhv em.bad{color:var(--bad-t,#C8312E)}
-#ov .ovtw{overflow-x:auto}
-#ov .ovoffl{margin-left:10px;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer}#ov .ovoffl input{margin-right:4px;vertical-align:-2px}
-#ov .ovhb.off .ovhn{font-weight:500;color:var(--muted);padding-left:6px}#ov .ovhb.off .ovht i{opacity:.35}#ov .ovhb.off.sel .ovht i{opacity:.7}
-#ov .ovtab tr.ovoff td{font-size:12.5px;color:var(--muted);background:var(--card)}#ov .ovtab tr.ovoff td:first-child{font-weight:500;padding-left:18px}#ov .ovtab tr.ovoff.sel td{background:var(--tint)}#ov .ovsm{display:none}
-#ov table.ovtab{border-collapse:collapse;width:100%;font-size:13px}
-#ov .ovtab th{background:var(--tint);color:var(--ovp);font-weight:700;text-align:right;padding:0;border-bottom:1px solid var(--muted);white-space:nowrap}
-#ov .ovtab th button{all:unset;box-sizing:border-box;cursor:pointer;padding:9px 10px;min-height:40px;width:100%;text-align:right;display:block}
-#ov .ovtab th:first-child button{text-align:left}
-#ov .ovtab th[aria-sort=ascending] button::after{content:" ▲"}#ov .ovtab th[aria-sort=descending] button::after{content:" ▼"}
-#ov .ovtab td{padding:10px;border-bottom:1px solid var(--border);text-align:right;color:var(--text)}
-#ov .ovtab td:first-child{text-align:left;font-weight:700;white-space:nowrap}
-#ov .ovtab tr.tgt td{background:var(--tint);color:var(--ovp);font-weight:700}
-#ov .ovtab tr.row{cursor:pointer}#ov .ovtab tr.sel td{background:var(--tint)}#ov .ovtab tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--primary)}
-#ov .ovtab td.st-good{color:var(--good-t,#26782D);font-weight:700}#ov .ovtab td.st-warn{color:var(--warn-t,#8F5C06);font-weight:700}#ov .ovtab td.st-bad{color:var(--bad-t,#C8312E);font-weight:700}
-#ov .ovtag{font-size:11.5px;margin-left:4px}
-#ov .ovpro{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--border)}
-#ov .ovpc{padding:12px 14px;border-left:1px solid var(--border)}#ov .ovpc:first-child{border-left:0}
-#ov .ovpc .ovl{font-size:14px}#ov .ovpc .ovv{font-size:28px;margin-top:2px}
-#ov .ovpc.ovnd{background:var(--card);border-left:1px dashed var(--muted)}
-#ov .ovpc.ovnd .ovv{font-size:15px;font-weight:700;color:var(--muted);margin-top:8px}
+#ov .ovtitle h2,.dsx .ovtitle h2{margin:0;font-size:24px;color:var(--ovp);font-weight:700}
+#ov .ovtitle p,.dsx .ovtitle p{margin:2px 0 12px;font-size:13.5px;color:var(--muted)}
+#ov .ovpv,.dsx .ovpv{color:var(--warn-t,#8F5C06);font-weight:700}
+#ov .ovkpi,.dsx .ovkpi{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--primary);display:grid;grid-template-columns:repeat(4,1fr)}
+#ov .ovkc,.dsx .ovkc{all:unset;box-sizing:border-box;cursor:pointer;padding:14px 16px 12px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:2px;position:relative;min-height:44px}
+#ov .ovkc:first-child,.dsx .ovkc:first-child{border-left:0}
+#ov .ovkc:hover,.dsx .ovkc:hover{background:var(--card)}
+#ov .ovkc[aria-selected=true],.dsx .ovkc[aria-selected=true]{background:var(--tint)}
+#ov .ovkc[aria-selected=true]::after,.dsx .ovkc[aria-selected=true]::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--primary)}
+#ov .ovkc:focus-visible,#ov button:focus-visible,.dsx .ovkc:focus-visible,.dsx button:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+#ov .ovl,.dsx .ovl{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:15px;font-weight:700;color:var(--ovp)}
+#ov .ovv,.dsx .ovv{font-size:36px;font-weight:300;color:var(--ovp);line-height:1.15;letter-spacing:-.02em;font-family:Arial,'Malgun Gothic',sans-serif}
+#ov .ovv small,.dsx .ovv small{font-size:15px;font-weight:400;margin-left:3px}
+#ov .ovt,.dsx .ovt{font-size:13px;color:var(--text)}
+#ov .ovd,.dsx .ovd{font-size:12px;color:var(--muted)}
+#ov .ovh,.dsx .ovh{font-size:12px;color:var(--muted)}
+#ov .ovchip,.dsx .ovchip{font-size:12px;font-weight:700;padding:1px 8px;border-radius:4px;line-height:20px;white-space:nowrap}
+#ov .ovchip.good,.dsx .ovchip.good{background:var(--good-bg,#E6F5E8);color:var(--good-t,#26782D)}
+#ov .ovchip.warn,.dsx .ovchip.warn{background:var(--warn-bg,#FDF1D8);color:var(--warn-t,#8F5C06)}
+#ov .ovchip.bad,.dsx .ovchip.bad{background:var(--bad-bg,#FCE9E8);color:var(--bad-t,#C8312E)}
+#ov .ovchip.none,.dsx .ovchip.none{background:var(--card);color:var(--muted)}
+#ov .ovgrid,.dsx .ovgrid{display:grid;gap:14px;margin-top:14px}
+#ov .ovg-a,.dsx .ovg-a{grid-template-columns:2fr 1fr}#ov .ovg-b,.dsx .ovg-b{grid-template-columns:1fr 1fr}
+#ov .ovgrid>*,.dsx .ovgrid>*{min-width:0}
+#ov .ovcard,.dsx .ovcard{background:var(--surface);border:1px solid var(--border);padding:14px 16px;min-width:0}
+#ov .ovcard h3,.dsx .ovcard h3{margin:0 0 10px;font-size:16px;font-weight:700;color:var(--ovp);padding-bottom:6px;border-bottom:1px solid var(--primary);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+#ov .ovsub,.dsx .ovsub{font-size:12px;font-weight:400;color:var(--muted)}
+#ov .ovtools,.dsx .ovtools{margin-left:auto;display:flex;min-width:0;max-width:100%}
+#ov .ovseg,.dsx .ovseg{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--surface)}
+#ov .ovseg button,.dsx .ovseg button{border:0;background:var(--surface);padding:0 12px;height:34px;font:inherit;font-size:12.5px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
+#ov .ovseg button+button,.dsx .ovseg button+button{border-left:1px solid var(--border)}
+#ov .ovseg button[aria-pressed=true],.dsx .ovseg button[aria-pressed=true]{background:var(--tint);color:var(--ovp);font-weight:700}
+#ov .ovscroll,.dsx .ovscroll{overflow-x:auto;scrollbar-width:none;max-width:100%}
+#ov .ovsum,.dsx .ovsum{display:flex;gap:6px 22px;flex-wrap:wrap;margin:0 0 6px;font-size:13px;color:var(--muted)}
+#ov .ovsum b,.dsx .ovsum b{color:var(--text);margin-left:4px}
+#ov .ovchart,.dsx .ovchart{position:relative}
+#ov .ovtip,.dsx .ovtip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--primary);padding:5px 9px;font-size:12.5px;color:var(--text);white-space:nowrap;transform:translate(-50%,-100%);display:none}
+#ov .ovtip b,.dsx .ovtip b{color:var(--ovp)}
+#ov .ovnote,.dsx .ovnote{font-size:12px;color:var(--muted);margin:8px 0 0}
+#ov .ovhl,.dsx .ovhl{margin:0;padding:0;list-style:none}
+#ov .ovhl li,.dsx .ovhl li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--border)}
+#ov .ovhl li:first-child,.dsx .ovhl li:first-child{border-top:0}
+#ov .ovhl b,.dsx .ovhl b{display:block;font-size:14px;color:var(--text)}#ov .ovhl .ovs,.dsx .ovhl .ovs{font-size:12px;color:var(--muted)}
+#ov .ovhl button,.dsx .ovhl button{border:1px solid var(--border);background:var(--surface);border-radius:6px;height:36px;padding:0 12px;font:inherit;font-size:13px;font-weight:700;color:var(--ovp);cursor:pointer;white-space:nowrap}
+#ov .ovdw,.dsx .ovdw{display:grid;grid-template-columns:190px 1fr;gap:16px;align-items:center}
+#ov .ovlg,.dsx .ovlg{width:100%;border-collapse:collapse;font-size:13px}
+#ov .ovlg td,.dsx .ovlg td{padding:7px 6px;border-bottom:1px solid var(--border);text-align:right}
+#ov .ovlg td:first-child,.dsx .ovlg td:first-child{text-align:left;font-weight:700;color:var(--text)}
+#ov .ovlg tr.tot td,.dsx .ovlg tr.tot td{border-top:1px solid var(--muted);font-weight:700}
+#ov .ovsw,.dsx .ovsw{display:inline-block;width:10px;height:10px;margin-right:8px}
+#ov .ovhb,.dsx .ovhb{all:unset;box-sizing:border-box;display:grid;grid-template-columns:92px 1fr 124px;gap:10px;align-items:center;width:100%;padding:6px 4px;cursor:pointer;min-height:36px;font-size:13px;border-radius:4px}
+#ov .ovhb:hover,.dsx .ovhb:hover{background:var(--card)}#ov .ovhb.sel,.dsx .ovhb.sel{background:var(--tint)}
+#ov .ovhn,.dsx .ovhn{font-weight:700;color:var(--text);white-space:nowrap}
+#ov .ovht,.dsx .ovht{position:relative;height:14px;background:var(--card)}
+#ov .ovht i,.dsx .ovht i{position:absolute;left:0;top:0;bottom:0;background:var(--muted);opacity:.55}
+#ov .ovhb.sel .ovht i,.dsx .ovhb.sel .ovht i{background:var(--primary);opacity:1}
+#ov .ovht u,.dsx .ovht u{position:absolute;top:-4px;bottom:-4px;width:0;border-left:1.5px dashed var(--text);text-decoration:none}
+#ov .ovhv,.dsx .ovhv{text-align:right;font-weight:700;color:var(--text);white-space:nowrap}
+#ov .ovhv em,.dsx .ovhv em{font-style:normal;font-size:11.5px;margin-left:6px}
+#ov .ovhv em.good,.dsx .ovhv em.good{color:var(--good-t,#26782D)}#ov .ovhv em.warn,.dsx .ovhv em.warn{color:var(--warn-t,#8F5C06)}#ov .ovhv em.bad,.dsx .ovhv em.bad{color:var(--bad-t,#C8312E)}
+#ov .ovtw,.dsx .ovtw{overflow-x:auto}
+#ov .ovoffl,.dsx .ovoffl{margin-left:10px;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer}#ov .ovoffl input,.dsx .ovoffl input{margin-right:4px;vertical-align:-2px}
+#ov .ovhb.off .ovhn,.dsx .ovhb.off .ovhn{font-weight:500;color:var(--muted);padding-left:6px}#ov .ovhb.off .ovht i,.dsx .ovhb.off .ovht i{opacity:.35}#ov .ovhb.off.sel .ovht i,.dsx .ovhb.off.sel .ovht i{opacity:.7}
+#ov .ovtab tr.ovoff td,.dsx .ovtab tr.ovoff td{font-size:12.5px;color:var(--muted);background:var(--card)}#ov .ovtab tr.ovoff td:first-child,.dsx .ovtab tr.ovoff td:first-child{font-weight:500;padding-left:18px}#ov .ovtab tr.ovoff.sel td,.dsx .ovtab tr.ovoff.sel td{background:var(--tint)}#ov .ovsm,.dsx .ovsm{display:none}
+#ov table.ovtab,.dsx table.ovtab{border-collapse:collapse;width:100%;font-size:13px}
+#ov .ovtab th,.dsx .ovtab th{background:var(--tint);color:var(--ovp);font-weight:700;text-align:right;padding:0;border-bottom:1px solid var(--muted);white-space:nowrap}
+#ov .ovtab th button,.dsx .ovtab th button{all:unset;box-sizing:border-box;cursor:pointer;padding:9px 10px;min-height:40px;width:100%;text-align:right;display:block}
+#ov .ovtab th:first-child button,.dsx .ovtab th:first-child button{text-align:left}
+#ov .ovtab th[aria-sort=ascending] button::after,.dsx .ovtab th[aria-sort=ascending] button::after{content:" ▲"}#ov .ovtab th[aria-sort=descending] button::after,.dsx .ovtab th[aria-sort=descending] button::after{content:" ▼"}
+#ov .ovtab td,.dsx .ovtab td{padding:10px;border-bottom:1px solid var(--border);text-align:right;color:var(--text)}
+#ov .ovtab td:first-child,.dsx .ovtab td:first-child{text-align:left;font-weight:700;white-space:nowrap}
+#ov .ovtab tr.tgt td,.dsx .ovtab tr.tgt td{background:var(--tint);color:var(--ovp);font-weight:700}
+#ov .ovtab tr.row,.dsx .ovtab tr.row{cursor:pointer}#ov .ovtab tr.sel td,.dsx .ovtab tr.sel td{background:var(--tint)}#ov .ovtab tr.sel td:first-child,.dsx .ovtab tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--primary)}
+#ov .ovtab td.st-good,.dsx .ovtab td.st-good{color:var(--good-t,#26782D);font-weight:700}#ov .ovtab td.st-warn,.dsx .ovtab td.st-warn{color:var(--warn-t,#8F5C06);font-weight:700}#ov .ovtab td.st-bad,.dsx .ovtab td.st-bad{color:var(--bad-t,#C8312E);font-weight:700}
+#ov .ovtag,.dsx .ovtag{font-size:11.5px;margin-left:4px}
+#ov .ovpro,.dsx .ovpro{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--border)}
+#ov .ovpc,.dsx .ovpc{padding:12px 14px;border-left:1px solid var(--border)}#ov .ovpc:first-child,.dsx .ovpc:first-child{border-left:0}
+#ov .ovpc .ovl,.dsx .ovpc .ovl{font-size:14px}#ov .ovpc .ovv,.dsx .ovpc .ovv{font-size:28px;margin-top:2px}
+#ov .ovpc.ovnd,.dsx .ovpc.ovnd{background:var(--card);border-left:1px dashed var(--muted)}
+#ov .ovpc.ovnd .ovv,.dsx .ovpc.ovnd .ovv{font-size:15px;font-weight:700;color:var(--muted);margin-top:8px}
 @media (max-width:600px){body[data-view] header.top .sub{display:none}body[data-view=ov] .vtabs .vinfo #info{display:none}body[data-view] .vtabs .vinfo{justify-content:flex-start}body[data-view] .vtabs .vinfo .vbtns{width:100%}body[data-view] .vtabs .vinfo .lbtn{flex:1}
   #svcBar .wrap{flex-wrap:nowrap;gap:8px;padding-top:8px;padding-bottom:8px}#svcBar .f{flex:1;min-width:0}#svcBar .f:first-child{flex:1.7}#svcBar .f select{width:100%}}
-@media (max-width:1000px){#ov .ovg-a,#ov .ovg-b{grid-template-columns:1fr}#ov .ovkpi{grid-template-columns:repeat(2,1fr)}#ov .ovkc:nth-child(3){border-left:0}#ov .ovkc:nth-child(n+3){border-top:1px solid var(--border)}#ov .ovpro{grid-template-columns:repeat(2,1fr)}#ov .ovpc:nth-child(odd){border-left:0}#ov .ovpc:nth-child(n+3){border-top:1px solid var(--border)}}
-@media (max-width:600px){#ov .ovtitle h2{font-size:20px}#ov .ovkc{padding:12px 10px 10px}#ov .ovv{font-size:30px}#ov .ovh{display:none}#ov .ovcard{padding:12px}#ov .ovgrid{gap:12px}
-  #ov .ovdw{grid-template-columns:1fr}#ov .ovdw svg{max-width:190px;margin:0 auto;display:block}#ov .ovhb{grid-template-columns:84px 1fr 100px}#ov .ovseg button,#ov .ovhl button{height:44px}#ov .ovtab th button{min-height:44px}
-  #ov .ovtab th:nth-child(2),#ov .ovtab td:nth-child(2),#ov .ovtab th:nth-child(4),#ov .ovtab td:nth-child(4),#ov .ovtab th:nth-child(5),#ov .ovtab td:nth-child(5){display:none}#ov .ovtab td .ovtag{display:block;margin:0}
-  #ov .ovtab th button{padding:8px 5px}#ov .ovtab td{padding:10px 5px}#ov .ovsm{display:inline}#ov .ovfl{display:none}#ov .ovpc .ovh{display:block}#ov .ovpro{grid-template-columns:1fr}#ov .ovpc{border-left:0!important;border-top:1px solid var(--border)}#ov .ovpc:first-child{border-top:0}}
+@media (max-width:1000px){#ov .ovg-a,#ov .ovg-b,.dsx .ovg-a,.dsx .ovg-b{grid-template-columns:1fr}#ov .ovkpi,.dsx .ovkpi{grid-template-columns:repeat(2,1fr)}#ov .ovkc:nth-child(3),.dsx .ovkc:nth-child(3){border-left:0}#ov .ovkc:nth-child(n+3),.dsx .ovkc:nth-child(n+3){border-top:1px solid var(--border)}#ov .ovpro,.dsx .ovpro{grid-template-columns:repeat(2,1fr)}#ov .ovpc:nth-child(odd),.dsx .ovpc:nth-child(odd){border-left:0}#ov .ovpc:nth-child(n+3),.dsx .ovpc:nth-child(n+3){border-top:1px solid var(--border)}}
+@media (max-width:600px){#ov .ovtitle h2,.dsx .ovtitle h2{font-size:20px}#ov .ovkc,.dsx .ovkc{padding:12px 10px 10px}#ov .ovv,.dsx .ovv{font-size:30px}#ov .ovh,.dsx .ovh{display:none}#ov .ovcard,.dsx .ovcard{padding:12px}#ov .ovgrid,.dsx .ovgrid{gap:12px}
+  #ov .ovdw,.dsx .ovdw{grid-template-columns:1fr}#ov .ovdw svg,.dsx .ovdw svg{max-width:190px;margin:0 auto;display:block}#ov .ovhb,.dsx .ovhb{grid-template-columns:84px 1fr 100px}#ov .ovseg button,#ov .ovhl button,.dsx .ovseg button,.dsx .ovhl button{height:44px}#ov .ovtab th button,.dsx .ovtab th button{min-height:44px}
+  #ov .ovtab th:nth-child(2),#ov .ovtab td:nth-child(2),#ov .ovtab th:nth-child(4),#ov .ovtab td:nth-child(4),#ov .ovtab th:nth-child(5),#ov .ovtab td:nth-child(5),.dsx .ovtab th:nth-child(2),.dsx .ovtab td:nth-child(2),.dsx .ovtab th:nth-child(4),.dsx .ovtab td:nth-child(4),.dsx .ovtab th:nth-child(5),.dsx .ovtab td:nth-child(5){display:none}#ov .ovtab td .ovtag,.dsx .ovtab td .ovtag{display:block;margin:0}
+  #ov .ovtab th button,.dsx .ovtab th button{padding:8px 5px}#ov .ovtab td,.dsx .ovtab td{padding:10px 5px}#ov .ovsm,.dsx .ovsm{display:inline}#ov .ovfl,.dsx .ovfl{display:none}#ov .ovpc .ovh,.dsx .ovpc .ovh{display:block}#ov .ovpro,.dsx .ovpro{grid-template-columns:1fr}#ov .ovpc,.dsx .ovpc{border-left:0!important;border-top:1px solid var(--border)}#ov .ovpc:first-child,.dsx .ovpc:first-child{border-top:0}}
 /* 화면 6개 구성 (2026-11-12) */
 .scr-off{display:none !important}.grid.one{grid-template-columns:1fr}
 .vtabs .vtl{display:flex;gap:4px;min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:none}
@@ -542,6 +543,64 @@ body[data-view=org] #prodTabs,body[data-view=eqp] #prodTabs{display:none}
 body[data-view=org] .pfoot,body[data-view=eqp] .pfoot{display:none}
 body[data-view=pro] #kpis .kpi:nth-child(1),body[data-view=pro] #kpis .kpi:nth-child(n+5){display:none}
 body[data-view=prd] #prodTabs [data-tab=team],body[data-view=prd] #prodTabs [data-tab=equip]{display:none}
+/* ===== 화면 공통 디자인 (2026-11-12 UI 통일 시안) — Overview CSS(.ov*)를 .dsx 범위에서 다른 화면이 같이 쓴다. dsx 는 setView 가 화면별로 켠다 ===== */
+.dsx .ovtitle{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+#mainArea:not(.dsx) .dstitle,#prod:not(.dsx) .dstitle{display:none}
+.dsx .ovkc.st{cursor:default}.dsx .ovkc.st:hover{background:none}
+.dsx .ovkpi.c3{grid-template-columns:repeat(3,1fr)}.dsx .ovkpi.c4{grid-template-columns:repeat(4,1fr)}
+.dsx .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.dsx .grid3>*{min-width:0}
+.dsx h2.sec{font-size:17px;font-weight:700;color:var(--ovp);margin:26px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--primary)}
+.dsx h2.sec small{font-size:12px;color:var(--muted);font-weight:400}
+.dsx .ovkpi+.ovsum,.dsx .ovsum{align-items:center}
+.dsx .panel,.dsx .card{border-radius:0;box-shadow:none}
+.dsx .panel{padding:14px 16px}
+.dsx .panel>h3{font-size:16px;font-weight:700;color:var(--ovp);margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid var(--primary)}
+.dsx .panel .thead{border-bottom:1px solid var(--primary);padding-bottom:6px;margin-bottom:10px}
+.dsx .panel .thead h3{font-size:16px;font-weight:700;color:var(--ovp);margin:0}
+.dsx .panel .d{font-size:12px;color:var(--muted)}
+.dsx .cv{height:260px}.dsx .cv.tall{height:340px}
+.dsx th{background:var(--tint);color:var(--ovp);font-weight:700;font-size:12.5px;border-bottom:1px solid var(--muted)}
+.dsx td.bad{background:none}
+.dsx #tSeries td:last-child.good,.dsx #tSeries td:last-child.bad{color:var(--text);font-weight:400}
+.dsx .ptk i{border-radius:0}
+#prod.dsx nav.tabs{gap:0;border-bottom:1px solid var(--border);margin:4px 0 16px}
+#prod.dsx nav.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;color:var(--muted);padding:10px 16px;font-weight:700;min-height:44px;margin-bottom:-1px}
+#prod.dsx nav.tabs button:hover{background:var(--card);color:var(--ovp)}
+#prod.dsx nav.tabs button.active{background:none;color:var(--ovp);border-bottom-color:var(--primary)}
+#mainArea.dsx .dstitle{padding-top:14px}
+.dsx .dspair{display:grid;grid-template-columns:1fr 1.3fr;gap:18px;align-items:start}.dsx .dspair>*{min-width:0}
+.dsx .ovhb.st{cursor:default;grid-template-columns:92px 1fr 96px}.dsx .ovhb.st:hover{background:none}
+.dsx .ovtab.dsfull th:nth-child(n),.dsx .ovtab.dsfull td:nth-child(n){display:table-cell}
+.dsx .ovtab .dsth{display:block;padding:9px 10px;white-space:nowrap}
+.dsx #pmTbl th:first-child .dsth{text-align:left}
+.dsx .ovhb.st .ovht i{background:var(--primary);opacity:1}.dsx .ovhb.st.off .ovht i{opacity:.45}
+.dsx .ovtab tr.tgt td:first-child{box-shadow:none}
+.dsx .lbf{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+.dsx .lbf input,.dsx .lbf select{height:36px;border:1px solid var(--border);border-radius:6px;padding:0 10px;font:inherit;font-size:13px;background:var(--surface);color:var(--text)}
+.dsx .lbf input{flex:1;min-width:130px;max-width:240px}
+.dsx .lbf button{height:36px;border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:0 12px;font:inherit;font-size:13px;font-weight:700;color:var(--ovp);cursor:pointer}
+.dsx .lbf .lbcount{margin-left:auto;font-size:12.5px;color:var(--muted)}
+.dsx .lbtab td,.dsx #lbTable td{vertical-align:middle}
+.dsx #lbTable td.num{text-align:right;font-variant-numeric:tabular-nums}.dsx #lbTable th.num button{text-align:right}
+.dsx #lbTable .lbsc{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.dsx #lbTable .lbtrack{flex:0 1 150px;min-width:50px;height:10px;background:var(--card);display:block}
+.dsx #lbTable .lbtrack i{display:block;height:100%;background:var(--primary)}
+.dsx #lbTable .lbsc b{min-width:38px;text-align:right;color:var(--text)}
+.dsx .lbtag{font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:3px;padding:0 5px;margin-left:6px;font-weight:400;white-space:nowrap}
+.dsx .lbsm{display:none;font-size:12px;color:var(--muted);margin-top:1px}
+.dsx #lbTable td.lbdl{color:var(--muted)}
+.dsx #lbTable td:nth-child(2){font-weight:700}
+.dsx #lbTable td:nth-child(-n+4),.dsx #lbTable th:nth-child(-n+4),.dsx #lbTable th:nth-child(-n+4) button{text-align:left}
+.dsx #lbTable td:first-child,.dsx #lbTable th:first-child,.dsx #lbTable th:first-child button{text-align:right;width:44px}
+.dsx th[aria-sort]::after{content:none}
+.dsx #lbTable td.lbempty{text-align:center;color:var(--muted);padding:24px 10px;font-weight:400}
+.dsx #lbTable tr.row:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+.dsx .ovpro.dsrv{grid-template-columns:repeat(4,1fr)}
+.dsx .ovpro.dsrv .ovpc .ovv small{font-size:13px;margin-left:4px;font-weight:400}
+.dsx .ovsum .pill{margin-left:4px}
+@media (max-width:1000px){.dsx .grid3{grid-template-columns:1fr}.dsx .dspair{grid-template-columns:1fr}.dsx .ovkpi.c3,.dsx .ovkpi.c4{grid-template-columns:repeat(2,1fr)}.dsx .ovkpi.c3 .ovkc:nth-child(3){grid-column:1/-1}.dsx .ovpro.dsrv{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:600px){.dsx h2.sec{font-size:16px;margin-top:20px}.dsx #lbTable .lbgr,.dsx #lbTable .lbteam,.dsx #lbTable th[data-key=grade],.dsx #lbTable th[data-key=team],.dsx #lbTable td.lbdl,.dsx #lbTable th[data-key=delta]{display:none}.dsx .lbsm{display:block}.dsx #lbTable .lbtrack{flex-basis:60px}.dsx .lbf input{max-width:none}
+  #pmTbl .ovtab.dsfull th:nth-child(2),#pmTbl .ovtab.dsfull td:nth-child(2),#pmTbl .ovtab.dsfull th:nth-child(6),#pmTbl .ovtab.dsfull td:nth-child(6){display:none}body[data-view=prd] #pCmp{display:none}#prod.dsx nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}#prod.dsx nav.tabs::-webkit-scrollbar{display:none}#prod.dsx nav.tabs button{white-space:nowrap;padding:10px 12px;flex:none}.dsx .ovhb.st{grid-template-columns:70px 1fr 80px}.dsx .ovpro.dsrv .ovpc{border-top:1px solid var(--border)}.dsx .ovpro.dsrv .ovpc:nth-child(-n+2){border-top:0}.dsx .ovpro.dsrv .ovpc:nth-child(even){border-left:1px solid var(--border)!important}}
 /* ===== 보고용 보기 (본사 보고서 방식, 2026-11-12 시안) — Overview 를 A4 보고서처럼. 화면에서는 「보고용 보기」, 인쇄하면 자동 ===== */
 .rptbar,.rptHead,.ovrh,.ovrpt,.ovrfoot,.ovsn{display:none}
 #ov .ovtitle{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
@@ -729,17 +788,39 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
 <div class="rptbar"><span>보고용 보기 — 인쇄하면 A4 한 부로 나옵니다</span><button type="button" id="rptBack">화면으로 돌아가기</button><button type="button" id="rptPrint">PDF로 저장 (인쇄)</button></div>
 <main class="wrap" id="ov" role="tabpanel" aria-labelledby="vtOv" hidden></main>
 <main class="wrap" id="mainArea" hidden>
+  <div class="ovtitle dstitle" data-scr="sq" id="sqTitle"></div>
   <h2 class="sec" data-scr="org">팀 구성 <small id="orgSub"></small></h2>
   <section class="teams" id="teams" data-scr="org"></section>
   <h2 class="sec" data-scr="pro">예방 서비스 <small>PM·예방정비 지수 12개월 추이와 운영 건전성(최근 12개월, 전사 기준)</small></h2>
-  <h2 class="sec" data-scr="sq">핵심 KPI <small id="kpiSub"></small></h2>
-  <section class="kpis" id="kpis" data-scr="sq pro"></section>
+  <h2 class="sec" data-scr="sq">서비스 품질 <small id="kpiSub"></small></h2>
+  <section class="ovkpi c3" id="sqKpiQ" data-scr="sq" aria-label="서비스 품질 지표: FTFR, 재방문율, MTTR"></section>
+  <h2 class="sec" data-scr="sq">업무량 <small>목표가 없는 지표 · 전월 대비는 방향만 표시</small></h2>
+  <section class="ovkpi c4" id="sqKpiW" data-scr="sq" aria-label="업무량 지표: 서비스 활동, 고장 수리, PM, 예방정비 지수"></section>
+  <section class="kpis" id="kpis" data-scr="pro"></section>
   <div class="na" id="na" data-scr="sq pro"></div>
 
   <h2 class="sec" data-scr="org">사무소·팀별 1인당 생산성 <small id="tpSub"></small></h2>
   <section class="panel tp" id="tpBox" data-scr="org"></section>
 
-  <h2 class="sec" data-scr="sq">12개월 추이 <small id="trendSub"></small></h2>
+  <h2 class="sec" data-scr="sq">서비스 품질 추이 <small id="trendSub"></small></h2>
+  <div class="grid3" data-scr="sq">
+    <section class="panel">
+      <h3>FTFR</h3>
+      <p class="d">점선 = 목표 (FTFR 90% 이상) · 점 색 <span class="ptk"><i style="background:var(--good)"></i>달성</span> <span class="ptk"><i style="background:var(--bad)"></i>미달</span> · ◆ 잠정치</p>
+      <div class="cv"><canvas id="cQual"></canvas></div>
+    </section>
+    <section class="panel">
+      <h3>재방문율</h3>
+      <p class="d">점선 = 목표 (재방문율 15% 이하) · 점 색 <span class="ptk"><i style="background:var(--good)"></i>달성</span> <span class="ptk"><i style="background:var(--bad)"></i>미달</span></p>
+      <div class="cv"><canvas id="cRev"></canvas></div>
+    </section>
+    <section class="panel">
+      <h3>MTTR</h3>
+      <p class="d">점선 = 목표 (MTTR 120분 이하) · 점 색 <span class="ptk"><i style="background:var(--good)"></i>달성</span> <span class="ptk"><i style="background:var(--bad)"></i>미달</span></p>
+      <div class="cv"><canvas id="cMttr"></canvas></div>
+    </section>
+  </div>
+  <h2 class="sec" data-scr="sq">업무량 추이 <small>고장 수리·PM 건수와 예방정비 지수</small></h2>
   <div class="grid">
     <section class="panel" data-scr="sq pro">
       <h3>고장 수리·PM 건수</h3>
@@ -749,18 +830,6 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
       <h3>예방정비 지수</h3>
       <p class="d">PM ÷ (PM + 고장 수리) · 목표 없음</p>
       <div class="cv"><canvas id="cIdx"></canvas></div>
-    </section>
-  </div>
-  <div class="grid" style="margin-top:16px">
-    <section class="panel" data-scr="sq">
-      <h3>FTFR</h3>
-      <p class="d">점선 = 목표 (FTFR 90% 이상) · 점 색 <span class="ptk"><i style="background:var(--good)"></i>목표 달성</span> <span class="ptk"><i style="background:var(--bad)"></i>목표 미달</span> · ◆ 잠정치</p>
-      <div class="cv"><canvas id="cQual"></canvas></div>
-    </section>
-    <section class="panel" data-scr="sq">
-      <h3>MTTR</h3>
-      <p class="d">점선 = 목표 (MTTR 120분 이하) · 점 색 <span class="ptk"><i style="background:var(--good)"></i>목표 달성</span> <span class="ptk"><i style="background:var(--bad)"></i>목표 미달</span></p>
-      <div class="cv"><canvas id="cMttr"></canvas></div>
     </section>
   </div>
 
@@ -777,7 +846,7 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
     </section>
   </div>
 
-  <h2 class="sec" data-scr="sq">고장 분석 <small id="errSub"></small></h2>
+  <h2 class="sec" data-scr="sq">고장 분석 <small id="errSub"></small> <small>상세 분석</small></h2>
   <div class="grid" data-scr="sq">
     <section class="panel">
       <h3>장비군별 고장 수리</h3>
@@ -1777,58 +1846,89 @@ function teamRevisit(team, period){
 /* ================= RENDER: OVERVIEW ================= */
 function renderOverview(){
   var el = document.getElementById('panel-overview');
-  var period = state.period;
-  var company = DATA.company;
-  var totalCase = company.total_case[period];
-  var totalCasePrevYoY = period === '이번 년도' ? company.total_case['직전 년도'] : null;
+  var period = state.period, CMP = '직전 년도', company = DATA.company;
+  var cmpOk = period === '이번 년도', lab = DATA.cmp_short || '비교 기간', cmpName = lab.replace(/ 대비$/, '');
+  var top = VIEW;
+  /* FSG 1인당 값 = 팀 값의 인원 가중 평균 — 서비스 화면 「사무소·팀별 1인당 생산성」의 FSG 평균 행과 같은 식(새 계산식 아님) */
+  function wavg(f, p){ var a = 0, b = 0; top.forEach(function(t){ var o = DATA.team[t], n = o.n_core || 0, v = o[f] ? o[f][p] : null; if (v != null && n){ a += v*n; b += n; } }); return b ? a/b : null; }
+  var nCore = top.reduce(function(a,t){ return a + (DATA.team[t].n_core || 0); }, 0);
+  var nAll = top.reduce(function(a,t){ return a + DATA.team[t].members.length; }, 0);
+  var cases = company.total_case[period], casesP = company.total_case[CMP];
+  var per = wavg('case_avg_core', period), perP = wavg('case_avg_core', CMP);
+  var sc = wavg('score_avg_core', period), scP = wavg('score_avg_core', CMP);
   var mttr = mttrRepairAvg(company, period);
-  var mttrPrevYoY = period === '이번 년도' ? mttrRepairAvg(company, '직전 년도') : null;
-
-  var reliableTeams = DATA.teams.filter(function(t){ return DATA.revisit[t].reliable; });
-  var rvVals = reliableTeams.map(function(t){ return teamRevisit(t, period).revisit; }).filter(function(v){return v!==null&&v!==undefined;});
-  var ftfrVals = reliableTeams.map(function(t){ return teamRevisit(t, period).ftfr; }).filter(function(v){return v!==null&&v!==undefined;});
-  /* FSG 전체 = 4개 팀 거래처 전체의 평균(서비스 운영 KPI 탭과 같은 값) */
   var allRv = DATA.revisit.ALL ? teamRevisit('ALL', period) : null;
-  var avgRevisit = allRv ? allRv.revisit : (rvVals.length ? rvVals.reduce(function(a,b){return a+b;},0)/rvVals.length : null);
-  var avgFtfr = allRv ? allRv.ftfr : (ftfrVals.length ? ftfrVals.reduce(function(a,b){return a+b;},0)/ftfrVals.length : null);
-
+  function dd(c, p, dec, unit){ if (!cmpOk || c == null || p == null) return lab + ' 비교 자료 없음'; var d = c - p;
+    if (Math.abs(d) < (dec ? 0.05 : 0.5)) return cmpName + '과 같음'; return lab + ' ' + (d > 0 ? '▲ ' : '▼ ') + (dec ? Math.abs(d).toFixed(dec) : fmt(Math.abs(d))) + unit; }
+  function cell(l, v, u, t, d, h){ return '<div class="ovkc st"><span class="ovl">'+l+'</span><span class="ovv">'+v+(u?'<small>'+u+'</small>':'')+'</span><span class="ovt">'+t+'</span><span class="ovd">'+d+'</span><span class="ovh">'+h+'</span></div>'; }
   var html = '';
-  html += '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'+
+  html += '<section class="ovkpi c4" aria-label="생산성 핵심 지표">'+
+    cell('처리 건수', fmt(cases), '건', '전사 · '+PL(period), dd(cases, casesP, 0, '건'), '담당자·필수 참석자 각각 1건으로 센 합계')+
+    cell('1인당 처리 건수', per == null ? '-' : fmt1(per), '건', '팀장·신입을 뺀 인원 평균', dd(per, perP, 1, '건'), '인원이 다른 조직을 견주는 값')+
+    cell('1인당 KPI 점수', sc == null ? '-' : fmt1(sc), '점', '가중치 업무량 · 팀장·신입 제외', dd(sc, scP, 1, '점'), '업무·직급 가중치를 더한 값')+
+    cell('비교 인원', fmt(nCore), '명', '전체 '+nAll+'명 중 팀장·신입 제외', '순위표는 전체 인원 기준', '1인당 값의 분모')+
+    '</section>';
+  html += '<p class="ovsum" style="margin:8px 0 0">품질 지표(전사) <span>MTTR<b>'+fmt1(mttr)+'분</b> '+targetPill(mttr, DATA.benchmarks.mttr_target, 'lower-better')+'</span>'+
+    '<span>재방문율<b>'+pctStr(allRv ? allRv.revisit : null)+'</b> '+targetPill(allRv ? allRv.revisit : null, DATA.benchmarks.revisit_target, 'lower-better')+'</span>'+
+    '<span>FTFR<b>'+pctStr(allRv ? allRv.ftfr : null)+'</b> '+targetPill(allRv ? allRv.ftfr : null, DATA.benchmarks.ftfr_target, 'higher-better')+'</span> <span class="ovsub">자세한 추이는 Service Quality에서</span></p>';
+
+  html += '<section class="ovcard" style="margin-top:14px" aria-labelledby="pmh"><h3 id="pmh">팀별 생산성 요약 <span class="ovsub">'+PL(period)+' · 팀장·신입 제외 인원 기준</span>'+
+    '<span class="ovtools"><span class="ovseg" id="pmSeg" role="group" aria-label="비교 지표"></span></span></h3>'+
+    '<div class="dspair"><div><label class="ovoffl" style="margin:0 0 6px;display:block"><input type="checkbox" id="pmOff"'+(state.pmOff===false?'':' checked')+'> 사무소 표시</label><div id="pmBars"></div></div><div class="ovtw" id="pmTbl"></div></div>'+
+    '<p class="ovnote">조직 규모와 맡은 거래처·장비가 달라 숫자만으로 우열을 가리지 않습니다. 사무소는 인원이 4~6명이라 한두 사람의 변화가 크게 반영됩니다(참고용).</p></section>';
+
+  var cavHtml = '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'+
     '<div><b>KPI 종합 점수</b> = 건마다 (업무 가중치 + 직급 가중치)의 합계. '+weightLine(DATA.weights)+'(진급자는 시행일부터 새 직급 적용). 그 밖의 목적(원격 Calibration·GMCS·부품 등)은 기타(0.2)로 계산하고, 온라인 정기점검은 건수·점수에서 뺍니다. 장비 그룹을 알 수 없는 건(모델 없음·미분류·RF-500)은 「기타」 그룹입니다. 담당자·필수 참석자 기준, 취소 건 제외. 재방문율·FTFR은 거래처별 비율의 팀 평균입니다.'+
     ' MTTR은 일정표 예약 시간 기준(참고용)입니다.'+(DATA.provisional ? ' <b>최근 14일은 FTFR 확인 기간이 끝나지 않아 잠정치</b>입니다.' : '')+(DATA.ex_lead ? ' 순위에서 팀장·신입을 뺐습니다.' : '')+' 팀 비교의 <b>1인당 점수·직급 보정 지수</b>(개인 점수 ÷ FSG 같은 직급 중앙값 × 100)는 팀장·신입을 뺀 값입니다. CENTRAL·SOUTH의 사무소(대전·광주, 부산·대구)는 팀별 분석에서 참고로 봅니다.'+
     ' <b>필수 참석자</b>도 담당자와 같은 가중치로 점수·건수에 들어갑니다(팀 합계는 동행 건이 사람 수만큼 반영).'+
     (DATA.no_att ? ' 지금 데이터에는 필수 참석자 열이 없어 담당자만 반영됐습니다. <b>CRM 파일을 다시 올리면 반영</b>됩니다.' : '')+(DATA.admin_weights ? ' <button type="button" class="lbtn" onclick="openWgt()">가중치 설정</button>' : '')+'</div></div>';
 
-  html += '<div class="block grid grid-4">'+
-    statTile('처리 건수', fmt(totalCase), '건', deltaBadge(totalCase, totalCasePrevYoY, null), DATA.period_label[period])+
-    statTile('MTTR (고장 수리)', fmt1(mttr), '분', deltaBadge(mttr, mttrPrevYoY, false)+' '+targetPill(mttr, DATA.benchmarks.mttr_target, 'lower-better'), '목표 '+DATA.benchmarks.mttr_target+'분 이내 · 500분 초과 건 제외')+
-    statTile('평균 재방문율', pctStr(avgRevisit), '', targetPill(avgRevisit, DATA.benchmarks.revisit_target, 'lower-better'), 'FSG 전체 거래처 평균 (목표 '+DATA.benchmarks.revisit_target+'% 이하)')+
-    statTile('평균 FTFR', pctStr(avgFtfr), '', targetPill(avgFtfr, DATA.benchmarks.ftfr_target, 'higher-better'), 'FSG 전체 거래처 평균 (목표 '+DATA.benchmarks.ftfr_target+'% 이상)')+
-    '</div>';
+  html += '<section class="ovcard" style="margin-top:14px" aria-labelledby="lbh"><h3 id="lbh">개인 순위 <span class="ovsub">KPI 종합 점수 · '+PL(period)+' · 열 제목을 누르면 정렬, 행을 누르면 개인별 상세</span></h3>'+
+    '<p class="ovnote" style="margin:0 0 10px">순위와 점수는 <b>맡은 업무의 양과 종류</b>(가중치 업무량)를 나타냅니다. 거래처 수·담당 장비·직급·근무 형태에 따라 달라지므로 <b>개인의 종합적인 성과를 뜻하지 않으며</b> 평가 점수로 쓰지 않습니다.</p>'+cavHtml+
+    '<div class="lbf" id="lbFilters"></div><div class="ovtw"><table class="ovtab dsfull" id="lbTable"></table></div></section>';
 
-  html += '<div class="block"><div class="block-head"><h2>전 직원 KPI 종합 점수</h2><span class="hint">업무 종류별 가중치 적용 · 담당자·필수 참석자 기준 · 열 제목 클릭 시 정렬 · 행 클릭 시 개인별 상세로 이동 · '+PL(period)+'</span></div>'+
-    '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="lbTable"></table></div></div>';
+  html += '<div class="ovgrid ovg-b">'+
+    '<section class="ovcard"><h3>서비스 유형별 처리 건수 <span class="ovsub">전사 · '+PL(period)+'</span></h3><div id="svc-type-chart"></div></section>'+
+    '<section class="ovcard"><h3>비즈니스(장비 그룹)별 처리 건수 <span class="ovsub">전사 · '+PL(period)+'</span></h3><div id="group-cmp-chart"></div></section></div>';
+  html += '<section class="ovcard" style="margin-top:14px"><h3>월별 처리 건수 추이 <span class="ovsub">'+(DATA.trend_names ? DATA.trend_names.join(' vs ') : '이번 년도 vs 직전 년도')+' · 전사</span></h3><div id="trend-chart"></div></section>';
 
-  html += '<div class="block grid grid-2">'+
-    chartCard('team-cmp-chart', '팀별 처리 건수', '선택 기간 · '+PL(period))+
-    chartCard('svc-type-chart', '서비스 유형별 처리 건수', '전사 · '+PL(period))+
-    '</div>';
-
-  html += '<div class="block grid grid-2">'+
-    chartCard('group-cmp-chart', '비즈니스(장비 그룹)별 처리 건수', '전사 · '+PL(period))+
-    chartCard('trend-chart', '월별 처리 건수 추이', ''+(DATA.trend_names?DATA.trend_names.join(' vs '):'이번 년도 vs 직전 년도')+' · 전사')+
-    '</div>';
-
-  html += '<div class="block"><div class="block-head"><h2>팀별 재방문율 / FTFR 개요</h2><span class="hint">고장 수리+PM 기준, "'+PL(period)+'" 스냅샷</span></div>'+
-    '<div class="grid grid-4" id="teamRevisitCards"></div></div>';
+  html += '<section class="ovcard" style="margin-top:14px"><h3>팀별 재방문율 / FTFR <span class="ovsub">고장 수리+PM 기준 · '+PL(period)+' 스냅샷</span></h3><div class="ovpro dsrv" id="teamRevisitCards"></div></section>';
 
   el.innerHTML = html;
 
+  /* 팀별 생산성 요약: 막대(지표 전환) + 표 */
+  var PM = [['per','1인당 처리 건수','건',1],['w','1인당 KPI 점수','점',1],['cnt','처리 건수','건',0]];
+  state.pm = state.pm || 'per'; if (state.pmOff == null) state.pmOff = true;
+  function pmRows(){
+    var rows = [];
+    function mk(key, name, o, off, parent){ return {key:key, name:name, off:off, team:parent, n:o.n_core||0, cnt:o.total_case ? o.total_case[period] : null, per:o.case_avg_core ? o.case_avg_core[period] : null, w:o.score_avg_core ? o.score_avg_core[period] : null, idx:o.index_avg ? o.index_avg[period] : null}; }
+    top.forEach(function(t){ var o = DATA.team[t]; rows.push(mk(t, DATA.team_short[t] || t, o, false, t));
+      if (state.pmOff) (o.units || []).forEach(function(u){ var uo = DATA.team[u]; if (uo) rows.push(mk(u, u.replace(/^FS\s*\S+\s*/, ''), uo, true, t)); }); });
+    return rows;
+  }
+  function drawPm(){
+    var rows = pmRows(), m = PM.filter(function(x){ return x[0] === state.pm; })[0], k = m[0] === 'per' ? 'per' : (m[0] === 'w' ? 'w' : 'cnt');
+    var topRows = rows.filter(function(r){ return !r.off; });
+    var mx = Math.max.apply(null, rows.map(function(r){ return r[k] || 0; }).concat([1]));
+    var avgV = k === 'per' ? per : (k === 'w' ? sc : null);
+    document.getElementById('pmSeg').innerHTML = PM.map(function(x){ return '<button type="button" data-m="'+x[0]+'" aria-pressed="'+(x[0]===state.pm)+'">'+x[1]+'</button>'; }).join('');
+    document.getElementById('pmBars').innerHTML = rows.map(function(r){ var v = r[k], w = v == null ? 0 : Math.max(1.5, v/mx*100);
+      return '<div class="ovhb st'+(r.off?' off':'')+'"><span class="ovhn">'+(r.off?'└ ':'')+esc(r.name)+'</span><span class="ovht"><i style="width:'+w+'%"></i>'+(avgV != null ? '<u style="left:'+Math.min(100, avgV/mx*100)+'%"></u>' : '')+'</span><span class="ovhv">'+(v == null ? '-' : (m[3] ? fmt1(v) : fmt(v)))+m[2]+'</span></div>'; }).join('') +
+      '<p class="ovnote">'+(avgV != null ? '점선은 FSG 평균('+fmt1(avgV)+m[2]+')입니다. ' : '')+'막대 길이는 같은 지표 안에서만 견줍니다.</p>';
+    var head = ['팀','비교 인원','처리 건수','1인당 처리 건수','1인당 KPI 점수','직급 보정 지수'];
+    document.getElementById('pmTbl').innerHTML = '<table class="ovtab dsfull"><thead><tr>'+head.map(function(h){ return '<th><span class="dsth">'+h+'</span></th>'; }).join('')+'</tr></thead><tbody>'+
+      rows.map(function(r){ return '<tr class="'+(r.off?'ovoff':'')+'"><td>'+(r.off?'└ ':'')+esc(r.name)+'</td><td>'+r.n+'</td><td>'+(r.cnt == null ? '-' : fmt(r.cnt))+'</td><td>'+(r.per == null ? '-' : fmt1(r.per))+'</td><td>'+(r.w == null ? '-' : fmt1(r.w))+'</td><td>'+(r.idx == null ? '-' : fmt1(r.idx))+'</td></tr>'; }).join('')+
+      '<tr class="tgt"><td>FSG</td><td>'+nCore+'</td><td>'+fmt(cases)+'</td><td>'+(per == null ? '-' : fmt1(per))+'</td><td>'+(sc == null ? '-' : fmt1(sc))+'</td><td>100.0</td></tr></tbody></table>';
+    document.getElementById('pmSeg').querySelectorAll('button').forEach(function(b){ b.onclick = function(){ state.pm = b.getAttribute('data-m'); drawPm(); }; });
+  }
+  drawPm();
+  document.getElementById('pmOff').onchange = function(){ state.pmOff = this.checked; drawPm(); };
+
   renderLeaderboardTable(period);
 
-  barChart(document.getElementById('team-cmp-chart'), VIEW.map(function(t){return DATA.team_short[t];}), VIEW.map(function(t){return DATA.team[t].total_case[period];}), VIEW.map(function(t){return TEAM_COLOR[t];}), {unit:'건'});
-  barChart(document.getElementById('svc-type-chart'), DATA.buckets.map(function(b){return DATA.bucket_label[b];}), bucketCaseArr(company, period), DATA.buckets.map(function(b){return BUCKET_COLOR[b];}), {unit:'건'});
-  barChart(document.getElementById('group-cmp-chart'), DATA.groups.map(function(g){return DATA.group_label[g];}), groupCaseArr(company, period), DATA.groups.map(function(g){return GROUP_COLOR[g];}), {unit:'건'});
+  var BL = ['#005BAC','#00B9EF','#5185C5','#84BAE5','#9FA0A0'];
+  barChart(document.getElementById('svc-type-chart'), DATA.buckets.map(function(b){return DATA.bucket_label[b];}), bucketCaseArr(company, period), DATA.buckets.map(function(b,i){return BL[i%BL.length];}), {unit:'건'});
+  barChart(document.getElementById('group-cmp-chart'), DATA.groups.map(function(g){return DATA.group_label[g];}), groupCaseArr(company, period), DATA.groups.map(function(g,i){return g==='RF-500'||DATA.group_label[g]==='기타' ? '#9FA0A0' : '#005BAC';}), {unit:'건'});
 
   var months = monthsUnion(company.month['이번 년도'], company.month['직전 년도']);
   lineChart(document.getElementById('trend-chart'), months, [
@@ -1837,16 +1937,10 @@ function renderOverview(){
   ], {unit:'건', partial:DATA.trend_partial});
 
   var cardsEl = document.getElementById('teamRevisitCards');
-  VIEW.forEach(function(t){
-    var rv = teamRevisit(t, period);
-    var reliable = DATA.revisit[t].reliable;
-    var card = document.createElement('div');
-    card.className = 'card stat';
-    card.innerHTML = '<div class="stat-label"><span style="color:'+resolveVar(TEAM_COLOR[t])+'">'+t+'</span>'+(reliable?'':'<span class="pill warn">확인필요</span>')+'</div>'+
-      '<div class="stat-value" style="font-size:19px;">'+pctStr(rv.revisit)+' <span class="unit">재방문율</span></div>'+
-      '<div class="stat-sub">FTFR '+pctStr(rv.ftfr)+' '+(reliable?targetPill(rv.ftfr, DATA.benchmarks.ftfr_target,'higher-better'):'')+'</div>';
-    cardsEl.appendChild(card);
-  });
+  cardsEl.innerHTML = VIEW.map(function(t){
+    var rv = teamRevisit(t, period), reliable = DATA.revisit[t].reliable;
+    return '<div class="ovpc"><div class="ovl">'+esc(DATA.team_short[t] || t)+(reliable?'':' <span class="pill warn">확인필요</span>')+'</div><div class="ovv">'+pctStr(rv.revisit)+'<small> 재방문율</small></div><div class="ovh" style="display:block">FTFR '+pctStr(rv.ftfr)+' '+(reliable?targetPill(rv.ftfr, DATA.benchmarks.ftfr_target,'higher-better'):'')+'</div></div>';
+  }).join('');
 }
 function mapMonthVals(obj){
   var out = {};
@@ -1878,13 +1972,34 @@ function renderLeaderboardTable(period){
       isNew: (DATA.newbie||[]).indexOf(x.name) >= 0,
       delta: (pe.score[period]||0) - (pe.score['직전 년도']||0),
       score: pe.score[period] || 0,
-      scorePrev: period==='이번 년도' ? (pe.score['직전 년도']||0) : null,
       total: pe.total_case[period] || 0,
     };
   });
   if (DATA.ex_lead) rows = rows.filter(function(r){ return r.grade !== '팀장' && !r.isNew; });
   var maxScore = Math.max(1, Math.max.apply(null, rows.map(function(r){return r.score;})));
   var _rk = rows.slice().sort(function(a,b){return b.score-a.score;}); rows.forEach(function(r){ r.rank = _rk.indexOf(r)+1; });
+  var nAllRows = rows.length;
+  /* 필터: 이름 검색 · 팀 · 직급 (순위는 필터와 무관한 실제 순위) */
+  var q = (state.lbQ || '').trim(), ft = state.lbTeam || '', fg = state.lbGrade || '';
+  var teamOpts = DATA.team_top || DATA.teams, gradeOpts = ['T4','T3','T2','T1','팀장'];
+  var fbox = document.getElementById('lbFilters');
+  if (fbox && !fbox.getAttribute('data-ready')){
+    fbox.setAttribute('data-ready','1');
+    fbox.innerHTML = '<label class="sr-only" for="lbQ">이름 검색</label><input type="search" id="lbQ" placeholder="이름 검색" autocomplete="off">'+
+      '<label class="sr-only" for="lbTeam">팀</label><select id="lbTeam"><option value="">팀 전체</option>'+teamOpts.map(function(t){ return '<option value="'+esc(t)+'">'+esc(DATA.team_short[t]||t)+'</option>'; }).join('')+'</select>'+
+      '<label class="sr-only" for="lbGrade">직급</label><select id="lbGrade"><option value="">직급 전체</option>'+gradeOpts.map(function(g){ return '<option value="'+g+'">'+g+'</option>'; }).join('')+'</select>'+
+      '<button type="button" id="lbReset">조건 지우기</button><span class="lbcount" id="lbCnt" role="status"></span>';
+    var upd = function(){ state.lbQ = document.getElementById('lbQ').value; state.lbTeam = document.getElementById('lbTeam').value; state.lbGrade = document.getElementById('lbGrade').value; renderLeaderboardTable(period); };
+    document.getElementById('lbQ').addEventListener('input', upd);
+    document.getElementById('lbTeam').addEventListener('change', upd);
+    document.getElementById('lbGrade').addEventListener('change', upd);
+    document.getElementById('lbReset').addEventListener('click', function(){ document.getElementById('lbQ').value=''; document.getElementById('lbTeam').value=''; document.getElementById('lbGrade').value=''; upd(); });
+  }
+  if (fbox){ document.getElementById('lbQ').value = state.lbQ || ''; document.getElementById('lbTeam').value = ft; document.getElementById('lbGrade').value = fg; }
+  if (q) rows = rows.filter(function(r){ return r.name.indexOf(q) >= 0; });
+  if (ft) rows = rows.filter(function(r){ return r.team === ft; });
+  if (fg) rows = rows.filter(function(r){ return r.grade === fg; });
+  var cnt = document.getElementById('lbCnt'); if (cnt) cnt.textContent = (rows.length === nAllRows ? '전체 '+nAllRows+'명' : nAllRows+'명 중 '+rows.length+'명');
   var key = state.lbSortKey, dir = state.lbSortDir;
   rows.sort(function(a,b){
     var av = a[key], bv = b[key];
@@ -1896,7 +2011,7 @@ function renderLeaderboardTable(period){
     return dir==='desc' ? bv-av : av-bv;
   });
   var cols = [
-    {k:'rank', label:'#'},
+    {k:'rank', label:'#', num:true},
     {k:'name', label:'이름'},
     {k:'team', label:'팀'},
     {k:'grade', label:'직급'},
@@ -1905,41 +2020,37 @@ function renderLeaderboardTable(period){
     {k:'total', label:'처리 건수', num:true},
   ];
   var thead = '<thead><tr>'+cols.map(function(c){
-    if (c.k==='rank') return '<th>#</th>';
-    var arrow = state.lbSortKey===c.k ? '<span class="arrow">'+(state.lbSortDir==='desc'?'▼':'▲')+'</span>' : '';
-    return '<th class="'+(c.num?'num':'')+'" data-key="'+c.k+'">'+c.label+arrow+'</th>';
+    var on = state.lbSortKey===c.k, srt = on ? (state.lbSortDir==='desc'?'descending':'ascending') : 'none';
+    return '<th'+(on?' aria-sort="'+srt+'"':'')+' data-key="'+c.k+'" class="'+(c.num?'num':'')+'"><button type="button">'+c.label+'</button></th>';
   }).join('')+'</tr></thead>';
-  var tbody = '<tbody>'+rows.map(function(r, i){
-    var rankCls = r.rank===1?'top1':(r.rank===2?'top2':(r.rank===3?'top3':''));
+  var tbody = '<tbody>'+(rows.length ? rows.map(function(r){
     var pct = Math.max(2, Math.round(r.score/maxScore*100));
-    var color = resolveVar(TEAM_COLOR[r.team]);
     var isSelf = r.name === state.person;
-    return '<tr class="'+(isSelf?'self-row':'')+'" data-person="'+esc(r.name)+'">'+
-      '<td><span class="rank-badge '+rankCls+'">'+r.rank+'</span></td>'+
-      '<td>'+esc(r.name)+(r.grade==='팀장'?'<span class="gtag lead">팀장</span>':'')+(r.isNew?'<span class="gtag new">신입</span>':'')+'</td>'+
-      '<td><span style="color:'+color+';font-weight:600;font-size:11.5px;">'+DATA.team_short[r.team]+'</span></td>'+
-      '<td>'+esc(r.grade)+((DATA.promoted||{})[r.name]?'<span class="gtag" title="'+esc(DATA.promoted[r.name])+' 진급">진급</span>':'')+'</td>'+
-      '<td class="num"><div class="score-cell"><div class="score-bar-track"><div class="score-bar-fill" style="width:'+pct+'%;background:'+color+';"></div></div><span class="score-num">'+fmt1(r.score)+'</span></div></td>'+
-      '<td class="num '+(r.delta>0.05?'dpos':(r.delta<-0.05?'dneg':''))+'"><span>'+(r.delta>0.05?'▲ +':(r.delta<-0.05?'▼ ':''))+fmt1(r.delta)+'</span></td>'+
+    var dTxt = r.delta>0.05 ? '▲ '+fmt1(r.delta) : (r.delta<-0.05 ? '▼ '+fmt1(Math.abs(r.delta)) : '-');
+    return '<tr class="row'+(isSelf?' sel':'')+'" data-person="'+esc(r.name)+'" tabindex="0">'+
+      '<td class="num">'+r.rank+'</td>'+
+      '<td>'+esc(r.name)+(r.grade==='팀장'?'<span class="lbtag">팀장</span>':'')+(r.isNew?'<span class="lbtag">신입</span>':'')+'<span class="lbsm">'+esc(DATA.team_short[r.team]||r.team)+' · '+esc(r.grade)+'</span></td>'+
+      '<td class="lbteam">'+esc(DATA.team_short[r.team]||r.team)+'</td>'+
+      '<td class="lbgr">'+esc(r.grade)+((DATA.promoted||{})[r.name]?'<span class="lbtag" title="'+esc(DATA.promoted[r.name])+' 진급">진급</span>':'')+'</td>'+
+      '<td class="num"><div class="lbsc"><span class="lbtrack"><i style="width:'+pct+'%"></i></span><b>'+fmt1(r.score)+'</b></div></td>'+
+      '<td class="num lbdl">'+dTxt+'</td>'+
       '<td class="num">'+fmt(r.total)+'</td>'+
       '</tr>';
-  }).join('')+'</tbody>';
+  }).join('') : '<tr><td colspan="7" class="lbempty">조건에 맞는 직원이 없습니다. 조건 지우기를 눌러 다시 확인해 주세요.</td></tr>')+'</tbody>';
   var table = document.getElementById('lbTable');
   table.innerHTML = thead+tbody;
-  table.querySelectorAll('th[data-key]').forEach(function(th){
-    th.addEventListener('click', function(){
-      var k = th.getAttribute('data-key');
+  table.querySelectorAll('th[data-key] button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var k = btn.parentNode.getAttribute('data-key'); if (k==='rank') k = 'score';
       if (state.lbSortKey === k) state.lbSortDir = state.lbSortDir==='desc'?'asc':'desc';
       else { state.lbSortKey = k; state.lbSortDir = 'desc'; }
       renderLeaderboardTable(period);
     });
   });
-  table.querySelectorAll('tbody tr').forEach(function(tr){
-    tr.addEventListener('click', function(){
-      state.person = tr.getAttribute('data-person');
-      state.tab = 'person';
-      switchTab('person');
-    });
+  var go = function(tr){ var n = tr.getAttribute('data-person'); if (!n) return; state.person = n; state.tab = 'person'; switchTab('person'); };
+  table.querySelectorAll('tbody tr.row').forEach(function(tr){
+    tr.addEventListener('click', function(){ go(tr); });
+    tr.addEventListener('keydown', function(e){ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); go(tr); } });
   });
 }
 
@@ -2922,6 +3033,18 @@ function render(){
     card('재방문율', f1(cur.rev), '%', delta(cur.rev,prv.rev,'%p',-1,pp.label), `목표 ${TARGET_REV}% 이하`, tgSt(cur.rev,TARGET_REV,false)),
     card('MTTR', f1(cur.mttr), '분', delta(cur.mttr,prv.mttr,'분',-1,pp.label), `목표 ${TARGET_MTTR}분 이하`, tgSt(cur.mttr,TARGET_MTTR,false)),
   ].join('');
+  /* 화면 통일 시안: Overview 와 같은 통합 KPI 패널(품질 3칸 + 업무량 4칸) — 같은 stats() 값, 새 계산식 없음 */
+  { const lab2=pp.label, cmpN=lab2;
+    const dN=(c,v,u,dec)=>{ if(c==null||v==null) return lab2+' 비교 자료 없음'; const d=c-v; if(Math.abs(d)<(dec?0.05:0.5)) return lab2+'과 같음'; return lab2+' 대비 '+(d>0?'▲ ':'▼ ')+(dec?Math.abs(d).toFixed(dec):fmt(Math.abs(d)))+u; };
+    const q=OV_K.slice(0,3).map(o=>{ const v=cur[o.k], st=ovSt(o,v);
+      return `<div class="ovkc st"><span class="ovl">${o.n}${st.chip?`<span class="ovchip ${st.st}">${st.chip}${o.k==='ftfr'&&prov?' · 잠정':''}</span>`:''}</span><span class="ovv">${ovF(o,v)}<small>${o.u}</small></span><span class="ovt">목표 ${o.tl()} · ${ovGap(o,v)}</span><span class="ovd">${ovDelta(o,v,prv[o.k],lab2)}</span><span class="ovh">${o.h}</span></div>`; }).join('');
+    $('sqKpiQ').innerHTML=q;
+    const w=[['서비스 활동',fmt(cur.total),'건',dN(cur.total,prv.total,'건',0),`Calibration ${fmt(cur.cal)} · 기타 ${fmt(cur.total-cur.rep-cur.pm-cur.cal)}`],
+      ['고장 수리',fmt(cur.rep),'건',dN(cur.rep,prv.rep,'건',0),'목표 없음'],
+      ['PM',fmt(cur.pm),'건',dN(cur.pm,prv.pm,'건',0),'목표 없음'],
+      ['예방정비 지수',f1(cur.idx),'%',dN(cur.idx,prv.idx,'%p',1),'PM ÷ (PM + 고장 수리) · 목표 없음']];
+    $('sqKpiW').innerHTML=w.map(x=>`<div class="ovkc st"><span class="ovl">${x[0]}</span><span class="ovv">${x[1]}<small>${x[2]}</small></span><span class="ovt">${x[4]}</span><span class="ovd">${x[3]}</span></div>`).join('');
+    $('sqTitle').innerHTML=`<div><h2>Service Quality</h2><p>${esc(p.label)} · ${esc(scope)} · 비교 ${esc(lab2)} · 자료 CRM ${esc((D.excl&&D.excl.cut)||'-')} 기준${SRC&&SRC.at?' · 업데이트 '+esc(SRC.at):''}${prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div>`; }
   $('na').innerHTML=''
     +calNote(p,team)
     +(prov?`<span style="color:var(--warn);border-color:var(--warn)">잠정치 · 최근 14일 포함</span>`:'');
@@ -2965,7 +3088,7 @@ function render(){
       plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}},tooltip:{callbacks:{afterTitle:it=>provIdx[it[0].dataIndex]?'FTFR 잠정치':'',
         label:c=>{const v=c.parsed.y; let t=`${c.dataset.label}: ${v}`; if(c.datasetIndex===0) t+=okTxt(v,v>=TARGET_FTFR); return t;},
         labelColor:c=>{const col=c.datasetIndex===0?fC[c.dataIndex]:c.dataset.borderColor; return {borderColor:c.dataset.borderColor,backgroundColor:col};}}}},
-      scales:{x:axis({grid:{display:false}}),y:axis({min:fR.min,max:fR.max,ticks:{stepSize:fR.step,color:css('--text'),callback:v=>v>100?'':v+'%'}})}}});
+      scales:{x:axis({grid:{display:false},ticks:{color:css('--text'),maxRotation:0,autoSkip:false,callback:function(v,i,a){return (a.length-1-i)%2===0?this.getLabelForValue(v):'';}}}),y:axis({min:fR.min,max:fR.max,ticks:{stepSize:fR.step,color:css('--text'),callback:v=>v>100?'':v+'%'}})}}});
   upsert('cMttr',{type:'line',data:{labels:lab,datasets:[
     {label:'MTTR(분)',data:mV,borderColor:'#005BAC',backgroundColor:'#005BAC',pointBackgroundColor:mC,pointHoverBackgroundColor:mC,pointBorderColor:RING,pointHoverBorderColor:RING,pointBorderWidth:1.5,
       pointRadius:4.5,pointHoverRadius:6,tension:.25},
@@ -2974,7 +3097,20 @@ function render(){
       plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}},tooltip:{callbacks:{
         label:c=>{const v=c.parsed.y; let t=`${c.dataset.label}: ${v}`; if(c.datasetIndex===0) t+=okTxt(v,v<=TARGET_MTTR); return t;},
         labelColor:c=>{const col=c.datasetIndex===0?mC[c.dataIndex]:c.dataset.borderColor; return {borderColor:c.dataset.borderColor,backgroundColor:col};}}}},
-      scales:{x:axis({grid:{display:false}}),y:axis({min:mR.min,max:mR.max,ticks:{stepSize:mR.step,color:css('--text')}})}}});
+      scales:{x:axis({grid:{display:false},ticks:{color:css('--text'),maxRotation:0,autoSkip:false,callback:function(v,i,a){return (a.length-1-i)%2===0?this.getLabelForValue(v):'';}}}),y:axis({min:mR.min,max:mR.max,ticks:{stepSize:mR.step,color:css('--text')}})}}});
+
+  /* 재방문율 12개월 추이 (stats().rev — 새 계산 없음), 점 색 = 목표 대비 */
+  { const rR=band(ts.map(s=>s.hasData&&s.rev!=null?s.rev:null),TARGET_REV,.25,.55,6,2);
+    const rV=ts.map(s=>s.hasData&&s.rev!=null?+s.rev.toFixed(1):null), rC=rV.map(v=>v==null?GOOD:v<=TARGET_REV?GOOD:BAD);
+    upsert('cRev',{type:'line',data:{labels:lab,datasets:[
+      {label:'재방문율(%)',data:rV,borderColor:'#005BAC',backgroundColor:'#005BAC',pointBackgroundColor:rC,pointHoverBackgroundColor:rC,pointBorderColor:RING,pointHoverBorderColor:RING,pointBorderWidth:1.5,
+        pointRadius:ts.map((s,i)=>provIdx[i]?6:4.5),pointStyle:ts.map((s,i)=>provIdx[i]?'rectRot':'circle'),pointHoverRadius:6,tension:.25},
+      {label:`재방문율 목표 ${TARGET_REV}%`,data:tm.map(()=>TARGET_REV),borderColor:'#3FBA46',borderDash:[6,4],borderWidth:1.5,pointRadius:0}]},
+      options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}},tooltip:{callbacks:{
+          label:c=>{const v=c.parsed.y; let t=`${c.dataset.label}: ${v}`; if(c.datasetIndex===0) t+=okTxt(v,v<=TARGET_REV); return t;},
+          labelColor:c=>{const col=c.datasetIndex===0?rC[c.dataIndex]:c.dataset.borderColor; return {borderColor:c.dataset.borderColor,backgroundColor:col};}}}},
+        scales:{x:axis({grid:{display:false},ticks:{color:css('--text'),maxRotation:0,autoSkip:false,callback:function(v,i,a){return (a.length-1-i)%2===0?this.getLabelForValue(v):'';}}}),y:axis({min:rR.min,max:rR.max,ticks:{stepSize:rR.step,color:css('--text'),callback:v=>v+'%'}})}}}); }
 
   renderOrg(p, team);
   /* 시리즈 */
@@ -3918,12 +4054,13 @@ $('changeCode').addEventListener('click',()=>{try{localStorage.removeItem(KEY_LS
 
 /* ===== 탭: 서비스 운영 KPI | 부서원 KPI — 같은 CRM 데이터(RAW)로 둘 다 계산 ===== */
 const VIEW_LS='fsg-kpi-view';
-const SCREENS={ov:{hash:'#overview'},sq:{hash:'#service-quality',scr:'sq'},org:{hash:'#organization',scr:'org',prod:'team'},prd:{hash:'#people',prod:'overview',tabs:['overview','person','ot','move']},eqp:{hash:'#instrument',scr:'eqp',prod:'equip'},pro:{hash:'#proactive',scr:'pro'}};
+const SCREENS={ov:{hash:'#overview'},sq:{hash:'#service-quality',scr:'sq',dsx:1},org:{hash:'#organization',scr:'org',prod:'team'},prd:{hash:'#people',prod:'overview',tabs:['overview','person','ot','move'],dsx:1},eqp:{hash:'#instrument',scr:'eqp',prod:'equip'},pro:{hash:'#proactive',scr:'pro'}};
 const VIEW_ALIAS={svc:'sq',prod:'prd'};   /* 예전 저장값·주소(#people)를 새 화면으로 */
 let VIEW=(()=>{ const h=location.hash; for(const k in SCREENS) if(SCREENS[k].hash===h) return k; let v=null; try{v=localStorage.getItem(VIEW_LS);}catch(e){} v=VIEW_ALIAS[v]||v; return SCREENS[v]?v:'ov'; })();
 let PROD=null, PROD_DIRTY=true;
 let SHIFT={}, SHIFT_INFO={state:'loading'}, _shiftLoading=null;   /* 근무일정표 시프트 근무일 — loadShifts() */
-const PROD_SKELETON=`<nav class="tabs" id="prodTabs">
+const PROD_SKELETON=`<div class="ovtitle dstitle" id="prodTitle"></div>
+  <nav class="tabs" id="prodTabs">
     <button data-tab="overview" class="active">전체 개요</button>
     <button data-tab="team">팀별 비교</button>
     <button data-tab="person">개인별 상세</button>
@@ -3970,6 +4107,11 @@ function renderProd(){
   if(ensureProd()||!PROD_SHOWN){
     $('prod').innerHTML=PROD_SKELETON; window.initProdDashboard(PROD); PROD_SHOWN=true;
   } else if(window.__prodRender) window.__prodRender();
+  prodTitle();
+}
+function prodTitle(){
+  const el=$('prodTitle'); if(!el||!PROD) return; const S=prodSelection(), n=Object.keys(PROD.person||{}).length;
+  el.innerHTML=`<div><h2>Productivity</h2><p>${esc(S.label)} · 비교 ${esc(S.cmpLabel)} · 직원 ${n}명 · 자료 CRM ${esc((D.excl&&D.excl.cut)||'-')} 기준${SRC&&SRC.at?' · 업데이트 '+esc(SRC.at):''}${S.prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div>`;
 }
 /* 부서원 계산(buildProdData)을 한 번만 — 서비스 탭 「팀별 1인당 생산성」과 부서원 탭이 같은 결과를 씀 */
 function prodOpts(S, weights){ return {hr:HRDATA, teams:PROD_UNITS, teamGroups:PROD_GROUPS, gradeNow:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), exclAvg:ROSTER.filter(r=>r[2]==='팀장'||NEWBIE.includes(r[0])).map(r=>r[0]), otEndHour:PROD_END_H, gradeHist:GRADE_HIST, weights:weights, holidays:KR_HOLIDAYS, shift:SHIFT, shiftInfo:SHIFT_INFO, sel:S.sel, cmp:S.cmp, trend:S.trend,
@@ -4157,7 +4299,7 @@ function setView(v){
   const c=SCREENS[v];
   document.querySelectorAll('#vtabs .vt').forEach(b=>b.setAttribute('aria-selected',b.dataset.view===v));
   $('svcBar').hidden=v==='prd'; $('prodBar').hidden=v!=='prd';
-  $('ov').hidden=v!=='ov'; $('mainArea').hidden=!c.scr; $('prod').hidden=!c.prod;
+  $('ov').hidden=v!=='ov'; $('mainArea').hidden=!c.scr; $('prod').hidden=!c.prod; $('mainArea').classList.toggle('dsx',!!(c.scr&&c.dsx)); $('prod').classList.toggle('dsx',!!(c.prod&&c.dsx));
   $('mainArea').querySelectorAll('[data-scr]').forEach(el=>el.classList.toggle('scr-off',!el.dataset.scr.split(' ').includes(c.scr)));
   $('mainArea').querySelectorAll('.grid').forEach(g=>{ const k=[...g.children].filter(x=>!x.classList.contains('scr-off')).length; g.classList.toggle('one',k<=1); });
   if(history.replaceState) history.replaceState(null,'',location.pathname+location.search+c.hash);
