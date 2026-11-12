@@ -27,6 +27,10 @@ on:
         description: "편집기 코드가 달라도 덮어쓴다 (yes 로 입력)"
         required: false
         default: "no"
+      pull_version:
+        description: "배포된 특정 버전의 코드만 받아 아티팩트로 올린다 (버전 번호, 예: 2). 넣으면 올리기는 하지 않는다"
+        required: false
+        default: ""
 concurrency: deploy-voc-apps-script
 permissions:
   contents: write
@@ -55,8 +59,49 @@ jobs:
             echo "ready=yes" >> "$GITHUB_OUTPUT"
           fi
 
+      # 웹 앱은 배포 시점에 얼린 코드로 돈다. 편집기(Head)에서 코드가 바뀌어도
+      # 배포된 버전은 그대로이므로, 그 버전 안에만 남아 있는 코드를 꺼내 볼 수 있다.
+      # (2026-11-12: doPost·CRM 업로드 입구가 버전 2 에만 있는 것을 확인)
+      - name: 배포된 버전 코드 받기
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version != ''
+        env:
+          CLASPRC: ${{ secrets.VOC_CLASPRC_JSON }}
+          SCRIPT_ID: ${{ secrets.VOC_SCRIPT_ID }}
+          VER: ${{ github.event.inputs.pull_version }}
+        run: |
+          printf '%s' "$CLASPRC" > ~/.clasprc.json
+          npm i -g @google/clasp@2.4.2 >/dev/null
+          mkdir -p gasver && cd gasver
+          printf '{"scriptId":"%s","rootDir":"."}' "$SCRIPT_ID" > .clasp.json
+          clasp pull --versionNumber "$VER"
+          echo "--- 버전 $VER 의 파일 ---"; ls -la
+          mkdir -p ../version_out
+          cp -a . ../version_out/ 2>/dev/null || :
+          rm -f ../version_out/.clasp.json ~/.clasprc.json
+          cd ..
+          echo "### 버전 $VER 에만 있는 것" >> "$GITHUB_STEP_SUMMARY"
+          for f in doPost uploadCore_ crmLoadFromFolder_ loadCrmTable_ crmConvert_ UPLOAD_TOKEN; do
+            n=$(grep -rho "$f" version_out 2>/dev/null | wc -l)
+            m=$(grep -o "$f" apps-script/survey_analysis.gs 2>/dev/null | wc -l)
+            echo "- \`$f\` — 버전 $VER: ${n}회 / 지금 저장소: ${m}회" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: 버전 코드 보관
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: apps-script-version-${{ github.event.inputs.pull_version }}
+          path: version_out
+          retention-days: 14
+
+      - name: 버전만 받고 끝낸다
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version != ''
+        run: |
+          echo "::notice::버전 ${{ github.event.inputs.pull_version }} 코드를 아티팩트로 올렸습니다 — 올리기는 하지 않았습니다."
+          exit 0
+
       - name: 편집기 코드 받기
-        if: steps.check.outputs.ready == 'yes'
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == ''
         id: pull
         env:
           CLASPRC: ${{ secrets.VOC_CLASPRC_JSON }}
@@ -74,7 +119,7 @@ jobs:
           echo "want=$(cat apps-script/.deployed.sha256 | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
 
       - name: 편집기 코드 보관 (비교용)
-        if: steps.check.outputs.ready == 'yes'
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == ''
         uses: actions/upload-artifact@v4
         with:
           name: editor-code-before-deploy
@@ -82,7 +127,7 @@ jobs:
           retention-days: 14
 
       - name: 편집기가 직접 수정됐는지 확인
-        if: steps.check.outputs.ready == 'yes'
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == ''
         run: |
           LIVE='${{ steps.pull.outputs.live }}'
           WANT='${{ steps.pull.outputs.want }}'
@@ -106,7 +151,7 @@ jobs:
           exit 1
 
       - name: 올리기
-        if: steps.check.outputs.ready == 'yes'
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == ''
         env:
           DEPLOYMENT_ID: ${{ secrets.VOC_DEPLOYMENT_ID }}
         run: |
@@ -121,7 +166,7 @@ jobs:
           rm -f ~/.clasprc.json
 
       - name: 올린 코드를 기준 해시로 기록
-        if: steps.check.outputs.ready == 'yes'
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == ''
         run: |
           NEW=$(bash apps-script/normalize.sh apps-script/survey_analysis.gs | sha256sum | cut -d' ' -f1)
           if [ "$NEW" = "$(cat apps-script/.deployed.sha256 | tr -d '[:space:]')" ]; then
