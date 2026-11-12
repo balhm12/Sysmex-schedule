@@ -443,6 +443,94 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 #prod .empty-note b{color:var(--text-primary)}
 #prod td.dpos span,#prod td.dneg span{background:none !important;color:var(--text-secondary) !important;padding:0 !important}
 @media (max-width:600px){#prod #lbTable th:nth-child(4),#prod #lbTable td:nth-child(4),#prod #lbTable th:nth-child(7),#prod #lbTable td:nth-child(7),#prod #lbTable .score-bar-track{display:none}#prod #lbTable .score-cell{min-width:0}}
+/* ===== Overview (2026-11-12 시안) — 본사 보고서 방식: 파랑 큰 숫자 + 작은 단위 + 회색 증감 + 연한 파랑 머리글 표. 색은 페이지 변수(다크 모드 포함)를 따른다 ===== */
+#ov{--ovp:var(--primary);padding-top:14px;padding-bottom:40px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #ov{--ovp:#5AA9F0}}
+:root[data-theme="dark"] #ov{--ovp:#5AA9F0}
+#ov .ovtitle h2{margin:0;font-size:24px;color:var(--ovp);font-weight:700}
+#ov .ovtitle p{margin:2px 0 12px;font-size:13.5px;color:var(--muted)}
+#ov .ovpv{color:var(--warn-t,#8F5C06);font-weight:700}
+#ov .ovkpi{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--primary);display:grid;grid-template-columns:repeat(4,1fr)}
+#ov .ovkc{all:unset;box-sizing:border-box;cursor:pointer;padding:14px 16px 12px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:2px;position:relative;min-height:44px}
+#ov .ovkc:first-child{border-left:0}
+#ov .ovkc:hover{background:var(--card)}
+#ov .ovkc[aria-selected=true]{background:var(--tint)}
+#ov .ovkc[aria-selected=true]::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--primary)}
+#ov .ovkc:focus-visible,#ov button:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+#ov .ovl{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:15px;font-weight:700;color:var(--ovp)}
+#ov .ovv{font-size:36px;font-weight:300;color:var(--ovp);line-height:1.15;letter-spacing:-.02em;font-family:Arial,'Malgun Gothic',sans-serif}
+#ov .ovv small{font-size:15px;font-weight:400;margin-left:3px}
+#ov .ovt{font-size:13px;color:var(--text)}
+#ov .ovd{font-size:12px;color:var(--muted)}
+#ov .ovh{font-size:12px;color:var(--muted)}
+#ov .ovchip{font-size:12px;font-weight:700;padding:1px 8px;border-radius:4px;line-height:20px;white-space:nowrap}
+#ov .ovchip.good{background:var(--good-bg,#E6F5E8);color:var(--good-t,#26782D)}
+#ov .ovchip.warn{background:var(--warn-bg,#FDF1D8);color:var(--warn-t,#8F5C06)}
+#ov .ovchip.bad{background:var(--bad-bg,#FCE9E8);color:var(--bad-t,#C8312E)}
+#ov .ovchip.none{background:var(--card);color:var(--muted)}
+#ov .ovgrid{display:grid;gap:14px;margin-top:14px}
+#ov .ovg-a{grid-template-columns:2fr 1fr}#ov .ovg-b{grid-template-columns:1fr 1fr}
+#ov .ovgrid>*{min-width:0}
+#ov .ovcard{background:var(--surface);border:1px solid var(--border);padding:14px 16px;min-width:0}
+#ov .ovcard h3{margin:0 0 10px;font-size:16px;font-weight:700;color:var(--ovp);padding-bottom:6px;border-bottom:1px solid var(--primary);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+#ov .ovsub{font-size:12px;font-weight:400;color:var(--muted)}
+#ov .ovtools{margin-left:auto;display:flex;min-width:0;max-width:100%}
+#ov .ovseg{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;background:var(--surface)}
+#ov .ovseg button{border:0;background:var(--surface);padding:0 12px;height:34px;font:inherit;font-size:12.5px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
+#ov .ovseg button+button{border-left:1px solid var(--border)}
+#ov .ovseg button[aria-pressed=true]{background:var(--tint);color:var(--ovp);font-weight:700}
+#ov .ovscroll{overflow-x:auto;scrollbar-width:none;max-width:100%}
+#ov .ovsum{display:flex;gap:6px 22px;flex-wrap:wrap;margin:0 0 6px;font-size:13px;color:var(--muted)}
+#ov .ovsum b{color:var(--text);margin-left:4px}
+#ov .ovchart{position:relative}
+#ov .ovtip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--primary);padding:5px 9px;font-size:12.5px;color:var(--text);white-space:nowrap;transform:translate(-50%,-100%);display:none}
+#ov .ovtip b{color:var(--ovp)}
+#ov .ovnote{font-size:12px;color:var(--muted);margin:8px 0 0}
+#ov .ovhl{margin:0;padding:0;list-style:none}
+#ov .ovhl li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--border)}
+#ov .ovhl li:first-child{border-top:0}
+#ov .ovhl b{display:block;font-size:14px;color:var(--text)}#ov .ovhl .ovs{font-size:12px;color:var(--muted)}
+#ov .ovhl button{border:1px solid var(--border);background:var(--surface);border-radius:6px;height:36px;padding:0 12px;font:inherit;font-size:13px;font-weight:700;color:var(--ovp);cursor:pointer;white-space:nowrap}
+#ov .ovdw{display:grid;grid-template-columns:190px 1fr;gap:16px;align-items:center}
+#ov .ovlg{width:100%;border-collapse:collapse;font-size:13px}
+#ov .ovlg td{padding:7px 6px;border-bottom:1px solid var(--border);text-align:right}
+#ov .ovlg td:first-child{text-align:left;font-weight:700;color:var(--text)}
+#ov .ovlg tr.tot td{border-top:1px solid var(--muted);font-weight:700}
+#ov .ovsw{display:inline-block;width:10px;height:10px;margin-right:8px}
+#ov .ovhb{all:unset;box-sizing:border-box;display:grid;grid-template-columns:92px 1fr 124px;gap:10px;align-items:center;width:100%;padding:6px 4px;cursor:pointer;min-height:36px;font-size:13px;border-radius:4px}
+#ov .ovhb:hover{background:var(--card)}#ov .ovhb.sel{background:var(--tint)}
+#ov .ovhn{font-weight:700;color:var(--text);white-space:nowrap}
+#ov .ovht{position:relative;height:14px;background:var(--card)}
+#ov .ovht i{position:absolute;left:0;top:0;bottom:0;background:var(--muted);opacity:.55}
+#ov .ovhb.sel .ovht i{background:var(--primary);opacity:1}
+#ov .ovht u{position:absolute;top:-4px;bottom:-4px;width:0;border-left:1.5px dashed var(--text);text-decoration:none}
+#ov .ovhv{text-align:right;font-weight:700;color:var(--text);white-space:nowrap}
+#ov .ovhv em{font-style:normal;font-size:11.5px;margin-left:6px}
+#ov .ovhv em.good{color:var(--good-t,#26782D)}#ov .ovhv em.warn{color:var(--warn-t,#8F5C06)}#ov .ovhv em.bad{color:var(--bad-t,#C8312E)}
+#ov .ovtw{overflow-x:auto}#ov .ovsm{display:none}
+#ov table.ovtab{border-collapse:collapse;width:100%;font-size:13px}
+#ov .ovtab th{background:var(--tint);color:var(--ovp);font-weight:700;text-align:right;padding:0;border-bottom:1px solid var(--muted);white-space:nowrap}
+#ov .ovtab th button{all:unset;box-sizing:border-box;cursor:pointer;padding:9px 10px;min-height:40px;width:100%;text-align:right;display:block}
+#ov .ovtab th:first-child button{text-align:left}
+#ov .ovtab th[aria-sort=ascending] button::after{content:" ▲"}#ov .ovtab th[aria-sort=descending] button::after{content:" ▼"}
+#ov .ovtab td{padding:10px;border-bottom:1px solid var(--border);text-align:right;color:var(--text)}
+#ov .ovtab td:first-child{text-align:left;font-weight:700;white-space:nowrap}
+#ov .ovtab tr.tgt td{background:var(--tint);color:var(--ovp);font-weight:700}
+#ov .ovtab tr.row{cursor:pointer}#ov .ovtab tr.sel td{background:var(--tint)}#ov .ovtab tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--primary)}
+#ov .ovtab td.st-good{color:var(--good-t,#26782D);font-weight:700}#ov .ovtab td.st-warn{color:var(--warn-t,#8F5C06);font-weight:700}#ov .ovtab td.st-bad{color:var(--bad-t,#C8312E);font-weight:700}
+#ov .ovtag{font-size:11.5px;margin-left:4px}
+#ov .ovpro{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--border)}
+#ov .ovpc{padding:12px 14px;border-left:1px solid var(--border)}#ov .ovpc:first-child{border-left:0}
+#ov .ovpc .ovl{font-size:14px}#ov .ovpc .ovv{font-size:28px;margin-top:2px}
+#ov .ovpc.ovnd{background:var(--card);border-left:1px dashed var(--muted)}
+#ov .ovpc.ovnd .ovv{font-size:15px;font-weight:700;color:var(--muted);margin-top:8px}
+@media (max-width:600px){body[data-view=ov] header.top .sub{display:none}body[data-view=ov] .vtabs .vinfo #info{display:none}body[data-view=ov] .vtabs .vinfo{justify-content:flex-start}body[data-view=ov] .vtabs .vinfo .vbtns{width:100%}body[data-view=ov] .vtabs .vinfo .lbtn{flex:1}
+  body[data-view=ov] #svcBar .wrap{flex-wrap:nowrap;gap:8px;padding-top:8px;padding-bottom:8px}body[data-view=ov] #svcBar .f{flex:1;min-width:0}body[data-view=ov] #svcBar .f:first-child{flex:1.7}body[data-view=ov] #svcBar .f select{width:100%}}
+@media (max-width:1000px){#ov .ovg-a,#ov .ovg-b{grid-template-columns:1fr}#ov .ovkpi{grid-template-columns:repeat(2,1fr)}#ov .ovkc:nth-child(3){border-left:0}#ov .ovkc:nth-child(n+3){border-top:1px solid var(--border)}#ov .ovpro{grid-template-columns:repeat(2,1fr)}#ov .ovpc:nth-child(odd){border-left:0}#ov .ovpc:nth-child(n+3){border-top:1px solid var(--border)}}
+@media (max-width:600px){#ov .ovtitle h2{font-size:20px}#ov .ovkc{padding:12px 10px 10px}#ov .ovv{font-size:30px}#ov .ovh{display:none}#ov .ovcard{padding:12px}#ov .ovgrid{gap:12px}
+  #ov .ovdw{grid-template-columns:1fr}#ov .ovdw svg{max-width:190px;margin:0 auto;display:block}#ov .ovhb{grid-template-columns:84px 1fr 100px}#ov .ovseg button,#ov .ovhl button{height:44px}#ov .ovtab th button{min-height:44px}
+  #ov .ovtab th:nth-child(2),#ov .ovtab td:nth-child(2),#ov .ovtab th:nth-child(4),#ov .ovtab td:nth-child(4),#ov .ovtab th:nth-child(5),#ov .ovtab td:nth-child(5){display:none}#ov .ovtab td .ovtag{display:block;margin:0}
+  #ov .ovtab th button{padding:8px 5px}#ov .ovtab td{padding:10px 5px}#ov .ovsm{display:inline}#ov .ovfl{display:none}#ov .ovpc .ovh{display:block}#ov .ovpro{grid-template-columns:1fr}#ov .ovpc{border-left:0!important;border-top:1px solid var(--border)}#ov .ovpc:first-child{border-top:0}}
 </style>
 </head>
 <body>
@@ -540,6 +628,7 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 </div></section>
 
 <nav class="vtabs" id="vtabs" hidden><div class="wrap" role="tablist" aria-label="대시보드 선택">
+  <button class="vt" role="tab" id="vtOv" data-view="ov" aria-selected="false" aria-controls="ov">Overview<small>핵심 현황</small></button>
   <button class="vt" role="tab" id="vtSvc" data-view="svc" aria-selected="true" aria-controls="mainArea">서비스 운영 KPI<small>전체 운영 현황</small></button>
   <button class="vt" role="tab" id="vtProd" data-view="prod" aria-selected="false" aria-controls="prod">부서원 KPI<small>개인별 KPI 점수</small></button>
   <div class="vinfo"><div id="info"></div><div class="vbtns"><button class="lbtn" id="adminToggle" aria-label="관리자 화면으로 전환">관리자</button><button class="lbtn" id="changeCode">접근 코드 변경</button></div></div>
@@ -561,6 +650,7 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
   <input type="password" id="lockIn" autocomplete="current-password" aria-label="접근 코드"><button id="lockBtn">열기</button>
   <div id="lockMsg" class="bad" role="alert"></div></div></div>
 <section id="empty" class="wrap" hidden><div class="panel" style="margin-top:24px"><p id="emptyMsg" style="margin:0"></p></div></section>
+<main class="wrap" id="ov" role="tabpanel" aria-labelledby="vtOv" hidden></main>
 <main class="wrap" id="mainArea" hidden>
   <h2 class="sec">팀 구성 <small id="orgSub"></small></h2>
   <section class="teams" id="teams"></section>
@@ -3697,10 +3787,10 @@ function refresh(){
   $('sub').textContent=`데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)} (CRM 추출일 ${D.excl.cut}까지${D.excl.future?`, 이후 예정 ${fmt(D.excl.future)}건 제외`:''}), 원본 ${SRC.act}`;
   $('info').innerHTML=`활동 ${fmt(D.rawN)}건${SERIAL?`, 자산대장 '사용' ${fmt(SERIAL.length)}대`:''}<br>최종 업데이트 ${SRC.at||'-'}`;
   render();
-  buildProdPeriods(); PROD_DIRTY=true; if(VIEW==='prod'&&!$('prod').hidden) renderProd();
+  buildProdPeriods(); PROD_DIRTY=true; if(VIEW==='prod'&&!$('prod').hidden) renderProd(); if(VIEW==='ov') renderOv();
 }
 $('fTeam').innerHTML='<option value="">FSG 전체</option>'+TEAMS.map(t=>`<option>${t}</option>`).join('');
-['fPeriod','fTeam'].forEach(id=>$(id).addEventListener('change',render));
+['fPeriod','fTeam'].forEach(id=>$(id).addEventListener('change',()=>{ if(VIEW==='ov') renderOv(); else render(); }));
 $('fErrFam').addEventListener('change',()=>drawErr());
 /* 팀 카드 → 팀 필터 */
 const pickTeam=el=>{ const c=el.closest('.tc[data-team]'); if(!c) return; $('fTeam').value=c.dataset.team; render(); };
@@ -3715,7 +3805,7 @@ document.querySelectorAll('#tInst th.s').forEach(th=>{const go=()=>{const k=th.d
   th.addEventListener('click',go);th.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});});
 $('openUpl').addEventListener('click',()=>{const o=$('upl').classList.toggle('open');$('openUpl').setAttribute('aria-expanded',o);});
 bindDrop('dropAct','fAct','act'); bindDrop('dropSer','fSer','ser'); bindDrop('dropHr','fHr','hr'); bindDrop('dropGeo','fGeo','geo'); bindDrop('dropEq','fEq','eq');
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>render());
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ render(); if(VIEW==='ov') renderOv(); });
 if(typeof Chart!=='undefined'){Chart.defaults.font.family="'Malgun Gothic', Arial, sans-serif";Chart.defaults.font.size=12;}
 $('lockBtn').addEventListener('click',submitCode);
 $('lockIn').addEventListener('keydown',e=>{if(e.key==='Enter')submitCode();});
@@ -3727,7 +3817,7 @@ $('changeCode').addEventListener('click',()=>{try{localStorage.removeItem(KEY_LS
 
 /* ===== 탭: 서비스 운영 KPI | 부서원 KPI — 같은 CRM 데이터(RAW)로 둘 다 계산 ===== */
 const VIEW_LS='fsg-kpi-view';
-let VIEW=(location.hash==='#people')?'prod':(()=>{try{return localStorage.getItem(VIEW_LS)||'svc';}catch(e){return 'svc';}})();
+let VIEW=(location.hash==='#people')?'prod':(location.hash==='#overview')?'ov':(()=>{try{return localStorage.getItem(VIEW_LS)||'ov';}catch(e){return 'ov';}})();
 let PROD=null, PROD_DIRTY=true;
 let SHIFT={}, SHIFT_INFO={state:'loading'}, _shiftLoading=null;   /* 근무일정표 시프트 근무일 — loadShifts() */
 const PROD_SKELETON=`<nav class="tabs" id="prodTabs">
@@ -3801,16 +3891,149 @@ function ensureProd(){
 $('pPeriod').addEventListener('change',()=>{ $('fPeriod').value=$('pPeriod').value; syncRange(); PROD_DIRTY=true; renderProd(); });
 $('fPeriod').addEventListener('change',()=>{ $('pPeriod').value=$('fPeriod').value; syncRange(); PROD_DIRTY=true; });
 [['fFrom','pFrom'],['fTo','pTo']].forEach(([a,b])=>{
-  $(a).addEventListener('change',()=>{ $(b).value=$(a).value; PROD_DIRTY=true; render(); });
+  $(a).addEventListener('change',()=>{ $(b).value=$(a).value; PROD_DIRTY=true; if(VIEW==='ov') renderOv(); else render(); });
   $(b).addEventListener('change',()=>{ $(a).value=$(b).value; PROD_DIRTY=true; renderProd(); });
 });
 $('pExLead').addEventListener('change',()=>{ if(PROD){ PROD.ex_lead=$('pExLead').checked; if(window.__prodRender) window.__prodRender(); } });
+/* ===== Overview (2026-11-12 2단계 시안) — 핵심 KPI 4개·추이·확인이 필요한 곳·업무 유형·조직·예방 서비스
+   읽기 전용: 계산은 stats()·PROD(부서원 계산)를 그대로 읽고, 새 계산식을 만들지 않는다(업무 유형 묶음만 kpiCore BUCKET과 같은 목록을 쓰며 tests/test_kpi_overview.js 가 일치를 확인) ===== */
+const OV={metric:'ftfr',range:12,om:'cnt',sortK:null,sortDir:-1,hov:null};
+const OV_K=[{k:'ftfr',n:'FTFR',u:'%',d:1,t:()=>TARGET_FTFR,hi:true,tl:()=>TARGET_FTFR+'% 이상',h:'한 번에 고친 비율'},
+ {k:'rev',n:'재방문율',u:'%',d:1,t:()=>TARGET_REV,hi:false,tl:()=>TARGET_REV+'% 이하',h:'고친 뒤 14일 안에 다시 방문한 비율'},
+ {k:'mttr',n:'MTTR',u:'분',d:1,t:()=>TARGET_MTTR,hi:false,tl:()=>TARGET_MTTR+'분 이하',h:'고장 수리 평균 소요 시간'},
+ {k:'idx',n:'예방정비 지수',u:'%',d:1,t:()=>null,hi:true,tl:()=>'목표 없음',h:'PM ÷ (PM + 고장 수리)'}];
+const OV_ACT=[['고장수리','고장 수리','#005BAC'],['PM','PM','#00B9EF'],['설치이전','설치·이전','#5185C5'],['Cal평가','Calibration·평가','#84BAE5'],['기타','기타','#9FA0A0']];
+const OV_BUCKET={'고장 수리':'고장수리','PM':'PM','온라인 정기점검':'PM'};
+['장비 설치','장비 이전 설치','설치/데모 평가','설치','장비 철수','철수 및 폐기'].forEach(p=>{OV_BUCKET[p]='설치이전';});
+['Calibration','원격 Calibration','Evaluation','EVALUATION','데이터 문제 해결 (QC/검체)','Quality Control'].forEach(p=>{OV_BUCKET[p]='Cal평가';});
+const ovBucket=p=>OV_BUCKET[p]||'기타';
+/* 상태: 서비스 탭 카드와 같은 tgSt (달성/근접/미달) */
+const ovSt=(o,v)=>{ const t=o.t(); if(v==null||t==null) return {st:'none',chip:''}; return tgSt(v,t,o.hi); };
+const ovF=(o,v)=>v==null?'-':(o.d?v.toFixed(o.d):Math.round(v).toLocaleString('ko-KR'));
+function ovGap(o,v){ const t=o.t(); if(t==null||v==null) return t==null?'목표를 정하면 차이를 표시':''; const d=v-t, a=Math.abs(d).toFixed(o.d); const u=o.u==='%'?'%p':'분'; return '목표보다 '+a+u+(d>=0?' 높음':' 낮음'); }
+function ovDelta(o,c,p,lab){ if(c==null||p==null) return lab+' 비교 자료 없음'; const d=c-p, u=o.u==='%'?'%p':'분'; if(Math.abs(d)<(o.u==='%'?0.05:0.5)) return lab+'과 같음'; return lab+' 대비 '+(d>0?'▲ ':'▼ ')+Math.abs(d).toFixed(o.d)+u; }
+function ovSvg(data,labels,target,o,w,h){
+  const vals=data.filter(v=>v!=null).concat(target!=null?[target]:[]); if(!vals.length) return '<p class="ovnote">그릴 자료가 없습니다.</p>';
+  let lo=Math.min(...vals), hi=Math.max(...vals), pad=(hi-lo)*0.2||1; lo=lo-pad; hi=hi+pad; if(o.u==='%'){ hi=Math.min(hi,100); lo=Math.max(lo,0); } if(o.d===0){ lo=Math.floor(lo); hi=Math.ceil(hi); }
+  const pl=w<500?38:44, pr=w<500?58:72, pt=14, pb=26, n=data.length, X=i=>pl+(w-pl-pr)*i/(n-1), Y=v=>pt+(h-pt-pb)*(1-(v-lo)/(hi-lo));
+  let s=`<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="${o.n} 최근 ${n}개월 추이">`;
+  [lo,(lo+hi)/2,hi].forEach(t=>{ s+=`<line x1="${pl}" x2="${w-pr}" y1="${Y(t)}" y2="${Y(t)}" stroke="var(--grid)"/><text x="${pl-6}" y="${Y(t)+4}" text-anchor="end" font-size="12" fill="var(--muted)">${o.d?t.toFixed(o.d):Math.round(t)}</text>`; });
+  if(target!=null) s+=`<line x1="${pl}" x2="${w-pr}" y1="${Y(target)}" y2="${Y(target)}" stroke="var(--muted)" stroke-width="1.3" stroke-dasharray="5 4"/><text x="${w-pr+6}" y="${Y(target)+4}" font-size="12" fill="var(--muted)">목표 ${o.d?target.toFixed(o.d):target}</text>`;
+  const ev=n>8?3:1; labels.forEach((l,i)=>{ if(i%ev===(n-1)%ev) s+=`<text x="${X(i)}" y="${h-6}" text-anchor="middle" font-size="12" fill="var(--muted)">${l}</text>`; });
+  let d='',pen=false; data.forEach((v,i)=>{ if(v==null){pen=false;return;} d+=(pen?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1); pen=true; });
+  s+=`<path d="${d}" fill="none" stroke="var(--ovp)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  let li=-1; data.forEach((v,i)=>{ if(v!=null) li=i; });
+  if(li>=0) s+=`<circle cx="${X(li)}" cy="${Y(data[li])}" r="4.5" fill="var(--ovp)" stroke="var(--surface)" stroke-width="2"/><text x="${X(li)+8}" y="${Y(data[li])+((target!=null&&Math.abs(Y(data[li])-Y(target))<18)?(Y(data[li])>=Y(target)?20:-10):-8)}" font-size="13" font-weight="700" fill="var(--ovp)">${ovF(o,data[li])}${o.u}</text>`;
+  s+=`<line class="cross" y1="${pt}" y2="${h-pb}" stroke="var(--ovp)" opacity="0"/><circle class="dot" r="4.5" fill="var(--ovp)" stroke="var(--surface)" stroke-width="2" opacity="0"/>`;
+  data.forEach((v,i)=>{ if(v==null) return; const bw=(w-pl-pr)/(n-1); s+=`<rect class="hit" data-i="${i}" data-x="${X(i).toFixed(1)}" data-y="${Y(v).toFixed(1)}" x="${X(i)-bw/2}" y="0" width="${bw}" height="${h-pb}" fill="transparent"/>`; });
+  return s+'</svg>';
+}
+function ovChronic(end,team){
+  const ms=last12Set(end), rep={}, last={};
+  for(const o of D.rows){ if(!ms.has(o.mk)||!o.sn||!o.acct) continue; if(team&&o.atm!==team) continue; if(o.purp!=='고장 수리') continue;
+    const k=o.sn+'|'+o.acct; rep[k]=(rep[k]||0)+1; if(!(last[k]>=o.t)) last[k]=o.t; }
+  let keys=Object.keys(rep).filter(k=>rep[k]>=3);
+  if(SERIAL){ const used=new Set(SERIAL.filter(s=>s.state==='사용'&&s.sn&&s.acct).map(s=>s.sn+'|'+s.acct)); keys=keys.filter(k=>used.has(k)); }
+  const cut=D.maxT-90*DAY; return {chronic:keys.length, risk:SERIAL?keys.filter(k=>last[k]>=cut).length:null};
+}
+function renderOv(){
+  const root=$('ov'); if(!D||!root) return;
+  const p=curPeriod(), team=$('fTeam').value||null, pp=prevPeriod(p), cur=stats(p.months,team), prv=stats(pp.months,team), prov=isProvisional(p.months);
+  const lab=pp.label, scope=team||'FSG 전체';
+  // 12개월 추이
+  const _l=D.months[D.months.length-1], end=p.months.filter(m=>m<=_l).pop()||_l, tm=[]; for(let i=11;i>=0;i--) tm.push(shiftMonth(end,-i));
+  const ts=tm.map(m=>stats([m],team)), tl=tm.map(m=>m.slice(2).replace('-','.'));
+  // 업무 유형
+  const ms=new Set(p.months), pms=new Set(pp.months), act={},actP={}; OV_ACT.forEach(a=>{act[a[0]]=0;actP[a[0]]=0;});
+  for(const o of D.rows){ const inC=ms.has(o.mk), inP=pms.has(o.mk); if(!inC&&!inP) continue; const n=team?o.cteams.filter(t=>t===team).length:o.credits.length; if(!n) continue; const b=ovBucket(o.purp); if(inC) act[b]+=n; if(inP) actP[b]+=n; }
+  const aTot=OV_ACT.reduce((a,x)=>a+act[x[0]],0), aTotP=OV_ACT.reduce((a,x)=>a+actP[x[0]],0);
+  // 확인이 필요한 곳 — 팀별 상태
+  const T=TEAMS.map(t=>({n:t,s:stats(p.months,t)})), al=[];
+  T.forEach(x=>OV_K.slice(0,3).forEach(o=>{ const v=x.s[o.k], st=ovSt(o,v); if(st.st==='bad'||st.st==='warn') al.push({n:x.n,o,v,st}); }));
+  al.sort((a,b)=>(a.st.st==='bad'?0:1)-(b.st.st==='bad'?0:1));
+  const ch=ovChronic(end,team);
+  root.innerHTML=`
+  <div class="ovtitle"><div><h2>Overview</h2><p>${esc(p.label)} · ${esc(scope)} · 비교 ${esc(lab)} · 자료 CRM ${esc((D.excl&&D.excl.cut)||'-')} 기준${SRC&&SRC.at?' · 업데이트 '+esc(SRC.at):''}${prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div></div>
+  <section class="ovkpi" id="ovKpi" role="tablist" aria-label="핵심 지표 4개. 선택하면 아래 추이 그래프가 바뀝니다">${OV_K.map(o=>{ const v=cur[o.k], st=ovSt(o,v);
+    return `<button class="ovkc" role="tab" aria-selected="${o.k===OV.metric}" data-k="${o.k}"><span class="ovl">${o.n}${st.chip?`<span class="ovchip ${st.st}">${st.chip}</span>`:''}</span>
+      <span class="ovv">${ovF(o,v)}<small>${o.u}</small></span><span class="ovt">${o.t()==null?'목표 없음':'목표 '+o.tl()+' · '+ovGap(o,v)}</span><span class="ovd">${ovDelta(o,v,prv[o.k],lab)}</span><span class="ovh">${o.h}</span></button>`; }).join('')}</section>
+  <div class="ovgrid ovg-a">
+    <section class="ovcard" aria-labelledby="ovh2"><h3 id="ovh2"><span id="ovTrT"></span><span class="ovtools"><span class="ovseg" role="group" aria-label="기간 범위"><button data-r="6">6개월</button><button data-r="12">12개월</button></span></span></h3>
+      <div class="ovsum" id="ovSum"></div><div class="ovchart" id="ovBox"></div><p class="ovnote" id="ovTrN"></p></section>
+    <section class="ovcard" aria-labelledby="ovh6"><h3 id="ovh6">확인이 필요한 곳</h3><p class="ovnote" style="margin:0 0 4px">팀별로 목표에 못 미치거나 근접한 항목입니다.</p>
+      ${al.length?`<ul class="ovhl">${al.slice(0,6).map(a=>`<li><span class="ovchip ${a.st.st}">${a.st.chip}</span><div><b>${esc(a.n)} ${a.o.n} ${ovF(a.o,a.v)}${a.o.u}</b><span class="ovs">목표 ${a.o.tl()}</span></div><button data-t="${esc(a.n)}">팀 보기</button></li>`).join('')}</ul>`:'<p class="ovnote">목표에 못 미치는 팀이 없습니다.</p>'}</section>
+  </div>
+  <div class="ovgrid ovg-b">
+    <section class="ovcard" aria-labelledby="ovh3"><h3 id="ovh3">업무 유형 <span class="ovsub">${esc(p.label)} · 취소·온라인 정기점검 제외</span></h3>
+      <div class="ovdw"><div id="ovDn"></div><table class="ovlg" id="ovLg"><tbody>${OV_ACT.map((a,i)=>`<tr><td><span class="ovsw" style="background:${a[2]}"></span>${a[1]}</td><td>${fmt(act[a[0]])}건</td><td>${aTot?(act[a[0]]/aTot*100).toFixed(1):'-'}%</td><td>${actP[a[0]]===act[a[0]]?'':(act[a[0]]>actP[a[0]]?'▲ ':'▼ ')+fmt(Math.abs(act[a[0]]-actP[a[0]]))}</td></tr>`).join('')}<tr class="tot"><td>합계</td><td>${fmt(aTot)}건</td><td>100%</td><td>${aTot===aTotP?'':(aTot>aTotP?'▲ ':'▼ ')+fmt(Math.abs(aTot-aTotP))}</td></tr></tbody></table></div></section>
+    <section class="ovcard" aria-labelledby="ovh4"><h3 id="ovh4">조직 비교 <span class="ovtools"><span class="ovseg ovscroll" id="ovMseg" role="group" aria-label="비교 지표"></span></span></h3><div id="ovBars"></div></section>
+  </div>
+  <section class="ovcard" style="margin-top:14px" aria-labelledby="ovh4b"><h3 id="ovh4b">팀 비교표 <span class="ovsub">머리글을 누르면 정렬 · 행을 누르면 그 팀만 봅니다</span></h3><div class="ovtw" id="ovTbl"></div>
+    <p class="ovnote">팀 인원이 달라 건수만으로 성과를 판단하지 않습니다. 1인당 값과 가중치 업무량(1인당 KPI 점수)은 팀장·신입을 뺀 인원 기준입니다. 야간·휴일·이동거리는 부서원 KPI에서 함께 봅니다.</p></section>
+  <section class="ovcard" style="margin-top:14px" aria-labelledby="ovh5"><h3 id="ovh5">예방 서비스</h3>
+    <div class="ovpro"><div class="ovpc"><div class="ovl">PM 실적</div><div class="ovv">${fmt(cur.pm)}<small>건</small></div><div class="ovh">${cur.pm===prv.pm?lab+'과 같음':lab+' 대비 '+(cur.pm>prv.pm?'▲ ':'▼ ')+fmt(Math.abs(cur.pm-prv.pm))+'건'}</div></div>
+      <div class="ovpc"><div class="ovl">예방정비 지수</div><div class="ovv">${f1(cur.idx)}<small>%</small></div><div class="ovh">PM ÷ (PM + 고장 수리) · 목표 없음</div></div>
+      <div class="ovpc"><div class="ovl">반복 고장 장비</div><div class="ovv">${fmt(ch.chronic)}<small>대</small></div><div class="ovh">12개월 내 3회 이상 고장${SERIAL?' · 자산대장 사용 장비':' · 자산대장 미등록(CRM 이력 기준)'}</div></div>
+      <div class="ovpc ovnd"><div class="ovl">위험 장비</div><div class="ovv">${ch.risk==null?'자산대장 미등록':fmt(ch.risk)+'<small>대</small>'}</div><div class="ovh">반복 고장 + 최근 90일 안에 고장${ch.risk==null?' · 자산대장을 올리면 표시':''}</div></div>
+      <div class="ovpc ovnd"><div class="ovl">표준 사전점검</div><div class="ovv">집계하지 않음</div><div class="ovh">CRM 활동 목적에 구분이 없습니다</div></div></div></section>`;
+  // 추이
+  const o=OV_K.find(x=>x.k===OV.metric), n=OV.range, arr=ts.map(s=>s[o.k]).slice(-n), lb=tl.slice(-n), tg=o.t();
+  const nn=arr.filter(v=>v!=null), avg=nn.length?nn.reduce((a,b)=>a+b,0)/nn.length:null;
+  $('ovTrT').textContent=o.n+' 추이';
+  $('ovSum').innerHTML=`<span>현재<b>${ovF(o,cur[o.k])}${o.u}</b></span><span>${ovDelta(o,cur[o.k],prv[o.k],lab)}</span><span>목표<b>${tg==null?'없음':o.tl()}</b></span><span>${n}개월 평균<b>${ovF(o,avg)}${o.u}</b></span>`;
+  const draw=()=>{ const W=Math.round(Math.max(300,Math.min(760,$('ovBox').clientWidth||760))); $('ovBox').innerHTML=ovSvg(arr,lb,tg,o,W,W<500?250:300)+'<div class="ovtip" id="ovTip"></div>';
+    const svg=$('ovBox').querySelector('svg'); if(!svg) return; const cross=svg.querySelector('.cross'), dot=svg.querySelector('.dot'), tip=$('ovTip');
+    svg.querySelectorAll('.hit').forEach(h=>{ const show=()=>{ const i=+h.dataset.i,x=+h.dataset.x,y=+h.dataset.y,sc=svg.clientWidth/W;
+      cross.setAttribute('x1',x);cross.setAttribute('x2',x);cross.setAttribute('opacity',.35);dot.setAttribute('cx',x);dot.setAttribute('cy',y);dot.setAttribute('opacity',1);
+      tip.innerHTML=`${lb[i]} <b>${ovF(o,arr[i])}${o.u}</b>`+(tg!=null?` · 목표 ${ovF(o,tg)}`:''); tip.style.display='block'; tip.style.left=Math.min(Math.max(x*sc,60),svg.clientWidth-60)+'px'; tip.style.top=(y*sc-10)+'px'; };
+      h.addEventListener('pointerenter',show); h.addEventListener('pointermove',show); });
+    svg.addEventListener('pointerleave',()=>{ cross.setAttribute('opacity',0);dot.setAttribute('opacity',0);tip.style.display='none'; }); };
+  draw(); $('ovTrN').textContent=tg==null?'목표가 정해져 있지 않아 목표선이 없습니다.':'점선은 목표입니다. 그래프에 마우스를 올리면 월별 값을 볼 수 있습니다.';
+  OV._draw=draw;
+  $('ovDn').innerHTML=ovDonut(OV_ACT.map(a=>({v:act[a[0]],c:a[2]})),aTot);
+  // 이벤트
+  root.querySelectorAll('.ovkc').forEach(b=>b.onclick=()=>{ OV.metric=b.dataset.k; renderOv(); });
+  root.querySelectorAll('[data-r]').forEach(b=>{ b.setAttribute('aria-pressed',+b.dataset.r===OV.range); b.onclick=()=>{ OV.range=+b.dataset.r; renderOv(); }; });
+  root.querySelectorAll('.ovhl button').forEach(b=>b.onclick=()=>{ $('fTeam').value=b.dataset.t; renderOv(); $('ovh4').scrollIntoView({behavior:'smooth',block:'center'}); });
+  ovOrg();
+}
+function ovDonut(segs,tot){ const S=190,R=S/2-4,r=R*0.62,c=S/2; let a0=-Math.PI/2, s=`<svg viewBox="0 0 ${S} ${S}" width="100%" role="img" aria-label="업무 유형별 구성비">`;
+  if(!tot) return s+`<text x="${c}" y="${c}" text-anchor="middle" font-size="13" fill="var(--muted)">자료 없음</text></svg>`;
+  segs.forEach(g=>{ if(!g.v) return; const a1=a0+g.v/tot*Math.PI*2-(g.v===tot?1e-4:0), L=(a1-a0)>Math.PI?1:0, P=(a,q)=>[c+q*Math.cos(a),c+q*Math.sin(a)];
+    const [x0,y0]=P(a0,R),[x1,y1]=P(a1,R),[x2,y2]=P(a1,r),[x3,y3]=P(a0,r); s+=`<path d="M${x0} ${y0}A${R} ${R} 0 ${L} 1 ${x1} ${y1}L${x2} ${y2}A${r} ${r} 0 ${L} 0 ${x3} ${y3}Z" fill="${g.c}" stroke="var(--surface)" stroke-width="2"/>`; a0=a1; });
+  return s+`<text x="${c}" y="${c}" text-anchor="middle" font-size="26" font-weight="300" fill="var(--ovp)">${fmt(tot)}</text><text x="${c}" y="${c+18}" text-anchor="middle" font-size="12" fill="var(--muted)">처리 건수</text></svg>`; }
+/* 조직 비교 — 서비스 탭 팀 카드와 같은 stats(팀) + 부서원 계산(PROD)의 1인당 값 */
+function ovOrg(){
+  const bars=$('ovBars'); if(!bars) return;
+  if(PROD_DIRTY||!PROD){ bars.innerHTML='<p class="ovnote">계산 중…</p>'; clearTimeout(ovOrg._t); ovOrg._t=setTimeout(()=>{ ensureProd(); ovOrg(); },30); return; }
+  const p=curPeriod(), sel=$('fTeam').value||'', PR='이번 년도', g=(o,k)=>o&&o[k]&&o[k][PR]!=null?o[k][PR]:null;
+  const R=TEAMS.map(t=>{ const s=stats(p.months,t), o=PROD.team[t]||{}; return {n:t,hc:o.n_core,cnt:s.total,per:g(o,'case_avg_core'),w:g(o,'score_avg_core'),ftfr:s.ftfr,rev:s.rev,mttr:s.mttr}; });
+  const OM=[{k:'cnt',n:'처리 건수',u:'건',d:0,b:1},{k:'per',n:'1인당 건수',u:'건',d:1,b:1},{k:'w',n:'가중 업무량',u:'점',d:1,b:1},{k:'ftfr',n:'FTFR',u:'%',d:1,b:1,t:'ftfr'},{k:'rev',n:'재방문율',u:'%',d:1,b:-1,t:'rev'},{k:'mttr',n:'MTTR',u:'분',d:1,b:-1,t:'mttr'}];
+  const m=OM.find(x=>x.k===OV.om), ko=m.t&&OV_K.find(x=>x.k===m.t), mx=Math.max(...R.map(r=>r[m.k]||0),ko?ko.t():0,1)*1.1;
+  $('ovMseg').innerHTML=OM.map(x=>`<button aria-pressed="${x.k===OV.om}" data-m="${x.k}">${x.n}</button>`).join('');
+  bars.innerHTML=`<p class="ovnote" style="margin:0 0 4px">${m.n}${ko?' · 점선은 목표 '+ko.tl():' · 인원이 달라 건수와 1인당 값을 함께 봅니다'}</p>`+[...R].sort((a,b)=>((b[m.k]||0)-(a[m.k]||0))*m.b).map(r=>{ const v=r[m.k], st=ko&&v!=null?ovSt(ko,v):null;
+    return `<button class="ovhb${sel===r.n?' sel':''}" data-n="${esc(r.n)}" aria-pressed="${sel===r.n}"><span class="ovhn">${esc(r.n)}</span><span class="ovht"><i style="width:${v==null?0:(v/mx*100).toFixed(1)}%"></i>${ko?`<u style="left:${(ko.t()/mx*100).toFixed(1)}%"></u>`:''}</span><span class="ovhv">${v==null?'-':(m.d?v.toFixed(m.d):fmt(v))+m.u}${st&&st.chip?`<em class="${st.st}">${st.chip}</em>`:''}</span></button>`; }).join('');
+  const TC=[['n','팀'],['hc','비교 인원'],['cnt','처리 건수','건수'],['per','1인당 건수'],['w','가중 업무량'],['ftfr','FTFR (%)','FTFR'],['rev','재방문율 (%)','재방문'],['mttr','MTTR (분)','MTTR']];
+  let rows=[...R]; if(OV.sortK) rows.sort((a,b)=>OV.sortK==='n'?a.n.localeCompare(b.n)*OV.sortDir:((a[OV.sortK]||0)-(b[OV.sortK]||0))*OV.sortDir);
+  const cell=(r,k)=>{ const v=r[k]; if(k==='n') return `<td>${esc(v)}</td>`; const ko2=['ftfr','rev','mttr'].includes(k)?OV_K.find(x=>x.k===k):null, st=ko2&&v!=null?ovSt(ko2,v):null;
+    return `<td class="${st?'st-'+st.st:''}">${v==null?'-':(k==='per'||k==='w'||k==='ftfr'||k==='rev'||k==='mttr')?v.toFixed(1):fmt(v)}${st&&st.chip?`<span class="ovtag">${st.chip}</span>`:''}</td>`; };
+  $('ovTbl').innerHTML=`<table class="ovtab"><thead><tr>${TC.map(c=>`<th aria-sort="${OV.sortK===c[0]?(OV.sortDir>0?'ascending':'descending'):'none'}"><button data-s="${c[0]}">${c[2]?`<span class="ovfl">${c[1]}</span><span class="ovsm">${c[2]}</span>`:c[1]}</button></th>`).join('')}</tr></thead><tbody>
+    <tr class="tgt"><td>목표</td><td>-</td><td>-</td><td>-</td><td>-</td><td>${TARGET_FTFR} 이상</td><td>${TARGET_REV} 이하</td><td>${TARGET_MTTR} 이하</td></tr>
+    ${rows.map(r=>`<tr class="row${sel===r.n?' sel':''}" data-n="${esc(r.n)}">${TC.map(c=>cell(r,c[0])).join('')}</tr>`).join('')}</tbody></table>`;
+  $('ovMseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{ OV.om=b.dataset.m; ovOrg(); });
+  const pick=n=>{ $('fTeam').value=($('fTeam').value===n?'':n); renderOv(); };
+  bars.querySelectorAll('.ovhb').forEach(b=>b.onclick=()=>pick(b.dataset.n));
+  $('ovTbl').querySelectorAll('tr.row').forEach(r=>r.onclick=()=>pick(r.dataset.n));
+  $('ovTbl').querySelectorAll('th button').forEach(b=>b.onclick=()=>{ const k=b.dataset.s; if(OV.sortK===k) OV.sortDir*=-1; else { OV.sortK=k; OV.sortDir=k==='n'?1:-1; } ovOrg(); });
+}
+addEventListener('resize',()=>{ clearTimeout(addEventListener._ovT); addEventListener._ovT=setTimeout(()=>{ if(VIEW==='ov'&&OV._draw) OV._draw(); },150); });
+
 function setView(v){
-  VIEW=v; try{localStorage.setItem(VIEW_LS,v);}catch(e){}
-  $('vtSvc').setAttribute('aria-selected',v==='svc'); $('vtProd').setAttribute('aria-selected',v==='prod');
-  $('svcBar').hidden=v!=='svc'; $('prodBar').hidden=v!=='prod'; $('mainArea').hidden=v!=='svc'; $('prod').hidden=v!=='prod';
-  if(history.replaceState) history.replaceState(null,'',location.pathname+location.search+(v==='prod'?'#people':''));
-  if(v==='prod') renderProd(); else render();
+  VIEW=v; document.body.dataset.view=v; try{localStorage.setItem(VIEW_LS,v);}catch(e){}
+  $('vtOv').setAttribute('aria-selected',v==='ov'); $('vtSvc').setAttribute('aria-selected',v==='svc'); $('vtProd').setAttribute('aria-selected',v==='prod');
+  $('svcBar').hidden=!(v==='svc'||v==='ov'); $('prodBar').hidden=v!=='prod'; $('ov').hidden=v!=='ov'; $('mainArea').hidden=v!=='svc'; $('prod').hidden=v!=='prod';
+  if(history.replaceState) history.replaceState(null,'',location.pathname+location.search+(v==='prod'?'#people':v==='ov'?'#overview':''));
+  if(v==='prod') renderProd(); else if(v==='ov') renderOv(); else render();
 }
 function showMain(){ $('vtabs').hidden=false; setView(VIEW); loadShifts(); loadInstCal(); }
 /* 근무일정표(같은 Firebase 프로젝트 work-schedule/{팀}/{날짜}/{성명}.night)에서 EAST·WEST 시프트 근무일(석간·석/야)을 읽는다.
