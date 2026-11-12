@@ -379,7 +379,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 .tpb .trk u{position:absolute;top:-4px;bottom:-4px;width:0;border-left:2px dashed #005BAC;opacity:.75}
 .tpt tr.tot th,.tpt tr.tot td{background:none!important}
 .tpb b{font-weight:600;font-variant-numeric:tabular-nums}.tpb b.best,.tpt .best{color:#005BAC;font-weight:800}
-.tpd{font-size:11px;font-weight:700;margin-left:4px}.tpd.up{color:#3FBA46}.tpd.dn{color:#E7413E}
+.tpd{font-size:11px;font-weight:700;margin-left:4px;color:var(--muted)}
 .tpt .ok{color:#3FBA46}.tpt .ng{color:#E7413E}.tpm{color:#9E9E9E}
 .tpn{margin:10px 0 0;font-size:12px;color:#9E9E9E;line-height:1.5}
 .tpseg{display:inline-flex;gap:2px;background:rgba(158,158,158,.15);border-radius:10px;padding:3px;margin-bottom:8px}
@@ -507,7 +507,10 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 #ov .ovhv{text-align:right;font-weight:700;color:var(--text);white-space:nowrap}
 #ov .ovhv em{font-style:normal;font-size:11.5px;margin-left:6px}
 #ov .ovhv em.good{color:var(--good-t,#26782D)}#ov .ovhv em.warn{color:var(--warn-t,#8F5C06)}#ov .ovhv em.bad{color:var(--bad-t,#C8312E)}
-#ov .ovtw{overflow-x:auto}#ov .ovsm{display:none}
+#ov .ovtw{overflow-x:auto}
+#ov .ovoffl{margin-left:10px;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer}#ov .ovoffl input{margin-right:4px;vertical-align:-2px}
+#ov .ovhb.off .ovhn{font-weight:500;color:var(--muted);padding-left:6px}#ov .ovhb.off .ovht i{opacity:.35}#ov .ovhb.off.sel .ovht i{opacity:.7}
+#ov .ovtab tr.ovoff td{font-size:12.5px;color:var(--muted);background:var(--card)}#ov .ovtab tr.ovoff td:first-child{font-weight:500;padding-left:18px}#ov .ovtab tr.ovoff.sel td{background:var(--tint)}#ov .ovsm{display:none}
 #ov table.ovtab{border-collapse:collapse;width:100%;font-size:13px}
 #ov .ovtab th{background:var(--tint);color:var(--ovp);font-weight:700;text-align:right;padding:0;border-bottom:1px solid var(--muted);white-space:nowrap}
 #ov .ovtab th button{all:unset;box-sizing:border-box;cursor:pointer;padding:9px 10px;min-height:40px;width:100%;text-align:right;display:block}
@@ -777,9 +780,11 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
   <h2 class="sec" data-scr="sq">고장 분석 <small id="errSub"></small></h2>
   <div class="grid" data-scr="sq">
     <section class="panel">
-      <h3>장비군별 고장 수리와 재방문</h3>
-      
-      <div class="cv tall"><canvas id="cFam"></canvas></div>
+      <h3>장비군별 고장 수리</h3>
+      <div class="cv"><canvas id="cFam"></canvas></div>
+      <h3 style="margin-top:14px">장비군별 재방문율</h3>
+      <p class="d" style="margin:0 0 4px">목표 15% 이하 · 빨강 = 목표 초과</p>
+      <div class="cv"><canvas id="cFamRv"></canvas></div>
     </section>
     <section class="panel">
       <div class="thead"><div><h3>고장 수리 상위 에러</h3><p class="d" style="margin:0" id="errNote"></p></div>
@@ -1453,10 +1458,7 @@ function deltaBadge(cur, prev, higherIsBetter){
   if (cur === null || prev === null || prev === undefined || cur === undefined || prev === 0) return '<span class="pill neutral">비교 자료 없음</span>';
   var d = ((cur - prev) / Math.abs(prev)) * 100;
   var up = d > 0.5, down = d < -0.5;
-  var good = higherIsBetter ? up : down;
-  var cls = (up || down) ? (good ? 'delta-down' : 'delta-up') : 'delta-flat';
-  if (higherIsBetter === null) cls = 'delta-flat';
-  // delta-down class = green (favorable), delta-up = red (unfavorable) per our CSS convention
+  var cls = 'delta-flat';   /* 증감은 방향(▲▼)만, 색 없음 (2026-11-12 결정) — 좋고 나쁨은 목표 배지(pill)로 말한다 */
   var arrow = up ? '▲' : (down ? '▼' : '·');
   return '<span class="stat-delta '+cls+'">'+arrow+' '+Math.abs(d).toFixed(1)+'% <span style="color:var(--text-muted);font-weight:500;">'+(DATA.cmp_short||'YoY')+'</span></span>';
 }
@@ -1852,10 +1854,10 @@ function mapMonthVals(obj){
   return out;
 }
 function statTile(label, value, unit, deltaHtml, sub){
-  /* 목표 배지가 있으면 그것으로, 없으면 증감 방향으로 잘된 것(초록)·안 된 것(빨강)을 칠한다 */
+  /* 목표 배지가 있으면 그것으로 띠 색을 칠한다(없으면 칠하지 않음) */
   var h = deltaHtml || '', st = '';
   if (/pill good/.test(h)) st = 'good'; else if (/pill bad/.test(h)) st = 'bad'; else if (/pill warn/.test(h)) st = 'warn';
-  else if (/delta-down/.test(h)) st = 'good'; else if (/delta-up/.test(h)) st = 'bad';
+  /* 목표가 없는 타일은 띠 색 없음 (증감 방향으로 칠하지 않는다) */
   return '<div class="card stat'+(st?' s-'+st:'')+'"><div class="stat-label">'+label+'</div>'+
     '<div class="stat-value">'+value+(unit?'<span class="unit">'+unit+'</span>':'')+'</div>'+
     (deltaHtml?'<div>'+deltaHtml+'</div>':'')+
@@ -3106,11 +3108,16 @@ function renderErrors(p, team){
   D.rows.forEach(o=>{ if(o.purp==='PM'&&o.rec&&ms.has(o.mk)&&(!team||o.atm===team)&&famC[o.fam]) famC[o.fam].s++; });   // 재방문율 분모 = 고장 수리 + PM
   const fk=FAM_ORDER.filter(f=>famC[f]);   // 정해진 장비군 순서
   $('errSub').textContent=`${p.label}, ${team||'FSG 전체'}`;
-  upsert('cFam',{data:{labels:fk,datasets:[
-    {type:'bar',label:'고장 수리',data:fk.map(f=>famC[f].n),backgroundColor:'#005BAC',yAxisID:'y',order:2},
-    {type:'line',label:'재방문율(%) · 15% 초과는 빨강',data:fk.map(f=>famC[f].s?+(famC[f].f/famC[f].s*100).toFixed(1):null),showLine:false,pointRadius:6,pointHoverRadius:8,pointBorderWidth:2,pointBorderColor:'#FFFFFF',borderColor:'#E7413E',backgroundColor:'#E7413E',pointBackgroundColor:fk.map(f=>{const r=famC[f].s?famC[f].f/famC[f].s*100:null;return r!=null&&r>TARGET_REV?'#E7413E':'#3FBA46';}),yAxisID:'y2',order:1}]},
-    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text'),sort:(p,q)=>p.datasetIndex-q.datasetIndex}}},
-      scales:{x:axis({grid:{display:false},ticks:{color:css('--text'),autoSkip:false}}),y:axis({beginAtZero:true}),y2:axis({position:'right',grid:{display:false},min:0,ticks:{color:css('--text'),callback:v=>v+'%'}})}}});
+  upsert('cFam',{type:'bar',data:{labels:fk,datasets:[
+    {label:'고장 수리',data:fk.map(f=>famC[f].n),backgroundColor:'#005BAC'}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false}},
+      scales:{x:axis({grid:{display:false},ticks:{color:css('--text'),autoSkip:false}}),y:axis({beginAtZero:true})}}});
+  const rvF=fk.map(f=>famC[f].s?+(famC[f].f/famC[f].s*100).toFixed(1):null);
+  upsert('cFamRv',{type:'bar',data:{labels:fk,datasets:[
+    {label:'재방문율(%)',data:rvF,backgroundColor:rvF.map(v=>v!=null&&v>TARGET_REV?'#E7413E':'#005BAC'),order:2},
+    {type:'line',label:`목표 ${TARGET_REV}%`,data:fk.map(()=>TARGET_REV),borderColor:'#3FBA46',borderDash:[6,4],borderWidth:1.5,pointRadius:0,order:1}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}}},
+      scales:{x:axis({grid:{display:false},ticks:{color:css('--text'),autoSkip:false}}),y:axis({beginAtZero:true,ticks:{color:css('--text'),callback:v=>v+'%'}})}}});
   const sel=$('fErrFam'), cur=sel.value; const opts=fk; sel.innerHTML='<option value="">전체</option>'+opts.map(f=>`<option>${esc(f)}</option>`).join(''); if(opts.includes(cur)) sel.value=cur;
   drawErr(rows);
 }
@@ -3274,19 +3281,19 @@ function renderFamTrend(p, team){
   const val=(b,f,k)=>{ const x=b.st[f]; if(!x||!b.have.length) return null;
     if(k==='n') return x.n; if(k==='rev') return x.s>=5?+(x.f/x.s*100).toFixed(1):null;
     const fl=b.fl[f]; return fl>=10?+(x.n/b.have.length/fl*100).toFixed(2):null; };
-  $('ftNote').textContent=`${team||'FSG 전체'} · ${unit==='q'?'회계연도 분기(4월 시작)':'최근 12개월'} · MTBF(100대당 월 고장) = 고장 수리 ÷ 달 수 ÷ 가동 대수 × 100 (건수가 적을수록 고장 간격이 긺) · 재방문율 목표 ${TARGET_REV}% 이하${B.some(b=>b.prov)?' · ◆ = 재방문 확인 기간이 남은 잠정치':''}`;
+  $('ftNote').textContent=`${team||'FSG 전체'} · ${unit==='q'?'회계연도 분기(4월 시작)':'최근 12개월'} · 그래프는 아래 「지표」 선택을 따릅니다 · MTBF(100대당 월 고장) = 고장 수리 ÷ 달 수 ÷ 가동 대수 × 100 (건수가 적을수록 고장 간격이 긺) · 재방문율 목표 ${TARGET_REV}% 이하${B.some(b=>b.prov)?' · ◆ = 재방문 확인 기간이 남은 잠정치':''}`;
   const lab=B.map(b=>b.label), revV=B.map(b=>val(b,F,'rev')), rateV=B.map(b=>val(b,F,'rate'));
   const GOOD=css('--good')||'#3FBA46', BAD=css('--bad')||'#E7413E';
-  upsert('cFamTrend',{data:{labels:lab,datasets:[
-    {type:'bar',label:'고장 수리(건)',data:B.map(b=>val(b,F,'n')),backgroundColor:'#9DC3E6',yAxisID:'y',order:3},
-    {type:'line',label:'재방문율(%)',data:revV,borderColor:'#E7413E',backgroundColor:'#E7413E',pointBackgroundColor:revV.map(v=>v==null?BAD:v>TARGET_REV?BAD:GOOD),pointBorderColor:'#fff',pointBorderWidth:1.5,
-      pointRadius:B.map(b=>b.prov?6:4.5),pointStyle:B.map(b=>b.prov?'rectRot':'circle'),tension:.25,yAxisID:'y2',order:1,spanGaps:true},
-    {type:'line',label:'MTBF (100대당 월 고장)',data:rateV,borderColor:'#005BAC',backgroundColor:'#005BAC',pointRadius:4,pointStyle:'rectRounded',tension:.25,yAxisID:'y2',order:2,spanGaps:true},
-    {type:'line',label:`재방문율 목표 ${TARGET_REV}%`,data:B.map(()=>TARGET_REV),borderColor:'#E7413E',borderDash:[6,4],borderWidth:1,pointRadius:0,yAxisID:'y2',order:4}]},
+  const km=$('fFtMet').value||'rev', unitTxt={n:'건',rev:'%',rate:'건'}[km];
+  const dsMap={n:[{type:'bar',label:'고장 수리(건)',data:B.map(b=>val(b,F,'n')),backgroundColor:'#005BAC'}],
+    rev:[{type:'line',label:'재방문율(%)',data:revV,borderColor:'#005BAC',backgroundColor:'#005BAC',pointBackgroundColor:revV.map(v=>v==null?BAD:v>TARGET_REV?BAD:GOOD),pointBorderColor:'#fff',pointBorderWidth:1.5,
+      pointRadius:B.map(b=>b.prov?6:4.5),pointStyle:B.map(b=>b.prov?'rectRot':'circle'),tension:.25,spanGaps:true},
+      {type:'line',label:`재방문율 목표 ${TARGET_REV}%`,data:B.map(()=>TARGET_REV),borderColor:'#3FBA46',borderDash:[6,4],borderWidth:1.5,pointRadius:0}],
+    rate:[{type:'line',label:'MTBF (100대당 월 고장)',data:rateV,borderColor:'#005BAC',backgroundColor:'#005BAC',pointRadius:4,tension:.25,spanGaps:true}]};
+  upsert('cFamTrend',{data:{labels:lab,datasets:dsMap[km]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}},tooltip:{callbacks:{afterTitle:it=>{const b=B[it[0].dataIndex]; return (b.months.length>1?b.months[0]+' ~ '+b.months[b.months.length-1]:'')+(b.prov?' (잠정)':'')+(b.fl[F]?` · 가동 ${fmt(b.fl[F])}대`:'');}}}},
-      scales:{x:axis({grid:{display:false}}),y:axis({beginAtZero:true,title:{display:true,text:'고장 수리(건)',color:css('--muted')}}),
-        y2:axis({position:'right',beginAtZero:true,grid:{display:false},title:{display:true,text:'재방문율(%) · MTBF (100대당 월 고장)',color:css('--muted')}})}}});
+      scales:{x:axis({grid:{display:false}}),y:axis({beginAtZero:true,ticks:{color:css('--text'),callback:v=>km==='rev'?v+'%':v}})}}});
   const k=$('fFtMet').value||'rev', fmtV=v=>v==null?'-':k==='n'?fmt(v):k==='rev'?f1(v)+'%':v.toFixed(2);
   const list=['전체'].concat(fams);
   $('ftTblNote').textContent=k==='rev'?`빨강 = 목표 ${TARGET_REV}% 초과 · 기록이 5건 미만인 칸은 '-'`:k==='rate'?'가동 10대 미만 장비군은 \'-\'':'';
@@ -3993,7 +4000,7 @@ $('fPeriod').addEventListener('change',()=>{ $('pPeriod').value=$('fPeriod').val
 $('pExLead').addEventListener('change',()=>{ if(PROD){ PROD.ex_lead=$('pExLead').checked; if(window.__prodRender) window.__prodRender(); } });
 /* ===== Overview (2026-11-12 2단계 시안) — 핵심 KPI 4개·추이·확인이 필요한 곳·업무 유형·조직·예방 서비스
    읽기 전용: 계산은 stats()·PROD(부서원 계산)를 그대로 읽고, 새 계산식을 만들지 않는다(업무 유형 묶음만 kpiCore BUCKET과 같은 목록을 쓰며 tests/test_kpi_overview.js 가 일치를 확인) ===== */
-const OV={metric:'ftfr',range:12,om:'cnt',sortK:null,sortDir:-1,hov:null};
+const OV={metric:'ftfr',range:12,om:'cnt',sortK:null,sortDir:-1,hov:null,off:true};
 const OV_K=[{k:'ftfr',n:'FTFR',u:'%',d:1,t:()=>TARGET_FTFR,hi:true,tl:()=>TARGET_FTFR+'% 이상',h:'한 번에 고친 비율'},
  {k:'rev',n:'재방문율',u:'%',d:1,t:()=>TARGET_REV,hi:false,tl:()=>TARGET_REV+'% 이하',h:'고친 뒤 14일 안에 다시 방문한 비율'},
  {k:'mttr',n:'MTTR',u:'분',d:1,t:()=>TARGET_MTTR,hi:false,tl:()=>TARGET_MTTR+'분 이하',h:'고장 수리 평균 소요 시간'},
@@ -4119,20 +4126,25 @@ function ovOrg(){
   const bars=$('ovBars'); if(!bars) return;
   if(PROD_DIRTY||!PROD){ bars.innerHTML='<p class="ovnote">계산 중…</p>'; clearTimeout(ovOrg._t); ovOrg._t=setTimeout(()=>{ ensureProd(); ovOrg(); },30); return; }
   const p=curPeriod(), sel=$('fTeam').value||'', PR='이번 년도', g=(o,k)=>o&&o[k]&&o[k][PR]!=null?o[k][PR]:null;
-  const R=TEAMS.map(t=>{ const s=stats(p.months,t), o=PROD.team[t]||{}; return {n:t,hc:o.n_core,cnt:s.total,per:g(o,'case_avg_core'),w:g(o,'score_avg_core'),ftfr:s.ftfr,rev:s.rev,mttr:s.mttr}; });
+  const R=TEAMS.map(t=>{ const s=stats(p.months,t), o=PROD.team[t]||{}; return {n:t,team:t,hc:o.n_core,cnt:s.total,per:g(o,'case_avg_core'),w:g(o,'score_avg_core'),ftfr:s.ftfr,rev:s.rev,mttr:s.mttr}; });
+  /* 사무소(CENTRAL = 대전·광주, SOUTH = 부산·대구) — 부서원 계산(PROD)의 사무소 값. 서비스 탭 「사무소·팀별 1인당 생산성」과 같은 출처 */
+  const offOf=r=>((PROD.team[r.team]||{}).units||[]).map(u=>{ const o=PROD.team[u]||{}, rv=((PROD.revisit||{})[u]||{}).team_total||{}, mm=(o.mttr||{})[PR]||{}; let a=0,c=0; Object.keys(mm).forEach(x=>{a+=mm[x].avg*mm[x].n;c+=mm[x].n;});
+    return {n:u.replace(/^FS\s*\S+\s*/,''),team:r.team,off:true,hc:o.n_core,cnt:g(o,'total_case'),per:g(o,'case_avg_core'),w:g(o,'score_avg_core'),ftfr:rv['이번년도FTFR'],rev:rv['이번년도재방문율'],mttr:c?a/c:null}; });
+  const withOff=list=>OV.off?list.flatMap(r=>[r].concat(offOf(r))):list;
   const OM=[{k:'cnt',n:'처리 건수',u:'건',d:0,b:1},{k:'per',n:'1인당 건수',u:'건',d:1,b:1},{k:'w',n:'가중 업무량',u:'점',d:1,b:1},{k:'ftfr',n:'FTFR',u:'%',d:1,b:1,t:'ftfr'},{k:'rev',n:'재방문율',u:'%',d:1,b:-1,t:'rev'},{k:'mttr',n:'MTTR',u:'분',d:1,b:-1,t:'mttr'}];
   const m=OM.find(x=>x.k===OV.om), ko=m.t&&OV_K.find(x=>x.k===m.t), mx=Math.max(...R.map(r=>r[m.k]||0),ko?ko.t():0,1)*1.1;
   $('ovMseg').innerHTML=OM.map(x=>`<button aria-pressed="${x.k===OV.om}" data-m="${x.k}">${x.n}</button>`).join('');
-  bars.innerHTML=`<p class="ovnote" style="margin:0 0 4px">${m.n}${ko?' · 점선은 목표 '+ko.tl():' · 인원이 달라 건수와 1인당 값을 함께 봅니다'}</p>`+[...R].sort((a,b)=>((b[m.k]||0)-(a[m.k]||0))*m.b).map(r=>{ const v=r[m.k], st=ko&&v!=null?ovSt(ko,v):null;
-    return `<button class="ovhb${sel===r.n?' sel':''}" data-n="${esc(r.n)}" aria-pressed="${sel===r.n}"><span class="ovhn">${esc(r.n)}</span><span class="ovht"><i style="width:${v==null?0:(v/mx*100).toFixed(1)}%"></i>${ko?`<u style="left:${(ko.t()/mx*100).toFixed(1)}%"></u>`:''}</span><span class="ovhv">${v==null?'-':(m.d?v.toFixed(m.d):fmt(v))+m.u}${st&&st.chip?`<em class="${st.st}">${st.chip}</em>`:''}</span></button>`; }).join('');
+  bars.innerHTML=`<p class="ovnote" style="margin:0 0 4px">${m.n}${ko?' · 점선은 목표 '+ko.tl():' · 인원이 달라 건수와 1인당 값을 함께 봅니다'} <label class="ovoffl"><input type="checkbox" id="ovOff"${OV.off?' checked':''}> 사무소 표시</label></p>`+withOff([...R].sort((a,b)=>((b[m.k]||0)-(a[m.k]||0))*m.b)).map(r=>{ const v=r[m.k], st=ko&&v!=null?ovSt(ko,v):null;
+    return `<button class="ovhb${r.off?' off':''}${sel===r.team?' sel':''}" data-n="${esc(r.team)}" aria-pressed="${sel===r.team}"><span class="ovhn">${r.off?'└ ':''}${esc(r.n)}</span><span class="ovht"><i style="width:${v==null?0:(v/mx*100).toFixed(1)}%"></i>${ko?`<u style="left:${(ko.t()/mx*100).toFixed(1)}%"></u>`:''}</span><span class="ovhv">${v==null?'-':(m.d?v.toFixed(m.d):fmt(v))+m.u}${st&&st.chip?`<em class="${st.st}">${st.chip}</em>`:''}</span></button>`; }).join('');
   const TC=[['n','팀'],['hc','비교 인원'],['cnt','처리 건수','건수'],['per','1인당 건수'],['w','가중 업무량'],['ftfr','FTFR (%)','FTFR'],['rev','재방문율 (%)','재방문'],['mttr','MTTR (분)','MTTR']];
   let rows=[...R]; if(OV.sortK) rows.sort((a,b)=>OV.sortK==='n'?a.n.localeCompare(b.n)*OV.sortDir:((a[OV.sortK]||0)-(b[OV.sortK]||0))*OV.sortDir);
-  const cell=(r,k)=>{ const v=r[k]; if(k==='n') return `<td>${esc(v)}</td>`; const ko2=['ftfr','rev','mttr'].includes(k)?OV_K.find(x=>x.k===k):null, st=ko2&&v!=null?ovSt(ko2,v):null;
+  const cell=(r,k)=>{ const v=r[k]; if(k==='n') return `<td>${r.off?'└ ':''}${esc(v)}</td>`; const ko2=['ftfr','rev','mttr'].includes(k)?OV_K.find(x=>x.k===k):null, st=ko2&&v!=null?ovSt(ko2,v):null;
     return `<td class="${st?'st-'+st.st:''}">${v==null?'-':(k==='per'||k==='w'||k==='ftfr'||k==='rev'||k==='mttr')?v.toFixed(1):fmt(v)}${st&&st.chip?`<span class="ovtag">${st.chip}</span>`:''}</td>`; };
   $('ovTbl').innerHTML=`<table class="ovtab"><thead><tr>${TC.map(c=>`<th aria-sort="${OV.sortK===c[0]?(OV.sortDir>0?'ascending':'descending'):'none'}"><button data-s="${c[0]}">${c[2]?`<span class="ovfl">${c[1]}</span><span class="ovsm">${c[2]}</span>`:c[1]}</button></th>`).join('')}</tr></thead><tbody>
     <tr class="tgt"><td>목표</td><td>-</td><td>-</td><td>-</td><td>-</td><td>${TARGET_FTFR} 이상</td><td>${TARGET_REV} 이하</td><td>${TARGET_MTTR} 이하</td></tr>
-    ${rows.map(r=>`<tr class="row${sel===r.n?' sel':''}" data-n="${esc(r.n)}">${TC.map(c=>cell(r,c[0])).join('')}</tr>`).join('')}</tbody></table>`;
+    ${withOff(rows).map(r=>`<tr class="row${r.off?' ovoff':''}${sel===r.team?' sel':''}" data-n="${esc(r.team)}">${TC.map(c=>cell(r,c[0])).join('')}</tr>`).join('')}</tbody></table><p class="ovnote">${OV.off?'└ 사무소 값은 부서원 계산 기준입니다(CENTRAL = 대전+광주, SOUTH = 부산+대구). 사무소는 인원이 4~5명이라 한두 사람의 변화가 크게 반영되니 참고용으로 봅니다.':''}</p>`;
   $('ovMseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{ OV.om=b.dataset.m; ovOrg(); });
+  const oc=$('ovOff'); if(oc) oc.onchange=()=>{ OV.off=oc.checked; ovOrg(); };
   const pick=n=>{ $('fTeam').value=($('fTeam').value===n?'':n); renderOv(); };
   bars.querySelectorAll('.ovhb').forEach(b=>b.onclick=()=>pick(b.dataset.n));
   $('ovTbl').querySelectorAll('tr.row').forEach(r=>r.onclick=()=>pick(r.dataset.n));
