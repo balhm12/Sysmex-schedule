@@ -8,7 +8,7 @@
 - 배포: GitHub Pages, `main` 브랜치 루트. **`main`에 푸시하면 즉시 배포된다** — 수정은 브랜치 + PR로.
 - `restore*.html`, `fss복구.html`, `bulk_*_tool.html`은 데이터를 통째로 쓰는 관리자 도구다. 손대기 전에 사용자에게 확인한다.
 - 사용자 환경: Windows 11 + PowerShell.
-- `apps-script/survey_analysis.gs` = 만족도 시트(고객만족도조사_구글서베이_Trial)에 붙은 Apps Script 전체 코드다. `main` 에 올라가면 GitHub Actions 가 clasp 로 그 프로젝트에 올린다 — **편집기에서 직접 고치지 말고 이 파일을 고친다**(설정은 `apps-script/README.md`).
+- `apps-script/survey_analysis.gs` = 만족도 시트(고객만족도조사_구글서베이_Trial)에 붙은 Apps Script 전체 코드다. `main` 에 올라가면 GitHub Actions 가 clasp 로 그 프로젝트에 올린다 — **편집기에서 직접 고치지 말고 이 파일을 고친다**(설정은 `apps-script/README.md`). 배포 전에 편집기 코드를 받아 `apps-script/.deployed.sha256` 과 대조하고, 다르면 **올리지 않고 멈춘다**(편집기 직접 수정으로 기능이 사라진 사고가 두 번 있었다 — README 참고).
 
 ## 데이터 안전 (가장 중요)
 - 전체 데이터를 읽어 다시 쓰는(`set`) 코드를 만들지 않는다. 바뀐 키만 `update`한다.

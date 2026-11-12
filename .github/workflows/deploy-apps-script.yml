@@ -2,20 +2,34 @@
 # 만족도 시트(고객만족도조사_구글서베이_Trial)에 붙은 Apps Script 에 코드를 올린다.
 #
 # 필요한 비밀값 (GitHub → Settings → Secrets and variables → Actions):
-#   VOC_CLASPRC_JSON  PC 에서 `npx @google/clasp login` 후 생긴 ~/.clasprc.json 의 내용 전체
+#   VOC_CLASPRC_JSON  PC 에서 `npx @google/clasp@2.4.2 login` 후 생긴 ~/.clasprc.json 의 내용 전체
 #   VOC_SCRIPT_ID     Apps Script 편집기 → 프로젝트 설정 → 스크립트 ID
 #   VOC_DEPLOYMENT_ID (선택) 대시보드 JSON 웹앱 배포 ID — 있으면 같은 URL 로 새 버전까지 배포
 #
 # 비밀값이 하나라도 없으면 올리지 않고 안내만 남긴다(설정 전에도 PR 검사는 돈다).
-# clasp 는 프로젝트의 코드 파일을 통째로 바꾸므로, 처음 올리기 전에
-# 편집기의 현재 코드가 이 저장소 파일과 같은지 확인한다.
+#
+# ■ 덮어쓰기 사고 방지 (2026-11-12)
+#   clasp 는 프로젝트의 코드 파일을 통째로 바꾼다. 실제로 이 방식 이전에
+#   편집기에 직접 붙여넣다가 기능이 조용히 사라진 적이 있다(Drive 폴더 읽기).
+#   그래서 올리기 전에 **편집기의 현재 코드**를 받아, 마지막으로 올린 코드
+#   (apps-script/.deployed.sha256)와 같은지 확인한다. 다르면 = 누군가 편집기에서
+#   직접 고쳤다는 뜻이므로 **올리지 않고 멈춘다**. 편집기 코드는 아티팩트로 올려
+#   사람이 비교할 수 있게 한다.
+#   일부러 덮어쓰려면 workflow_dispatch 의 force 를 yes 로 실행한다.
 name: Deploy Apps Script (만족도)
 on:
   push:
     branches: [main]
     paths: [apps-script/survey_analysis.gs]
   workflow_dispatch:
+    inputs:
+      force:
+        description: "편집기 코드가 달라도 덮어쓴다 (yes 로 입력)"
+        required: false
+        default: "no"
 concurrency: deploy-voc-apps-script
+permissions:
+  contents: write
 jobs:
   gas:
     runs-on: ubuntu-latest
@@ -41,20 +55,62 @@ jobs:
             echo "ready=yes" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 올리기
+      - name: 편집기 코드 받기
         if: steps.check.outputs.ready == 'yes'
+        id: pull
         env:
           CLASPRC: ${{ secrets.VOC_CLASPRC_JSON }}
           SCRIPT_ID: ${{ secrets.VOC_SCRIPT_ID }}
-          DEPLOYMENT_ID: ${{ secrets.VOC_DEPLOYMENT_ID }}
         run: |
           printf '%s' "$CLASPRC" > ~/.clasprc.json
           npm i -g @google/clasp@2.4.2 >/dev/null
           mkdir -p gas && cd gas
           printf '{"scriptId":"%s","rootDir":"."}' "$SCRIPT_ID" > .clasp.json
-          # 먼저 받아서 프로젝트 설정(appsscript.json)을 그대로 쓴다
-          clasp pull
-          echo "--- 올리기 전 프로젝트 파일 ---"; ls
+          clasp pull                    # 프로젝트 설정(appsscript.json)도 여기서 받아 그대로 쓴다
+          echo "--- 편집기 파일 ---"; ls
+          cat $(ls *.js *.gs 2>/dev/null) > ../live_now.txt 2>/dev/null || : > ../live_now.txt
+          cd ..
+          echo "live=$(bash apps-script/normalize.sh live_now.txt | sha256sum | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "want=$(cat apps-script/.deployed.sha256 | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
+
+      - name: 편집기 코드 보관 (비교용)
+        if: steps.check.outputs.ready == 'yes'
+        uses: actions/upload-artifact@v4
+        with:
+          name: editor-code-before-deploy
+          path: live_now.txt
+          retention-days: 14
+
+      - name: 편집기가 직접 수정됐는지 확인
+        if: steps.check.outputs.ready == 'yes'
+        run: |
+          LIVE='${{ steps.pull.outputs.live }}'
+          WANT='${{ steps.pull.outputs.want }}'
+          FORCE='${{ github.event.inputs.force }}'
+          if [ -z "$WANT" ]; then
+            echo "::notice::기준 해시가 없습니다(첫 배포) — 그대로 진행합니다."
+            exit 0
+          fi
+          if [ "$LIVE" = "$WANT" ]; then
+            echo "편집기 코드 = 마지막으로 올린 코드. 안전하게 덮어쓸 수 있습니다."
+            exit 0
+          fi
+          if [ "$FORCE" = "yes" ]; then
+            echo "::warning::편집기 코드가 다르지만 force=yes 라 그대로 덮어씁니다."
+            exit 0
+          fi
+          echo "::error::편집기 코드가 마지막으로 올린 코드와 다릅니다 — 누군가 편집기에서 직접 고쳤을 수 있습니다."
+          echo "::error::기준 $WANT / 지금 $LIVE"
+          echo "::error::이 실행의 아티팩트 editor-code-before-deploy 를 받아 apps-script/survey_analysis.gs 와 비교한 뒤,"
+          echo "::error::편집기 쪽 변경을 저장소 파일에 반영하거나, 버려도 되면 force=yes 로 다시 실행하세요."
+          exit 1
+
+      - name: 올리기
+        if: steps.check.outputs.ready == 'yes'
+        env:
+          DEPLOYMENT_ID: ${{ secrets.VOC_DEPLOYMENT_ID }}
+        run: |
+          cd gas
           # 코드 파일은 survey_analysis.gs 하나로 통일한다
           find . -maxdepth 1 \( -name '*.js' -o -name '*.gs' \) -delete
           cp ../apps-script/survey_analysis.gs Code.js
@@ -63,3 +119,17 @@ jobs:
             clasp deploy -i "$DEPLOYMENT_ID" -d "${GITHUB_SHA::7}"
           fi
           rm -f ~/.clasprc.json
+
+      - name: 올린 코드를 기준 해시로 기록
+        if: steps.check.outputs.ready == 'yes'
+        run: |
+          NEW=$(bash apps-script/normalize.sh apps-script/survey_analysis.gs | sha256sum | cut -d' ' -f1)
+          if [ "$NEW" = "$(cat apps-script/.deployed.sha256 | tr -d '[:space:]')" ]; then
+            echo "기준 해시 그대로 — 커밋할 것 없음"; exit 0
+          fi
+          echo "$NEW" > apps-script/.deployed.sha256
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps-script/.deployed.sha256
+          git commit -m "배포한 Apps Script 기준 해시 갱신 (${GITHUB_SHA::7})"
+          git push
