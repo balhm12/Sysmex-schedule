@@ -59,4 +59,10 @@ assert(!/orgRows\('office'\), tp=/.test(html), 'Proactive 가 예전 사무소 �
 assert(/function dsBars/.test(html) && /0에서 시작하지 않음/.test(html), '도트 플롯에 축 범위 안내가 없음');
 assert(/\$\{ADMIN\?`, 원본 \$\{SRC\.act\}`:''\}/.test(html), '원본 파일명이 일반 사용자 헤더에 노출됨');
 assert(/function chronicList/.test(html) && !/revisitAvg/.test(between('function chronicList', 'function renderProTop')), '반복 고장 목록이 새 계산식을 씀');
+// 슬림 헤더(2026-11-13): 자료 정보·관리자·접근 코드 변경은 파란 띠 안에 있고 잠금이 풀릴 때만 보인다. 탭 줄에는 탭만 남는다. 다른 페이지 안에서 열리면 페이지 탭 줄을 숨긴다
+const hdrHtml = between('<header class="top">', '</header>'), tabsHtml = between('<nav class="vtabs"', '</nav>');
+['id="hdrInfo" hidden', 'id="info"', 'id="adminToggle"', 'id="changeCode"', 'id="openUpl"', 'id="sub"'].forEach(t => assert(hdrHtml.includes(t), '헤더에 ' + t + ' 없음'));
+assert(!/vinfo|lbtn/.test(tabsHtml), '화면 탭 줄에 정보·버튼이 남아 있음');
+assert(/\$\('hdrInfo'\)\.hidden=true/.test(between('function showEmpty', 'function showMain')) && /\$\('hdrInfo'\)\.hidden=false/.test(between('function showMain', 'loadShifts')), '헤더 정보·버튼이 잠금 상태와 같이 움직이지 않음');
+assert(/window\.self!==window\.top/.test(html) && /\.embed \.appbar\{display:none\}/.test(html), '포털 안 페이지 탭 숨김 없음');
 console.log('test_kpi_overview: OK (업무 유형 묶음 ' + Object.keys(core).length + '개 kpiCore 와 일치 · 새 계산식 없음 · 화면 전환·주소 · 목표·상태 기준 공유)');
