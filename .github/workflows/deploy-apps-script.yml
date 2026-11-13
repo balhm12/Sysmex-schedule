@@ -31,6 +31,10 @@ on:
         description: "배포된 특정 버전의 코드만 받아 아티팩트로 올린다 (버전 번호, 예: 2). 넣으면 올리기는 하지 않는다"
         required: false
         default: ""
+      redeploy:
+        description: "웹 앱 배포를 지금 Head 로 갱신한다. list = 배포 목록만 보기, 배포 ID = 그 배포를 새 버전으로 갱신(주소 유지). 넣으면 코드 올리기는 하지 않는다"
+        required: false
+        default: ""
 concurrency: deploy-voc-apps-script
 permissions:
   contents: write
@@ -59,11 +63,46 @@ jobs:
             echo "ready=yes" >> "$GITHUB_OUTPUT"
           fi
 
+      # 웹 앱 배포 갱신. `clasp deploy -i <배포 ID>` 는 그 배포를 **지금 Head 로** 새 버전으로
+      # 바꾸고 주소(.../exec)는 그대로 둔다(= 편집기 「배포 관리 › 수정 › 새 버전」과 같은 일).
+      # 이 프로젝트는 한 배포가 doGet(공개 대시보드)과 doPost(PC 업로드 입구)를 함께 쓰므로,
+      # 엉뚱한 배포를 건드리지 않도록 먼저 `redeploy: list` 로 목록을 보고 ID 를 넣는다.
+      # Head 가 불완전한 상태에서 하면 기능이 사라지므로, 올리기가 성공한 뒤에만 한다.
+      - name: 웹 앱 배포 갱신
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.redeploy != ''
+        env:
+          CLASPRC: ${{ secrets.VOC_CLASPRC_JSON }}
+          SCRIPT_ID: ${{ secrets.VOC_SCRIPT_ID }}
+          WANT: ${{ github.event.inputs.redeploy }}
+        run: |
+          printf '%s' "$CLASPRC" > ~/.clasprc.json
+          npm i -g @google/clasp@2.4.2 >/dev/null
+          mkdir -p gasdep && cd gasdep
+          printf '{"scriptId":"%s","rootDir":"."}' "$SCRIPT_ID" > .clasp.json
+          echo "### 배포 목록 (갱신 전)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          clasp deployments | tee deployments.txt | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          if [ "$WANT" = "list" ]; then
+            echo "::notice::배포 목록만 확인했습니다 — 아무것도 바꾸지 않았습니다."
+            rm -f ~/.clasprc.json; exit 0
+          fi
+          if ! grep -q -- "$WANT" deployments.txt; then
+            echo "::error::배포 ID '$WANT' 가 이 프로젝트의 배포 목록에 없습니다. redeploy: list 로 먼저 확인하세요."
+            rm -f ~/.clasprc.json; exit 1
+          fi
+          clasp deploy -i "$WANT" -d "repo ${GITHUB_SHA::7}"
+          echo "### 갱신 뒤" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          clasp deployments | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          rm -f ~/.clasprc.json
+
       # 웹 앱은 배포 시점에 얼린 코드로 돈다. 편집기(Head)에서 코드가 바뀌어도
       # 배포된 버전은 그대로이므로, 그 버전 안에만 남아 있는 코드를 꺼내 볼 수 있다.
       # (2026-11-12: doPost·CRM 업로드 입구가 버전 2 에만 있는 것을 확인)
       - name: 배포된 버전 코드 받기
-        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version != ''
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version != '' && github.event.inputs.redeploy == ''
         env:
           CLASPRC: ${{ secrets.VOC_CLASPRC_JSON }}
           SCRIPT_ID: ${{ secrets.VOC_SCRIPT_ID }}
@@ -87,7 +126,7 @@ jobs:
           done
 
       - name: 버전 코드 보관
-        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version != ''
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version != '' && github.event.inputs.redeploy == ''
         uses: actions/upload-artifact@v4
         with:
           name: apps-script-version-${{ github.event.inputs.pull_version }}
@@ -95,13 +134,13 @@ jobs:
           retention-days: 14
 
       - name: 버전만 받고 끝낸다
-        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version != ''
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version != '' && github.event.inputs.redeploy == ''
         run: |
           echo "::notice::버전 ${{ github.event.inputs.pull_version }} 코드를 아티팩트로 올렸습니다 — 올리기는 하지 않았습니다."
           exit 0
 
       - name: 편집기 코드 받기
-        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == ''
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == '' && github.event.inputs.redeploy == ''
         id: pull
         env:
           CLASPRC: ${{ secrets.VOC_CLASPRC_JSON }}
@@ -119,7 +158,7 @@ jobs:
           echo "want=$(cat apps-script/.deployed.sha256 | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
 
       - name: 편집기 코드 보관 (비교용)
-        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == ''
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == '' && github.event.inputs.redeploy == ''
         uses: actions/upload-artifact@v4
         with:
           name: editor-code-before-deploy
@@ -127,7 +166,7 @@ jobs:
           retention-days: 14
 
       - name: 편집기가 직접 수정됐는지 확인
-        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == ''
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == '' && github.event.inputs.redeploy == ''
         run: |
           LIVE='${{ steps.pull.outputs.live }}'
           WANT='${{ steps.pull.outputs.want }}'
@@ -151,7 +190,7 @@ jobs:
           exit 1
 
       - name: 올리기
-        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == ''
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == '' && github.event.inputs.redeploy == ''
         env:
           DEPLOYMENT_ID: ${{ secrets.VOC_DEPLOYMENT_ID }}
         run: |
@@ -166,7 +205,7 @@ jobs:
           rm -f ~/.clasprc.json
 
       - name: 올린 코드를 기준 해시로 기록
-        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == ''
+        if: steps.check.outputs.ready == 'yes' && github.event.inputs.pull_version == '' && github.event.inputs.redeploy == ''
         run: |
           NEW=$(bash apps-script/normalize.sh apps-script/survey_analysis.gs | sha256sum | cut -d' ' -f1)
           if [ "$NEW" = "$(cat apps-script/.deployed.sha256 | tr -d '[:space:]')" ]; then
