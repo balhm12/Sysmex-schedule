@@ -13,8 +13,8 @@ const ovCode = between('/* ===== Overview (2026-11-12 2단계 시안)', 'functio
 assert(/stats\(p\.months,team\)/.test(ovCode) && /PROD\.team\[t\]/.test(ovCode), 'stats()/PROD 를 읽지 않음');
 // 3) 화면 6개 — 전환·주소·섹션 배치 (2026-11-12 재편)
 const screens = new Function(between('const SCREENS=', 'const VIEW_ALIAS') .replace('const SCREENS=', 'var SCREENS=') + '; return SCREENS;')();
-assert.deepStrictEqual(Object.keys(screens).sort(), ['eqp', 'ov', 'org', 'pro', 'prd', 'sq'].sort());
-assert.strictEqual(new Set(Object.values(screens).map(s => s.hash)).size, 6, '화면 주소가 겹침');
+assert.deepStrictEqual(Object.keys(screens).sort(), ['eqp', 'ov', 'org', 'pro', 'prd', 'sq', 'wl'].sort());
+assert.strictEqual(new Set(Object.values(screens).map(s => s.hash)).size, 7, '화면 주소가 겹침');
 assert.strictEqual(screens.prd.hash, '#people', '기존 주소 #people 은 Productivity 로 유지');
 const sv = between('function setView(v){', 'function showMain');
 assert(sv.includes('rerender()') && sv.includes('scr-off'));

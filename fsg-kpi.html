@@ -752,6 +752,24 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
   body.rpt #ov{max-width:none}
   body.rpt #ov .ovcard,body.rpt #ov .ovkpi,body.rpt #ov .ovrc,body.rpt #ov .ovpro,body.rpt #ov .ovtw{break-inside:avoid}
 }
+
+/* ===== Workload (2026-11-13) — Overview 디자인 재사용, 추가 규칙만 ===== */
+#wl .ovkpi.c3.wlk{grid-template-columns:repeat(3,1fr)}#wl .ovkpi.c3.wlk .ovkc{grid-column:auto!important}#wl .ovkpi.c3.wlk .ovkc{border-top:1px solid var(--border)}#wl .ovkpi.c3.wlk .ovkc:nth-child(-n+3){border-top:0}#wl .ovkpi.c3.wlk .ovkc:nth-child(3n+1){border-left:0}
+#wl .wlna .ovv{color:var(--muted)}#wl .wlna .ovl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.dsx .wltabs{display:flex;margin:18px 0 10px;border:1px solid var(--border);width:max-content;max-width:100%;overflow-x:auto}.dsx .wltabs button{height:40px;padding:0 16px}.dsx .wltabs button[aria-pressed=true]{background:var(--primary);color:#fff;font-weight:700}
+.dsx .wltab tr[data-k]{cursor:pointer}.dsx .wltab tr[data-k]:hover td{background:var(--card)}.dsx .wltab tr.wlsel td{background:var(--tint)}.dsx .wltab tr.wlmut td{color:var(--muted)}.dsx .wltab tfoot td{font-weight:700}
+#wl .wlsvg{width:100%;height:auto;display:block}#wl .wlleg{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}#wl .wlleg button{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 8px;border:1px solid var(--border);min-height:28px}#wl .wlleg button[aria-pressed=false]{opacity:.45;text-decoration:line-through}#wl .wlleg i{width:10px;height:10px;display:inline-block}
+#wl .wlleg button:focus-visible,.dsx .wltab tr[data-k]:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+#wl .wlq{margin:18px 0 30px}#wl .wlq summary{cursor:pointer;font-weight:700;padding:8px 0}#wl .wlh4{margin:14px 0 6px;font-size:14px}
+#wl .dsmt i{color:#fff}.dsx .wltab{min-width:max-content}.dsx .wltab td:first-child,.dsx .wltab th:first-child{position:sticky;left:0;background:var(--surface);z-index:1}.dsx .wltab thead th:first-child{background:var(--tint)}@media (max-width:600px){#wl .dsmt i{font-size:0}.dsx .wltab th,.dsx .wltab td{padding:8px 8px}}.dsx .wltab th:first-child,.dsx .wltab td:first-child{text-align:left}.dsx .wltab th{white-space:nowrap}
+.wled{position:fixed;inset:0;background:rgba(10,20,40,.45);z-index:60;display:flex;align-items:flex-start;justify-content:center;padding:4vh 12px;overflow:auto}
+.wled .ovchip{font-style:normal}.wledc{background:var(--surface);color:var(--text);width:min(960px,100%);padding:16px 18px;border:1px solid var(--border)}
+.wledh{display:flex;align-items:center;justify-content:space-between;gap:8px}.wledh h3{margin:0;font-size:18px;color:var(--primary)}
+.wledf{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}.wledf input{height:34px;padding:0 10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;min-width:200px}
+.wledc select{height:30px;font:inherit;font-size:12.5px;border:1px solid var(--border);background:var(--surface);color:var(--text);max-width:150px}
+.wledb{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}.wledc .wlpri{background:var(--primary);color:#fff;border-color:var(--primary)}
+@media (max-width:1000px){#wl .ovkpi.c3.wlk{grid-template-columns:repeat(2,1fr)}#wl .ovkpi.c3.wlk .ovkc{border-left:1px solid var(--border);border-top:1px solid var(--border)}#wl .ovkpi.c3.wlk .ovkc:nth-child(odd){border-left:0}#wl .ovkpi.c3.wlk .ovkc:nth-child(-n+2){border-top:0}}
+@media (pointer:coarse){.dsx .wltabs button{height:44px}#wl .wlleg button{min-height:44px}.wledc select{height:44px}}
 </style>
 </head>
 <body>
@@ -837,6 +855,11 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
       <b>담당기관 관리표 (선택)</b>
       <p>「FSG_FSR_담당기관관리표_…정리본.xlsx」 — 「담당기관 마스터」 시트의 담당자·기관·장비 수·시스템·장비군 수량(엑셀에서 저장한 계산값)을 읽습니다. 넣으면 부서원 KPI에 「담당 장비」 탭이 계산됩니다. 기관명·이름이 들어 있어 암호화해서만 올라갑니다.</p>
       <div class="st" id="stEq">선택된 파일 없음</div>
+    <div class="drop" id="dropAcad" tabindex="0" role="button" aria-label="업무부하 학술 자료 파일 선택">
+      <b>업무부하 학술 자료 (선택)</b>
+      <p>FS Portal 「Sysmex Talk 집계」·「학술요청 집계」의 「KPI용 내보내기」 파일(.json) — 날짜·시간별 학술 글·접수 수만 들어 있습니다(이름·병원명 없음). Talk 파일과 Slack 파일을 각각 올리면 Workload 화면 「학술 응대」에 이어 붙입니다.</p>
+      <div class="st" id="stAcad">선택된 파일 없음</div>
+    </div>
     </div>
   </div>
   <input type="file" id="fAct" accept=".xlsx,.xls,.csv" hidden>
@@ -844,6 +867,7 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
   <input type="file" id="fHr" accept=".xlsx,.xls,.csv" hidden>
   <input type="file" id="fGeo" accept=".json" hidden>
   <input type="file" id="fEq" accept=".xlsx" hidden>
+  <input type="file" id="fAcad" accept=".json,application/json" hidden>
   <div class="uplfoot">
     <span>엑셀은 이 브라우저에서 읽어 집계에 필요한 열만 정리한 뒤, 접근 코드로 암호화해서 저장소에 올립니다. 5분 안에 자동 반영(새로고침하면 바로).</span>
   </div>
@@ -852,6 +876,7 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
 <nav class="vtabs" id="vtabs" hidden><div class="wrap"><div class="vtl" role="tablist" aria-label="대시보드 화면 선택">
   <button class="vt" role="tab" id="vtOv" data-view="ov" aria-selected="false" aria-controls="ov">Overview<small>핵심 현황</small></button>
   <button class="vt" role="tab" id="vtSq" data-view="sq" aria-selected="false" aria-controls="mainArea">Service Quality<small>서비스 품질</small></button>
+  <button class="vt" role="tab" id="vtWl" data-view="wl" aria-selected="false" aria-controls="wl">Workload<small>업무부하</small></button>
   <button class="vt" role="tab" id="vtOrg" data-view="org" aria-selected="false" aria-controls="mainArea">Organization<small>팀·사무소</small></button>
   <button class="vt" role="tab" id="vtPrd" data-view="prd" aria-selected="false" aria-controls="prod">Productivity<small>개인·업무부하</small></button>
   <button class="vt" role="tab" id="vtEqp" data-view="eqp" aria-selected="false" aria-controls="mainArea">Instrument<small>장비</small></button>
@@ -877,6 +902,7 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
 <section id="empty" class="wrap" hidden><div class="panel" style="margin-top:24px"><p id="emptyMsg" style="margin:0"></p></div></section>
 <div class="rptbar"><span>보고용 보기 — 인쇄하면 A4 한 부로 나옵니다</span><button type="button" id="rptBack">화면으로 돌아가기</button><button type="button" id="rptPrint">PDF로 저장 (인쇄)</button></div>
 <main class="wrap" id="ov" role="tabpanel" aria-labelledby="vtOv" hidden></main>
+<main class="wrap dsx" id="wl" role="tabpanel" aria-labelledby="vtWl" hidden></main>
 <main class="wrap" id="mainArea" hidden>
   <div class="ovtitle dstitle" data-scr="sq" id="sqTitle"></div>
   <div class="ovtitle dstitle" data-scr="org" id="orgTitle"></div>
@@ -3773,7 +3799,7 @@ function parseSerial(buf){
 }
 const nowStr=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
 async function handleFile(kind, file){
-  if(!file) return; const st=$(kind==='act'?'stAct':kind==='hr'?'stHr':kind==='geo'?'stGeo':kind==='eq'?'stEq':'stSer');
+  if(!file) return; const st=$(kind==='act'?'stAct':kind==='hr'?'stHr':kind==='geo'?'stGeo':kind==='eq'?'stEq':kind==='acad'?'stAcad':'stSer');
   if(typeof XLSX==='undefined'){ st.innerHTML='<span class="bad">엑셀 읽기 라이브러리를 불러오지 못했습니다. 네트워크 연결을 확인해 주세요.</span>'; return; }
   $('busy').classList.add('on'); await new Promise(r=>setTimeout(r,30));
   try{
@@ -3783,6 +3809,7 @@ async function handleFile(kind, file){
     else if(kind==='hr'){ const nw=parseHr(buf,file.name,file.lastModified), c=hrCovOf(nw); HRDATA=mergeHr(HRDATA, nw); SRC.hr=HRDATA.src;
       msg=`${file.name}: ${nw.kind==='mon'?'월별 연장근로':'연장근무 신청'} ${fmt(Object.keys(nw.h).length)}명, ${c[0]||''}~${c[c.length-1]||''} 읽음(기존 자료와 합침: ${HRDATA.srcs.map(x=>(x.kind==='mon'?'월별 ':'신청 ')+x.first+'~'+x.last).join(' + ')})`+(nw.yearNote?' ['+nw.yearNote+']':''); }
     else if(kind==='geo'){ GEO=parseGeo(buf,file.name); SRC.geo=file.name; PROD_DIRTY=true; msg=`${file.name}: 기관 ${fmt(Object.keys(GEO.acct).length)}곳 · 직원 ${fmt(Object.keys(GEO.home).length)}명 좌표 읽음`; }
+    else if(kind==='acad'){ ACAD=parseAcad(new TextDecoder().decode(buf),file.name); const k=Object.keys(ACAD).map(x=>(x==='talk'?'Sysmex Talk ':'Slack ')+Object.keys(ACAD[x].days).length+'일'); msg=`${file.name}: 학술 자료 읽음 (${k.join(' · ')})`; }
     else if(kind==='eq'){ EQD=parseEq(buf,file.name); SRC.eq=file.name; PROD_DIRTY=true; msg=`${file.name}: 기관 ${fmt(EQD.rows.length)}곳 · 장비 ${fmt(EQD.rows.reduce((a,r)=>a+r[3],0))}대 읽음`; }
     else { const all=parseSerial(buf); SERIAL=all.filter(x=>x.state==='사용'); SRC.ser=file.name; msg=`${file.name}: 장비 ${fmt(all.length)}대 중 '사용' ${fmt(SERIAL.length)}대`; }
     SRC.at=nowStr(); if(RAW){ refresh(); } else PROD_DIRTY=true;
@@ -3793,6 +3820,7 @@ async function handleFile(kind, file){
       : kind==='hr' ? await pushShared('hr', HRDATA, {hrSrc:HRDATA.src})
       : kind==='geo' ? await pushShared('geo', GEO, {geoSrc:file.name})
       : kind==='eq' ? await pushShared('eq', EQD, {eqSrc:file.name})
+      : kind==='acad' ? await pushShared('acad', ACAD, {acadSrc:file.name, acadAt:nowStr()})
       : await pushShared('ser', encodeSer(SERIAL), {serSrc:file.name});
     st.innerHTML = ok ? msg+', <span class="good">올리기 완료. 팀장 화면은 새로고침하거나 5분 안에 자동 반영됩니다</span>' : msg+'. <span class="bad">공유 저장소에 연결되지 않아 이 화면에만 반영됐습니다</span>';
   }catch(err){ st.innerHTML=`<span class="bad">${esc(err.code?('공유 저장 실패 ('+err.code+'). 잠시 후 다시 올려 주세요.'):(err.message||err))}</span>`; }
@@ -3943,11 +3971,13 @@ async function loadAll(){
     if(!(await codeOk(CODE,meta))){ localStorage.removeItem(KEY_LS); CODE=null; showLock('접근 코드가 맞지 않습니다. 다시 입력해 주세요.'); return; }
     /* 자산대장·연장근무는 선택 자료 — 못 읽어도 CRM 화면은 연다 */
     const opt=(k,ver)=>fbCached(k,ver).catch(e=>{ console.warn(k+' 불러오기 실패',e); return null; });
-    const [a,s,hr,geo,eq]=await Promise.all([fbCached('act',meta.actAt||meta.updatedAt), meta.serSrc?opt('ser',meta.serAt||meta.updatedAt):Promise.resolve(null), meta.hrSrc?opt('hr',meta.updatedAt):Promise.resolve(null), meta.geoSrc?opt('geo',meta.updatedAt):Promise.resolve(null), meta.eqSrc?opt('eq',meta.updatedAt):Promise.resolve(null)]);
+    const [a,s,hr,geo,eq,inst,acad]=await Promise.all([fbCached('act',meta.actAt||meta.updatedAt), meta.serSrc?opt('ser',meta.serAt||meta.updatedAt):Promise.resolve(null), meta.hrSrc?opt('hr',meta.updatedAt):Promise.resolve(null), meta.geoSrc?opt('geo',meta.updatedAt):Promise.resolve(null), meta.eqSrc?opt('eq',meta.updatedAt):Promise.resolve(null), meta.instAt?opt('inst',meta.instAt):Promise.resolve(null), meta.acadAt?opt('acad',meta.acadAt):Promise.resolve(null)]);
     RAW=fixTz(decodeEmbed(await open_(a,CODE))); SERIAL=s?decodeSer(await open_(s,CODE)):null;
     HRDATA=null; if(hr){ try{ HRDATA=await open_(hr,CODE); }catch(e){ console.warn('hr decode',e); } }
     GEO=null; if(geo){ try{ GEO=await open_(geo,CODE); GEO.src=GEO.src||meta.geoSrc; }catch(e){ console.warn('geo decode',e); } }
     EQD=null; if(eq){ try{ EQD=await open_(eq,CODE); EQD.src=EQD.src||meta.eqSrc; }catch(e){ console.warn('eq decode',e); } }
+    INST=null; if(inst){ try{ INST=await open_(inst,CODE); }catch(e){ console.warn('inst decode',e); } }
+    ACAD=null; if(acad){ try{ ACAD=await open_(acad,CODE); }catch(e){ console.warn('acad decode',e); } }
     await loadWeights();
     META=meta; SRC={act:meta.actSrc,ser:s?meta.serSrc:null,hr:HRDATA?meta.hrSrc:null,at:meta.updatedAt,embedded:false};
     $('empty').hidden=true; refresh(); showMain();
@@ -4176,7 +4206,7 @@ document.querySelectorAll('#tInst th.s').forEach(th=>{const go=()=>{const k=th.d
   document.querySelectorAll('#tInst th').forEach(x=>x.removeAttribute('aria-sort'));th.setAttribute('aria-sort',sortDir<0?'descending':'ascending');drawInst();};
   th.addEventListener('click',go);th.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});});
 $('openUpl').addEventListener('click',()=>{const o=$('upl').classList.toggle('open');$('openUpl').setAttribute('aria-expanded',o);});
-bindDrop('dropAct','fAct','act'); bindDrop('dropSer','fSer','ser'); bindDrop('dropHr','fHr','hr'); bindDrop('dropGeo','fGeo','geo'); bindDrop('dropEq','fEq','eq');
+bindDrop('dropAct','fAct','act'); bindDrop('dropSer','fSer','ser'); bindDrop('dropHr','fHr','hr'); bindDrop('dropGeo','fGeo','geo'); bindDrop('dropEq','fEq','eq'); bindDrop('dropAcad','fAcad','acad');
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>rerender());
 if(typeof Chart!=='undefined'){Chart.defaults.font.family="'Malgun Gothic', Arial, sans-serif";Chart.defaults.font.size=12;}
 $('lockBtn').addEventListener('click',submitCode);
@@ -4189,7 +4219,7 @@ $('changeCode').addEventListener('click',()=>{try{localStorage.removeItem(KEY_LS
 
 /* ===== 탭: 서비스 운영 KPI | 부서원 KPI — 같은 CRM 데이터(RAW)로 둘 다 계산 ===== */
 const VIEW_LS='fsg-kpi-view';
-const SCREENS={ov:{hash:'#overview'},sq:{hash:'#service-quality',scr:'sq',dsx:1},org:{hash:'#organization',scr:'org',prod:'team',dsx:1},prd:{hash:'#people',prod:'overview',tabs:['overview','person','ot','move'],dsx:1},eqp:{hash:'#instrument',scr:'eqp',prod:'equip',dsx:1},pro:{hash:'#proactive',scr:'pro',dsx:1}};
+const SCREENS={ov:{hash:'#overview'},sq:{hash:'#service-quality',scr:'sq',dsx:1},wl:{hash:'#workload'},org:{hash:'#organization',scr:'org',prod:'team',dsx:1},prd:{hash:'#people',prod:'overview',tabs:['overview','person','ot','move'],dsx:1},eqp:{hash:'#instrument',scr:'eqp',prod:'equip',dsx:1},pro:{hash:'#proactive',scr:'pro',dsx:1}};
 const VIEW_ALIAS={svc:'sq',prod:'prd'};   /* 예전 저장값·주소(#people)를 새 화면으로 */
 let VIEW=(()=>{ const h=location.hash; for(const k in SCREENS) if(SCREENS[k].hash===h) return k; let v=null; try{v=localStorage.getItem(VIEW_LS);}catch(e){} v=VIEW_ALIAS[v]||v; return SCREENS[v]?v:'ov'; })();
 let PROD=null, PROD_DIRTY=true;
@@ -4563,12 +4593,260 @@ function renderProTop(p,team,pp,prov,scope,cur,prv){
   $('tChr').innerHTML=`<thead><tr><th>기관</th><th>담당 팀</th><th>장비</th><th class="num">12개월 고장 수리</th><th class="num">최근 고장일</th>${hasSt?'<th>상태</th>':''}</tr></thead><tbody>`+
     (list.length?list.slice(0,200).map(r=>`<tr><td>${esc(r.acct)}</td><td>${esc(r.atm||'-')}</td><td>${esc(r.sn)}${r.fam?` <span class="ovsub">${esc(r.fam)}</span>`:''}</td><td class="num">${r.n}</td><td class="num">${dstr(r.last)}</td>${hasSt?`<td>${r.risk?'<b class="st-bad">위험</b>':'관찰'}</td>`:''}</tr>`).join(''):`<tr><td colspan="${hasSt?6:5}" style="color:var(--muted)">이 기간·팀에 해당하는 장비가 없습니다(0대).</td></tr>`)+'</tbody>'+(list.length>200?`<caption style="caption-side:bottom;text-align:left;font-size:11.5px;color:var(--muted);padding-top:6px">상위 200대만 표시 (전체 ${fmt(list.length)}대)</caption>`:'');
 }
+/* ===== Workload — 업무부하 분석 (2026-11-13 작업지시서 「Workload Analysis 구축」) =====
+   원칙: 방문 = CRM 활동(공식 기준). 학술 응대 = FS Portal 이 올린 Sysmex Talk(과거)·Slack(이후) 집계(사용자 결정 2026-11-13) — CRM 방문과 단위가 달라 비율로 섞지 않는다.
+   시간대 = 평일 08~18시 주간, 그 밖 야간, 주말·공휴일은 날짜 속성(사용자 결정: 지시서 초안 08~18 일괄).
+   기관 유형·5대 수탁기관 = 관리자가 이 화면에서 지정한 표(INST)만 — 이름 검색은 후보 제시에만 쓴다. 지정 안 한 기관은 「미분류」.
+   지역 = 시·도(담당기관 관리표) — 서울 / 경기는 관리표 담당자의 팀(WEST·EAST) / 그 밖 지방, 관리표에 없으면 미분류. 관리자가 기관별로 바꿀 수 있다. */
+let INST=null;   /* {map:{거래처명:{t:'lab'|'hosp'|'etc', g:'gc'|'seegene'|'samkwang'|'eone'|'scl'|'', r:'서울'|'경기 West'|'경기 East'|'지방'|''}}, at, by} — 관리자 지정(암호화) */
+let ACAD=null;   /* {talk:{made,from,to,days:{'YYYY-MM-DD':[24]}}, slack:{…}} — FS Portal 에서 내보낸 학술 글·접수 수(시간별) */
+const WL={tab:'sum', reg:'', grp:'', met:'night', hide:new Set(), instQ:'', instF:'cand'};
+const WL_GROUPS=[['gc','녹십자'],['seegene','씨젠'],['samkwang','삼광'],['eone','이원'],['scl','SCL']];
+const WL_GN=Object.fromEntries(WL_GROUPS);
+const WL_REG=['서울','경기 West','경기 East','지방'];
+const WL_SUG=[['gc',/녹십자|GC\s*(?:랩|의료|녹십자|Labs?)/i],['seegene',/씨젠|seegene/i],['samkwang',/삼광/],['eone',/이원\s*의료|이원의료/],['scl',/서울의과학연구소|\bSCL\b|에스씨엘/i]];
+const WL_LABC=/의료재단|수탁|검사센터|랩지노믹스|진단검사의학연구소|의과학연구소/;   /* 후보 제시용 — 확정은 관리자 */
+const WL_D0=8, WL_D1=18;
+const WL_COL=['#005BAC','#00B9EF','#5185C5','#84BAE5','#9FA0A0'];
+let WL_HOLS=null;
+function wlHol(ms){ const d=new Date(ms), w=d.getUTCDay(); if(w===0||w===6) return true; if(!WL_HOLS) WL_HOLS=new Set(KR_HOLIDAYS); return WL_HOLS.has(d.toISOString().slice(0,10)); }
+/* 구간 [a,b) 를 평일 주간·평일 야간·주말공휴일 분으로 나눔(벽시계 ms) */
+function wlSplit(a,b){ const o={day:0,night:0,hol:0}; if(a==null||b==null||!(b>a)) return o;
+  let t=a; while(t<b){ const d0=Math.floor(t/DAY)*DAY, nx=Math.min(b,d0+DAY);
+    if(wlHol(d0)) o.hol+=(nx-t)/60000;
+    else { const s=d0+WL_D0*3600e3, e=d0+WL_D1*3600e3, dd=Math.max(0,Math.min(nx,e)-Math.max(t,s))/60000; o.day+=dd; o.night+=(nx-t)/60000-dd; }
+    t=nx; }
+  return o; }
+/* 대표 시간대(상호 배타): 시작일이 주말·공휴일 → hol, 평일인데 18~08시와 겹치면 → night, 아니면 day. 종료가 없으면 시작 시각으로만 판단 */
+function wlBand(t,e){ if(wlHol(t)) return 'hol'; if(e!=null&&e>t){ return wlSplit(t,e).night>0?'night':'day'; } const h=new Date(t).getUTCHours(); return (h<WL_D0||h>=WL_D1)?'night':'day'; }
+function wlUnit(n){ const r=ROSTER.find(x=>x[0]===n); if(!r) return null; const t=r[1]; return (t==='FS CENTRAL'||t==='FS SOUTH')&&OFFICE[n]?t+' '+OFFICE[n]:t; }
+function wlTeam(n){ const r=ROSTER.find(x=>x[0]===n); return r?r[1]:null; }
+/* 방문 = 같은 거래처·같은 날 시작한 CRM 활동 중 앞 활동 종료(없으면 시작) 뒤 60분 안에 이어진 것을 한 번으로(장비별로 나눠 입력·여러 작업 = 방문 1건).
+   인력 투입시간 = 활동마다 (종료−시작) × 참여 인원, 0~500분 활동만. 이동시간은 자료 없음 */
+function wlVisits(rows){
+  const by=new Map();
+  rows.forEach(o=>{ if(!o.credits||!o.credits.length||o.internal||!o.acct||/원격/.test(o.purp||'')) return; let l=by.get(o.acct); if(!l) by.set(o.acct,l=[]); l.push(o); });
+  const V=[];
+  by.forEach((l,acct)=>{ l.sort((a,b)=>a.t-b.t); let cur=null;
+    l.forEach(o=>{ const e=o.dur!=null?o.t+o.dur*60000:null, dk=Math.floor(o.t/DAY);
+      if(cur&&dk===cur.dk&&o.t<=(cur.e!=null?cur.e:cur.t)+3600e3){ if(e!=null&&(cur.e==null||e>cur.e)) cur.e=e; cur.rows.push(o); o.credits.forEach(n=>cur.ppl.add(n)); if(e==null) cur.noEnd=true; }
+      else { cur={acct,t:o.t,e,dk,rows:[o],ppl:new Set(o.credits),noEnd:e==null}; V.push(cur); } }); });
+  V.forEach(v=>{ v.mk=mkey(v.t); v.band=wlBand(v.t,v.e); v.min=v.e!=null?(v.e-v.t)/60000:null;
+    let pm=0, off=0; v.rows.forEach(o=>{ if(o.dur==null) return; const s=wlSplit(o.t,o.t+o.dur*60000), k=o.credits.length; pm+=o.dur*k; off+=(s.night+s.hol)*k; });
+    v.pmin=pm; v.offmin=off; v.units=new Set([...v.ppl].map(wlUnit).filter(Boolean)); v.teams=new Set([...v.ppl].map(wlTeam).filter(Boolean));
+    v.purps=[...new Set(v.rows.map(o=>o.purp||'미기재'))]; });
+  return V;
+}
+/* 관리표(EQD) 색인: 기관명 → {sido, team(담당자 팀)} */
+let WL_EQI=null, WL_EQI_SRC=null;
+function wlEqIdx(){ if(WL_EQI&&WL_EQI_SRC===EQD) return WL_EQI; WL_EQI_SRC=EQD; WL_EQI=new Map();
+  ((EQD&&EQD.rows)||[]).forEach(r=>{ if(!WL_EQI.has(r[1])) WL_EQI.set(r[1],{sido:r[2]||'',team:wlTeam(r[0])||''}); }); return WL_EQI; }
+function wlRegionAuto(acct){ const x=wlEqIdx().get(acct); if(!x||!x.sido) return '';
+  if(/서울/.test(x.sido)) return '서울';
+  if(/경기/.test(x.sido)) return x.team==='FS WEST'?'경기 West':x.team==='FS EAST'?'경기 East':'';
+  return '지방'; }
+function wlInfo(acct){ const m=(INST&&INST.map&&INST.map[acct])||{}; return {t:m.t||'', g:m.g||'', r:m.r||wlRegionAuto(acct), rOver:!!m.r, set:!!m.t}; }
+function wlSug(acct){ for(const [g,re] of WL_SUG) if(re.test(acct)) return {t:'lab',g}; return WL_LABC.test(acct)?{t:'lab',g:''}:null; }
+/* 집계 — 방문 묶음 v[] 를 받아 숫자를 냄(순수 함수, 테스트에서 직접 부름) */
+function wlAgg(V, info){
+  const z=()=>({n:0,day:0,night:0,hol:0,min:0,minN:0,pmin:0,off:0,accts:new Set()});
+  const add=(o,v)=>{ o.n++; o[v.band]++; if(v.min!=null){ o.min+=v.min; o.minN++; } o.pmin+=v.pmin; o.off+=v.offmin; o.accts.add(v.acct); };
+  const R={all:z(), type:{lab:z(),hosp:z(),etc:z(),'':z()}, reg:{}, grp:{}, grpReg:{}, labOther:z(), unit:{}, unitLab:{}, regUnit:{}, q:{noEnd:0,joint:0,noType:0,noRegLab:0}};
+  WL_REG.concat(['']).forEach(r=>R.reg[r]=z()); WL_GROUPS.forEach(([g])=>{ R.grp[g]=z(); R.grpReg[g]={}; WL_REG.concat(['']).forEach(r=>R.grpReg[g][r]=z()); });
+  V.forEach(v=>{ const I=info(v.acct); add(R.all,v); add(R.type[I.t]||R.type[''],v);
+    if(v.noEnd) R.q.noEnd++; if(v.ppl.size>1) R.q.joint++; if(!I.t) R.q.noType++;
+    v.units.forEach(u=>{ (R.unit[u]||(R.unit[u]=z())); add(R.unit[u],v); if(I.t==='lab'){ (R.unitLab[u]||(R.unitLab[u]=z())); add(R.unitLab[u],v); } });
+    if(I.t!=='lab') return;
+    const r=WL_REG.includes(I.r)?I.r:''; if(!r) R.q.noRegLab++; add(R.reg[r],v);
+    v.units.forEach(u=>{ const k=r+'|'+u; (R.regUnit[k]||(R.regUnit[k]=z())); add(R.regUnit[k],v); });
+    if(I.g&&R.grp[I.g]){ add(R.grp[I.g],v); add(R.grpReg[I.g][r],v); } else add(R.labOther,v); });
+  return R;
+}
+/* 학술 — Talk(과거)·Slack(이후)을 날짜로 이어 붙임: Slack 기록이 있는 첫날부터는 Slack, 그 전은 Talk */
+function wlAcadDays(){ if(!ACAD) return null; const T=(ACAD.talk&&ACAD.talk.days)||{}, S=(ACAD.slack&&ACAD.slack.days)||{};
+  const sk=Object.keys(S).sort(), cut=sk[0]||'9999'; const out={};
+  Object.keys(T).forEach(d=>{ if(d<cut) out[d]={h:T[d],src:'talk'}; }); sk.forEach(d=>{ out[d]={h:S[d],src:'slack'}; }); return {days:out, cut:sk[0]||null}; }
+function wlAcadAgg(months){ const A=wlAcadDays(); if(!A) return null; const ms=new Set(months), o={n:0,day:0,night:0,hol:0,src:new Set(),byM:{}};
+  Object.keys(A.days).forEach(d=>{ const mk=d.slice(0,7); const x=A.days[d], t0=Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10)), hol=wlHol(t0);
+    let n=0,dy=0,nt=0; x.h.forEach((c,h)=>{ if(!c) return; n+=c; if(h>=WL_D0&&h<WL_D1) dy+=c; else nt+=c; });
+    const M=o.byM[mk]||(o.byM[mk]={n:0,day:0,night:0,hol:0,src:new Set()}); M.n+=n; if(hol) M.hol+=n; else { M.day+=dy; M.night+=nt; } if(n) M.src.add(x.src);
+    if(!ms.has(mk)) return; o.n+=n; if(hol) o.hol+=n; else { o.day+=dy; o.night+=nt; } if(n) o.src.add(x.src); });
+  return o; }
+/* ---------- 그리기 ---------- */
+const wlF=v=>v==null?'-':Math.round(v).toLocaleString('ko-KR'), wlP=(a,b)=>b?(a*100/b).toFixed(1):null, wlH=m=>m==null?'-':(m/60).toLocaleString('ko-KR',{maximumFractionDigits:0});
+function wlNA(label,why){ return `<div class="ovkc st wlna"><span class="ovl">${label}<em class="ovchip none">데이터 미확보</em></span><span class="ovv">–</span><span class="ovt">${why}</span></div>`; }
+function wlD(c,p,unit,lab){ if(c==null||p==null) return lab+' 비교 자료 없음'; const d=c-p; if(Math.abs(d)<0.05) return lab+'과 같음'; return lab+' 대비 '+(d>0?'▲ ':'▼ ')+(Number.isInteger(d)?Math.abs(d).toLocaleString('ko-KR'):Math.abs(d).toFixed(1))+unit; }
+function wlMix(rows){ return rows.map(r=>{ const t=r.day+r.night+r.hol; if(!t) return `<div class="dsmix"><span class="ovhn">${esc(r.n)}</span><span class="dsmt"></span><span class="ovhv">0건</span></div>`;
+  const seg=[['주간',r.day,'#84BAE5'],['야간',r.night,'#005BAC'],['주말',r.hol,'#5185C5']].filter(x=>x[1]).map(([k,v,c])=>{ const p=Math.round(v*100/t); return `<i style="width:${v*100/t}%;background:${c}" title="${k} ${v}건 (${p}%)">${p>=12?k+' '+p+'%':''}</i>`; }).join('');
+  return `<div class="dsmix"><span class="ovhn">${esc(r.n)}</span><span class="dsmt">${seg}</span><span class="ovhv">${wlF(t)}건</span></div>`; }).join('')+'<p class="ovnote">연한 파랑 = 평일 주간(08~18시), 진한 파랑 = 평일 야간, 중간 파랑 = 주말·공휴일 · 오른쪽 = 전체 방문</p>'; }
+function wlLine(months, series, unit){ const W=(window.innerWidth||1280)<600?360:640,H=(window.innerWidth||1280)<600?200:190,L=34,R=8,T=12,B=26, vis=series.filter(s=>!WL.hide.has(s.n));
+  const mx=Math.max(1,...vis.flatMap(s=>s.v.filter(x=>x!=null))); const X=i=>L+(W-L-R)*(months.length<2?0.5:i/(months.length-1)), Y=v=>T+(H-T-B)*(1-v/mx);
+  let g=''; for(let k=0;k<=4;k++){ const v=mx*k/4, y=Y(v); g+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="var(--border)"/><text x="${L-6}" y="${y+4}" text-anchor="end" font-size="11" fill="var(--muted)">${Math.round(v)}</text>`; }
+  months.forEach((m,i)=>{ if(months.length>8&&i%2) return; g+=`<text x="${X(i)}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--muted)">${m.slice(2).replace('-','/')}</text>`; });
+  series.forEach((s,si)=>{ if(WL.hide.has(s.n)) return; const c=s.c||WL_COL[si%WL_COL.length]; let d=''; s.v.forEach((v,i)=>{ if(v==null) return; d+=(d?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1); });
+    g+=`<path d="${d}" fill="none" stroke="${c}" stroke-width="2.2"/>`+s.v.map((v,i)=>v==null?'':`<circle cx="${X(i)}" cy="${Y(v)}" r="3" fill="${c}"><title>${esc(s.n)} ${months[i]} ${wlF(v)}${unit}</title></circle>`).join(''); });
+  const leg=series.length>1?`<div class="wlleg" role="group" aria-label="범례 — 눌러서 숨기기·보이기">${series.map((s,si)=>`<button type="button" data-n="${esc(s.n)}" aria-pressed="${!WL.hide.has(s.n)}"><i style="background:${s.c||WL_COL[si%WL_COL.length]}"></i>${esc(s.n)}</button>`).join('')}</div>`:'';
+  return `${leg}<svg class="wlsvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="월별 추이">${g}</svg><p class="ovnote">세로축 0부터 · 단위 ${unit}</p>`; }
+function wlTbl(head, rows, foot){ return `<div class="ovtw"><table class="ovtab dsfull wltab"><thead><tr>${head.map((h,i)=>`<th${i?' class="num"':''}>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr${r.k?` data-k="${esc(r.k)}" tabindex="0"`:''}${r.cls?` class="${r.cls}"`:''}>${r.c.map((c,i)=>`<td${i?' class="num"':''}>${c}</td>`).join('')}</tr>`).join('')}</tbody>${foot?`<tfoot><tr>${foot.map((c,i)=>`<td${i?' class="num"':''}>${c}</td>`).join('')}</tr></tfoot>`:''}</table></div>`; }
+function wlOn(){ return !!(INST&&INST.map&&Object.keys(INST.map).some(k=>INST.map[k]&&INST.map[k].t)); }
+function renderWl(){
+  const el=$('wl'); if(!el||!D) return;
+  const p=curPeriod(), pp=prevPeriod(p), team=$('fTeam').value||null;
+  const yoy={months:p.months.map(m=>shiftMonth(m,-12)), label:'전년 같은 기간'};
+  const all=wlVisits(D.rows);
+  const pick=(months)=>{ const s=new Set(months); return all.filter(v=>s.has(v.mk)&&(!team||v.teams.has(team))); };
+  const V=pick(p.months), A=wlAgg(V,wlInfo), Ap=wlAgg(pick(pp.months),wlInfo), Ay=wlAgg(pick(yoy.months),wlInfo);
+  const ac=wlAcadAgg(p.months), acp=wlAcadAgg(pp.months), acy=wlAcadAgg(yoy.months);
+  const last=D.months[D.months.length-1], m12=Array.from({length:12},(_,i)=>shiftMonth(last,i-11));
+  const lab=A.type.lab, cls=A.all.n-A.type[''].n, labShare=wlP(lab.n,cls), labShareP=wlP(Ap.type.lab.n,Ap.all.n-Ap.type[''].n), labShareY=wlP(Ay.type.lab.n,Ay.all.n-Ay.type[''].n);
+  const offH=A.all.off, two=(a,b)=>a+'<br>'+b;
+  const srcTxt=ac?([...ac.src].map(s=>s==='talk'?'Sysmex Talk 글':'Slack 접수').join(' + ')||'자료 없음'):'';
+  let h=`<div class="ovtitle dstitle"><div><h2>Workload</h2><p>${esc(p.label)} · ${esc(team||'FSG 전체')} · 비교 ${esc(pp.label)} · 시간대 평일 08~18시 = 주간 · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}</p></div>${ADMIN?'<span class="ovtools"><button type="button" class="dsbtn" id="wlInstBtn">기관 분류 관리</button></span>':''}</div>`;
+  h+=`<h2 class="sec">업무부하 요약 <small>방문 = CRM 활동(같은 거래처·같은 날 이어진 활동은 1건) · 학술 = FS Portal 집계 · 늘었다고 좋은 실적이 아님</small></h2><section class="ovkpi c3 wlk" aria-label="업무부하 핵심 지표">`;
+  h+= ac? dsCell('학술 응대',wlF(ac.n),'건',two(srcTxt,'평일 주간 '+wlF(ac.day)+' · 야간 '+wlF(ac.night)+' · 주말·공휴일 '+wlF(ac.hol)),two(wlD(ac.n,acp&&acp.n,'건',pp.label),wlD(ac.n,acy&&acy.n,'건','전년 같은 기간')),'Sysmex Talk 은 글 수, Slack 은 접수 건 — CRM 방문과 단위가 다름') : wlNA('학술 응대','FS Portal 에서 내보낸 학술 자료를 아직 올리지 않았습니다');
+  h+= wlNA('학술 업무 비중','CRM 에 학술 활동 기록이 없어 같은 단위의 분모가 없습니다(학술은 글·접수 수)');
+  h+= ac? dsCell('야간·주말 학술 응대',wlF(ac.night+ac.hol),'건','전체의 '+(wlP(ac.night+ac.hol,ac.n)||'-')+'%',two(wlD(ac.night+ac.hol,acp&&(acp.night+acp.hol),'건',pp.label),wlD(ac.night+ac.hol,acy&&(acy.night+acy.hol),'건','전년 같은 기간')),'평일 18~08시 + 주말·공휴일') : wlNA('야간·주말 학술 응대','학술 자료 미확보');
+  h+= wlOn()? dsCell('수탁기관 방문 비중',labShare==null?'-':labShare,'%',`분류된 방문 ${wlF(cls)}건 중 ${wlF(lab.n)}건 · 미분류 ${wlF(A.type[''].n)}건 제외`,two(wlD(labShare&&+labShare,labShareP&&+labShareP,'%p',pp.label),wlD(labShare&&+labShare,labShareY&&+labShareY,'%p','전년 같은 기간')),'기관 유형 = 관리자가 지정한 표') : wlNA('수탁기관 방문 비중','기관 분류(수탁기관·일반병원)를 아직 지정하지 않았습니다');
+  h+= wlOn()? dsCell('수탁기관 야간 방문',wlF(lab.night),'건',`주말·공휴일 ${wlF(lab.hol)}건 · 야간 비율 ${wlP(lab.night,lab.n)||'-'}%`,two(wlD(lab.night,Ap.type.lab.night,'건',pp.label),wlD(lab.night,Ay.type.lab.night,'건','전년 같은 기간')),'평일 18~08시와 작업 시간이 겹친 방문') : wlNA('수탁기관 야간 방문','기관 분류 미지정');
+  h+= dsCell('정규근무 외 작업시간',wlH(offH),'시간',`인력 투입 기준(참여 인원 × 작업시간) · 이동시간 미포함`,two(wlD(Math.round(offH/60),Math.round(Ap.all.off/60),'시간',pp.label),wlD(Math.round(offH/60),Math.round(Ay.all.off/60),'시간','전년 같은 기간')),'평일 18~08시 + 주말·공휴일의 CRM 작업시간');
+  h+=`</section>`;
+  const TABS=[['sum','요약'],['acad','학술 응대'],['inst','기관 유형'],['reg','지역'],['grp','5대 수탁기관'],['org','조직']];
+  h+=`<div class="ovseg ovscroll wltabs" role="tablist" aria-label="분석 영역">${TABS.map(([k,n])=>`<button type="button" role="tab" data-t="${k}" aria-selected="${WL.tab===k}" aria-pressed="${WL.tab===k}">${n}</button>`).join('')}</div><div id="wlBody"></div>`;
+  el.innerHTML=h;
+  const ctx={p,pp,team,V,A,ac,m12,all,lab};
+  el.querySelectorAll('.wltabs button').forEach(b=>b.onclick=()=>{ WL.tab=b.dataset.t; renderWl(); });
+  const ib=$('wlInstBtn'); if(ib) ib.onclick=()=>wlInstEditor(all);
+  wlBody(ctx);
+}
+function wlMonthSeries(all,m12,team,fn){ const s=new Set(m12), by={}; all.forEach(v=>{ if(!s.has(v.mk)||(team&&!v.teams.has(team))) return; const k=fn(v); if(k==null) return; (by[k]||(by[k]={}))[v.mk]=(by[k][v.mk]||0)+1; }); return by; }
+function wlBody(c){
+  const b=$('wlBody'), {A,ac,m12,all,team,lab}=c, T=WL.tab; let h='';
+  const typeRow=(n,o)=>({n,day:o.day,night:o.night,hol:o.hol});
+  if(T==='sum'){
+    const L=A.type.lab, Hh=A.type.hosp, rl=L.n?L.night/L.n:null, rh=Hh.n?Hh.night/Hh.n:null, conc=(rl!=null&&rh)?(rl/rh):null;
+    const g5n=WL_GROUPS.reduce((a,[g])=>a+A.grp[g].night,0);
+    h+=`<div class="ovgrid dspair"><section class="ovcard"><h3>기관 유형별 시간대 구성 <span class="ovsub">CRM 방문 · 100%</span></h3>${wlOn()?wlMix([typeRow('수탁기관',L),typeRow('일반병원',Hh),typeRow('기타',A.type.etc),typeRow('미분류',A.type[''])]):'<p class="empty-note">기관 분류를 지정하면 표시됩니다.</p>'}</section>
+      <section class="ovcard"><h3>한눈에 <span class="ovsub">이 기간</span></h3>${wlTbl(['지표','값'],[
+        {c:['야간 방문 상대 집중도 (수탁 ÷ 병원)',conc==null?'산출 안 함':conc.toFixed(2)+'배']},
+        {c:['5대 수탁기관 야간 방문 집중도',L.night?(g5n*100/L.night).toFixed(1)+'%':'산출 안 함']},
+        {c:['공동 방문(2명 이상)',wlF(A.q.joint)+'건']},
+        {c:['정규근무 외 작업시간',wlH(A.all.off)+'시간']}])}<p class="ovnote">집중도는 분모가 0이면 산출하지 않습니다. 야간 방문이 많다고 긴급 방문으로 보지 않습니다.</p></section></div>`;
+  }
+  if(T==='acad'){
+    if(!ac){ h+='<section class="ovcard"><p class="empty-note">학술 자료가 없습니다. FS Portal 「Sysmex Talk 집계」·「학술요청 집계」에서 「KPI용 내보내기」 파일을 받아 관리자 화면 「업무부하 학술 자료」 칸에 올려 주세요.</p></section>'; }
+    else{ const A2=wlAcadAgg(m12), mm=m12.map(m=>(A2.byM[m]||{}).n||0), mn=m12.map(m=>{ const x=A2.byM[m]; return x?(x.night+x.hol):0; });
+      h+=`<div class="ovgrid dspair"><section class="ovcard"><h3>학술 응대 — 시간대 <span class="ovsub">${esc(c.p.label)}</span></h3>${dsBars([{n:'평일 주간',v:ac.day},{n:'평일 야간',v:ac.night},{n:'주말·공휴일',v:ac.hol}],{type:'bar',unit:'건',dec:0})}</section>
+        <section class="ovcard"><h3>월별 학술 응대 <span class="ovsub">최근 12개월</span></h3>${wlLine(m12,[{n:'전체',v:mm},{n:'야간·주말',v:mn}],'건')}<p class="ovnote">${esc(m12.filter(m=>A2.byM[m]&&A2.byM[m].src.has('slack')).length?'Slack 접수가 있는 달은 Slack, 그 전은 Sysmex Talk 글 수':'Sysmex Talk 글 수')} — 두 자료는 단위가 달라 바뀐 달의 증감은 비교하지 않습니다.</p></section></div>`;
+      h+=`<section class="ovcard" style="margin-top:14px"><h3>아직 계산하지 않는 항목 <span class="ovsub">데이터 미확보</span></h3>${wlTbl(['항목','필요한 자료'],[{c:['학술 업무 비중(건수·시간)','CRM 에 FS 직원의 학술 활동 기록(목적·시간)']},{c:['학술 소요시간·평균 응대시간','통화·응대 시간 기록']},{c:['팀·사무소별 학술 응대','응대한 직원 정보(Slack 확인자·Talk 작성자를 업무 기록으로 쓰려면 사용자 결정 필요)']}])}</section>`; }
+  }
+  if(T==='inst'){
+    if(!wlOn()){ h+='<section class="ovcard"><p class="empty-note">기관 분류를 지정하지 않았습니다. 관리자 화면 「기관 분류 관리」에서 수탁기관·일반병원을 지정해 주세요.</p></section>'; }
+    else{ const K=[['lab','수탁기관'],['hosp','일반병원'],['etc','기타'],['','미분류']];
+      const rows=K.map(([k,n])=>{ const o=A.type[k]; return {c:[n,wlF(o.n),wlF(o.day),wlF(o.night),wlF(o.hol),(wlP(o.night,o.n)||'-')+(o.n?'%':''),o.minN?Math.round(o.min/o.minN)+'분':'-',wlH(o.off)+'시간'],cls:k===''?'wlmut':''}; });
+      const L=A.type.lab, Hh=A.type.hosp, rl=L.n?L.night/L.n:null, rh=Hh.n?Hh.night/Hh.n:null;
+      const by=wlMonthSeries(all,m12,team,v=>{ const t=wlInfo(v.acct).t; return t==='lab'||t==='hosp'?t:null; });
+      h+=`<section class="ovcard"><h3>수탁기관 · 일반병원 <span class="ovsub">절대 건수와 비율 · 평균 작업시간 = 방문 시작~끝 · 정규근무 외 = 인력 투입시간</span></h3>${wlTbl(['기관 유형','전체','평일 주간','평일 야간','주말·공휴일','야간 비율','평균 작업시간','정규근무 외'],rows)}<p class="ovnote">야간 방문 상대 집중도 = 수탁기관 야간 비율 ÷ 일반병원 야간 비율 = <b>${rl!=null&&rh?(rl/rh).toFixed(2)+'배':'산출 안 함'}</b> · 평균 이동시간 = 데이터 미확보</p></section>
+        <div class="ovgrid dspair"><section class="ovcard"><h3>시간대 구성 <span class="ovsub">100%</span></h3>${wlMix([typeRow('수탁기관',L),typeRow('일반병원',Hh)])}</section>
+        <section class="ovcard"><h3>월별 방문 <span class="ovsub">최근 12개월</span></h3>${wlLine(m12,[{n:'수탁기관',v:m12.map(m=>(by.lab||{})[m]||0)},{n:'일반병원',v:m12.map(m=>(by.hosp||{})[m]||0),c:'#84BAE5'}],'건')}</section></div>`; }
+  }
+  if(T==='reg'){
+    if(!wlOn()){ h+='<section class="ovcard"><p class="empty-note">기관 분류를 지정하면 수탁기관 지역 분석이 표시됩니다.</p></section>'; }
+    else{ const RG=WL_REG.concat(['']), totN=A.type.lab.night||0;
+      const rows=RG.map(r=>{ const o=A.reg[r]; return {k:r||'-',c:[r||'미분류',wlF(o.accts.size),wlF(o.n),wlF(o.day),wlF(o.night),wlF(o.hol),(wlP(o.night,o.n)||'-')+(o.n?'%':''),(wlP(o.night,totN)||'-')+(totN?'%':''),o.accts.size?(o.night/o.accts.size).toFixed(1):'-',wlH(o.off)],cls:(WL.reg===(r||'-')?'wlsel':'')+(r?'':' wlmut')}; });
+      const by=wlMonthSeries(all,m12,team,v=>{ const I=wlInfo(v.acct); return I.t==='lab'&&v.band==='night'?(WL_REG.includes(I.r)?I.r:'미분류'):null; });
+      h+=`<div class="ovgrid dspair"><section class="ovcard"><h3>지역별 수탁기관 야간 방문 <span class="ovsub">평일 18~08시</span></h3>${dsBars(RG.map(r=>({n:r||'미분류',v:A.reg[r].night})),{type:'bar',unit:'건',dec:0})}</section>
+        <section class="ovcard"><h3>주간·야간 구성 <span class="ovsub">100%</span></h3>${wlMix(RG.map(r=>({...A.reg[r],n:r||'미분류'})))}</section></div>
+        <section class="ovcard" style="margin-top:14px"><h3>지역별 비교표 <span class="ovsub">행을 누르면 그 지역 기관·수행 사무소 · 부담시간 = 정규근무 외 인력 투입시간(시간)</span></h3>${wlTbl(['지역','기관 수','전체','평일 주간','평일 야간','주말·공휴일','야간 비율','야간 중 비중','기관당 야간','부담시간'],rows)}<p class="ovnote">경기 West·East = 담당기관 관리표 담당자의 팀(관리표에 없으면 미분류, 관리자가 기관별로 바꿀 수 있음) · 지방 = 서울·경기 밖(인천·강원 포함) · 평균 이동시간 = 데이터 미확보</p><div id="wlRegDet"></div></section>
+        <section class="ovcard" style="margin-top:14px"><h3>최근 12개월 지역별 야간 방문</h3>${wlLine(m12,WL_REG.concat(['미분류']).map(r=>({n:r,v:m12.map(m=>(by[r]||{})[m]||0)})),'건')}</section>`; }
+  }
+  if(T==='grp'){
+    if(!wlOn()){ h+='<section class="ovcard"><p class="empty-note">5대 수탁기관 그룹을 지정하면 표시됩니다.</p></section>'; }
+    else{ const G5=WL_GROUPS.map(([g,n])=>({k:g,n,o:A.grp[g]})).sort((a,b)=>b.o.night-a.o.night), g5n=G5.reduce((a,x)=>a+x.o.night,0), L=A.type.lab;
+      const MET=[['night','야간 방문'],['n','전체 방문'],['rate','야간 비율'],['off','부담시간']], mv=o=>WL.met==='rate'?(o.n?(o.night*100/o.n).toFixed(1)+'%':'-'):WL.met==='off'?wlH(o.off):wlF(o[WL.met]);
+      const by=wlMonthSeries(all,m12,team,v=>{ const I=wlInfo(v.acct); return I.t==='lab'&&I.g&&v.band==='night'?WL_GN[I.g]:null; });
+      h+=`<div class="ovgrid dspair"><section class="ovcard"><h3>5대 수탁기관 야간 방문 <span class="ovsub">많은 순 · 오른쪽 괄호 = 5대 전체 야간 중 비율 · 누르면 상세</span></h3>${dsBars(G5.map(x=>({k:x.k,n:x.n,v:x.o.night,sub:g5n?'('+(x.o.night*100/g5n).toFixed(0)+'%)':'',sel:WL.grp===x.k})),{type:'bar',unit:'건',dec:0,pick:true})}</section>
+        <section class="ovcard"><h3>기관별 주간·야간 구성 <span class="ovsub">100%</span></h3>${wlMix(G5.map(x=>({...x.o,n:x.n})))}</section></div>
+        <section class="ovcard" style="margin-top:14px"><h3>기관 × 지역 <span class="ovtools"><span class="ovseg" role="group" aria-label="지표" id="wlMet">${MET.map(([k,n])=>`<button type="button" data-m="${k}" aria-pressed="${WL.met===k}">${n}</button>`).join('')}</span></span></h3>${wlTbl(['기관'].concat(WL_REG,['미분류','합계']),WL_GROUPS.map(([g,n])=>({k:g,c:[n].concat(WL_REG.concat(['']).map(r=>mv(A.grpReg[g][r])),[mv(A.grp[g])])})))}</section>
+        <div class="ovgrid dspair"><section class="ovcard"><h3>5대 vs 기타 수탁기관 <span class="ovsub">수탁기관 전체 = 5대 + 기타</span></h3>${wlTbl(['','5대','기타','5대 비중'],[
+          ['전체 방문','n'],['평일 야간','night'],['주말·공휴일','hol'],['정규근무 외(시간)','off']].map(([n,k])=>{ const a=G5.reduce((s,x)=>s+x.o[k],0), o=A.labOther[k]; return {c:[n,k==='off'?wlH(a):wlF(a),k==='off'?wlH(o):wlF(o),(wlP(a,a+o)||'-')+(a+o?'%':'')]}; }))}<p class="ovnote">5대 수탁기관 야간 방문 집중도 = <b>${L.night?(g5n*100/L.night).toFixed(1)+'%':'산출 안 함'}</b> (5대 야간 ÷ 전체 수탁기관 야간)</p></section>
+        <section class="ovcard"><h3>최근 12개월 기관별 야간 방문 <span class="ovsub">범례를 누르면 숨기기·보이기</span></h3>${wlLine(m12,WL_GROUPS.map(([g,n])=>({n,v:m12.map(m=>(by[n]||{})[m]||0)})),'건')}</section></div><div id="wlGrpDet"></div>`; }
+  }
+  if(T==='org'){
+    const U=PROD_UNITS, hc=u=>ROSTER.filter(r=>wlUnit(r[0])===u&&r[0]!=='김민결').length;
+    const rows=U.map(u=>{ const o=A.unit[u]||{n:0,night:0,hol:0,off:0}, l=A.unitLab[u]||{n:0,night:0}, n=hc(u);
+      const g5n=c.V.filter(v=>v.units.has(u)&&wlInfo(v.acct).g).length;
+      return {c:[UNIT_SHORT(u),wlF(n),wlF(o.n),wlF(l.n),wlF(o.night),wlF(o.hol),wlOn()?wlF(g5n):'-',n?(o.night/n).toFixed(1):'-',n?(o.off/60/n).toFixed(1):'-']}; });
+    h+=`<section class="ovcard"><h3>사무소별 업무부하 <span class="ovsub">수행 조직 = 방문한 직원의 사무소 · 공동 방문은 참여 사무소마다 1건 · 1인당 = 그 사무소 인원</span></h3>${wlTbl(['사무소','인원','방문','수탁기관','평일 야간','주말·공휴일','5대 수탁','1인당 야간','1인당 정규근무 외(시간)'],rows)}<p class="ovnote">사무소별 학술 응대 = 데이터 미확보(응대 직원 정보 없음)</p></section>`;
+    if(wlOn()){ const reg=WL_REG.concat(['']); h+=`<section class="ovcard" style="margin-top:14px"><h3>기관 지역 × 수행 사무소 <span class="ovsub">수탁기관 방문 건수 — 기관 지역과 방문한 직원의 사무소를 따로 셈</span></h3>${wlTbl(['기관 지역'].concat(U.map(UNIT_SHORT)),reg.map(r=>({c:[r||'미분류'].concat(U.map(u=>wlF((A.regUnit[r+'|'+u]||{n:0}).n)))})))}</section>`; }
+  }
+  h+=`<details class="wlq"><summary>데이터 점검</summary>${wlTbl(['항목','건수'],[{c:['기관 유형 미분류 방문',wlF(A.q.noType)]},{c:['지역 미분류 수탁기관 방문',wlF(A.q.noRegLab)]},{c:['종료 시각 없는 방문(시작 시각으로만 시간대 판정)',wlF(A.q.noEnd)]},{c:['공동 방문(2명 이상)',wlF(A.q.joint)]},{c:['합계 확인: 주간+야간+주말 = 전체',(A.all.day+A.all.night+A.all.hol===A.all.n)?'일치':'불일치']},{c:['합계 확인: 5대+기타 = 수탁기관',(WL_GROUPS.reduce((s,[g])=>s+A.grp[g].n,0)+A.labOther.n===A.type.lab.n)?'일치':'불일치']}])}<p class="ovnote">방문 = 취소·온라인 정기점검·원격 목적·사내 계정 제외 CRM 활동 · 공휴일 표는 2024~2027년만 있어 그 전 공휴일은 평일로 셈 · 학술 자료는 FS Portal 이 이름·병원명 없이 시간별 건수만 내보냄</p></details>`;
+  b.innerHTML=h;
+  b.querySelectorAll('.wlleg button').forEach(x=>x.onclick=()=>{ const n=x.dataset.n; WL.hide.has(n)?WL.hide.delete(n):WL.hide.add(n); wlBody(c); });
+  const mt=$('wlMet'); if(mt) mt.querySelectorAll('button').forEach(x=>x.onclick=()=>{ WL.met=x.dataset.m; wlBody(c); });
+  b.querySelectorAll('.ovhb.pick[data-k]').forEach(x=>x.onclick=()=>{ WL.grp=WL.grp===x.dataset.k?'':x.dataset.k; wlBody(c); });
+  b.querySelectorAll('tr[data-k]').forEach(tr=>{ const go=()=>{ if(T==='reg'){ WL.reg=WL.reg===tr.dataset.k?'':tr.dataset.k; wlBody(c); } else if(T==='grp'){ WL.grp=WL.grp===tr.dataset.k?'':tr.dataset.k; wlBody(c); } }; tr.onclick=go; tr.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } }; });
+  if(T==='reg'&&WL.reg&&$('wlRegDet')){ const r=WL.reg==='-'?'':WL.reg, L=c.V.filter(v=>{ const I=wlInfo(v.acct); return I.t==='lab'&&(WL_REG.includes(I.r)?I.r:'')===r; });
+    const by={}; L.forEach(v=>{ const o=by[v.acct]||(by[v.acct]={n:0,night:0,units:new Set()}); o.n++; if(v.band==='night') o.night++; v.units.forEach(u=>o.units.add(UNIT_SHORT(u))); });
+    $('wlRegDet').innerHTML=`<h4 class="wlh4">${esc(r||'미분류')} — 수탁기관 ${Object.keys(by).length}곳</h4>`+wlTbl(['기관','방문','평일 야간','수행 사무소'],Object.entries(by).sort((a,b)=>b[1].night-a[1].night||b[1].n-a[1].n).slice(0,30).map(([a,o])=>({c:[esc(a),wlF(o.n),wlF(o.night),[...o.units].join('·')]}))); }
+  if(T==='grp'&&WL.grp&&$('wlGrpDet')){ const g=WL.grp, L=c.V.filter(v=>wlInfo(v.acct).g===g), pr={}, of={}, sites={};
+    L.forEach(v=>{ v.purps.forEach(p=>pr[p]=(pr[p]||0)+1); v.units.forEach(u=>{ const k=UNIT_SHORT(u); of[k]=(of[k]||0)+1; }); const s=sites[v.acct]||(sites[v.acct]={n:0,night:0,min:0,mn:0,r:wlInfo(v.acct).r||'미분류'}); s.n++; if(v.band==='night') s.night++; if(v.min!=null){ s.min+=v.min; s.mn++; } });
+    const by=wlMonthSeries(all,m12,team,v=>wlInfo(v.acct).g===g?v.band:null);
+    $('wlGrpDet').innerHTML=`<section class="ovcard" style="margin-top:14px"><h3>${esc(WL_GN[g])} 상세 <span class="ovsub">사업장 ${Object.keys(sites).length}곳 · 이동시간 데이터 미확보</span></h3>
+      <div class="ovgrid dspair"><div>${wlLine(m12,[{n:'평일 주간',v:m12.map(m=>(by.day||{})[m]||0),c:'#84BAE5'},{n:'평일 야간',v:m12.map(m=>(by.night||{})[m]||0)},{n:'주말·공휴일',v:m12.map(m=>(by.hol||{})[m]||0),c:'#5185C5'}],'건')}</div>
+      <div>${wlTbl(['방문 사유(CRM 목적)','방문'],Object.entries(pr).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,n])=>({c:[esc(k),wlF(n)]})))}${wlTbl(['담당(수행) 사무소','방문'],Object.entries(of).sort((a,b)=>b[1]-a[1]).map(([k,n])=>({c:[esc(k),wlF(n)]})))}</div></div>
+      ${wlTbl(['사업장','지역','방문','평일 야간','평균 작업시간'],Object.entries(sites).sort((a,b)=>b[1].n-a[1].n).map(([a,s])=>({c:[esc(a),esc(s.r),wlF(s.n),wlF(s.night),s.mn?Math.round(s.min/s.mn)+'분':'-']})))}<p class="ovnote">야간 방문이라는 이유만으로 긴급 방문으로 보지 않습니다.</p></section>`; }
+}
+/* ---------- 기관 분류 관리(관리자) — 이름은 후보 제시에만, 확정은 관리자 ---------- */
+function wlInstEditor(all){
+  const cnt=new Map(); all.forEach(v=>{ const o=cnt.get(v.acct)||{n:0,night:0}; o.n++; if(v.band!=='day') o.night++; cnt.set(v.acct,o); });
+  const M=JSON.parse(JSON.stringify((INST&&INST.map)||{}));
+  const box=document.createElement('div'); box.className='wled dsx'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true'); box.setAttribute('aria-labelledby','wledT');
+  document.body.appendChild(box);
+  const close=()=>box.remove();
+  function draw(){
+    const q=WL.instQ.trim(), F=WL.instF;
+    let L=[...cnt.entries()].map(([a,o])=>({a,o,m:M[a]||{},s:wlSug(a)}));
+    if(F==='cand') L=L.filter(x=>x.s&&!x.m.t); else if(F==='lab') L=L.filter(x=>x.m.t==='lab'); else if(F==='none') L=L.filter(x=>!x.m.t);
+    if(q) L=L.filter(x=>x.a.includes(q));
+    L.sort((a,b)=>b.o.n-a.o.n); const shown=L.slice(0,150);
+    const nSet=Object.values(M).filter(x=>x.t).length, nLab=Object.values(M).filter(x=>x.t==='lab').length;
+    box.innerHTML=`<div class="wledc"><div class="wledh"><h3 id="wledT">기관 분류 관리</h3><button type="button" class="dsbtn" id="wledX" aria-label="닫기">닫기</button></div>
+      <p class="ovnote">CRM 거래처마다 기관 유형·5대 그룹·지역을 정합니다. 이름은 후보를 보여 줄 때만 쓰고, 여기서 정한 값만 집계에 들어갑니다. 지정 ${nSet}곳(수탁기관 ${nLab}곳) / 방문 기록이 있는 기관 ${cnt.size}곳.</p>
+      <div class="wledf"><span class="ovseg" role="group" aria-label="보기">${[['cand','후보(미지정)'],['lab','수탁기관'],['none','미지정 전체'],['all','전체']].map(([k,n])=>`<button type="button" data-f="${k}" aria-pressed="${F===k}">${n}</button>`).join('')}</span><input id="wledQ" type="search" placeholder="기관명 찾기" aria-label="기관명 찾기" value="${esc(q)}"></div>
+      <div class="ovtw"><table class="ovtab dsfull wltab"><thead><tr><th>기관(CRM 거래처)</th><th class="num">방문</th><th>유형</th><th>5대 그룹</th><th>지역</th></tr></thead><tbody>${shown.map((x,i)=>{ const m=x.m, auto=wlRegionAuto(x.a);
+        return `<tr><td>${esc(x.a)}${x.s&&!m.t?` <em class="ovchip none">후보 ${x.s.g?WL_GN[x.s.g]:'수탁기관'}</em>`:''}</td><td class="num">${wlF(x.o.n)}</td>
+        <td><select data-i="${i}" data-f="t" aria-label="${esc(x.a)} 유형"><option value="">미분류</option>${[['lab','수탁기관'],['hosp','일반병원'],['etc','기타']].map(([k,n])=>`<option value="${k}"${m.t===k?' selected':''}>${n}</option>`).join('')}</select></td>
+        <td><select data-i="${i}" data-f="g" aria-label="${esc(x.a)} 5대 그룹"><option value="">-</option>${WL_GROUPS.map(([k,n])=>`<option value="${k}"${m.g===k?' selected':''}>${n}</option>`).join('')}</select></td>
+        <td><select data-i="${i}" data-f="r" aria-label="${esc(x.a)} 지역"><option value="">${auto?'자동: '+auto:'미분류'}</option>${WL_REG.map(r=>`<option value="${r}"${m.r===r?' selected':''}>${r}</option>`).join('')}</select></td></tr>`; }).join('')}</tbody></table></div>
+      ${L.length>150?`<p class="ovnote">${L.length}곳 중 방문이 많은 150곳만 보입니다. 기관명으로 찾아 주세요.</p>`:''}
+      <div class="wledb">${F==='cand'?'<button type="button" class="dsbtn" id="wledAcc">보이는 후보를 제안대로 지정</button>':''}<button type="button" class="dsbtn" id="wledRest">남은 미지정 기관을 모두 일반병원으로</button><span style="flex:1"></span><span class="ovnote" id="wledMsg"></span><button type="button" class="dsbtn wlpri" id="wledSave">저장</button></div></div>`;
+    box.querySelector('#wledX').onclick=close;
+    box.querySelectorAll('[data-f][aria-pressed]').forEach(b=>b.onclick=()=>{ WL.instF=b.dataset.f; draw(); });
+    const qi=box.querySelector('#wledQ'); qi.oninput=()=>{ WL.instQ=qi.value; clearTimeout(qi._t); qi._t=setTimeout(()=>{ draw(); const n=box.querySelector('#wledQ'); n.focus(); n.setSelectionRange(n.value.length,n.value.length); },250); };
+    box.querySelectorAll('select[data-i]').forEach(s=>s.onchange=()=>{ const x=shown[+s.dataset.i], m=M[x.a]||(M[x.a]={}); m[s.dataset.f]=s.value; if(s.dataset.f==='g'&&s.value) m.t='lab'; if(!m.t&&!m.g&&!m.r) delete M[x.a]; });
+    const acc=box.querySelector('#wledAcc'); if(acc) acc.onclick=()=>{ shown.forEach(x=>{ if(x.s){ M[x.a]={...(M[x.a]||{}),t:'lab',g:x.s.g||''}; } }); draw(); };
+    box.querySelector('#wledRest').onclick=()=>{ const n=[...cnt.keys()].filter(a=>!(M[a]&&M[a].t)).length; if(!n||!confirm(`지정하지 않은 ${n}곳을 모두 「일반병원」으로 정합니다. 수탁기관 후보를 먼저 확인하셨나요?`)) return; cnt.forEach((o,a)=>{ if(!(M[a]&&M[a].t)) M[a]={...(M[a]||{}),t:'hosp'}; }); draw(); };
+    box.querySelector('#wledSave').onclick=async()=>{ const msg=box.querySelector('#wledMsg'); msg.textContent='저장 중…';
+      try{ const obj={map:M,at:nowStr(),by:ADMIN_EMAIL||''}; await pushShared('inst',obj,{instAt:nowStr(),instN:Object.keys(M).length}); INST=obj; msg.textContent='저장했습니다'; renderWl(); }
+      catch(e){ msg.textContent='저장하지 못했습니다: '+(e.message||e)+' — 위 「CRM 데이터 올리기」에서 관리자 로그인 후 다시 저장해 주세요'; } };
+  }
+  draw(); box.querySelector('#wledX').focus();
+  box.addEventListener('keydown',e=>{ if(e.key==='Escape') close(); });
+}
+/* FS Portal 「KPI용 내보내기」 파일(학술) 읽기 — {kind:'fsportal-acad', src:'talk'|'slack', days:{'YYYY-MM-DD':[24]}} */
+function parseAcad(txt, name){
+  let o; try{ o=JSON.parse(txt); }catch(e){ throw new Error('JSON 파일이 아닙니다.'); }
+  if(!o||o.kind!=='fsportal-acad'||!/^(talk|slack)$/.test(o.src)||!o.days) throw new Error('FS Portal 「KPI용 내보내기」 학술 파일이 아닙니다.');
+  const days={}; Object.keys(o.days).forEach(d=>{ const a=o.days[d]; if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!Array.isArray(a)||a.length!==24) throw new Error('날짜·시간 형식이 맞지 않습니다: '+d); days[d]=a.map(x=>Math.max(0,Math.round(+x||0))); });
+  const cur=JSON.parse(JSON.stringify(ACAD||{})); cur[o.src]={made:o.made||'',from:o.from||'',to:o.to||'',days,file:name}; return cur;
+}
+
 function setView(v){
   if(!SCREENS[v]) v='ov'; VIEW=v; document.body.dataset.view=v; try{localStorage.setItem(VIEW_LS,v);}catch(e){}
   const c=SCREENS[v];
   document.querySelectorAll('#vtabs .vt').forEach(b=>b.setAttribute('aria-selected',b.dataset.view===v));
   $('svcBar').hidden=v==='prd'; $('prodBar').hidden=v!=='prd';
-  $('ov').hidden=v!=='ov'; $('mainArea').hidden=!c.scr; $('prod').hidden=!c.prod; $('mainArea').classList.toggle('dsx',!!(c.scr&&c.dsx)); $('prod').classList.toggle('dsx',!!(c.prod&&c.dsx));
+  $('ov').hidden=v!=='ov'; $('wl').hidden=v!=='wl'; $('mainArea').hidden=!c.scr; $('prod').hidden=!c.prod; $('mainArea').classList.toggle('dsx',!!(c.scr&&c.dsx)); $('prod').classList.toggle('dsx',!!(c.prod&&c.dsx));
   $('mainArea').querySelectorAll('[data-scr]').forEach(el=>el.classList.toggle('scr-off',!el.dataset.scr.split(' ').includes(c.scr)));
   $('mainArea').querySelectorAll('.grid').forEach(g=>{ const k=[...g.children].filter(x=>!x.classList.contains('scr-off')).length; g.classList.toggle('one',k<=1); });
   if(history.replaceState) history.replaceState(null,'',location.pathname+location.search+c.hash);
@@ -4583,6 +4861,7 @@ function renderProdFor(){
 function rerender(){
   const c=SCREENS[VIEW]; if(!c) return;
   if(VIEW==='ov'){ renderOv(); return; }
+  if(VIEW==='wl'){ try{ renderWl(); }catch(e){ console.error('Workload',e); $('wl').innerHTML='<p class="empty-note">Workload 화면을 그리지 못했습니다: '+esc(e.message||e)+'</p>'; } return; }
   if(c.scr) render();
   if(c.prod) renderProdFor();
 }
