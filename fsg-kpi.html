@@ -547,8 +547,10 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 .scr-off{display:none !important}.grid.one{grid-template-columns:1fr}
 .vtabs .vtl{display:flex;gap:4px;min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:none}
 .vtabs .vtl::-webkit-scrollbar{display:none}.vtabs button.vt{white-space:nowrap}
-body[data-view=org] #prodTabs,body[data-view=eqp] #prodTabs{display:none}
-body[data-view=org] .pfoot,body[data-view=eqp] .pfoot{display:none}
+body[data-view=org] #prodTabs,body[data-view=eqp] #prodTabs,body[data-view=wl] #prodTabs{display:none}
+body[data-view=org] .pfoot,body[data-view=eqp] .pfoot,body[data-view=wl] .pfoot{display:none}
+body[data-view=prd] #prodTabs [data-tab=ot]{display:none}
+#otPerson .block-head{flex-wrap:wrap;align-items:center}#otPerson .otpx{width:auto;margin:0 0 0 auto;flex:0 0 auto;min-height:40px;padding:0 14px}.otmoved{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.otmoved .more-btn{width:auto;margin:0}
 body[data-view=pro] #kpis .kpi:nth-child(1),body[data-view=pro] #kpis .kpi:nth-child(n+5){display:none}
 body[data-view=prd] #prodTabs [data-tab=team],body[data-view=prd] #prodTabs [data-tab=equip]{display:none}
 /* ===== 화면 공통 디자인 (2026-11-12 UI 통일 시안) — Overview CSS(.ov*)를 .dsx 범위에서 다른 화면이 같이 쓴다. dsx 는 setView 가 화면별로 켠다 ===== */
@@ -876,8 +878,8 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
 <nav class="vtabs" id="vtabs" hidden><div class="wrap"><div class="vtl" role="tablist" aria-label="대시보드 화면 선택">
   <button class="vt" role="tab" id="vtOv" data-view="ov" aria-selected="false" aria-controls="ov">Overview<small>핵심 현황</small></button>
   <button class="vt" role="tab" id="vtSq" data-view="sq" aria-selected="false" aria-controls="mainArea">Service Quality<small>서비스 품질</small></button>
-  <button class="vt" role="tab" id="vtWl" data-view="wl" aria-selected="false" aria-controls="wl">Workload<small>업무부하</small></button>
   <button class="vt" role="tab" id="vtOrg" data-view="org" aria-selected="false" aria-controls="mainArea">Organization<small>팀·사무소</small></button>
+  <button class="vt" role="tab" id="vtWl" data-view="wl" aria-selected="false" aria-controls="wl">Workload<small>업무부하</small></button>
   <button class="vt" role="tab" id="vtPrd" data-view="prd" aria-selected="false" aria-controls="prod">Productivity<small>개인·업무부하</small></button>
   <button class="vt" role="tab" id="vtEqp" data-view="eqp" aria-selected="false" aria-controls="mainArea">Instrument<small>장비</small></button>
   <button class="vt" role="tab" id="vtPro" data-view="pro" aria-selected="false" aria-controls="mainArea">Proactive Service<small>예방 서비스</small></button>
@@ -2451,33 +2453,7 @@ function renderPerson(){
     '</div>';
   html2 += '<div class="block">'+chartCard('p-trend-chart', '월별 처리 건수 추이', ''+(DATA.trend_names?DATA.trend_names.join(' vs '):'이번 년도 vs 직전 년도')+'')+'</div>';
   var po = DATA.ot && DATA.ot.person[state.person] ? DATA.ot.person[state.person].p : null;
-  if (po){ var oc = po[period], op = period==='이번 년도' ? po['직전 년도'] : null;
-    var HRP = !!DATA.ot.hr, hrn = hrNote(period);
-    if (HRP) html2 += '<div class="block"><div class="block-head"><h2>야간·휴일 근무</h2><span class="hint">시간 = 인사 연장근무 · 건수·업무 형태 = CRM 기록 · '+PL(period)+'</span></div><div class="grid grid-4">'+
-      statTile('연장근무 시간', fmtH(oc.rM), '시간', otDelta(oc.rM, hrCmpOk() && op ? op.rM : null, 1), '인사 연장근무'+(hrn?'<br><span style="color:var(--warn)">'+hrn+'</span>':''))+
-      statTile('야간 OT (CRM)', fmt(oc.nN), '건', otDelta(oc.nN, op && op.nN), 'CRM 기록'+(oc.sN ? ' · 시프트 근무 '+fmt(oc.sN)+'건 별도' : ''))+
-      statTile('휴일 근무 (CRM)', fmt(oc.hN), '건', otDelta(oc.hN, op && op.hN), 'CRM 기록')+
-      statTile('CRM 근무 외 시간 (참고)', fmtH(oc.nM+oc.hM+oc.xM), '시간', '', '야간+휴일+잔업 활동 시간')+
-      '</div><div class="grid grid-2" style="margin-top:14px;">'+
-      chartCard('p-ot-cnt', '월별 야간 OT · 휴일 근무 건수', '최근 12개월 · CRM')+
-      chartCard('p-ot-hrs', '월별 연장근무 시간', '최근 12개월 · 인사 연장근무 (CRM 근무 외 시간 참고)')+
-      '</div><div class="grid grid-2" style="margin-top:14px;">'+
-      chartCard('p-ot-ntype', '야간 OT 업무 형태', PL(period)+' · '+fmt(oc.nN)+'건')+
-      chartCard('p-ot-htype', '휴일 근무 업무 형태', PL(period)+' · '+fmt(oc.hN)+'건')+
-      '</div></div>';
-    else html2 += '<div class="block"><div class="block-head"><h2>야간·휴일 근무</h2><span class="hint">CRM 기록 기준 · '+PL(period)+' · 정의는 「야간·휴일 근무」 탭 참고</span></div><div class="grid grid-4">'+
-      statTile('야간 OT', fmt(oc.nN), '건', otDelta(oc.nN, op && op.nN), fmtH(oc.nM)+'시간'+(oc.sN ? ' · 시프트 근무 '+fmt(oc.sN)+'건('+fmtH(oc.sM)+'시간) 별도' : ''))+
-      statTile('휴일 근무', fmt(oc.hN), '건', otDelta(oc.hN, op && op.hN), fmtH(oc.hM)+'시간')+
-      statTile('잔업 (근무 종료 후)', fmtH(oc.xM), '시간', otDelta(oc.xM, op && op.xM, 1), fmt(oc.xN)+'건')+
-      statTile('근무 외 시간 합계', fmtH(oc.nM+oc.hM+oc.xM), '시간', otDelta(oc.nM+oc.hM+oc.xM, op && (op.nM+op.hM+op.xM), 1), '야간+휴일+잔업')+
-      '</div><div class="grid grid-2" style="margin-top:14px;">'+
-      chartCard('p-ot-cnt', '월별 야간 OT · 휴일 근무 건수', '최근 12개월')+
-      chartCard('p-ot-hrs', '월별 근무 외 시간', '최근 12개월 · 야간·휴일·잔업 (시간)')+
-      '</div><div class="grid grid-2" style="margin-top:14px;">'+
-      chartCard('p-ot-ntype', '야간 OT 업무 형태', PL(period)+' · '+fmt(oc.nN)+'건')+
-      chartCard('p-ot-htype', '휴일 근무 업무 형태', PL(period)+' · '+fmt(oc.hN)+'건')+
-      '</div></div>'; }
-
+  if (po) html2 += '<div class="block"><div class="empty-note otmoved">야간·휴일 근무(야간 OT·휴일 근무·잔업·연장근무)는 <b>Workload</b> 화면으로 옮겼습니다. <button type="button" class="more-btn" id="pOtGo">'+esc(state.person)+' 야간·휴일 근무 보기 ›</button></div></div>';
   /* 자주 방문한 병원 — 보고 기간 기준, 6곳 먼저 보이고 '더보기'로 전체 */
   var accAll = (pe.accounts && pe.accounts[period]) || [], accPrev = {};
   ((pe.accounts && pe.accounts['직전 년도']) || []).forEach(function(a){ accPrev[a[0]] = a[1]; });
@@ -2492,25 +2468,7 @@ function renderPerson(){
     : '<div class="empty-note">이 기간에 방문 기록이 없습니다.</div>')+'</div></div>';
 
   detail.innerHTML = html2;
-  if (po && document.getElementById('p-ot-cnt')){
-    var pm = DATA.ot.person[state.person].month['이번 년도'], om = [], cn = {}, ch = {}, hn = {}, hh = {}, hx = {}, hr = {}, ht = {};
-    for (var oi=1; oi<=(DATA.trend_labels||[]).length; oi++){ om.push(oi); var c0 = pm[oi] || {};
-      cn[oi] = c0.n || 0; ch[oi] = c0.h || 0; hn[oi] = Math.round(otH(c0.nM)*10)/10; hh[oi] = Math.round(otH(c0.hM)*10)/10; hx[oi] = Math.round(otH(c0.xM)*10)/10;
-      ht[oi] = Math.round(otH((c0.nM||0)+(c0.hM||0)+(c0.xM||0))*10)/10; if (hrHas(DATA.trend_labels[oi-1])) hr[oi] = Math.round(otH(c0.r||0)*10)/10; }
-    lineChart(document.getElementById('p-ot-cnt'), om, [
-      {name:'야간 OT', color:'var(--s1)', values:cn, partial:true},
-      {name:'휴일 근무', color:'#00B9EF', values:ch, partial:true}], {unit:'건', partial:DATA.trend_partial});
-    if (DATA.ot.hr) lineChart(document.getElementById('p-ot-hrs'), om, [
-      {name:'연장근무 (인사)', color:'var(--s1)', values:hr},
-      {name:'CRM 근무 외(참고)', color:'var(--text-muted)', values:ht, partial:true}], {unit:'시간', partial:DATA.trend_partial});
-    else lineChart(document.getElementById('p-ot-hrs'), om, [
-      {name:'야간', color:'var(--s1)', values:hn, partial:true},
-      {name:'휴일', color:'#00B9EF', values:hh, partial:true},
-      {name:'잔업', color:'var(--s5)', values:hx, partial:true}], {unit:'시간', partial:DATA.trend_partial});
-    var POB = DATA.ot_buckets, pbl = POB.map(function(b){ return DATA.ot_bucket_label[b]; }), pbc = POB.map(function(b){ return OT_BUCKET_COLOR[b]; }), poc = po[period];
-    barChart(document.getElementById('p-ot-ntype'), pbl, POB.map(function(b){ return poc.nB[b] || 0; }), pbc, {unit:'건', tip:function(i){ return otTipPerson((poc.nL||{})[POB[i]], '야간 OT · '+pbl[i], poc.nB[POB[i]] || 0); }});
-    barChart(document.getElementById('p-ot-htype'), pbl, POB.map(function(b){ return poc.hB[b] || 0; }), pbc, {unit:'건', tip:function(i){ return otTipPerson((poc.hL||{})[POB[i]], '휴일 근무 · '+pbl[i], poc.hB[POB[i]] || 0); }});
-  }
+  var pog = document.getElementById('pOtGo'); if (pog) pog.addEventListener('click', function(){ state.otPerson = state.person; state.otJump = true; setView('wl'); });
   var amb = document.getElementById('accMoreBtn');
   if (amb) amb.addEventListener('click', function(){ state.accMore = !state.accMore; var y = window.scrollY; renderPerson(); window.scrollTo(0, y); });
 
@@ -2536,6 +2494,61 @@ function renderPerson(){
   ], {unit:'건', partial:DATA.trend_partial});
 }
 
+/* 개인 야간·휴일 근무 — 예전 Productivity 개인별 상세에 있던 블록을 Workload(야간·휴일 근무 패널) 아래로 옮김 (2026-11-13) */
+function otPersonHtml(name, period){
+  var po = DATA.ot && DATA.ot.person[name] ? DATA.ot.person[name].p : null; if (!po) return '';
+  var h = '';
+  if (po){ var oc = po[period], op = period==='이번 년도' ? po['직전 년도'] : null;
+    var HRP = !!DATA.ot.hr, hrn = hrNote(period);
+    if (HRP) h += '<div class="block"><div class="block-head"><h2>'+esc(name)+' · 야간·휴일 근무</h2><button type="button" class="more-btn otpx" aria-label="개인 상세 닫기">닫기 ×</button><span class="hint">시간 = 인사 연장근무 · 건수·업무 형태 = CRM 기록 · '+PL(period)+'</span></div><div class="grid grid-4">'+
+      statTile('연장근무 시간', fmtH(oc.rM), '시간', otDelta(oc.rM, hrCmpOk() && op ? op.rM : null, 1), '인사 연장근무'+(hrn?'<br><span style="color:var(--warn)">'+hrn+'</span>':''))+
+      statTile('야간 OT (CRM)', fmt(oc.nN), '건', otDelta(oc.nN, op && op.nN), 'CRM 기록'+(oc.sN ? ' · 시프트 근무 '+fmt(oc.sN)+'건 별도' : ''))+
+      statTile('휴일 근무 (CRM)', fmt(oc.hN), '건', otDelta(oc.hN, op && op.hN), 'CRM 기록')+
+      statTile('CRM 근무 외 시간 (참고)', fmtH(oc.nM+oc.hM+oc.xM), '시간', '', '야간+휴일+잔업 활동 시간')+
+      '</div><div class="grid grid-2" style="margin-top:14px;">'+
+      chartCard('p-ot-cnt', '월별 야간 OT · 휴일 근무 건수', '최근 12개월 · CRM')+
+      chartCard('p-ot-hrs', '월별 연장근무 시간', '최근 12개월 · 인사 연장근무 (CRM 근무 외 시간 참고)')+
+      '</div><div class="grid grid-2" style="margin-top:14px;">'+
+      chartCard('p-ot-ntype', '야간 OT 업무 형태', PL(period)+' · '+fmt(oc.nN)+'건')+
+      chartCard('p-ot-htype', '휴일 근무 업무 형태', PL(period)+' · '+fmt(oc.hN)+'건')+
+      '</div></div>';
+    else h += '<div class="block"><div class="block-head"><h2>'+esc(name)+' · 야간·휴일 근무</h2><button type="button" class="more-btn otpx" aria-label="개인 상세 닫기">닫기 ×</button><span class="hint">CRM 기록 기준 · '+PL(period)+' · 정의는 위 설명 참고</span></div><div class="grid grid-4">'+
+      statTile('야간 OT', fmt(oc.nN), '건', otDelta(oc.nN, op && op.nN), fmtH(oc.nM)+'시간'+(oc.sN ? ' · 시프트 근무 '+fmt(oc.sN)+'건('+fmtH(oc.sM)+'시간) 별도' : ''))+
+      statTile('휴일 근무', fmt(oc.hN), '건', otDelta(oc.hN, op && op.hN), fmtH(oc.hM)+'시간')+
+      statTile('잔업 (근무 종료 후)', fmtH(oc.xM), '시간', otDelta(oc.xM, op && op.xM, 1), fmt(oc.xN)+'건')+
+      statTile('근무 외 시간 합계', fmtH(oc.nM+oc.hM+oc.xM), '시간', otDelta(oc.nM+oc.hM+oc.xM, op && (op.nM+op.hM+op.xM), 1), '야간+휴일+잔업')+
+      '</div><div class="grid grid-2" style="margin-top:14px;">'+
+      chartCard('p-ot-cnt', '월별 야간 OT · 휴일 근무 건수', '최근 12개월')+
+      chartCard('p-ot-hrs', '월별 근무 외 시간', '최근 12개월 · 야간·휴일·잔업 (시간)')+
+      '</div><div class="grid grid-2" style="margin-top:14px;">'+
+      chartCard('p-ot-ntype', '야간 OT 업무 형태', PL(period)+' · '+fmt(oc.nN)+'건')+
+      chartCard('p-ot-htype', '휴일 근무 업무 형태', PL(period)+' · '+fmt(oc.hN)+'건')+
+      '</div></div>'; }
+
+  return h;
+}
+function otPersonDraw(name, period){
+  var po = DATA.ot && DATA.ot.person[name] ? DATA.ot.person[name].p : null;
+  if (po && document.getElementById('p-ot-cnt')){
+    var pm = DATA.ot.person[name].month['이번 년도'], om = [], cn = {}, ch = {}, hn = {}, hh = {}, hx = {}, hr = {}, ht = {};
+    for (var oi=1; oi<=(DATA.trend_labels||[]).length; oi++){ om.push(oi); var c0 = pm[oi] || {};
+      cn[oi] = c0.n || 0; ch[oi] = c0.h || 0; hn[oi] = Math.round(otH(c0.nM)*10)/10; hh[oi] = Math.round(otH(c0.hM)*10)/10; hx[oi] = Math.round(otH(c0.xM)*10)/10;
+      ht[oi] = Math.round(otH((c0.nM||0)+(c0.hM||0)+(c0.xM||0))*10)/10; if (hrHas(DATA.trend_labels[oi-1])) hr[oi] = Math.round(otH(c0.r||0)*10)/10; }
+    lineChart(document.getElementById('p-ot-cnt'), om, [
+      {name:'야간 OT', color:'var(--s1)', values:cn, partial:true},
+      {name:'휴일 근무', color:'#00B9EF', values:ch, partial:true}], {unit:'건', partial:DATA.trend_partial});
+    if (DATA.ot.hr) lineChart(document.getElementById('p-ot-hrs'), om, [
+      {name:'연장근무 (인사)', color:'var(--s1)', values:hr},
+      {name:'CRM 근무 외(참고)', color:'var(--text-muted)', values:ht, partial:true}], {unit:'시간', partial:DATA.trend_partial});
+    else lineChart(document.getElementById('p-ot-hrs'), om, [
+      {name:'야간', color:'var(--s1)', values:hn, partial:true},
+      {name:'휴일', color:'#00B9EF', values:hh, partial:true},
+      {name:'잔업', color:'var(--s5)', values:hx, partial:true}], {unit:'시간', partial:DATA.trend_partial});
+    var POB = DATA.ot_buckets, pbl = POB.map(function(b){ return DATA.ot_bucket_label[b]; }), pbc = POB.map(function(b){ return OT_BUCKET_COLOR[b]; }), poc = po[period];
+    barChart(document.getElementById('p-ot-ntype'), pbl, POB.map(function(b){ return poc.nB[b] || 0; }), pbc, {unit:'건', tip:function(i){ return otTipPerson((poc.nL||{})[POB[i]], '야간 OT · '+pbl[i], poc.nB[POB[i]] || 0); }});
+    barChart(document.getElementById('p-ot-htype'), pbl, POB.map(function(b){ return poc.hB[b] || 0; }), pbc, {unit:'건', tip:function(i){ return otTipPerson((poc.hL||{})[POB[i]], '휴일 근무 · '+pbl[i], poc.hB[POB[i]] || 0); }});
+  }
+}
 /* ================= RENDER: 야간·휴일 근무(OT) ================= */
 function otH(m){ return m ? m/60 : 0; }
 function fmtH(m){ return fmt1(otH(m)); }
@@ -2625,8 +2638,10 @@ function renderOT(){
     chartCard('ot-hol-type', '휴일 근무 업무 구성', (scope==='ALL'?'FSG 전체':DATA.team_short[scope])+' · '+PL(period))+
     '</div>';
 
-  html += '<div class="block"><div class="block-head"><h2>개인별 야간·휴일 근무</h2><span class="hint">열 제목 클릭 시 정렬 · 행 클릭 시 개인별 상세로 이동 · '+PL(period)+'</span></div>'+
+  html += '<div class="block"><div class="block-head"><h2>개인별 야간·휴일 근무</h2><span class="hint">열 제목 클릭 시 정렬 · 행을 누르면 아래에 개인 상세 · '+PL(period)+'</span></div>'+
     '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="otTable"></table></div></div>';
+  var otp = state.otPerson && DATA.ot.person[state.otPerson] ? state.otPerson : null;
+  html += '<div id="otPerson">'+(otp ? otPersonHtml(otp, period) : '')+'</div>';
   el.innerHTML = html;
 
   teamButtons(document.getElementById('otSeg'), scope, true, function(t){ state.otScope = t; renderOT(); });
@@ -2651,6 +2666,9 @@ function renderOT(){
   barChart(document.getElementById('ot-night-type'), bl, OB.map(function(b){ return cur.nB[b] || 0; }), bc, {unit:'건', tip:function(i){ return otTipGroup(names, period, 'n', OB[i], '야간 OT · '+bl[i], cur.nB[OB[i]] || 0); }});
   barChart(document.getElementById('ot-hol-type'), bl, OB.map(function(b){ return cur.hB[b] || 0; }), bc, {unit:'건', tip:function(i){ return otTipGroup(names, period, 'h', OB[i], '휴일 근무 · '+bl[i], cur.hB[OB[i]] || 0); }});
   renderOTTable(period, names);
+  if (otp){ otPersonDraw(otp, period);
+    el.querySelectorAll('.otpx').forEach(function(b){ b.addEventListener('click', function(){ state.otPerson = null; renderOT(); }); });
+    if (state.otJump){ state.otJump = false; var op_ = document.getElementById('otPerson'); if (op_ && op_.scrollIntoView) setTimeout(function(){ op_.scrollIntoView({block:'start'}); }, 0); } }
 }
 function renderOTTable(period, names){
   var rows = names.map(function(n){ var e = DATA.ot.person[n].p[period], pv = DATA.ot.person[n].p['직전 년도'];
@@ -2688,7 +2706,7 @@ function renderOTTable(period, names){
   t.querySelectorAll('th[data-key]').forEach(function(th){ th.addEventListener('click', function(){ var k = th.getAttribute('data-key');
     if (state.otSortKey === k) state.otSortDir = (state.otSortDir||'desc')==='desc'?'asc':'desc'; else { state.otSortKey = k; state.otSortDir = 'desc'; }
     renderOTTable(period, names); }); });
-  t.querySelectorAll('tbody tr').forEach(function(tr){ tr.addEventListener('click', function(){ state.person = tr.getAttribute('data-person'); switchTab('person'); }); });
+  t.querySelectorAll('tbody tr').forEach(function(tr){ tr.style.cursor = 'pointer'; tr.addEventListener('click', function(){ state.otPerson = tr.getAttribute('data-person'); state.otJump = true; renderOT(); }); });
 }
 
 /* ================= RENDER: 이동거리 ================= */
@@ -4219,7 +4237,7 @@ $('changeCode').addEventListener('click',()=>{try{localStorage.removeItem(KEY_LS
 
 /* ===== 탭: 서비스 운영 KPI | 부서원 KPI — 같은 CRM 데이터(RAW)로 둘 다 계산 ===== */
 const VIEW_LS='fsg-kpi-view';
-const SCREENS={ov:{hash:'#overview'},sq:{hash:'#service-quality',scr:'sq',dsx:1},wl:{hash:'#workload'},org:{hash:'#organization',scr:'org',prod:'team',dsx:1},prd:{hash:'#people',prod:'overview',tabs:['overview','person','ot','move'],dsx:1},eqp:{hash:'#instrument',scr:'eqp',prod:'equip',dsx:1},pro:{hash:'#proactive',scr:'pro',dsx:1}};
+const SCREENS={ov:{hash:'#overview'},sq:{hash:'#service-quality',scr:'sq',dsx:1},org:{hash:'#organization',scr:'org',prod:'team',dsx:1},wl:{hash:'#workload',prod:'ot',dsx:1},prd:{hash:'#people',prod:'overview',tabs:['overview','person','move'],dsx:1},eqp:{hash:'#instrument',scr:'eqp',prod:'equip',dsx:1},pro:{hash:'#proactive',scr:'pro',dsx:1}};
 const VIEW_ALIAS={svc:'sq',prod:'prd'};   /* 예전 저장값·주소(#people)를 새 화면으로 */
 let VIEW=(()=>{ const h=location.hash; for(const k in SCREENS) if(SCREENS[k].hash===h) return k; let v=null; try{v=localStorage.getItem(VIEW_LS);}catch(e){} v=VIEW_ALIAS[v]||v; return SCREENS[v]?v:'ov'; })();
 let PROD=null, PROD_DIRTY=true;
@@ -4277,7 +4295,7 @@ function renderProd(){
 }
 function prodTitle(){
   const el=$('prodTitle'), sec=$('prodSec'); if(!el||!PROD) return;
-  if(sec){ const h={org:['팀별 상세 분석','팀을 고르면 그 팀의 순위·병원별 재방문율을 봅니다'],eqp:['담당 장비','담당기관 관리표 기준 · 현재 담당 장비']}[VIEW]; sec.innerHTML=h?h[0]+' <small>'+h[1]+'</small>':''; sec.hidden=!h; }
+  if(sec){ const h={org:['팀별 상세 분석','팀을 고르면 그 팀의 순위·병원별 재방문율을 봅니다'],eqp:['담당 장비','담당기관 관리표 기준 · 현재 담당 장비'],wl:['야간 OT · 휴일 근무 (사람 기준)','Productivity 에서 옮김 · CRM 기록·인사 연장근무 기준 — 근무 종료가 WEST·EAST 17시·CENTRAL·SOUTH 18시라 위 방문 시간대(08~18시)와 기준이 다릅니다']}[VIEW]; sec.innerHTML=h?h[0]+' <small>'+h[1]+'</small>':''; sec.hidden=!h; }
   if(VIEW!=='prd'){ el.innerHTML=''; return; }
   const S=prodSelection(), n=Object.keys(PROD.person||{}).length;
   el.innerHTML=`<div><h2>Productivity</h2><p>${esc(S.label)} · 비교 ${esc(S.cmpLabel)} · 직원 ${n}명 · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}${SRC&&SRC.at?' · 마지막 업데이트 '+esc(SRC.at):''}${S.prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div>`;
@@ -4861,7 +4879,7 @@ function renderProdFor(){
 function rerender(){
   const c=SCREENS[VIEW]; if(!c) return;
   if(VIEW==='ov'){ renderOv(); return; }
-  if(VIEW==='wl'){ try{ renderWl(); }catch(e){ console.error('Workload',e); $('wl').innerHTML='<p class="empty-note">Workload 화면을 그리지 못했습니다: '+esc(e.message||e)+'</p>'; } return; }
+  if(VIEW==='wl'){ try{ renderWl(); }catch(e){ console.error('Workload',e); $('wl').innerHTML='<p class="empty-note">Workload 화면을 그리지 못했습니다: '+esc(e.message||e)+'</p>'; } try{ renderProdFor(); }catch(e){ console.error('Workload OT',e); } return; }
   if(c.scr) render();
   if(c.prod) renderProdFor();
 }

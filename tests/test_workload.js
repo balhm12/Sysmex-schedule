@@ -64,7 +64,11 @@ assert.throws(()=>api.parseAcad('{"kind":"x"}','x'),/학술 파일이 아닙니�
 assert.throws(()=>api.parseAcad(JSON.stringify({kind:'fsportal-acad',src:'talk',days:{'2026-1-1':[1]}}),'x'),/형식/);
 // 화면: Workload 탭·데이터 미확보 표시·이름 검색으로 KPI 를 계산하지 않음
 assert(/id="vtWl" data-view="wl"/.test(html),'Workload 탭');
-assert(/wl:\{hash:'#workload'\}/.test(html));
+assert(/wl:\{hash:'#workload',prod:'ot'/.test(html));   // 야간·휴일 근무(OT) 패널을 Workload 아래로 (2026-11-13)
+assert(!/prd:\{[^}]*tabs:\[[^\]]*'ot'/.test(html), 'Productivity 하위 탭에서 야간·휴일 근무를 뺌');
+assert(/body\[data-view=prd\] #prodTabs \[data-tab=ot\]\{display:none\}/.test(html));
+assert(/function otPersonHtml\(/.test(html) && /function otPersonDraw\(/.test(html), '개인 야간·휴일 블록은 OT 패널 아래로');
+assert(!/html2 \+= '<div class="block"><div class="block-head"><h2>야간·휴일 근무<\/h2>/.test(html), '개인별 상세에서 야간 블록을 뺌');
 assert(/wlNA\('학술 업무 비중'/.test(block),'학술 업무 비중 = 데이터 미확보');
 assert(!/WL_SUG[\s\S]{0,40}wlAgg/.test(block)&&!/wlSug\(/.test(block.slice(block.indexOf('function wlAgg'),block.indexOf('function wlAcadDays'))),'집계에 이름 후보를 쓰지 않음');
 console.log('test_workload ok');
