@@ -4625,6 +4625,8 @@ const WL_REG=['서울','경기 West','경기 East','지방'];
 const WL_SUG=[['gc',/녹십자|GC\s*(?:랩|의료|녹십자|Labs?)/i],['seegene',/씨젠|seegene/i],['samkwang',/삼광/],['eone',/이원\s*의료|이원의료/],['scl',/서울의과학연구소|\bSCL\b|에스씨엘/i]];
 const WL_LABC=/의료재단|수탁|검사센터|랩지노믹스|진단검사의학연구소|의과학연구소/;   /* 후보 제시용 — 확정은 관리자 */
 const WL_D0=8, WL_D1=18;
+/* Sysmex Talk 학술 글은 응대 뒤 아침에 몰아 올리는 경우가 많아 평일 09시 전 글은 야간으로 본다(사용자 기준 2026-11-13). Slack 은 접수 시각이라 그대로 */
+const WL_ACAD_TALK_D0=9;
 const WL_COL=['#005BAC','#00B9EF','#5185C5','#84BAE5','#9FA0A0'];
 let WL_HOLS=null;
 function wlHol(ms){ const d=new Date(ms), w=d.getUTCDay(); if(w===0||w===6) return true; if(!WL_HOLS) WL_HOLS=new Set(KR_HOLIDAYS); return WL_HOLS.has(d.toISOString().slice(0,10)); }
@@ -4686,7 +4688,7 @@ function wlAcadDays(){ if(!ACAD) return null; const T=(ACAD.talk&&ACAD.talk.days
   Object.keys(T).forEach(d=>{ if(d<cut) out[d]={h:T[d],src:'talk'}; }); sk.forEach(d=>{ out[d]={h:S[d],src:'slack'}; }); return {days:out, cut:sk[0]||null}; }
 function wlAcadAgg(months){ const A=wlAcadDays(); if(!A) return null; const ms=new Set(months), o={n:0,day:0,night:0,hol:0,src:new Set(),byM:{}};
   Object.keys(A.days).forEach(d=>{ const mk=d.slice(0,7); const x=A.days[d], t0=Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10)), hol=wlHol(t0);
-    let n=0,dy=0,nt=0; x.h.forEach((c,h)=>{ if(!c) return; n+=c; if(h>=WL_D0&&h<WL_D1) dy+=c; else nt+=c; });
+    let n=0,dy=0,nt=0; const a0=x.src==='talk'?WL_ACAD_TALK_D0:WL_D0; x.h.forEach((c,h)=>{ if(!c) return; n+=c; if(h>=a0&&h<WL_D1) dy+=c; else nt+=c; });
     const M=o.byM[mk]||(o.byM[mk]={n:0,day:0,night:0,hol:0,src:new Set()}); M.n+=n; if(hol) M.hol+=n; else { M.day+=dy; M.night+=nt; } if(n) M.src.add(x.src);
     if(!ms.has(mk)) return; o.n+=n; if(hol) o.hol+=n; else { o.day+=dy; o.night+=nt; } if(n) o.src.add(x.src); });
   return o; }
@@ -4721,7 +4723,7 @@ function renderWl(){
   const srcTxt=ac?([...ac.src].map(s=>s==='talk'?'Sysmex Talk 글':'Slack 접수').join(' + ')||'자료 없음'):'';
   let h=`<div class="ovtitle dstitle"><div><h2>Workload</h2><p>${esc(p.label)} · ${esc(team||'FSG 전체')} · 비교 ${esc(pp.label)} · 시간대 평일 08~18시 = 주간 · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}</p></div>${ADMIN?'<span class="ovtools"><button type="button" class="dsbtn" id="wlInstBtn">기관 분류 관리</button></span>':''}</div>`;
   h+=`<h2 class="sec">업무부하 요약 <small>방문 = CRM 활동(같은 거래처·같은 날 이어진 활동은 1건) · 학술 = FS Portal 집계 · 늘었다고 좋은 실적이 아님</small></h2><section class="ovkpi c3 wlk" aria-label="업무부하 핵심 지표">`;
-  h+= ac? dsCell('학술 응대',wlF(ac.n),'건',two(srcTxt,'평일 주간 '+wlF(ac.day)+' · 야간 '+wlF(ac.night)+' · 주말·공휴일 '+wlF(ac.hol)),two(wlD(ac.n,acp&&acp.n,'건',pp.label),wlD(ac.n,acy&&acy.n,'건','전년 같은 기간')),'Sysmex Talk 은 글 수, Slack 은 접수 건 — CRM 방문과 단위가 다름') : wlNA('학술 응대','FS Portal 에서 내보낸 학술 자료를 아직 올리지 않았습니다');
+  h+= ac? dsCell('학술 응대',wlF(ac.n),'건',two(srcTxt,'평일 주간 '+wlF(ac.day)+' · 야간 '+wlF(ac.night)+' · 주말·공휴일 '+wlF(ac.hol)),two(wlD(ac.n,acp&&acp.n,'건',pp.label),wlD(ac.n,acy&&acy.n,'건','전년 같은 기간')),'Sysmex Talk 은 글 수(평일 09시 전 글 = 야간, 글을 안 남긴 응대는 빠져 실제보다 적음), Slack 은 접수 시각 기준 건 — CRM 방문과 단위가 다름') : wlNA('학술 응대','FS Portal 에서 내보낸 학술 자료를 아직 올리지 않았습니다');
   h+= wlNA('학술 업무 비중','CRM 에 학술 활동 기록이 없어 같은 단위의 분모가 없습니다(학술은 글·접수 수)');
   h+= ac? dsCell('야간·주말 학술 응대',wlF(ac.night+ac.hol),'건','전체의 '+(wlP(ac.night+ac.hol,ac.n)||'-')+'%',two(wlD(ac.night+ac.hol,acp&&(acp.night+acp.hol),'건',pp.label),wlD(ac.night+ac.hol,acy&&(acy.night+acy.hol),'건','전년 같은 기간')),'평일 18~08시 + 주말·공휴일') : wlNA('야간·주말 학술 응대','학술 자료 미확보');
   h+= wlOn()? dsCell('수탁기관 방문 비중',labShare==null?'-':labShare,'%',`분류된 방문 ${wlF(cls)}건 중 ${wlF(lab.n)}건 · 미분류 ${wlF(A.type[''].n)}건 제외`,two(wlD(labShare&&+labShare,labShareP&&+labShareP,'%p',pp.label),wlD(labShare&&+labShare,labShareY&&+labShareY,'%p','전년 같은 기간')),'기관 유형 = 관리자가 지정한 표') : wlNA('수탁기관 방문 비중','기관 분류(수탁기관·일반병원)를 아직 지정하지 않았습니다');
@@ -4754,7 +4756,7 @@ function wlBody(c){
     if(!ac){ h+='<section class="ovcard"><p class="empty-note">학술 자료가 없습니다. FS Portal 「Sysmex Talk 집계」·「학술요청 집계」에서 「KPI용 내보내기」 파일을 받아 관리자 화면 「업무부하 학술 자료」 칸에 올려 주세요.</p></section>'; }
     else{ const A2=wlAcadAgg(m12), mm=m12.map(m=>(A2.byM[m]||{}).n||0), mn=m12.map(m=>{ const x=A2.byM[m]; return x?(x.night+x.hol):0; });
       h+=`<div class="ovgrid dspair"><section class="ovcard"><h3>학술 응대 — 시간대 <span class="ovsub">${esc(c.p.label)}</span></h3>${dsBars([{n:'평일 주간',v:ac.day},{n:'평일 야간',v:ac.night},{n:'주말·공휴일',v:ac.hol}],{type:'bar',unit:'건',dec:0})}</section>
-        <section class="ovcard"><h3>월별 학술 응대 <span class="ovsub">최근 12개월</span></h3>${wlLine(m12,[{n:'전체',v:mm},{n:'야간·주말',v:mn}],'건')}<p class="ovnote">${esc(m12.filter(m=>A2.byM[m]&&A2.byM[m].src.has('slack')).length?'Slack 접수가 있는 달은 Slack, 그 전은 Sysmex Talk 글 수':'Sysmex Talk 글 수')} — 두 자료는 단위가 달라 바뀐 달의 증감은 비교하지 않습니다.</p></section></div>`;
+        <section class="ovcard"><h3>월별 학술 응대 <span class="ovsub">최근 12개월</span></h3>${wlLine(m12,[{n:'전체',v:mm},{n:'야간·주말',v:mn}],'건')}<p class="ovnote">${esc(m12.filter(m=>A2.byM[m]&&A2.byM[m].src.has('slack')).length?'Slack 접수가 있는 달은 Slack, 그 전은 Sysmex Talk 글 수':'Sysmex Talk 글 수')} — 두 자료는 단위가 달라 바뀐 달의 증감은 비교하지 않습니다. Sysmex Talk 은 글 작성 시각이라 평일 09시 전 글은 전날 밤 응대로 보아 야간에 넣었고, 글을 안 남긴 응대는 빠져 실제보다 적게 잡힙니다(참고값).</p></section></div>`;
       h+=`<section class="ovcard" style="margin-top:14px"><h3>아직 계산하지 않는 항목 <span class="ovsub">데이터 미확보</span></h3>${wlTbl(['항목','필요한 자료'],[{c:['학술 업무 비중(건수·시간)','CRM 에 FS 직원의 학술 활동 기록(목적·시간)']},{c:['학술 소요시간·평균 응대시간','통화·응대 시간 기록']},{c:['팀·사무소별 학술 응대','응대한 직원 정보(Slack 확인자·Talk 작성자를 업무 기록으로 쓰려면 사용자 결정 필요)']}])}</section>`; }
   }
   if(T==='inst'){

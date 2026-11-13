@@ -60,6 +60,9 @@ api.ACAD=api.parseAcad(JSON.stringify({kind:'fsportal-acad',src:'slack',days:{'2
 api.ACAD=Object.assign({},acad,{slack:{days:{'2026-11-10':h({7:1,8:1})}}});
 g=api.wlAcadAgg(['2026-11']); assert.deepStrictEqual([g.n,g.day,g.night],[5,3,2],'11/10 부터 Slack(07시 = 야간, 08시 = 주간), 11/09 는 Talk '+JSON.stringify([g.n,g.day,g.night]));
 assert(g.src.has('talk')&&g.src.has('slack'));
+// Sysmex Talk 은 평일 09시 전 글 = 야간(아침에 올린 전날 밤 응대), Slack 은 08시부터 주간 그대로 (2026-11-13 사용자 기준)
+api.ACAD={talk:{days:{'2026-11-11':h({7:1,8:2,9:3,17:1,18:1})}},slack:{days:{'2026-11-12':h({8:1})}}};
+g=api.wlAcadAgg(['2026-11']); assert.deepStrictEqual([g.day,g.night],[4+1,4],'Talk 08시 = 야간, 09~17시 = 주간 / Slack 08시 = 주간 '+JSON.stringify([g.day,g.night]));
 assert.throws(()=>api.parseAcad('{"kind":"x"}','x'),/학술 파일이 아닙니다/);
 assert.throws(()=>api.parseAcad(JSON.stringify({kind:'fsportal-acad',src:'talk',days:{'2026-1-1':[1]}}),'x'),/형식/);
 // 화면: Workload 탭·데이터 미확보 표시·이름 검색으로 KPI 를 계산하지 않음
