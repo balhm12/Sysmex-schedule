@@ -486,6 +486,7 @@
 
   /* 탭이 늘어나면 휴대폰 폭을 넘어 페이지 전체가 좌우로 밀린다. 줄바꿈 허용. */
   .app-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .embed .app-nav{display:none;}
   .app-nav a{
     flex:0 0 auto;padding:8px 16px;border-radius:8px;font-size:12.5px;font-weight:700;
     text-decoration:none;border:1.5px solid var(--line);color:var(--ink-soft);background:white;transition:.15s;
@@ -517,6 +518,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <body>
+<script>/* 다른 페이지 안(iframe, 예: FS 포털)이나 ?embed 로 열리면 겹치는 페이지 탭 줄을 숨긴다(2026-11-14, fsg-kpi.html 과 같은 규칙) */if(window.self!==window.top||/[?&]embed(=|&|$)/.test(location.search))document.documentElement.classList.add("embed");</script>
 <div class="app">
   <div class="app-nav">
     <a href="index.html">설치일정</a>
