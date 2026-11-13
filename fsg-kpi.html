@@ -34,10 +34,21 @@ main.wrap{padding-bottom:40px}
 @media (max-width:600px){.app-nav{gap:6px}.app-nav a{padding:7px 10px;font-size:11.5px}}
 header.top{background:var(--head);color:#fff}
 .ptk{display:inline-flex;align-items:center;gap:4px;margin-left:4px;white-space:nowrap}.ptk i{width:8px;height:8px;border-radius:50%;display:inline-block}
-header.top .wrap{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-top:22px;padding-bottom:20px;flex-wrap:wrap}
-header.top img{height:26px;display:block;margin-bottom:12px}
-header.top h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.3px}
-header.top .sub{opacity:.85;font-size:13px;margin-top:4px}
+/* 슬림 헤더(2026-11-13 사용자 선택 B): 로고·제목 한 줄 + 자료 정보·버튼을 파란 띠 오른쪽에. 예전 높이 약 155px → 약 54px */
+header.top .wrap{display:flex;align-items:center;justify-content:flex-start;gap:10px 14px;padding-top:10px;padding-bottom:10px;flex-wrap:wrap}
+header.top .wrap>div:first-child{display:contents}
+header.top img{height:20px;display:block;margin:0}
+header.top h1{margin:0;font-size:18px;font-weight:700;letter-spacing:-.2px;white-space:nowrap}
+header.top .sub{display:none;opacity:.85;font-size:12.5px;flex:0 0 100%;order:9;overflow-wrap:anywhere}
+.adm header.top .sub{display:block}
+header.top .vinfo{margin-left:auto;display:flex;align-items:center;gap:12px}
+header.top .vinfo[hidden]{display:none}
+header.top .vinfo #info{font-size:12px;color:#fff;opacity:.9;text-align:right;line-height:1.45}
+header.top .vinfo .vbtns{display:flex;gap:8px;flex:none}
+header.top .vinfo .lbtn{white-space:nowrap;background:transparent;color:#fff;border-color:rgba(255,255,255,.75)}
+header.top .vinfo .lbtn:hover{background:rgba(255,255,255,.12)}
+header.top .vinfo .lbtn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.embed .appbar{display:none}
 .hbtn{font:inherit;font-size:13px;padding:8px 14px;border-radius:4px;cursor:pointer;border:1px solid rgba(255,255,255,.7);background:#fff;color:#005BAC;font-weight:700}
 .bar{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--border)}
 .bar .wrap{display:flex;gap:10px 16px;flex-wrap:wrap;align-items:flex-end;padding-top:12px;padding-bottom:12px}
@@ -186,12 +197,9 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 .vtabs button.vt:hover{color:var(--text)}
 .vtabs button.vt[aria-selected=true]{color:var(--primary);border-bottom-color:var(--primary)}
 .vtabs button.vt small{display:block;font-size:11.5px;font-weight:400;color:var(--muted);margin-top:1px}
-.vtabs .vinfo{margin-left:auto;display:flex;align-items:center;gap:12px;padding-bottom:10px}
-.vtabs .vinfo #info{font-size:12px;color:var(--muted);text-align:right}
-.vtabs .vinfo .vbtns{display:flex;gap:8px;flex:none}
-.vtabs .vinfo .lbtn{white-space:nowrap}
 .vtabs[hidden],#svcBar[hidden],#prod[hidden]{display:none}
-@media (max-width:700px){.vtabs button.vt{padding:12px 12px 9px;font-size:14px}.vtabs .vinfo{margin-left:0;width:100%;justify-content:space-between}.vtabs .vinfo #info{text-align:left}.vtabs .vinfo{flex-direction:column;align-items:stretch;gap:6px}.vtabs .vinfo .vbtns{width:100%}.vtabs .vinfo .lbtn{flex:1;min-height:44px;padding:6px 10px}}
+@media (max-width:700px){.vtabs button.vt{padding:12px 12px 9px;font-size:14px}header.top .vinfo{margin-left:0;width:100%;flex-direction:column;align-items:stretch;gap:6px}header.top .vinfo #info{text-align:left}header.top .vinfo .vbtns{width:100%}header.top .vinfo .lbtn{flex:1;min-height:44px;padding:6px 10px}header.top .hbtn{width:100%;min-height:44px}}
+@media (max-width:900px){header.top .vinfo #info{display:none}}
 #prod .mono{font-family:'IBM Plex Mono','Noto Sans KR',monospace; font-variant-numeric: tabular-nums;}
 #prod nav.tabs{display:flex; gap:4px; margin-bottom:18px; border-bottom:1px solid var(--border); flex-wrap:wrap;}
 #prod nav.tabs button{appearance:none; border:none; background:none; color:var(--text-secondary);
@@ -528,7 +536,7 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 #ov .ovpc .ovl,.dsx .ovpc .ovl{font-size:14px}#ov .ovpc .ovv,.dsx .ovpc .ovv{font-size:28px;margin-top:2px}
 #ov .ovpc.ovnd,.dsx .ovpc.ovnd{background:var(--card);border-left:1px dashed var(--muted)}
 #ov .ovpc.ovnd .ovv,.dsx .ovpc.ovnd .ovv{font-size:15px;font-weight:700;color:var(--muted);margin-top:8px}
-@media (max-width:600px){body[data-view] header.top .sub{display:none}body[data-view=ov] .vtabs .vinfo #info{display:none}body[data-view] .vtabs .vinfo{justify-content:flex-start}body[data-view] .vtabs .vinfo .vbtns{width:100%}body[data-view] .vtabs .vinfo .lbtn{flex:1}
+@media (max-width:600px){body[data-view] header.top .sub{display:none}
   #svcBar .wrap{flex-wrap:nowrap;gap:8px;padding-top:8px;padding-bottom:8px}#svcBar .f{flex:1;min-width:0}#svcBar .f:first-child{flex:1.7}#svcBar .f select{width:100%}}
 @media (max-width:1000px){#ov .ovg-a,#ov .ovg-b,.dsx .ovg-a,.dsx .ovg-b{grid-template-columns:1fr}#ov .ovkpi,.dsx .ovkpi{grid-template-columns:repeat(2,1fr)}#ov .ovkc:nth-child(3),.dsx .ovkc:nth-child(3){border-left:0}#ov .ovkc:nth-child(n+3),.dsx .ovkc:nth-child(n+3){border-top:1px solid var(--border)}#ov .ovpro,.dsx .ovpro{grid-template-columns:repeat(2,1fr)}#ov .ovpc:nth-child(odd),.dsx .ovpc:nth-child(odd){border-left:0}#ov .ovpc:nth-child(n+3),.dsx .ovpc:nth-child(n+3){border-top:1px solid var(--border)}}
 @media (max-width:600px){#ov .ovtitle h2,.dsx .ovtitle h2{font-size:20px}#ov .ovkc,.dsx .ovkc{padding:12px 10px 10px}#ov .ovv,.dsx .ovv{font-size:30px}#ov .ovh,.dsx .ovh{display:none}#ov .ovcard,.dsx .ovcard{padding:12px}#ov .ovgrid,.dsx .ovgrid{gap:12px}
@@ -760,6 +768,7 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
     <h1>FSG KPI 대시보드</h1>
     <div class="sub" id="sub"></div>
   </div>
+  <div class="vinfo" id="hdrInfo" hidden><div id="info"></div><div class="vbtns"><button class="lbtn" id="adminToggle" aria-label="관리자 화면으로 전환">관리자</button><button class="lbtn" id="changeCode">접근 코드 변경</button></div></div>
   <button class="hbtn" id="openUpl" aria-expanded="false" hidden>CRM 데이터 올리기</button>
 </div></header>
 
@@ -848,7 +857,6 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
   <button class="vt" role="tab" id="vtEqp" data-view="eqp" aria-selected="false" aria-controls="mainArea">Instrument<small>장비</small></button>
   <button class="vt" role="tab" id="vtPro" data-view="pro" aria-selected="false" aria-controls="mainArea">Proactive Service<small>예방 서비스</small></button>
   </div>
-  <div class="vinfo"><div id="info"></div><div class="vbtns"><button class="lbtn" id="adminToggle" aria-label="관리자 화면으로 전환">관리자</button><button class="lbtn" id="changeCode">접근 코드 변경</button></div></div>
 </div></nav>
 <div class="bar" id="svcBar"><div class="wrap">
   <div class="f"><label for="fPeriod">보고 기간</label><select id="fPeriod" autocomplete="off"></select></div>
@@ -3805,6 +3813,9 @@ function bindDrop(zoneId, inputId, kind){
    - Firebase에는 암호문만 저장되므로, 저장소 주소를 알아도 접근 코드 없이는 읽을 수 없습니다.
    - 업로드 화면은 주소 끝에 ?admin 을 붙였을 때만 보입니다. */
 const ADMIN = new URLSearchParams(location.search).has('admin');
+/* 슬림 헤더(2026-11-13): 관리자 모드에서만 헤더 둘째 줄(원본 파일명)을 보이고, FS Portal 처럼 다른 페이지 안(iframe)이나 ?embed 로 열리면 중복되는 페이지 탭 줄(.appbar)을 숨긴다 */
+document.documentElement.classList.toggle('adm', ADMIN);
+if(window.self!==window.top||new URLSearchParams(location.search).has('embed')) document.documentElement.classList.add('embed');
 const KEY_LS = 'fsg-kpi-code';
 let CODE = null, META = null;
 let _authToken=null, _authTokenExpires=0;
@@ -3944,7 +3955,7 @@ async function loadAll(){
     showEmpty('데이터를 불러오지 못했습니다'+(err.step?' ('+err.step+')':'')+'. '+(net?'네트워크 연결이 끊겼거나 회사 보안 프로그램이 저장소(firebaseio.com) 접속을 막았을 수 있습니다. 잠시 뒤 새로고침해 보세요. ':'')+'['+(err.message||err)+']'); }
   finally{ $('busy').classList.remove('on'); }
 }
-function showEmpty(msg){ $('mainArea').hidden=true; $('prod').hidden=true; $('svcBar').hidden=true; $('prodBar').hidden=true; $('vtabs').hidden=true; $('empty').hidden=false; $('emptyMsg').textContent=msg; }
+function showEmpty(msg){ $('mainArea').hidden=true; $('prod').hidden=true; $('svcBar').hidden=true; $('prodBar').hidden=true; $('vtabs').hidden=true; $('hdrInfo').hidden=true; $('empty').hidden=false; $('emptyMsg').textContent=msg; }
 function showLock(msg){ $('lock').hidden=false; $('lockMsg').textContent=msg||''; setTimeout(()=>$('lockIn').focus(),50); }
 async function submitCode(){
   const v=$('lockIn').value.trim(); if(!v){ $('lockMsg').textContent='접근 코드를 입력해 주세요.'; return; }
@@ -4146,7 +4157,7 @@ async function initShare(){
 function refresh(){
   prepare(); buildPeriods();
   $('sub').textContent=`데이터 기간 ${ymd(D.minT)} ~ ${ymd(D.maxT)} (CRM 추출일 ${D.excl.cut}까지${D.excl.future?`, 이후 예정 ${fmt(D.excl.future)}건 제외`:''})${ADMIN?`, 원본 ${SRC.act}`:''}`;
-  $('info').innerHTML=`활동 ${fmt(D.rawN)}건${SERIAL?`, 자산대장 '사용' ${fmt(SERIAL.length)}대`:''}<br>자료 CRM ${esc((D.excl&&D.excl.cut)||'-')} 기준 · 최종 업데이트 ${SRC.at||'-'}`;
+  $('info').innerHTML=`데이터 ${ymd(D.minT)} ~ ${ymd(D.maxT)} · 활동 ${fmt(D.rawN)}건${SERIAL?` · 자산대장 '사용' ${fmt(SERIAL.length)}대`:''}<br>데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')} · 마지막 업데이트 ${SRC.at||'-'}`;
   render();
   buildProdPeriods(); PROD_DIRTY=true; if(!$('prod').hidden) renderProdFor(); if(VIEW==='ov') renderOv();
 }
@@ -4575,7 +4586,7 @@ function rerender(){
   if(c.scr) render();
   if(c.prod) renderProdFor();
 }
-function showMain(){ $('vtabs').hidden=false; setView(VIEW); loadShifts(); loadInstCal(); }
+function showMain(){ $('vtabs').hidden=false; $('hdrInfo').hidden=false; setView(VIEW); loadShifts(); loadInstCal(); }
 /* 근무일정표(같은 Firebase 프로젝트 work-schedule/{팀}/{날짜}/{성명}.night)에서 EAST·WEST 시프트 근무일(석간·석/야)을 읽는다.
    시프트 근무는 주간 업무가 저녁·야간으로 옮겨간 것이라 그날 근무시간 외 활동은 야간 OT·잔업에서 빼고 '시프트 근무'로 따로 센다. 읽기만 한다. */
 const SHIFT_TEAMS=['east','west'], SHIFT_KEYS=['석간','석/야'];
