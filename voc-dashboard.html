@@ -65,6 +65,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .appbar{background:var(--surface);border-bottom:1px solid var(--line)}
 .appbar .inner{padding-block:10px}
 .appbar .app-nav{margin:0}
+.embed .appbar{display:none}
 
 .topband{background:var(--accent-deep);color:#fff;padding:16px 0 18px}
 .topband .inner{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
@@ -174,6 +175,7 @@ a,button,input,select,textarea,[role=button]{touch-action:manipulation}
 </style>
 </head>
 <body>
+<script>/* 다른 페이지 안(iframe, 예: FS 포털)이나 ?embed 로 열리면 겹치는 페이지 탭 줄을 숨긴다(2026-11-14, fsg-kpi.html 과 같은 규칙) */if(window.self!==window.top||/[?&]embed(=|&|$)/.test(location.search))document.documentElement.classList.add("embed");</script>
 <!-- (0) 앱 네비 : 설치일정 · 근무일정 · 만족도 -->
 <div class="appbar">
   <div class="inner">
