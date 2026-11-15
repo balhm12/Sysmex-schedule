@@ -691,6 +691,7 @@ body[data-view=prd] #prodTabs [data-tab=team],body[data-view=prd] #prodTabs [dat
 .dsx .ovsum .pill{margin-left:4px}
 @media (max-width:1000px){.dsx .grid3{grid-template-columns:1fr}.dsx .dspair{grid-template-columns:1fr}.dsx .ovkpi.c3,.dsx .ovkpi.c4{grid-template-columns:repeat(2,1fr)}.dsx .ovkpi.c3 .ovkc:nth-child(3){grid-column:1/-1}.dsx .ovpro.dsrv{grid-template-columns:repeat(2,1fr)}}
 @media (min-width:601px){.dsx .dshint{display:none}}
+.dsx #tChr th,.dsx #tChr td{white-space:nowrap}.dsx #tChr td.why{white-space:normal;min-width:220px}   /* 위험·반복 고장 장비 목록: 휴대폰에서 기관명이 한 글자씩 꺾이지 않게 옆으로 밀어 본다 */
 @media (max-width:600px){.dsx .ovtab.dsfull th:first-child,.dsx .ovtab.dsfull td:first-child{position:sticky;left:0;z-index:1;background:var(--surface)}.dsx .ovtab.dsfull th:first-child{background:var(--tint)}.dsx .ovtab.dsfull tr.ovoff td:first-child{background:var(--card)}.dsx .ovtab.dsfull tr.tgt td:first-child{background:var(--tint)}.dsx h2.sec{font-size:16px;margin-top:20px}.dsx #lbTable .lbgr,.dsx #lbTable .lbteam,.dsx #lbTable th[data-key=grade],.dsx #lbTable th[data-key=team],.dsx #lbTable td.lbdl,.dsx #lbTable th[data-key=delta]{display:none}.dsx .lbsm{display:block}.dsx #lbTable .lbtrack{flex-basis:60px}.dsx .lbf input{max-width:none}
   #pmTbl .ovtab.dsfull th:nth-child(2),#pmTbl .ovtab.dsfull td:nth-child(2),#pmTbl .ovtab.dsfull th:nth-child(6),#pmTbl .ovtab.dsfull td:nth-child(6){display:none}body[data-view=prd] #pCmp{display:none}#prod.dsx nav.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}#prod.dsx nav.tabs::-webkit-scrollbar{display:none}#prod.dsx nav.tabs button{white-space:nowrap;padding:10px 12px;flex:none}.dsx .ovhb.st{grid-template-columns:70px 1fr 80px}.dsx .ovpro.dsrv .ovpc{border-top:1px solid var(--border)}.dsx .ovpro.dsrv .ovpc:nth-child(-n+2){border-top:0}.dsx .ovpro.dsrv .ovpc:nth-child(even){border-left:1px solid var(--border)!important}}
 /* ===== 보고용 보기 (본사 보고서 방식, 2026-11-12 시안) — Overview 를 A4 보고서처럼. 화면에서는 「보고용 보기」, 인쇄하면 자동 ===== */
@@ -981,8 +982,8 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
   <h2 class="sec" data-scr="pro">반복 고장·위험 장비 <small id="chrSub"></small></h2>
   <section class="ovpro c2" id="proRisk" data-scr="pro" aria-label="반복 고장 장비, 위험 장비, 표준 사전점검"></section>
   <section class="panel" style="margin-top:14px" data-scr="pro">
-    <div class="thead"><div><h3>반복 고장 장비 목록</h3><p class="d" style="margin:0" id="chrNote"></p></div></div>
-    <div class="tw lim" style="max-height:420px"><table id="tChr"></table></div>
+    <div class="thead"><div><h3 id="chrH">반복 고장 장비 목록</h3><p class="d" style="margin:0" id="chrNote"></p></div><span class="ovseg" id="chrSeg" role="group" aria-label="목록 보기" style="display:none"></span></div>
+    <div class="tw lim" style="max-height:420px"><table id="tChr"></table></div><p class="ovnote dshint">표는 옆으로 밀어서 모든 열을 볼 수 있습니다.</p>
   </section>
 
   <h2 class="sec" data-scr="sq">고장 분석 <small id="errSub"></small> <small>상세 분석</small></h2>
@@ -4364,6 +4365,47 @@ function ovSvg(data,labels,target,o,w,h){
   data.forEach((v,i)=>{ if(v==null) return; const bw=(w-pl-pr)/(n-1); s+=`<rect class="hit" data-i="${i}" data-x="${X(i).toFixed(1)}" data-y="${Y(v).toFixed(1)}" x="${X(i)-bw/2}" y="0" width="${bw}" height="${h-pb}" fill="transparent"/>`; });
   return s+'</svg>';
 }
+/* ===== 위험 장비 점수 v1 (2026-11-16 사용자 승인, 설계서: 프로젝트 문서 claude/위험장비점수_설계서_v1_20261116.md) =====
+   「90일 안에 다시 고장 수리가 생길 확률」을 고정 계수 로지스틱으로 계산해 위험·주의·관찰·정상 4등급으로 보여 준다(확률 숫자는 화면에 쓰지 않는다 — 시험에서 상위 등급 예측이 실제보다 약 4%p 높았다).
+   입력: 최근 30·90·365일 고장 수리 건수, 마지막 고장 후 경과일, 같은 거래처 다른 장비의 90일 고장, 장비군(famOf). PM·설치 연수는 시험에서 이득이 없어 뺐다.
+   검증(2026-08-03 CRM, 시험 2026-01~05): 같은 대수 기준 정밀도 현행 규칙 53.6% → 58.4%, 위험 등급 월 372대 63.5%(현행 규칙 월 467대 53.6%). 계수를 바꾸면 설계서·tests/test_risk_score.js 의 검증 벡터도 같이 갱신한다. */
+const RISK_MODEL={v:1,b0:-2.069,
+  c:{r30:0.198,r90:-0.076,r365:0.794,gap:-0.504,acct:0.93},
+  fam:{'XN-Series':0,'XR-Series':0.687,'XN-L Series':0.169,'SP-50':1.441,'UF-Series':0.293,'UC-3500':0.468,'CN-Series':1.072,'CA/CS':0.085,'HISCL-Series':0.485,'G11':0.43,'SP-10':0.982,'TS-10':0.605,'기타':-0.879},
+  tier:[[0.5,'위험'],[0.3,'주의'],[0.15,'관찰'],[0,'정상']]};
+/* f = {r30,r90,r365(고장 수리 건수), lastDays(마지막 고장 후 경과일, 없으면 null), acct(같은 거래처 다른 장비의 90일 고장 평균), fam} — DOM·D·SERIAL 을 읽지 않는 순수 함수 */
+function riskScore(f,M){ M=M||RISK_MODEL;
+  const gap=Math.min(f.lastDays==null?365:f.lastDays,365)/365;
+  const fv=M.fam[f.fam]; 
+  const z=M.b0+M.c.r30*Math.log1p(f.r30)+M.c.r90*Math.log1p(f.r90)+M.c.r365*Math.log1p(f.r365)+M.c.gap*gap+M.c.acct*Math.log1p(f.acct||0)+(fv==null?M.fam['기타']:fv);
+  const p=1/(1+Math.exp(-z)); return {p,tier:M.tier.find(t=>p>=t[0])[1]};
+}
+/* 자산대장 '사용' 장비 전체의 점수 — 기준 시점은 데이터 마지막 시각(D.maxT). 같은 D·SERIAL 이면 다시 계산하지 않는다. 자산대장이 없으면 null */
+function riskCalc(){
+  if(!SERIAL||!D) return null;
+  if(D._risk&&D._risk.ser===SERIAL) return D._risk;
+  const ref=D.maxT, dev=new Map();
+  for(const s of SERIAL){ if(s.state!=='사용'||!s.sn||!s.acct) continue; const k=s.sn+'|'+s.acct;
+    if(!dev.has(k)) dev.set(k,{sn:s.sn,acct:s.acct,fam:famOf(s.model),r30:0,r90:0,r365:0,last:null,atm:null,atmT:-Infinity}); }
+  for(const o of D.rows){ if(!o.sn||!o.acct||o.t==null||o.t>ref) continue; const d=dev.get(o.sn+'|'+o.acct); if(!d) continue;
+    if(o.atm&&o.t>d.atmT){ d.atmT=o.t; d.atm=o.atm; }
+    if(o.purp!=='고장 수리') continue;
+    const age=(ref-o.t)/DAY; if(age<=365){ d.r365++; if(age<=90) d.r90++; if(age<=30) d.r30++; }
+    if(d.last==null||o.t>d.last) d.last=o.t; }
+  const acc={}; for(const d of dev.values()){ const a=acc[d.acct]||(acc[d.acct]={n:0,r90:0}); a.n++; a.r90+=d.r90; }
+  const items=[]; for(const d of dev.values()){ const a=acc[d.acct], oth=(a.r90-d.r90)/Math.max(a.n-1,1);
+    const sc=riskScore({r30:d.r30,r90:d.r90,r365:d.r365,lastDays:d.last==null?null:(ref-d.last)/DAY,acct:oth,fam:d.fam});
+    items.push({sn:d.sn,acct:d.acct,fam:d.fam,atm:d.atm,r30:d.r30,r90:d.r90,r365:d.r365,last:d.last,oth,p:sc.p,tier:sc.tier}); }
+  return D._risk={ser:SERIAL,ref,items};
+}
+/* 팀 필터(담당 팀 = 거래처 팀)를 적용한 등급별 대수와 목록(점수 내림차순). 자산대장이 없으면 null */
+function riskList(team){
+  const R=riskCalc(); if(!R) return null;
+  const items=(team?R.items.filter(x=>x.atm===team):R.items).slice().sort((a,b)=>b.p-a.p), counts={'위험':0,'주의':0,'관찰':0,'정상':0};
+  items.forEach(x=>counts[x.tier]++);
+  return {items,counts,ref:R.ref};
+}
+function riskWhy(x){ const w=[]; if(x.r30>0) w.push('30일 내 '+x.r30+'회'); else if(x.r90>0) w.push('90일 내 '+x.r90+'회'); if(x.oth>0) w.push('같은 거래처 다른 장비도 고장'); return w.join(' · ')||'-'; }
 function ovChronic(end,team){
   const ms=last12Set(end), rep={}, last={};
   for(const o of D.rows){ if(!ms.has(o.mk)||!o.sn||!o.acct) continue; if(team&&o.atm!==team) continue; if(o.purp!=='고장 수리') continue;
@@ -4387,7 +4429,7 @@ function renderOv(){
   const T=TEAMS.map(t=>({n:t,s:stats(p.months,t)})), al=[];
   T.forEach(x=>OV_K.slice(0,3).forEach(o=>{ const v=x.s[o.k], st=ovSt(o,v); if(st.st==='bad'||st.st==='warn') al.push({n:x.n,o,v,st}); }));
   al.sort((a,b)=>(a.st.st==='bad'?0:1)-(b.st.st==='bad'?0:1));
-  const ch=ovChronic(end,team);
+  const ch=ovChronic(end,team), rk=riskList(team);
   const logoEl=document.querySelector('header.top img'), logoSrc=logoEl?logoEl.src:'';
   const kpSt=OV_K.slice(0,3).map(o=>ovSt(o,cur[o.k]).st), nOk=kpSt.filter(x=>x==='good').length, nNear=kpSt.filter(x=>x==='warn').length, nBad=kpSt.filter(x=>x==='bad').length;
   const rptSum='FTFR·재방문율·MTTR 목표 3개 중 '+nOk+'개 달성'+(nNear?', '+nNear+'개 근접':'')+(nBad?', '+nBad+'개 미달':'');
@@ -4419,7 +4461,7 @@ function renderOv(){
     <div class="ovpro"><div class="ovpc"><div class="ovl">PM 실적</div><div class="ovv">${fmt(cur.pm)}<small>건</small></div><div class="ovh">${cur.pm===prv.pm?lab+'과 같음':lab+' 대비 '+(cur.pm>prv.pm?'▲ ':'▼ ')+fmt(Math.abs(cur.pm-prv.pm))+'건'}</div></div>
       <div class="ovpc"><div class="ovl">예방정비 지수</div><div class="ovv">${f1(cur.idx)}<small>%</small></div><div class="ovh">PM ÷ (PM + 고장 수리) · 목표 없음</div></div>
       <div class="ovpc"><div class="ovl">반복 고장 장비</div><div class="ovv">${fmt(ch.chronic)}<small>대</small></div><div class="ovh">12개월 내 3회 이상 고장${SERIAL?' · 자산대장 사용 장비':' · 자산대장 미등록(CRM 이력 기준)'}</div></div>
-      <div class="ovpc ovnd"><div class="ovl">위험 장비</div><div class="ovv">${ch.risk==null?'자산대장 미등록':fmt(ch.risk)+'<small>대</small>'}</div><div class="ovh">반복 고장 + 최근 90일 안에 고장${ch.risk==null?' · 자산대장을 올리면 표시':''}</div></div>
+      <div class="ovpc${rk?'':' ovnd'}"><div class="ovl">위험 장비</div><div class="ovv">${rk?fmt(rk.counts['위험'])+'<small>대</small>':'자산대장 미등록'}</div><div class="ovh">${rk?'주의 '+fmt(rk.counts['주의'])+'대 · 90일 안에 다시 고장 날 가능성 기준':'자산대장을 올리면 표시'}</div></div>
       <div class="ovpc ovnd"><div class="ovl">표준 사전점검</div><div class="ovv">집계하지 않음</div><div class="ovh">CRM 활동 목적에 구분이 없습니다</div></div></div></section>
   <div class="ovrfoot">자료: CRM 「모든 약속/활동」 · FTFR = 한 번에 고친 비율, 재방문율 = 14일 안 재방문 비율, MTTR = 고장 수리 평균 소요 시간 · 근접 기준: 목표의 92%(높을수록 좋은 지표) / 115%(낮을수록 좋은 지표) · 업무 유형은 취소·온라인 정기점검 제외, 담당자·필수 참석자 각각 1건 · 최근 14일의 FTFR·재방문율은 잠정치 · 작성: FSS Team</div>`;
   // 추이
@@ -4580,7 +4622,7 @@ function chronicList(end,team){
 }
 function renderProTop(p,team,pp,prov,scope,cur,prv){
   dsTitle('proTitle','Proactive Service',p,scope,pp.label,prov);
-  const _l=D.months[D.months.length-1], end=p.months.filter(m=>m<=_l).pop()||_l, lab=pp.label, ch=ovChronic(end,team), list=chronicList(end,team);
+  const _l=D.months[D.months.length-1], end=p.months.filter(m=>m<=_l).pop()||_l, lab=pp.label, ch=ovChronic(end,team), list=chronicList(end,team), rk=riskList(team);
   $('proSub').textContent=`${p.label}, ${scope} (${lab} 대비)`;
   const cv=window.__pmcv;
   $('proKpi').innerHTML=dsCell('PM 실적',fmt(cur.pm),'건','PM 월별 편차는 옆 칸',dsDelta(cur.pm,prv.pm,'건',0,lab),'')+
@@ -4603,13 +4645,30 @@ function renderProTop(p,team,pp,prov,scope,cur,prv){
       <tr class="tgt"><td>FSG 전체</td><td>${TT.reduce((a,r)=>a+r.all,0)}</td><td>${fmt(tp)}</td><td>${fmt(tr)}</td><td>${fsg==null?'-':fsg.toFixed(1)}</td><td>기준</td></tr></tbody></table>`;
     orgWire($('proOgBars')); orgWire($('proOgTbl')); }
   $('chrSub').textContent='최근 12개월 · '+scope;
-  $('proRisk').innerHTML=`<div class="ovpc${ch.risk==null?' ovnd':''}"><div class="ovl">위험 장비</div><div class="ovv">${ch.risk==null?'자산대장 미등록':fmt(ch.risk)+'<small>대</small>'}</div><div class="ovh" style="display:block">발생 기준: 반복 고장 + 최근 90일 안에 고장${ch.risk==null?' · 자산대장(Serial No)을 올리면 표시':' · 아래 목록의 「위험」 표시'}</div></div>
+  $('proRisk').innerHTML=`<div class="ovpc${rk?'':' ovnd'}"><div class="ovl">위험 장비</div><div class="ovv">${rk?fmt(rk.counts['위험'])+'<small>대</small>':'자산대장 미등록'}</div><div class="ovh" style="display:block">${rk?`주의 ${fmt(rk.counts['주의'])}대 · 관찰 ${fmt(rk.counts['관찰'])}대 — 최근 고장 이력·장비군·같은 거래처 고장으로 본 90일 안에 다시 고장 날 가능성입니다. 과거 검증에서 위험 등급의 약 60%가 실제로 다시 고장났습니다.`:'발생 기준: 자산대장(Serial No)을 올리면 표시'}</div></div>
     <div class="ovpc ovnd"><div class="ovl">표준 사전점검 <span class="ovchip none">신규 개발 대상</span></div><div class="ovv">집계하지 않음</div><div class="ovh" style="display:block">CRM 활동 목적에 사전점검 구분이 없어 이행률을 만들지 않습니다. 구분 값이 생기면 이행률·미이행 장비 분석을 이 화면에 추가합니다.</div></div>`;
-  const dstr=t=>new Date(t).toISOString().slice(0,10);
-  $('chrNote').textContent=SERIAL?'반복 고장 = 12개월 내 고장 수리 3회 이상(자산대장 사용 장비) · 「위험」 = 그중 최근 90일 안에 고장 · 위 팀 필터로 담당 팀별로 볼 수 있습니다':'12개월 내 고장 수리 3회 이상(CRM 이력 기준) · 자산대장이 등록되면 사용 장비만 남기고 「위험」(최근 90일 안에 고장) 표시를 함께 보여 줍니다 · 위 팀 필터로 담당 팀별로 볼 수 있습니다';
-  const hasSt=SERIAL!=null;
-  $('tChr').innerHTML=`<thead><tr><th>기관</th><th>담당 팀</th><th>장비</th><th class="num">12개월 고장 수리</th><th class="num">최근 고장일</th>${hasSt?'<th>상태</th>':''}</tr></thead><tbody>`+
-    (list.length?list.slice(0,200).map(r=>`<tr><td>${esc(r.acct)}</td><td>${esc(r.atm||'-')}</td><td>${esc(r.sn)}${r.fam?` <span class="ovsub">${esc(r.fam)}</span>`:''}</td><td class="num">${r.n}</td><td class="num">${dstr(r.last)}</td>${hasSt?`<td>${r.risk?'<b class="st-bad">위험</b>':'관찰'}</td>`:''}</tr>`).join(''):`<tr><td colspan="${hasSt?6:5}" style="color:var(--muted)">이 기간·팀에 해당하는 장비가 없습니다(0대).</td></tr>`)+'</tbody>'+(list.length>200?`<caption style="caption-side:bottom;text-align:left;font-size:11.5px;color:var(--muted);padding-top:6px">상위 200대만 표시 (전체 ${fmt(list.length)}대)</caption>`:'');
+  window.__chrCtx={end,team,list,rk,scope}; renderChrTable();
+}
+/* 위험·반복 고장 장비 목록 — 자산대장이 있으면 「위험·주의」(점수 순)와 「반복 고장 3회+」 두 보기, 없으면 반복 고장 목록만 */
+let CHR_MODE='risk';
+function renderChrTable(){
+  const c=window.__chrCtx; if(!c||!$('tChr')) return;
+  const dstr=t=>t==null?'-':new Date(t).toISOString().slice(0,10), rk=c.rk, list=c.list, mode=rk?CHR_MODE:'chronic';
+  const seg=$('chrSeg'); if(seg){ seg.style.display=rk?'':'none';
+    seg.innerHTML=[['risk','위험·주의'],['chronic','반복 고장 3회+']].map(b=>`<button type="button" data-m="${b[0]}" aria-pressed="${mode===b[0]}">${b[1]}</button>`).join('');
+    seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{ CHR_MODE=b.dataset.m; renderChrTable(); }); }
+  $('chrH').textContent=mode==='risk'?'위험·주의 장비 목록':'반복 고장 장비 목록';
+  if(mode==='risk'){
+    const L=rk.items.filter(x=>x.tier==='위험'||x.tier==='주의');
+    $('chrNote').textContent=`등급 기준 v1 · 기준일 ${dstr(rk.ref)} · 위험 ${fmt(rk.counts['위험'])}대, 주의 ${fmt(rk.counts['주의'])}대 · 90일 안에 다시 고장 날 가능성 순(PM 여부는 점수에 넣지 않았습니다)`;
+    $('tChr').innerHTML=`<thead><tr><th>기관</th><th>담당 팀</th><th>장비</th><th class="num">12개월 고장 수리</th><th class="num">최근 고장일</th><th>등급</th><th>근거</th></tr></thead><tbody>`+
+      (L.length?L.slice(0,200).map(r=>`<tr><td>${esc(r.acct)}</td><td>${esc(r.atm||'-')}</td><td>${esc(r.sn)}${r.fam?` <span class="ovsub">${esc(r.fam)}</span>`:''}</td><td class="num">${r.r365}</td><td class="num">${dstr(r.last)}</td><td><span class="ovchip ${r.tier==='위험'?'bad':'warn'}">${r.tier}</span></td><td class="why">${esc(riskWhy(r))}</td></tr>`).join(''):'<tr><td colspan="7" style="color:var(--muted)">이 팀에 위험·주의 등급 장비가 없습니다(0대).</td></tr>')+'</tbody>'+(L.length>200?`<caption style="caption-side:bottom;text-align:left;font-size:11.5px;color:var(--muted);padding-top:6px">상위 200대만 표시 (전체 ${fmt(L.length)}대)</caption>`:'');
+    return; }
+  $('chrNote').textContent=SERIAL?'반복 고장 = 12개월 내 고장 수리 3회 이상(자산대장 사용 장비) · 위 팀 필터로 담당 팀별로 볼 수 있습니다':'12개월 내 고장 수리 3회 이상(CRM 이력 기준) · 자산대장이 등록되면 사용 장비만 남기고 위험 등급을 함께 보여 줍니다 · 위 팀 필터로 담당 팀별로 볼 수 있습니다';
+  const tier={}; if(rk) rk.items.forEach(x=>{ tier[x.sn+'|'+x.acct]=x.tier; });
+  const hasSt=rk!=null;
+  $('tChr').innerHTML=`<thead><tr><th>기관</th><th>담당 팀</th><th>장비</th><th class="num">12개월 고장 수리</th><th class="num">최근 고장일</th>${hasSt?'<th>등급</th>':''}</tr></thead><tbody>`+
+    (list.length?list.slice(0,200).map(r=>{ const t=tier[r.sn+'|'+r.acct]||'정상'; return `<tr><td>${esc(r.acct)}</td><td>${esc(r.atm||'-')}</td><td>${esc(r.sn)}${r.fam?` <span class="ovsub">${esc(r.fam)}</span>`:''}</td><td class="num">${r.n}</td><td class="num">${dstr(r.last)}</td>${hasSt?`<td>${t==='위험'?'<span class="ovchip bad">위험</span>':t==='주의'?'<span class="ovchip warn">주의</span>':t==='관찰'?'<span class="ovchip none">관찰</span>':'정상'}</td>`:''}</tr>`; }).join(''):`<tr><td colspan="${hasSt?6:5}" style="color:var(--muted)">이 기간·팀에 해당하는 장비가 없습니다(0대).</td></tr>`)+'</tbody>'+(list.length>200?`<caption style="caption-side:bottom;text-align:left;font-size:11.5px;color:var(--muted);padding-top:6px">상위 200대만 표시 (전체 ${fmt(list.length)}대)</caption>`:'');
 }
 /* ===== Workload — 업무부하 분석 (2026-11-13 작업지시서 「Workload Analysis 구축」) =====
    원칙: 방문 = CRM 활동(공식 기준). 학술 응대 = FS Portal 이 올린 Sysmex Talk(과거)·Slack(이후) 집계(사용자 결정 2026-11-13) — CRM 방문과 단위가 달라 비율로 섞지 않는다.
