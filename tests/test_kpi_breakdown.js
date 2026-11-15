@@ -86,4 +86,8 @@ rep.kpi.teams.forEach(t => { assert.strictEqual(rep.mttrBreak.teams.find(x => x.
 assert(!rep.meta.warnings.some(w => /확인 필요/.test(w)), '기존 값과 어긋남: ' + rep.meta.warnings.filter(w => /확인 필요/.test(w)).join(' / '));
 const noProd = buildReport({ raw, roster, period: '2026-10', cut: '2026-11-13' });
 assert.strictEqual(noProd.ftfrFail, null); assert(noProd.meta.warnings.some(w => /ftfrFail·mttrBreak 생략/.test(w)));
+// 새 키 계산이 오류를 내도 나머지 보고 데이터는 그대로 나온다(두 키만 비고 이유가 남는다)
+const broken = buildReport({ raw, roster, period: '2026-10', cut: '2026-11-13', prod: { office, gradeHist: [], newbie: [], weights: [] }, _kbBuild: () => { throw new Error('시험 오류'); } });
+assert.strictEqual(broken.ftfrFail, null); assert.strictEqual(broken.mttrBreak, null); assert(broken.meta.warnings.some(w => /계산 중 오류: 시험 오류/.test(w)));
+assert.deepStrictEqual(broken.kpi, rep.kpi); assert.deepStrictEqual(broken.peopleKpi, rep.peopleKpi);
 console.log('test_kpi_breakdown: OK (FTFR 실패 분해 · 재수리 간격 · 인수인계 · MTTR 분포 · 설치/Cal 병행 · 30분 단위 · 기존 값 대조)');
