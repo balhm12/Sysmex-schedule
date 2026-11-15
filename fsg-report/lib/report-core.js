@@ -36,6 +36,7 @@ function errGroup(model) {
 }
 const { eqByPerson, eqAgg } = require('../equip-core');
 const RD = require('./repair-drivers');
+const KB = require('./kpi-breakdown');
 const round1 = v => Math.round(v * 10) / 10;                  // Apps Script round1_ (MTTR·예방정비지수·상관표 재방문율)
 const monthOf = ms => { const d = new Date(ms); return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 }; };
 const inMonths = (ms, months) => { const o = monthOf(ms); return months.some(x => x.y === o.y && x.m === o.m); };
@@ -406,6 +407,10 @@ function buildReport(opt) {
         return { account: a, team: teamByAccount[a] ? topKeyOf(teamByAccount[a]) : '', fleet: v.fleet, chronic: v.chronic, chronicPct: round1(ratio * 100), repairs: v.repairs, oldUnits: v.oldUnits, oldPct: round1(oldPct * 100), action }; }) };
   }
 
+  /* FTFR 실패 건 분해(ftfrFail) · MTTR 분해(mttrBreak) — 2026-11-16: 사무소 6개·팀 4개·FSG × (기간·직전 기간·12개월). 판정은 kpiCore 그대로, 개인 이름·개인별 값 없음(lib/kpi-breakdown.js) */
+  const kbRes = KB.build({ kpiCore, raw: RAWC, roster, office: opt.prod ? opt.prod.office : null, period, P, round1, monthOf, excluded: EXCLUDED,
+    expect: { mttr: kpi.mttr, teamMttr: kpi.teams, teamFtfr: kpi.teams, units: peopleKpi && peopleKpi.units ? peopleKpi.units.units : [] } });
+
   /* ════════ 3차 묶음 ════════ 4장 설치 현황 — 설치 공유캘린더 + 자산대장 + 기관명매핑 + 설치_수동입력 (lib/install.js) */
   let installBlock = null;
   if (opt.calendar && opt.calendar.length && serial) {
@@ -418,7 +423,7 @@ function buildReport(opt) {
     meta: { period: { key: period.key, label: period.label, months: period.months.map(ym => P.lab(ym.y, ym.m)) }, cut: opt.cut || null, teams,
       rows: { raw: raw.length, afterCut: RAWC.length, counted: rows.length }, excluded,
       unmappedRows: rows.filter(x => !x.credits.length).length, eligibleAccounts: CORE.eligible.length,
-      warnings: rdRes.warnings,
+      warnings: rdRes.warnings.concat(kbRes.warnings),
       // 숫자의 기준 설명(보고서·덱을 쓰는 쪽이 "왜 전월 덱과 다른가"를 json 만 보고 알 수 있게). 값이 아니라 정의다.
       basis: {
         hospital: '활동(방문) 기준 — 모든 목적, 내부 계정 제외. 2026-10-26부터 서비스 케이스 파일을 쓰지 않는다(2026-09 덱까지는 케이스 파일 기준이라 순위·건수가 다를 수 있음)',
@@ -432,6 +437,7 @@ function buildReport(opt) {
     fleet: fleet ? { activeCount: fleet.activeCount, pmActiveCount: fleet.pmActiveCount } : null, health, focus,
     installBlock, nextPlan,
     inputs: { serial: !!serial, calendar: !!(opt.calendar && opt.calendar.length), equip: !!(opt.equip && opt.equip.rows) },
+    ftfrFail: kbRes.ftfrFail, mttrBreak: kbRes.mttrBreak,
   };
 }
 module.exports = { buildReport, rosterInfo, cutEndMs, errGroup, SHEET_TEAMS, PV, CORR_SERIES, METRO_TEAMS, N, round1 };
