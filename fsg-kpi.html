@@ -788,6 +788,18 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
 .wledb{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}.wledc .wlpri{background:var(--primary);color:#fff;border-color:var(--primary)}
 @media (max-width:1000px){#wl .ovkpi.c3.wlk{grid-template-columns:repeat(2,1fr)}#wl .ovkpi.c3.wlk .ovkc{border-left:1px solid var(--border);border-top:1px solid var(--border)}#wl .ovkpi.c3.wlk .ovkc:nth-child(odd){border-left:0}#wl .ovkpi.c3.wlk .ovkc:nth-child(-n+2){border-top:0}}
 @media (pointer:coarse){.dsx .wltabs button{height:44px}#wl .wlleg button{min-height:44px}.wledc select{height:44px}}
+.xbtns{margin-left:auto;display:flex;align-items:center;gap:8px;padding-bottom:2px}.xchk{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:4px;white-space:nowrap}
+.xbtns .dsbtn{font:inherit;font-size:13px;font-weight:700;height:34px;padding:0 14px;border:1px solid var(--primary);border-radius:6px;background:var(--surface);color:var(--primary);cursor:pointer;white-space:nowrap}.xbtns .dsbtn:hover{background:var(--tint)}.xbtns .dsbtn:disabled{opacity:.6;cursor:wait}
+@media (max-width:700px){#svcBar .f select{min-width:0}.xbtns{flex:none;gap:6px;align-self:flex-end}.xchk{display:none}.xbtns .dsbtn{height:44px;padding:0 10px;font-size:12.5px}}
+#xPrintHead{display:none}
+@media print{
+  @page{size:A4 landscape;margin:10mm}
+  body.pdfx{background:#fff}
+  body.pdfx .appbar,body.pdfx header.top .vinfo,body.pdfx .vtabs,body.pdfx #svcBar,body.pdfx #prodBar,body.pdfx #upl,body.pdfx .ovtools button,body.pdfx #prodFoldBtn,body.pdfx .dsmore,body.pdfx .ovseg,body.pdfx #ovRptBtn{display:none!important}
+  body.pdfx #xPrintHead{display:block;font-size:12px;color:#3F3F3F;margin:0 0 8px;padding:0 20px}
+  body.pdfx .ovcard,body.pdfx .panel,body.pdfx section{break-inside:avoid}
+  body.pdfx details.dsfold>*{display:block}
+}
 </style>
 </head>
 <body>
@@ -904,6 +916,7 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
   <div class="f"><label for="fPeriod">보고 기간</label><select id="fPeriod" autocomplete="off"></select></div>
   <div class="f" id="fRange" hidden><label for="fFrom">기간 지정 (시작 월 ~ 끝 월)</label><div class="rng"><select id="fFrom" autocomplete="off"></select><span>~</span><select id="fTo" autocomplete="off"></select></div></div>
   <div class="f"><label for="fTeam">팀</label><select id="fTeam"></select></div>
+  <div class="xbtns" role="group" aria-label="지금 화면 내보내기"><label class="xchk"><input type="checkbox" id="xDet"> 접힌 상세 포함</label><button type="button" class="dsbtn" id="xXlsx">Excel</button><button type="button" class="dsbtn" id="xPdf">PDF</button></div>
 </div></div>
 <div class="bar" id="prodBar" hidden><div class="wrap">
   <div class="f"><label for="pPeriod">보고 기간</label><select id="pPeriod" autocomplete="off"></select></div>
@@ -5068,6 +5081,58 @@ function rerender(){
   if(c.scr) render();
   if(c.prod) renderProdFor();
 }
+/* ===== 지금 화면 내보내기 (2026-11-16 사용자 요청 「각 항목별로 그래프 포함 엑셀·PDF」) =====
+   계산 없음 — 화면에 보이는 표·핵심 숫자·막대 목록을 그대로 옮기고, 그래프(canvas·svg)는 그림으로. 「접힌 상세 포함」이면 접힌 상세를 잠깐 펼쳐서 함께 */
+const VIEW_NAME={ov:'Overview',sq:'Service Quality',org:'Organization',wl:'Workload',eqp:'Instrument',pro:'Proactive Service'};
+function xMeta(){ const p=curPeriod(), t=$('fTeam').value||'FSG 전체'; return {view:VIEW_NAME[VIEW]||VIEW, period:p.label, team:t, cut:(D&&D.excl&&D.excl.cut)||'-', at:new Date().toISOString().slice(0,16).replace('T',' ')}; }
+function xVisible(el){ if(!el||el.closest('#lock,#upl,.appbar,header.top,#svcBar,#prodBar,.vtabs')) return false; const r=el.getClientRects(); return r.length>0&&getComputedStyle(el).visibility!=='hidden'; }
+async function xWith(fn){ const det=$('xDet')&&$('xDet').checked, pr=$('prod'), wasFold=pr&&pr.classList.contains('pfold'), opened=[];
+  if(det){ if(wasFold) pr.classList.remove('pfold'); document.querySelectorAll('details').forEach(d=>{ if(!d.open&&xVisible(d)){ d.open=true; opened.push(d); } }); await new Promise(r=>setTimeout(r,400)); }
+  try{ return await fn(); } finally{ if(det){ if(wasFold) pr.classList.add('pfold'); opened.forEach(d=>d.open=false); } } }
+function xHT(h){ const c=h.cloneNode(true); c.querySelectorAll('small,.ovsub,.ovchip,.ovtools,.ovscope,.ovsn,i,button,select,label').forEach(x=>x.remove()); return c.textContent.replace(/\s+/g,' ').trim(); }
+function xHead(el){ const H=[...document.querySelectorAll('h2,h3,h4')].filter(h=>xVisible(h)&&!h.closest('.ovkc')); let best=null;
+  for(const h of H){ if(h.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING||h.contains(el)) best=h; else break; }
+  return best?(xHT(best)||'표'):'표'; }
+const xNum=t=>{ const m=String(t).trim().replace(/\s+/g,' ').match(/^([▲▼+\-−]?\s?)([\d,]+(?:\.\d+)?)\s*(%|%p|건|분|대|명|시간|곳|배)?$/); if(!m) return t; const v=parseFloat(m[2].replace(/,/g,''))*(/[−\-▼]/.test(m[1])?-1:1); return isNaN(v)?t:v; };
+function xCollect(){
+  const items=[], seen=new Set();
+  document.querySelectorAll('.ovkpi, table, canvas, svg.wlsvg, #ovBox svg, .ovhb, .ovpro, .ovhl, .dsmix').forEach(el=>{ if(!xVisible(el)) return;
+    if(el.matches('.ovhl')){ const R=[...el.querySelectorAll('li')].map(li=>[((li.querySelector('.ovchip')||{}).textContent||'').trim(),((li.querySelector('b')||{}).textContent||'').trim(),((li.querySelector('.ovs')||{}).textContent||'').trim(),((li.querySelector('button')||{}).textContent||'').replace('›','').trim()]); if(R.length) items.push({k:'tbl',t:xHead(el),rows:[['상태','항목','기준','탭'],...R]}); return; }
+    if(el.matches('.dsmix')){ const par=el.parentElement; if(seen.has(par)) return; seen.add(par); const R=[...par.querySelectorAll(':scope>.dsmix')].map(m=>[((m.querySelector('.ovhn')||{}).textContent||'').trim(),[...m.querySelectorAll('.dsmt i')].map(i=>i.getAttribute('title')||i.textContent).join(' · '),((m.querySelector('.ovhv')||{}).textContent||'').trim()]); if(R.length) items.push({k:'tbl',t:xHead(par),rows:[['항목','구성','합계'],...R]}); return; }
+    if(el.matches('.ovkpi')){ const c=[...el.querySelectorAll('.ovkc')].filter(xVisible); if(c.length) items.push({k:'kpi',t:xHead(el),rows:c.map(x=>[ (x.querySelector('.ovl')||{}).childNodes?[...x.querySelector('.ovl').childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim():'', ((x.querySelector('.ovv')||{}).textContent||'').trim(), ((x.querySelector('.ovt')||{}).textContent||'').trim(), ((x.querySelector('.ovd')||{}).textContent||'').trim()])}); return; }
+    if(el.matches('.ovpro')){ const c=[...el.querySelectorAll('.ovpc')]; if(c.length) items.push({k:'kpi',t:xHead(el),rows:c.map(x=>[((x.querySelector('.ovl')||{}).textContent||'').trim(),((x.querySelector('.ovv')||{}).textContent||'').trim(),((x.querySelector('.ovh')||{}).textContent||'').trim(),''])}); return; }
+    if(el.matches('table')){ if(el.closest('.ovkpi')) return; const rows=[...el.rows].filter(r=>xVisible(r)||r.parentElement.tagName==='THEAD').map(r=>[...r.cells].map(c=>c.textContent.replace(/\s+/g,' ').trim())).filter(r=>r.some(x=>x)); if(rows.length>1) items.push({k:'tbl',t:xHead(el),rows}); return; }
+    if(el.matches('.ovhb')){ const par=el.parentElement; if(seen.has(par)) return; seen.add(par); const R=[...par.querySelectorAll(':scope>.ovhb')].filter(xVisible).map(b=>[((b.querySelector('.ovhn')||{}).textContent||'').trim(),((b.querySelector('.ovhv')||{}).textContent||'').trim()]); if(R.length) items.push({k:'tbl',t:xHead(par),rows:[['항목','값'],...R]}); return; }
+    if(el.width<40||el.height<40) return; items.push({k:'img',t:xHead(el),el}); });
+  return items; }
+async function xPng(el){ if(el.tagName==='CANVAS'){ const c=document.createElement('canvas'); c.width=el.width; c.height=el.height; const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height); g.drawImage(el,0,0); return {d:c.toDataURL('image/png'),w:el.clientWidth||el.width,h:el.clientHeight||el.height}; }
+  const r=el.getBoundingClientRect(), cl=el.cloneNode(true); cl.setAttribute('xmlns','http://www.w3.org/2000/svg'); cl.setAttribute('width',r.width); cl.setAttribute('height',r.height);
+  const cs=getComputedStyle(document.documentElement); let src=new XMLSerializer().serializeToString(cl).replace(/var\(--([a-z0-9-]+)\)/gi,(m,k)=>cs.getPropertyValue('--'+k).trim()||'#888');
+  const img=new Image(); await new Promise((ok,no)=>{ img.onload=ok; img.onerror=no; img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(src); });
+  const c=document.createElement('canvas'), sc=2; c.width=r.width*sc; c.height=r.height*sc; const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height); g.drawImage(img,0,0,c.width,c.height); return {d:c.toDataURL('image/png'),w:r.width,h:r.height}; }
+let _xlj=null;
+function loadExcelJS(){ if(window.ExcelJS) return Promise.resolve(); return _xlj||(_xlj=new Promise((ok,no)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js'; s.onload=ok; s.onerror=()=>{ _xlj=null; no(new Error('Excel 라이브러리를 불러오지 못했습니다')); }; document.head.appendChild(s); })); }
+async function exportXlsx(){
+  const btn=$('xXlsx'); btn.disabled=true; const old=btn.textContent; btn.textContent='만드는 중…';
+  try{ await loadExcelJS(); await xWith(async()=>{
+    const M=xMeta(), items=xCollect(), wb=new ExcelJS.Workbook(); wb.creator='FSG KPI 대시보드';
+    const used=new Set(), nm=t=>{ let b=String(t).replace(/[\[\]:*?\/\\]/g,' ').replace(/\s+/g,' ').trim().slice(0,28)||'표', n=b, i=2; while(used.has(n)) n=b.slice(0,26)+' '+(i++); used.add(n); return n; };
+    const head=r=>{ r.font={bold:true,color:{argb:'FFFFFFFF'}}; r.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF005BAC'}}; };
+    const s0=wb.addWorksheet(nm('정보')); [['화면',M.view],['보고 기간',M.period],['팀',M.team],['데이터 기준일',M.cut],['내보낸 시각',M.at],['비고','화면에 보이는 값을 그대로 옮김(계산 없음) · 그래프는 「그래프」 시트에 그림으로']].forEach(r=>s0.addRow(r)); s0.getColumn(1).width=16; s0.getColumn(2).width=70; s0.getColumn(1).font={bold:true};
+    const kp=items.filter(x=>x.k==='kpi'); if(kp.length){ const s=wb.addWorksheet(nm('핵심 지표')); head(s.addRow(['구역','지표','값','목표·설명','전기 대비'])); kp.forEach(x=>x.rows.forEach(r=>s.addRow([x.t,...r]))); [24,22,14,40,30].forEach((w,i)=>s.getColumn(i+1).width=w); }
+    items.filter(x=>x.k==='tbl').forEach(x=>{ const s=wb.addWorksheet(nm(x.t)); head(s.addRow(x.rows[0])); x.rows.slice(1).forEach(r=>s.addRow(r.map(xNum))); x.rows[0].forEach((_,i)=>{ const L=Math.max(...x.rows.map(r=>String(r[i]||'').length)); s.getColumn(i+1).width=Math.min(40,Math.max(8,L*1.6)); }); s.views=[{state:'frozen',ySplit:1}]; });
+    const im=items.filter(x=>x.k==='img'); if(im.length){ const s=wb.addWorksheet(nm('그래프')); s.getColumn(1).width=100; let row=1;
+      for(const x of im){ let p; try{ p=await xPng(x.el); }catch(e){ continue; } s.getCell(row,1).value=x.t; s.getCell(row,1).font={bold:true,color:{argb:'FF005BAC'}}; const sc=Math.min(1,760/p.w), w=p.w*sc, h=p.h*sc;
+        s.addImage(wb.addImage({base64:p.d,extension:'png'}),{tl:{col:0,row:row},ext:{width:w,height:h}}); row+=Math.ceil(h/20)+3; } }
+    const buf=await wb.xlsx.writeBuffer(), a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+    a.download=`FSG_KPI_${M.view.replace(/\s+/g,'')}_${M.period.replace(/[^\w가-힣]+/g,'')}_${M.team.replace(/\s+/g,'')}.xlsx`; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
+    window.__xLast={sheets:wb.worksheets.map(w=>w.name),images:im.length,name:a.download}; });
+  }catch(e){ console.warn(e); alert('Excel 을 만들지 못했습니다: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent=old; } }
+async function exportPdf(){ const M=xMeta(); let h=$('xPrintHead'); if(!h){ h=document.createElement('div'); h.id='xPrintHead'; document.body.insertBefore(h,document.body.firstChild); }
+  h.textContent=`FSG KPI 대시보드 · ${M.view} · ${M.period} · ${M.team} · 데이터 기준일 ${M.cut} · 출력 ${M.at}`;
+  await xWith(async()=>{ document.body.classList.add('pdfx'); await new Promise(r=>setTimeout(r,300)); window.print(); }); document.body.classList.remove('pdfx'); }
+document.addEventListener('click',e=>{ const t=e.target; if(!t||!t.id) return; if(t.id==='xXlsx') exportXlsx(); else if(t.id==='xPdf') exportPdf(); });
 function showMain(){ $('vtabs').hidden=false; $('hdrInfo').hidden=false; setView(VIEW); loadShifts(); loadInstCal(); }
 /* 근무일정표(같은 Firebase 프로젝트 work-schedule/{팀}/{날짜}/{성명}.night)에서 EAST·WEST 시프트 근무일(석간·석/야)을 읽는다.
    시프트 근무는 주간 업무가 저녁·야간으로 옮겨간 것이라 그날 근무시간 외 활동은 야간 OT·잔업에서 빼고 '시프트 근무'로 따로 센다. 읽기만 한다. */

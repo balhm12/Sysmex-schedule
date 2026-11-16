@@ -81,3 +81,5 @@ assert(/data-k="ftfr"/.test(html) && /if\(0\) html \+= '<div class="block"><div 
 assert(/function ovIssues\(/.test(html) && /function ovGo\(/.test(html) && !/SECTION 03<\/i>업무 유형/.test(html) && !/SECTION 05<\/i>예방 서비스/.test(html), 'v3.1: Overview 3영역, 이슈 → 탭 이동');
 /* v3.1 PR4: Workload 사람 기준(야간 OT·휴일·이동거리·개인 목록)은 기본 접힘 — 화면별 기억 */
 assert(/const FV=VIEW==='org'\|\|VIEW==='wl'/.test(html), 'v3.1: Organization·Workload 상세 기본 접힘');
+/* 내보내기: 지금 화면 Excel(ExcelJS, 누를 때만)·PDF(인쇄) */
+assert(/id="xXlsx"/.test(html) && /id="xPdf"/.test(html) && /function exportXlsx\(/.test(html) && /exceljs\/4\.4\.0/.test(html) && html.indexOf('function exportXlsx(')<html.indexOf('function showMain(){'), '내보내기 버튼·코드');
