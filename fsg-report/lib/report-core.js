@@ -408,8 +408,12 @@ function buildReport(opt) {
   }
 
   /* FTFR 실패 건 분해(ftfrFail) · MTTR 분해(mttrBreak) — 2026-11-16: 사무소 6개·팀 4개·FSG × (기간·직전 기간·12개월). 판정은 kpiCore 그대로, 개인 이름·개인별 값 없음(lib/kpi-breakdown.js) */
-  const kbRes = KB.build({ kpiCore, raw: RAWC, roster, office: opt.prod ? opt.prod.office : null, period, P, round1, monthOf, excluded: EXCLUDED,
-    expect: { mttr: kpi.mttr, teamMttr: kpi.teams, teamFtfr: kpi.teams, units: peopleKpi && peopleKpi.units ? peopleKpi.units.units : [] } });
+  /* 덧붙이는 분석이라 여기서 오류가 나도 보고 데이터 전체를 멈추지 않는다(대시보드 올리기 아이콘이 같은 실행에서 이 json 을 만든다) — 두 키만 비우고 이유를 남긴다 */
+  let kbRes;
+  try {
+    kbRes = (opt._kbBuild || KB.build)({ kpiCore, raw: RAWC, roster, office: opt.prod ? opt.prod.office : null, period, P, round1, monthOf, excluded: EXCLUDED,
+      expect: { mttr: kpi.mttr, teamMttr: kpi.teams, teamFtfr: kpi.teams, units: peopleKpi && peopleKpi.units ? peopleKpi.units.units : [] } });
+  } catch (e) { kbRes = { ftfrFail: null, mttrBreak: null, warnings: ['ftfrFail·mttrBreak 생략 — 계산 중 오류: ' + (e && e.message ? e.message : e) + ' (나머지 보고 데이터는 정상)'] }; }
 
   /* ════════ 3차 묶음 ════════ 4장 설치 현황 — 설치 공유캘린더 + 자산대장 + 기관명매핑 + 설치_수동입력 (lib/install.js) */
   let installBlock = null;
