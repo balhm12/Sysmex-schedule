@@ -57,13 +57,22 @@ const h=(m)=>{ const a=new Array(24).fill(0); Object.entries(m).forEach(([k,v])=
 const acad=api.parseAcad(JSON.stringify({kind:'fsportal-acad',src:'talk',days:{'2026-11-09':h({10:2,20:1}),'2026-11-10':h({9:5}),'2026-10-09':h({11:1})}}),'t.json');
 api.ACAD=acad; let g=api.wlAcadAgg(['2026-11','2026-10']); assert.deepStrictEqual([g.n,g.day,g.night,g.hol],[9,7,1,1],'Talk 만');
 api.ACAD=api.parseAcad(JSON.stringify({kind:'fsportal-acad',src:'slack',days:{'2026-11-10':h({7:1,8:1})}}),'s.json');
-// parseAcad 는 기존 ACAD 에 합침 — 위에서 api.ACAD 를 Talk 로 두었으므로 다시 합쳐 봄
-api.ACAD=Object.assign({},acad,{slack:{days:{'2026-11-10':h({7:1,8:1})}}});
-g=api.wlAcadAgg(['2026-11']); assert.deepStrictEqual([g.n,g.day,g.night],[5,3,2],'11/10 부터 Slack(07시 = 야간, 08시 = 주간), 11/09 는 Talk '+JSON.stringify([g.n,g.day,g.night]));
-assert(g.src.has('talk')&&g.src.has('slack'));
-// Sysmex Talk 은 평일 09시 전 글 = 야간(아침에 올린 전날 밤 응대), Slack 은 08시부터 주간 그대로 (2026-11-13 사용자 기준)
-api.ACAD={talk:{days:{'2026-11-11':h({7:1,8:2,9:3,17:1,18:1})}},slack:{days:{'2026-11-12':h({8:1})}}};
-g=api.wlAcadAgg(['2026-11']); assert.deepStrictEqual([g.day,g.night],[4+1,4],'Talk 08시 = 야간, 09~17시 = 주간 / Slack 08시 = 주간 '+JSON.stringify([g.day,g.night]));
+// 데이터 소스 전환(2026-11-16 지시서): 2026-11-10 까지 Talk, 11-11 부터 Slack — 날짜로 나눠 같은 날을 두 번 세지 않음
+api.ACAD=Object.assign({},acad,{slack:{made:'2026-11-30',days:{'2026-11-10':h({7:1,8:1})}}});
+g=api.wlAcadAgg(['2026-11']); assert.deepStrictEqual([g.n,g.day,g.night],[8,7,1],'11/10 Slack(전환 전)은 쓰지 않음, Talk 11/09·11/10 '+JSON.stringify([g.n,g.day,g.night]));
+// Talk 은 평일 09시 전 글 = 야간, Slack 은 08시부터 주간. 11/11 이후 Talk 글은 쓰지 않음(운영 종료)
+api.ACAD={talk:{made:'2026-11-12',days:{'2026-11-10':h({7:1,8:2,9:3,17:1,18:1}),'2026-11-11':h({9:9})}},slack:{made:'2026-11-30',days:{'2026-11-12':h({8:1,7:1})}}};
+g=api.wlAcadAgg(['2026-11']); assert.deepStrictEqual([g.n,g.day,g.night],[10,5,5],'Talk 11/10(08시 야간·09~17 주간) + Slack 11/12(07 야간·08 주간), Talk 11/11 제외 '+JSON.stringify([g.n,g.day,g.night]));
+assert.deepStrictEqual([g.talk,g.slack],[8,2],'전환 월 = 두 소스 합');
+assert(g.src.has('talk')&&g.src.has('slack')&&!g.gap.wait,'Slack 이 월말까지 있으면 집계 대기 없음');
+// Slack 미연동 — 11/11 이후는 0 이 아니라 집계 대기
+api.ACAD={talk:{made:'2026-11-10',days:{'2026-11-03':h({10:2})}}};
+g=api.wlAcadAgg(['2026-11']); assert(g.gap.wait==='slack'&&g.gap.part&&g.gap.mix,'11월 = Talk 만 반영, Slack 집계 대기(일부)');
+g=api.wlAcadAgg(['2026-12']); assert(g.gap.wait==='slack'&&g.gap.none,'12월 Slack 미연동 = 집계 대기(0 아님)');
+api.ACAD={talk:{made:'2026-11-10',days:{}},slack:{made:'2026-11-14',days:{'2026-11-13':h({10:1})}}};
+g=api.wlAcadAgg(['2026-11']); assert(g.gap.wait==='slack'&&g.gap.part&&g.gap.upto==='2026-11-14','Slack 일부 연동 = 내보낸 날까지만');
+g=api.wlAcadAgg(['2026-10']); assert(!g.gap.wait,'10월 Talk 수집 범위 안');
+assert(/function wlAcadCrm\(/.test(block)&&!/wlAcadAgg[\s\S]{0,200}wlAcadCrm/.test(block.slice(block.indexOf('function wlAcadAgg'),block.indexOf('function acadGapTxt'))),'CRM 학술 요청과 학술 응대를 합치지 않음');
 assert.throws(()=>api.parseAcad('{"kind":"x"}','x'),/학술 파일이 아닙니다/);
 assert.throws(()=>api.parseAcad(JSON.stringify({kind:'fsportal-acad',src:'talk',days:{'2026-1-1':[1]}}),'x'),/형식/);
 // 화면: Workload 탭·데이터 미확보 표시·이름 검색으로 KPI 를 계산하지 않음
