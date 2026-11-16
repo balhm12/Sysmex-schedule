@@ -3179,6 +3179,13 @@ function prevPeriod(p){
     months.tTo=Date.UTC(y,mo-1,dd+1); months.rng=`${y}.${String(mo).padStart(2,'0')}.01~${String(mo).padStart(2,'0')}.${String(dd).padStart(2,'0')}`;
     const cy=p.months[0].split('-'); months.cur=`${cy[0]}.${cy[1]}.01~${cy[1]}.${String(day).padStart(2,'0')}`;
     return {months,label:`전월 동기간(${mo}/1~${dd})`,rng:months.rng,cur:months.cur}; }
+  /* 2026-11-16 검토: 진행 중인 분기·반기·연도도 마지막 달은 같은 날까지만 비교(예전: 마지막 달이 10일치인데 비교 쪽은 한 달 전체) */
+  const inProg=p.partial&&upto.includes(last)&&!(D.maxT>=monthEnd(last)-DAY);
+  if(inProg&&months.length){ const day=new Date(D.maxT).getUTCDate(), lm=months[months.length-1], [y,mo]=lm.split('-').map(Number), dim=new Date(Date.UTC(y,mo,0)).getUTCDate(), dd=Math.min(day,dim);
+    months.tTo=Date.UTC(y,mo-1,dd+1); const f=months[0].split('-'), cf=upto[0].split('-'), [cy,cm]=last.split('-');
+    months.rng=`${f[0]}.${f[1]}.01~${y}.${String(mo).padStart(2,'0')}.${String(dd).padStart(2,'0')}`; months.cur=`${cf[0]}.${cf[1]}.01~${cy}.${cm}.${String(day).padStart(2,'0')}`;
+    const lb=({q:'전 분기 동기간',h:'전 반기 동기간',fy:'전년 동기간',custom:'직전 같은 기간'}[p.kind]||'직전 같은 기간');
+    return {months,label:`${lb}(~${mo}/${dd})`,rng:months.rng,cur:months.cur}; }
   const label=({m:'전월',q:'전 분기',h:'전 반기',fy:'전년 동기',custom:'직전 같은 기간'}[p.kind]||'직전 기간');   /* v3.2: 진행 중인 달은 전월 한 달 전체와 비교됨을 이름에 표시(계산은 그대로) */
   return {months,label};
 }
@@ -4390,8 +4397,8 @@ function prodSelection(){
   const sel=p.months, cmp=pp.months, rng=a=>a.length>1?`${dotMk(a[0])} ~ ${dotMk(a[a.length-1])}`:(a[0]?dotMk(a[0]):'-');
   const inData=sel.filter(m=>ms.includes(m)), end=inData.length?inData[inData.length-1]:last;
   /* 조직·개인(buildProdData, 월간보고 엔진과 같은 계산)은 월 단위라 진행 중인 달도 전월 한 달 전체와 비교 — 이름에 그대로 적는다 */
-  const pl=cmp.tTo?'전월 전체(조직·개인 비교는 월 단위)':pp.label;
-  return {sel,cmp,label:p.label,cmpLabel:`${rng(cmp)} (${pl})`,short:(cmp.tTo?'전월 전체':pp.label)+' 대비',end,
+  const pl=cmp.tTo?(p.kind==='m'?'전월 전체':pp.label.replace(/\(.*\)/,'')+' — 마지막 달 전체')+'(조직·개인 비교는 월 단위)':pp.label;
+  return {sel,cmp,label:p.label,cmpLabel:`${rng(cmp)} (${pl})`,short:(cmp.tTo?(p.kind==='m'?'전월 전체':pp.label.replace(/\(.*\)/,'')):pp.label)+' 대비',end,
     trend:rangeMk(shiftMonth(end,-11),end),prov:inData.length?isProvisional(inData):false};
 }
 let PROD_SHOWN=false;
@@ -4620,8 +4627,8 @@ function renderOv(){
   const _l=D.months[D.months.length-1], end=p.months.filter(m=>m<=_l).pop()||_l, tm=[]; for(let i=11;i>=0;i--) tm.push(shiftMonth(end,-i));
   const ts=tm.map(m=>stats([m],team)), tl=tm.map(m=>m.slice(2).replace('-','.'));
   // 업무 유형
-  const ms=new Set(p.months), pms=new Set(pp.months), act={},actP={}; OV_ACT.forEach(a=>{act[a[0]]=0;actP[a[0]]=0;});
-  for(const o of D.rows){ const inC=ms.has(o.mk), inP=pms.has(o.mk); if(!inC&&!inP) continue; const n=team?o.cteams.filter(t=>t===team).length:o.credits.length; if(!n) continue; const b=ovBucket(o.purp); if(inC) act[b]+=n; if(inP) actP[b]+=n; }
+  const ms=new Set(p.months), pmP=mPred(pp.months), act={},actP={}; OV_ACT.forEach(a=>{act[a[0]]=0;actP[a[0]]=0;});
+  for(const o of D.rows){ const inC=ms.has(o.mk), inP=pmP(o.mk,o.t); if(!inC&&!inP) continue; const n=team?o.cteams.filter(t=>t===team).length:o.credits.length; if(!n) continue; const b=ovBucket(o.purp); if(inC) act[b]+=n; if(inP) actP[b]+=n; }
   const aTot=OV_ACT.reduce((a,x)=>a+act[x[0]],0), aTotP=OV_ACT.reduce((a,x)=>a+actP[x[0]],0);
   // 확인이 필요한 곳 — 팀별 상태
   const al=ovIssues(p,pp);
@@ -5128,7 +5135,7 @@ function renderWl(){
   const el=$('wl'); if(!el||!D) return;
   const p=curPeriod(), pp=prevPeriod(p), team=$('fTeam').value||null;
   const yoy={months:p.months.map(m=>shiftMonth(m,-12)), label:'전년 같은 기간'};
-  if(pp.months.tTo){ const day=new Date(D.maxT).getUTCDate(), [y,mo]=yoy.months[0].split('-').map(Number); yoy.months.tTo=Date.UTC(y,mo-1,day+1); yoy.label=`전년 동기간(${mo}/1~${day})`; }   /* 진행 중인 달은 전년도 같은 날까지 */
+  if(pp.months.tTo){ const day=new Date(D.maxT).getUTCDate(), [y,mo]=yoy.months[yoy.months.length-1].split('-').map(Number), dd=Math.min(day,new Date(Date.UTC(y,mo,0)).getUTCDate()); yoy.months.tTo=Date.UTC(y,mo-1,dd+1); yoy.label=yoy.months.length>1?`전년 동기간(~${mo}/${dd})`:`전년 동기간(${mo}/1~${dd})`; }   /* 진행 중인 달은 전년도 같은 날까지 */
   const all=wlVisits(D.rows);
   const pick=(months)=>{ const f=mPred(months); return all.filter(v=>f(v.mk,v.t)&&(!team||v.teams.has(team))); };
   const V=pick(p.months), A=wlAgg(V,wlInfo), Ap=wlAgg(pick(pp.months),wlInfo), Ay=wlAgg(pick(yoy.months),wlInfo);
@@ -5338,7 +5345,7 @@ function xVisible(el){ if(!el||el.closest('#lock,#upl,.appbar,header.top,#svcBar
 async function xWith(fn){ const det=$('xDet')&&$('xDet').checked, pr=$('prod'), wasFold=pr&&pr.classList.contains('pfold'), opened=[];
   if(det){ if(wasFold) pr.classList.remove('pfold'); document.querySelectorAll('details').forEach(d=>{ if(!d.open&&xVisible(d)){ d.open=true; opened.push(d); } }); await new Promise(r=>setTimeout(r,400)); }
   try{ return await fn(); } finally{ if(det){ if(wasFold) pr.classList.add('pfold'); opened.forEach(d=>d.open=false); } } }
-function xHT(h){ const c=h.cloneNode(true); c.querySelectorAll('small,.ovsub,.ovchip,.ovtools,.ovscope,.ovsn,i,button,select,label').forEach(x=>x.remove()); return c.textContent.replace(/\s+/g,' ').trim(); }
+function xHT(h){ const c=h.cloneNode(true); c.querySelectorAll('small,.ovsub,.ovchip,.ovtools,.ovscope,.ovsn,.wlinfo,i,button,select,label').forEach(x=>x.remove()); return c.textContent.replace(/\s+/g,' ').trim(); }
 function xHead(el){ const H=[...document.querySelectorAll('h2,h3,h4')].filter(h=>xVisible(h)&&!h.closest('.ovkc')); let best=null;
   for(const h of H){ if(h.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING||h.contains(el)) best=h; else break; }
   return best?(xHT(best)||'표'):'표'; }
@@ -5347,7 +5354,7 @@ function xCollect(){
   const items=[], seen=new Set();
   document.querySelectorAll('.ovkpi, table, canvas, svg.wlsvg, #ovBox svg, .ovhb, .ovpro, .ovhl, .dsmix, .health').forEach(el=>{ if(!xVisible(el)) return;
     if(el.matches('.health')){ const c=[...el.querySelectorAll('.hc')]; if(c.length) items.push({k:'kpi',t:xHead(el),rows:c.map(x=>[((x.querySelector('.l')||{}).textContent||'').trim(),((x.querySelector('.v')||{}).textContent||'').trim(),((x.querySelector('.c')||{}).textContent||'').trim(),''])}); return; }
-    if(el.matches('.ovhl')){ const R=[...el.querySelectorAll('li')].map(li=>[((li.querySelector('.ovchip')||{}).textContent||'').trim(),((li.querySelector('b')||{}).textContent||'').trim(),((li.querySelector('.ovs')||{}).textContent||'').trim(),((li.querySelector('button')||{}).textContent||'').replace('›','').trim()]); if(R.length) items.push({k:'tbl',t:xHead(el),rows:[['상태','항목','기준','탭'],...R]}); return; }
+    if(el.matches('.ovhl')){ const R=[...el.querySelectorAll('li')].map(li=>[((li.querySelector('.ovchip')||{}).textContent||'').trim(),((li.querySelector('.ovissl')||li.querySelector('b')||{}).textContent||'').replace(/\s+/g,' ').trim(),((li.querySelector('.ovs')||{}).textContent||'').trim(),((li.querySelector('button')||{}).textContent||'').replace('›','').trim()]); if(R.length) items.push({k:'tbl',t:xHead(el),rows:[['상태','항목','기준','탭'],...R]}); return; }
     if(el.matches('.dsmix')){ const par=el.parentElement; if(seen.has(par)) return; seen.add(par); const R=[...par.querySelectorAll(':scope>.dsmix')].map(m=>[((m.querySelector('.ovhn')||{}).textContent||'').trim(),[...m.querySelectorAll('.dsmt i')].map(i=>i.getAttribute('title')||i.textContent).join(' · '),((m.querySelector('.ovhv')||{}).textContent||'').trim()]); if(R.length) items.push({k:'tbl',t:xHead(par),rows:[['항목','구성','합계'],...R]}); return; }
     if(el.matches('.ovkpi')){ const c=[...el.querySelectorAll('.ovkc')].filter(xVisible); if(c.length) items.push({k:'kpi',t:xHead(el),rows:c.map(x=>[ (x.querySelector('.ovl')||{}).childNodes?[...x.querySelector('.ovl').childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim():'', ((x.querySelector('.ovv')||{}).textContent||'').trim(), ((x.querySelector('.ovt')||{}).textContent||'').trim(), ((x.querySelector('.ovd')||{}).textContent||'').trim()])}); return; }
     if(el.matches('.ovpro')){ const c=[...el.querySelectorAll('.ovpc')]; if(c.length) items.push({k:'kpi',t:xHead(el),rows:c.map(x=>[((x.querySelector('.ovl')||{}).textContent||'').trim(),((x.querySelector('.ovv')||{}).textContent||'').trim(),((x.querySelector('.ovh')||{}).textContent||'').trim(),''])}); return; }

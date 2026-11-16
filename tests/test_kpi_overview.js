@@ -116,3 +116,7 @@ assert(/function mPred\(months\)/.test(html) && /전월 동기간\(/.test(html) 
   assert(/처리 건수 기준/.test(ops) && /방문 기준/.test(ops), 'v3.8 업무 구성 단위 표시');
   assert(/Service Operations/.test(html) && /body\.rpt #ov \.ovequip/.test(html), 'v3.8 2쪽 Service Operations, 장비 카드는 보고서에서 숨김');
   assert(/<span class="ovh" hidden>/.test(html), 'v3.8 KPI 카드 설명은 마우스 설명으로'); }
+/* 2026-11-16 검토: 진행 중인 분기·반기·연도도 마지막 달은 같은 날까지 비교 */
+{ const fn=html.slice(html.indexOf('function prevPeriod('),html.indexOf('/* ===== 집계 ====='));
+  assert(/inProg=p\.partial&&upto\.includes\(last\)/.test(fn)&&/months\.tTo=Date\.UTC\(y,mo-1,dd\+1\)/.test(fn),'진행 중 다개월 기간 동기간 비교');
+  assert(/yoy\.months\[yoy\.months\.length-1\]/.test(html),'Workload 전년 비교는 마지막 달 기준으로 자름'); }
