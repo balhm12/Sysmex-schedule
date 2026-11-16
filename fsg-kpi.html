@@ -4601,7 +4601,8 @@ function orgScatter(){
   if(!PROD.eq){ box.innerHTML='<p class="empty-note">담당 장비 수가 없어 그릴 수 없습니다. 관리자가 「담당기관 관리표」를 올리면 표시됩니다.</p>'; return; }
   const R=orgRows('office').filter(r=>r.eq&&r[ORGSC.y]!=null); if(R.length<2){ box.innerHTML='<p class="empty-note">점이 2개 미만이라 그리지 않습니다.</p>'; return; }
   const ko=OV_K.find(x=>x.k===ORGSC.c), yl=ORGSC.y==='cnt'?'처리 건수 (건)':'1인당 처리 건수 (건)', mx=orgMed(R.map(r=>r.eq)), my=orgMed(R.map(r=>r[ORGSC.y])), qon=ORGSC.q==='on', rmax=Math.max(...R.map(r=>r.all||1));
-  const pts=R.map(r=>{ const st=ovSt(ko,r[ORGSC.c]).st||'none'; return {x:r.eq,y:r[ORGSC.y],r:8+16*Math.sqrt((r.all||1)/rmax),row:r,st}; });
+  const narrow=(box.clientWidth||window.innerWidth)<560;   /* 휴대폰: 점이 화면 폭에 비해 커서 서로 덮이던 것 — 크기를 줄임 */
+  const pts=R.map(r=>{ const st=ovSt(ko,r[ORGSC.c]).st||'none'; return {x:r.eq,y:r[ORGSC.y],r:(narrow?5:8)+(narrow?10:16)*Math.sqrt((r.all||1)/rmax),row:r,st}; });
   box.innerHTML=`<div class="cv ogsc"><canvas id="cOrgSc" role="img" aria-label="담당 장비 수와 ${yl}의 관계. 아래 조직별 운영 현황 표와 같은 숫자입니다."></canvas></div>
     <div class="dsleg ogscleg"><span><i style="background:${ORGSC_C.good}"></i>${ko.n} 달성</span><span><i style="background:${ORGSC_C.warn}"></i>근접</span><span><i style="background:${ORGSC_C.bad}"></i>미달</span><span><i style="background:${ORGSC_C.none}"></i>자료 없음</span><span>점 크기 = 인원</span></div>
     <p class="ovnote">담당 장비: 현재 관리표 기준 / 처리 건수: 선택 기간 기준. 시점이 다른 데이터의 참고 비교입니다.</p>
@@ -4609,12 +4610,26 @@ function orgScatter(){
   const quad={id:'orgq',afterDatasetsDraw(c){ const {ctx,chartArea:a,scales:{x,y}}=c, px=x.getPixelForValue(mx), py=y.getPixelForValue(my); ctx.save();
       const wide=a.right-a.left>=520;
       if(qon){ ctx.strokeStyle=css('--muted')||'#9FA0A0'; ctx.setLineDash([5,4]); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(px,a.top); ctx.lineTo(px,a.bottom); ctx.moveTo(a.left,py); ctx.lineTo(a.right,py); ctx.stroke(); ctx.setLineDash([]);
-      ctx.font='12px '+(css('--font')||'sans-serif'); ctx.fillStyle=css('--muted')||'#6B6B6B';
+      ctx.font='11.5px '+(css('--font')||'sans-serif'); ctx.fillStyle=css('--muted')||'#6B6B6B'; ctx.globalAlpha=.75;
       if(wide){ ctx.textAlign='left'; ctx.textBaseline='top'; ctx.fillText('적은 장비 · 많은 업무',a.left+6,a.top+4); ctx.textBaseline='bottom'; ctx.fillText('적은 장비 · 적은 업무',a.left+6,a.bottom-4);
-      ctx.textAlign='right'; ctx.textBaseline='top'; ctx.fillText('많은 장비 · 많은 업무',a.right-6,a.top+4); ctx.textBaseline='bottom'; ctx.fillText('많은 장비 · 적은 업무',a.right-6,a.bottom-4); } }
-      ctx.font='700 12.5px '+(css('--font')||'sans-serif'); ctx.fillStyle=css('--text')||'#3F3F3F'; ctx.textBaseline='middle';
-      c.getDatasetMeta(0).data.forEach((el,i)=>{ const d=pts[i], tw=ctx.measureText(d.row.n).width, rr=(el.options&&el.options.radius)||d.r, right=el.x+rr+4+tw<=a.right; ctx.textAlign=right?'left':'right'; ctx.fillText(d.row.n,right?el.x+rr+4:el.x-rr-4,el.y); }); ctx.restore(); }};
-  upsert('cOrgSc',{type:'bubble',data:{datasets:[{data:pts,backgroundColor:pts.map(d=>ORGSC_C[d.st]+'CC'),borderColor:pts.map(d=>d.row.sel?'#003A70':ORGSC_C[d.st]),borderWidth:pts.map(d=>d.row.sel?3:1)}]},plugins:[quad],
+      ctx.textAlign='right'; ctx.textBaseline='top'; ctx.fillText('많은 장비 · 많은 업무',a.right-6,a.top+4); ctx.textBaseline='bottom'; ctx.fillText('많은 장비 · 적은 업무',a.right-6,a.bottom-4); } ctx.globalAlpha=1; }
+      /* 이름 자리 고르기 — 다른 점·이미 놓은 이름과 겹치지 않는 첫 자리(오른쪽 → 왼쪽 → 위 → 아래 → 대각선 → 더 멀리), 멀리 놓이면 가는 선으로 잇는다 */
+      ctx.font='700 12.5px '+(css('--font')||'sans-serif'); ctx.textBaseline='middle';
+      const els=c.getDatasetMeta(0).data, H=16, G=4, boxes=[], cir=els.map((el,i)=>({x:el.x,y:el.y,r:(el.options&&el.options.radius)||pts[i].r}));
+      const hitC=(R,j)=>cir.some((q,k)=>k!==j&&q.x+q.r>R.x&&q.x-q.r<R.x+R.w&&q.y+q.r>R.y&&q.y-q.r<R.y+R.h);
+      const hitB=R=>boxes.some(B=>B.x<R.x+R.w&&B.x+B.w>R.x&&B.y<R.y+R.h&&B.y+B.h>R.y);
+      const inA=R=>R.x>=a.left&&R.x+R.w<=a.right&&R.y>=a.top-18&&R.y+R.h<=a.bottom;
+      const order=els.map((e,i)=>i).sort((i,j)=>cir[i].y-cir[j].y);
+      order.forEach(i=>{ const C=cir[i], name=pts[i].row.n, w=ctx.measureText(name).width+2, r=C.r;
+        const cand=[[C.x+r+G,C.y-H/2],[C.x-r-G-w,C.y-H/2],[C.x-w/2,C.y-r-G-H],[C.x-w/2,C.y+r+G],[C.x+r*.7+G,C.y-r*.7-H],[C.x+r*.7+G,C.y+r*.7],[C.x-r*.7-G-w,C.y-r*.7-H],[C.x-r*.7-G-w,C.y+r*.7]];
+        [1,2,3].forEach(k=>{ cand.push([C.x+r+G+6,C.y-H/2-k*(H+2)],[C.x+r+G+6,C.y-H/2+k*(H+2)],[C.x-r-G-6-w,C.y-H/2-k*(H+2)],[C.x-r-G-6-w,C.y-H/2+k*(H+2)]); });
+        let pick=null, far=false; for(let t=0;t<cand.length;t++){ const R={x:cand[t][0],y:cand[t][1],w,h:H}; if(inA(R)&&!hitB(R)&&!hitC(R,i)){ pick=R; far=t>=8; break; } }
+        if(!pick){ pick={x:Math.min(C.x+r+G,a.right-w),y:C.y-H/2,w,h:H}; }
+        boxes.push(pick);
+        if(far){ ctx.strokeStyle=css('--muted')||'#9FA0A0'; ctx.lineWidth=1; ctx.beginPath(); const tx=pick.x>C.x?pick.x:pick.x+w, ty=pick.y+H/2, ang=Math.atan2(ty-C.y,tx-C.x); ctx.moveTo(C.x+Math.cos(ang)*r,C.y+Math.sin(ang)*r); ctx.lineTo(tx,ty); ctx.stroke(); }
+        ctx.textAlign='left'; ctx.lineJoin='round'; ctx.lineWidth=4; ctx.strokeStyle=css('--surface')||'#fff'; ctx.strokeText(name,pick.x+1,pick.y+H/2); ctx.fillStyle=css('--text')||'#3F3F3F'; ctx.fillText(name,pick.x+1,pick.y+H/2); });
+      ctx.restore(); }};
+  upsert('cOrgSc',{type:'bubble',data:{datasets:[{data:pts,backgroundColor:pts.map(d=>ORGSC_C[d.st]+'CC'),borderColor:pts.map(d=>d.row.sel?'#003A70':(css('--surface')||'#FFFFFF')),borderWidth:pts.map(d=>d.row.sel?3:1.5),hoverBorderColor:'#003A70',hoverBorderWidth:2}]},plugins:[quad],
     options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:22,right:12}},plugins:{legend:{display:false},tooltip:{callbacks:{title:it=>it[0].raw.row.n,label:it=>{ const r=it.raw.row, q=v=>v==null?'-':v.toFixed(1);
         return [`담당 장비 ${fmt(r.eq)}대 · 인원 ${r.all}명 (비교 ${r.hc}명)`,`처리 건수 ${fmt(r.cnt)}건 · 1인당 ${q(r.per)}건`,`FTFR ${q(r.ftfr)}% · 재방문율 ${q(r.rev)}% · MTTR ${q(r.mttr)}분`]; }}}},
       onClick:(e,els)=>{ if(els&&els.length){ const r=pts[els[0].index].row; orgPick(r.k); } },
