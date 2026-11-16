@@ -549,7 +549,9 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 .vtabs .vtl{display:flex;gap:4px;min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:none}
 .vtabs .vtl::-webkit-scrollbar{display:none}.vtabs button.vt{white-space:nowrap}
 body[data-view=eqp] #prodTabs{display:none}
-.ogsctl{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.dsx .cv.ogsc{height:380px}@media (max-width:600px){.dsx .cv.ogsc{height:320px}}.ogscleg{margin-top:6px}
+.ogsctl{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.dsx .cv.ogsc{height:420px}
+.ogscw{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(250px,1fr);gap:20px;align-items:start}@media (max-width:1000px){.ogscw{grid-template-columns:1fr}}
+.ogsct{width:100%}.ogsct caption{text-align:left;font-size:12px;color:var(--muted);padding:0 0 6px}.ogsct td:not(:first-child),.ogsct th:not(:first-child){text-align:right}.ogsct th:first-child,.ogsct td:first-child{text-align:left;padding-left:8px}.ogsct tr[data-k]{cursor:pointer}.ogsct tr[data-k]:hover td{background:rgba(0,91,172,.05)}.ogsct tr.sel td{background:rgba(0,91,172,.08);font-weight:700}.ogdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}@media (max-width:600px){.dsx .cv.ogsc{height:320px}}.ogscleg{margin-top:6px}
 @media (max-width:1000px){.dsx .dspair.dseven{grid-template-columns:1fr !important}}   /* 휴대폰에서 두 칸이 나란히 남아 막대가 눌리던 것 — .dseven 이 1000px 이하 1칸 규칙보다 우선했음 */
 .lbex{display:inline-flex;align-items:center;gap:6px;margin:0 0 8px;font-size:13px;min-height:40px}.lbex input{width:18px;height:18px}
 .ogtab td:first-child,.ogtab th:first-child{position:sticky;left:0;background:var(--surface,#fff);z-index:1}
@@ -922,8 +924,8 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
   <section class="ovkpi c4" id="orgKpi" data-scr="org" aria-label="조직 핵심 지표: 담당 장비, 1인당 담당 장비, 1인당 처리 건수, 장비 100대당 처리 건수"></section>
   <section class="ovcard" data-scr="org" style="margin-top:14px" aria-labelledby="ogTblT"><h3 id="ogTblT">조직별 운영 현황 <span class="ovchip none">단위: 처리 건수(KPI)</span> <span class="ovsub">팀을 누르면 사무소로 나뉘고, 누른 팀·사무소의 상세를 아래 「상세 분석」에서 봅니다</span></h3>
     <div class="ovtw" id="ogTbl"></div><p class="ovnote dshint">표는 옆으로 밀어서 모든 열을 볼 수 있습니다.</p><p class="ovnote" id="ogNote"></p></section>
-  <section class="ovcard" data-scr="org" style="margin-top:14px" aria-labelledby="ogScT"><h3 id="ogScT">담당 장비 × 처리 건수 <span class="ovsub">점 = 사무소 · 크기 = 인원 · 색 = 고른 품질 지표의 목표 달성</span></h3>
-    <div class="ogsctl"><span class="ovseg" id="ogScQ" role="group" aria-label="사분면 기준선"></span><span class="ovseg" id="ogScY" role="group" aria-label="세로축"></span><span class="ovseg" id="ogScC" role="group" aria-label="점 색 기준"></span></div>
+  <section class="ovcard" data-scr="org" style="margin-top:14px" aria-labelledby="ogScT"><h3 id="ogScT">담당 장비 × 처리 건수 <span class="ovsub">점 = 사무소 또는 팀(전환) · 크기 = 인원 · 색 = 고른 품질 지표의 목표 달성</span></h3>
+    <div class="ogsctl"><span class="ovseg" id="ogScU" role="group" aria-label="점 단위"></span><span class="ovseg" id="ogScQ" role="group" aria-label="사분면 기준선"></span><span class="ovseg" id="ogScY" role="group" aria-label="세로축"></span><span class="ovseg" id="ogScC" role="group" aria-label="점 색 기준"></span></div>
     <div id="ogScBox"></div></section>
   <section class="ovcard" data-scr="org" style="margin-top:14px" aria-labelledby="ogh"><h3 id="ogh">팀 · 사무소별 인력 · 장비 · 업무량 비교 <span class="ovsub">건수·규모는 막대, 목표·평균 대비는 점 · 이름 옆은 비교 인원</span><span class="ovtools"><span class="ovseg ovscroll" id="ogMseg" role="group" aria-label="비교 지표"></span></span></h3>
     <div class="dspair dseven"><div id="ogBars"></div><div><h4 class="dsh4">업무 유형 구성비 (100% 누적)</h4><div id="ogMix"></div></div></div></section>
@@ -4553,7 +4555,7 @@ const ORG_M=[{k:'all',n:'인원',u:'명',d:0,type:'bar'},{k:'eq',n:'담당 장�
 /* FSG 합계 — 팀 행을 더함(장비·건수), 1인당은 팀장 제외 인원 기준. 장비 100대당 = 처리 건수 ÷ 담당 장비 × 100 (eqAgg.per100 과 같은 식) */
 function orgFsg(T){ const sum=f=>T.reduce((a,r)=>a+(r[f]||0),0), eq=PROD.eq?sum('eq'):null, np=sum('nPeople'), cas=T.reduce((a,r)=>a+(r.cnt||0),0);
   return {eq, eqInst:PROD.eq?sum('eqInst'):null, eqh:eq!=null&&np?eq/np:null, e100:eq?cas/eq*100:null, cnt:cas, per:orgAvg().per, np, all:sum('all'), hc:sum('hc')}; }
-const ORGSC={y:'cnt',c:'ftfr',q:'on'};
+const ORGSC={u:'office',y:'cnt',c:'ftfr',q:'on'};   /* u: office 사무소 6 / team 팀 4 — 한 그림에 섞지 않음(작업지시서 v2) */
 function renderOrgTop(p,team,pp,prov,scope){
   dsTitle('orgTitle','Organization',p,scope,pp.label,prov);
   orgSync(); const rows=orgTree(), avg=orgAvg(), T=rows.filter(r=>!r.off), F=orgFsg(orgRows('team'));
@@ -4593,20 +4595,27 @@ function renderOrgTop(p,team,pp,prov,scope){
   orgWire($('ogMix'));
 }
 /* 담당 장비 × 처리 건수 — Chart.js 거품 그림, 점 = 사무소 6개(팀과 섞지 않음, 작업지시서 v2). 사분면 기준선 = 표시된 사무소 값의 중앙값. 비교용 위치 기준이며 과부하를 판정하지 않는다 */
+/* 기준선을 그림 가운데로 — 축 범위를 중앙값 기준 양쪽 같은 거리로(가장 먼 점 + 여유 18%). 0 아래로 내려가야 하면(건수는 음수 없음) 0부터 시작하고 그때는 가운데가 아닐 수 있다. 눈금은 보기 좋은 간격만 남긴다 */
+function orgCenter(vals,m){ const d=Math.max(...vals.map(v=>Math.abs(v-m)),m*0.05||1)*1.18, raw=d*2/6, p=Math.pow(10,Math.floor(Math.log10(raw))), st=[1,2,2.5,5,10].map(k=>k*p).find(k=>k>=raw);
+  let mn=m-d, mx=m+d; if(mn<0){ mn=0; mx=Math.max(mx,2*m); }
+  return {min:mn,max:mx,afterBuildTicks:ax=>{ ax.ticks=ax.ticks.filter(t=>Math.abs(t.value/st-Math.round(t.value/st))<1e-6); },ticks:{color:css('--text'),stepSize:st}}; }
 const orgMed=a=>{ const v=a.slice().sort((x,y)=>x-y), n=v.length; return n?(n%2?v[(n-1)/2]:(v[n/2-1]+v[n/2])/2):null; };
 const ORGSC_C={good:'#005BAC',warn:'#E69E0B',bad:'#E7413E',none:'#9FA0A0'};
 function orgScatter(){
   const box=$('ogScBox'), seg=(id,list,cur,key)=>{ $(id).innerHTML=list.map(([k,n])=>`<button type="button" data-v="${k}" aria-pressed="${k===cur}">${n}</button>`).join(''); $(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{ ORGSC[key]=b.dataset.v; orgScatter(); }); };
-  seg('ogScQ',[['on','기준선 보이기'],['off','숨기기']],ORGSC.q,'q'); seg('ogScY',[['cnt','처리 건수'],['per','1인당 처리 건수']],ORGSC.y,'y'); seg('ogScC',[['ftfr','FTFR'],['rev','재방문율'],['mttr','MTTR']],ORGSC.c,'c');
+  seg('ogScU',[['office','사무소 6'],['team','팀 4']],ORGSC.u,'u'); seg('ogScQ',[['on','기준선 보이기'],['off','숨기기']],ORGSC.q,'q'); seg('ogScY',[['cnt','처리 건수'],['per','1인당 처리 건수']],ORGSC.y,'y'); seg('ogScC',[['ftfr','FTFR'],['rev','재방문율'],['mttr','MTTR']],ORGSC.c,'c');
   if(!PROD.eq){ box.innerHTML='<p class="empty-note">담당 장비 수가 없어 그릴 수 없습니다. 관리자가 「담당기관 관리표」를 올리면 표시됩니다.</p>'; return; }
-  const R=orgRows('office').filter(r=>r.eq&&r[ORGSC.y]!=null); if(R.length<2){ box.innerHTML='<p class="empty-note">점이 2개 미만이라 그리지 않습니다.</p>'; return; }
+  const R=orgRows(ORGSC.u).filter(r=>r.eq&&r[ORGSC.y]!=null), UW=ORGSC.u==='team'?'팀':'사무소', UI=ORGSC.u==='team'?'팀이':'사무소가', UN=ORGSC.u==='team'?'팀은':'사무소는'; if(R.length<2){ box.innerHTML='<p class="empty-note">점이 2개 미만이라 그리지 않습니다.</p>'; return; }
   const ko=OV_K.find(x=>x.k===ORGSC.c), yl=ORGSC.y==='cnt'?'처리 건수 (건)':'1인당 처리 건수 (건)', mx=orgMed(R.map(r=>r.eq)), my=orgMed(R.map(r=>r[ORGSC.y])), qon=ORGSC.q==='on', rmax=Math.max(...R.map(r=>r.all||1));
   const narrow=(box.clientWidth||window.innerWidth)<560;   /* 휴대폰: 점이 화면 폭에 비해 커서 서로 덮이던 것 — 크기를 줄임 */
   const pts=R.map(r=>{ const st=ovSt(ko,r[ORGSC.c]).st||'none'; return {x:r.eq,y:r[ORGSC.y],r:(narrow?5:8)+(narrow?10:16)*Math.sqrt((r.all||1)/rmax),row:r,st}; });
-  box.innerHTML=`<div class="cv ogsc"><canvas id="cOrgSc" role="img" aria-label="담당 장비 수와 ${yl}의 관계. 아래 조직별 운영 현황 표와 같은 숫자입니다."></canvas></div>
+  const stL={good:'달성',warn:'근접',bad:'미달',none:'자료 없음'}, fv=v=>v==null?'-':(ORGSC.c==='mttr'?Math.round(v)+'분':v.toFixed(1)+'%'), srt=pts.slice().sort((a,b)=>b.y-a.y);
+  const side=`<div class="ogscside"><table class="ovtab dsfull ogsct"><caption>${UW}별 값 · ${esc(ko.n)} 기준 색</caption><thead><tr><th>${UW}</th><th>담당 장비</th><th>${ORGSC.y==='cnt'?'처리 건수':'1인당 처리'}</th><th>${esc(ko.n)}</th></tr></thead><tbody>${srt.map(d=>`<tr class="row${d.row.sel?' sel':''}" data-k="${esc(d.row.k)}" tabindex="0"><td><i class="ogdot" style="background:${ORGSC_C[d.st]}" aria-hidden="true"></i>${esc(d.row.n)}</td><td>${fmt(d.x)}</td><td>${ORGSC.y==='cnt'?fmt(d.y):d.y.toFixed(1)}</td><td>${fv(d.row[ORGSC.c])} <span class="ovsub">${stL[d.st]}</span></td></tr>`).join('')}</tbody></table><p class="ovnote">처리 건수 많은 순 · 줄을 누르면 그 ${UI} 선택됩니다.</p></div>`;
+  box.innerHTML=`<div class="ogscw"><div class="cv ogsc"><canvas id="cOrgSc" role="img" aria-label="담당 장비 수와 ${yl}의 관계. 오른쪽 표와 같은 숫자입니다."></canvas></div>${side}</div>
     <div class="dsleg ogscleg"><span><i style="background:${ORGSC_C.good}"></i>${ko.n} 달성</span><span><i style="background:${ORGSC_C.warn}"></i>근접</span><span><i style="background:${ORGSC_C.bad}"></i>미달</span><span><i style="background:${ORGSC_C.none}"></i>자료 없음</span><span>점 크기 = 인원</span></div>
     <p class="ovnote">담당 장비: 현재 관리표 기준 / 처리 건수: 선택 기간 기준. 시점이 다른 데이터의 참고 비교입니다.</p>
-    <p class="ovnote">${qon?`점선 = 사무소 중앙값(담당 장비 ${Math.round(mx)}대 · ${ORGSC.y==='cnt'?'처리 건수 '+Math.round(my)+'건':'1인당 처리 건수 '+my.toFixed(1)+'건'}). 위치를 견주는 기준이며 과부하·인력 부족을 판정하는 값이 아닙니다. `:''}담당 장비가 없는 사무소는 점을 그리지 않습니다(0으로 넣지 않음). 점을 누르면 그 사무소가 선택되고 아래 「상세 분석」에 나옵니다.</p>`;
+    <p class="ovnote">${qon?`점선 = ${UW} 중앙값(담당 장비 ${Math.round(mx)}대 · ${ORGSC.y==='cnt'?'처리 건수 '+Math.round(my)+'건':'1인당 처리 건수 '+my.toFixed(1)+'건'}). 위치를 견주는 기준이며 과부하·인력 부족을 판정하는 값이 아닙니다. `:''}담당 장비가 없는 ${UN} 점을 그리지 않습니다(0으로 넣지 않음). 점을 누르면 그 ${UI} 선택되고 아래 「상세 분석」에 나옵니다.</p>`;
+  box.querySelectorAll('.ogsct tr[data-k]').forEach(t=>{ t.onclick=()=>orgPick(t.dataset.k); t.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); orgPick(t.dataset.k); } }; });
   const quad={id:'orgq',afterDatasetsDraw(c){ const {ctx,chartArea:a,scales:{x,y}}=c, px=x.getPixelForValue(mx), py=y.getPixelForValue(my); ctx.save();
       const wide=a.right-a.left>=520;
       if(qon){ ctx.strokeStyle=css('--muted')||'#9FA0A0'; ctx.setLineDash([5,4]); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(px,a.top); ctx.lineTo(px,a.bottom); ctx.moveTo(a.left,py); ctx.lineTo(a.right,py); ctx.stroke(); ctx.setLineDash([]);
@@ -4620,7 +4629,8 @@ function orgScatter(){
       const hitB=R=>boxes.some(B=>B.x<R.x+R.w&&B.x+B.w>R.x&&B.y<R.y+R.h&&B.y+B.h>R.y);
       const inA=R=>R.x>=a.left&&R.x+R.w<=a.right&&R.y>=a.top-18&&R.y+R.h<=a.bottom;
       const order=els.map((e,i)=>i).sort((i,j)=>cir[i].y-cir[j].y);
-      order.forEach(i=>{ const C=cir[i], name=pts[i].row.n, w=ctx.measureText(name).width+2, r=C.r;
+      const vtx=r=>{ const v=r[ORGSC.c]; return v==null?' · 자료 없음':' '+(ORGSC.c==='mttr'?Math.round(v)+'분':v.toFixed(1)+'%'); };   /* 고른 품질 지표 값을 이름 옆에 — 지표를 바꾸면 위치는 그대로라 색만으로는 차이가 안 보일 때가 있음 */
+      order.forEach(i=>{ const C=cir[i], name=pts[i].row.n+vtx(pts[i].row), w=ctx.measureText(name).width+2, r=C.r;
         const cand=[[C.x+r+G,C.y-H/2],[C.x-r-G-w,C.y-H/2],[C.x-w/2,C.y-r-G-H],[C.x-w/2,C.y+r+G],[C.x+r*.7+G,C.y-r*.7-H],[C.x+r*.7+G,C.y+r*.7],[C.x-r*.7-G-w,C.y-r*.7-H],[C.x-r*.7-G-w,C.y+r*.7]];
         [1,2,3].forEach(k=>{ cand.push([C.x+r+G+6,C.y-H/2-k*(H+2)],[C.x+r+G+6,C.y-H/2+k*(H+2)],[C.x-r-G-6-w,C.y-H/2-k*(H+2)],[C.x-r-G-6-w,C.y-H/2+k*(H+2)]); });
         let pick=null, far=false; for(let t=0;t<cand.length;t++){ const R={x:cand[t][0],y:cand[t][1],w,h:H}; if(inA(R)&&!hitB(R)&&!hitC(R,i)){ pick=R; far=t>=8; break; } }
@@ -4634,7 +4644,7 @@ function orgScatter(){
         return [`담당 장비 ${fmt(r.eq)}대 · 인원 ${r.all}명 (비교 ${r.hc}명)`,`처리 건수 ${fmt(r.cnt)}건 · 1인당 ${q(r.per)}건`,`FTFR ${q(r.ftfr)}% · 재방문율 ${q(r.rev)}% · MTTR ${q(r.mttr)}분`]; }}}},
       onClick:(e,els)=>{ if(els&&els.length){ const r=pts[els[0].index].row; orgPick(r.k); } },
       onHover:(e,els)=>{ if(e.native&&e.native.target) e.native.target.style.cursor=els&&els.length?'pointer':'default'; },
-      scales:{x:axis({title:{display:true,text:'담당 장비 (대, 현재 관리표)',color:css('--text')},grace:'12%',ticks:{color:css('--text'),precision:0}}),y:axis({title:{display:true,text:yl,color:css('--text')},grace:'15%',ticks:{color:css('--text')}})}}});
+      scales:{x:axis(Object.assign({title:{display:true,text:'담당 장비 (대, 현재 관리표)',color:css('--text')},ticks:{color:css('--text'),precision:0}},qon?orgCenter(R.map(r=>r.eq),mx):{grace:'12%'})),y:axis(Object.assign({title:{display:true,text:yl,color:css('--text')},ticks:{color:css('--text')}},qon?orgCenter(R.map(r=>r[ORGSC.y]),my):{grace:'15%'}))}}});
 }
 /* 장비 구성에 따른 업무 부담 — 조직별 담당 장비 구성(관리표 분야 4종, 100% 누적) + 장비군별 고장 수리·PM·평균 수리 시간(CRM, stats() 와 같은 인정 건수 기준) */
 const ORG_FLD=['CBC','유린','응고','면역'], ORG_FLDC=['#005BAC','#00B9EF','#5185C5','#84BAE5'];
