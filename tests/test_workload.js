@@ -13,7 +13,7 @@ let EQD={rows:[['테스트1','가 수탁 A','경기'],['테스트2','가 수탁 
 const mkey=ms=>{const d=new Date(ms);return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');};
 const esc=s=>String(s); const $=()=>null;
 function mPred(months){ const ms=new Set(months), tTo=months&&months.tTo; return tTo? (mk,t)=>ms.has(mk)&&(t==null||t<tTo) : (mk)=>ms.has(mk); }`;
-const api=new Function(env+block+';return {wlSplit,wlBand,wlVisits,wlAgg,wlAcadAgg,parseAcad,wlRegionAuto,wlInfo,wlSug,set INST(v){INST=v;},set ACAD(v){ACAD=v;}};')();
+const api=new Function(env+block+';return {wlSplit,wlBand,wlVisits,wlAgg,wlAcadAgg,parseAcad,wlRegionAuto,wlInfo,wlSug,acadMergeAuto,set INST(v){INST=v;},set ACAD(v){ACAD=v;}};')();
 const T=(y,m,d,h,mi)=>Date.UTC(y,m-1,d,h,mi||0);   // 벽시계 시각
 // 2026-11-11(수) 평일, 2026-11-14(토), 2026-10-09(금, 한글날 공휴일)
 let s=api.wlSplit(T(2026,11,11,17),T(2026,11,11,19)); assert.deepStrictEqual([s.day,s.night,s.hol],[60,60,0],'평일 17~19시 = 주간 60·야간 60');
@@ -72,6 +72,11 @@ g=api.wlAcadAgg(['2026-12']); assert(g.gap.wait==='slack'&&g.gap.none,'12월 Sla
 api.ACAD={talk:{made:'2026-11-10',days:{}},slack:{made:'2026-11-14',days:{'2026-11-13':h({10:1})}}};
 g=api.wlAcadAgg(['2026-11']); assert(g.gap.wait==='slack'&&g.gap.part&&g.gap.upto==='2026-11-14','Slack 일부 연동 = 내보낸 날까지만');
 g=api.wlAcadAgg(['2026-10']); assert(!g.gap.wait,'10월 Talk 수집 범위 안');
+// 서버 자동(acadAuto): 파일보다 새것이면 Slack 자리에, 손으로 올린 더 새 파일은 그대로, 잘못된 모양은 무시
+{ const au={kind:'fsportal-acad',src:'slack',made:'2026-11-16',days:{'2026-11-12':h({8:2})},at:1};
+  let m=api.acadMergeAuto({talk:{made:'2026-11-10',days:{}},slack:{made:'2026-11-14',days:{}}},au); assert(m.slack.auto&&m.slack.made==='2026-11-16'&&m.slack.days['2026-11-12'][8]===2&&m.talk,'자동 값이 새것');
+  m=api.acadMergeAuto({slack:{made:'2026-11-20',days:{}}},au); assert(!m.slack.auto,'손으로 올린 파일이 더 새것이면 유지');
+  m=api.acadMergeAuto(null,Object.assign({},au,{src:'talk'})); assert(m===null,'Slack 아닌 자동 값 무시'); }
 assert(/function wlAcadCrm\(/.test(block)&&!/wlAcadAgg[\s\S]{0,200}wlAcadCrm/.test(block.slice(block.indexOf('function wlAcadAgg'),block.indexOf('function acadGapTxt'))),'CRM 학술 요청과 학술 응대를 합치지 않음');
 assert.throws(()=>api.parseAcad('{"kind":"x"}','x'),/학술 파일이 아닙니다/);
 assert.throws(()=>api.parseAcad(JSON.stringify({kind:'fsportal-acad',src:'talk',days:{'2026-1-1':[1]}}),'x'),/형식/);

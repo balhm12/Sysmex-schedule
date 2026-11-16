@@ -141,4 +141,13 @@ ok(!r3(null, '/kpi-dashboard/weights'), '로그인 없는 읽기 거부');
 ok(w3(ADMIN, '/kpi-dashboard/meta', { updatedAt: 'x' }) && !w3(anon, '/kpi-dashboard/meta', { updatedAt: 'x' }), '기존 관리자만 데이터 올리기(2단계와 동일)');
 ok(w3(anon, '/schedule-overrides/custom/user-1', ev()) && !w3(anon, '/schedule-overrides', snapshot), '설치일정 규칙은 그대로');
 
+/* ---- 학술 응대 자동 반영(2026-11-16): FS Portal 서버 전용 계정만 acadAuto 쓰기. 계정 UID 는 관리자가 kpi-dashboard/acadBots/{UID}=true 로 지정(저장소에 UID 없음) ---- */
+const BOT = { uid: 'bot-test-uid', provider: 'password' }, botDb = { 'kpi-dashboard': { acadBots: { 'bot-test-uid': true } } };
+const acadV = (o) => Object.assign({ kind: 'fsportal-acad', src: 'slack', made: '2026-11-16', at: 1, days: { '2026-11-11': [0, 1] }, total: 1 }, o || {});
+ok(w3(BOT, '/kpi-dashboard/acadAuto', acadV(), botDb), '지정된 서버 계정은 acadAuto 저장');
+ok(!w3(BOT, '/kpi-dashboard/acadAuto', acadV()), '지정 안 된 계정은 거부');
+ok(!w3(anon, '/kpi-dashboard/acadAuto', acadV(), botDb), '익명은 거부');
+ok(!w3(BOT, '/kpi-dashboard/acadAuto', acadV({ src: 'talk' }), botDb) && !w3(BOT, '/kpi-dashboard/acadAuto', acadV({ made: '11/16' }), botDb), '형식 검사');
+ok(!w3(BOT, '/kpi-dashboard/meta', { updatedAt: 'x' }, botDb) && !w3(BOT, '/kpi-dashboard/acadBots/x', true, botDb), '서버 계정은 다른 KPI 경로·계정 지정 거부');
+ok(w3(ADMIN, '/kpi-dashboard/acadBots/bot-test-uid', true) && !w3(WADM, '/kpi-dashboard/acadBots/bot-test-uid', true), '서버 계정 지정은 기존 관리자만');
 console.log('test_db_rules: OK (' + pass + '개 확인)');

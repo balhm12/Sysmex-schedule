@@ -340,6 +340,13 @@
     "kpi-dashboard": {
       ".read": "auth != null",
       ".write": "auth != null && auth.uid === 'sknozAsrQ4NZZyaGGPnDWZoWpSv2'",
+      "acadBots": {
+        "$uid": { ".validate": "newData.isBoolean()" }
+      },
+      "acadAuto": {
+        ".write": "auth != null && root.child('kpi-dashboard/acadBots/' + auth.uid).val() === true",
+        ".validate": "newData.hasChildren(['kind','src','made','days','at']) && newData.child('kind').val() === 'fsportal-acad' && newData.child('src').val() === 'slack' && newData.child('made').isString() && newData.child('made').val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.child('at').isNumber()"
+      },
       "weights": {
         "items": {
           "$m": {
