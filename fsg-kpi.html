@@ -4458,8 +4458,10 @@ function ovGo(it){ if(!it) return; $('fTeam').value=it.team||''; if(it.wl&&typeo
 /* v3.2: 운영 장비 현황 — 자산대장 기준(관리표 담당 장비와 다름). 등록 = 자산대장 상태 '사용', 유효 운영 = 그중 최근 12개월 서비스 이력(S/N·기관 일치) — 운영 건전성 「가동 장비(모수)」와 같은 기준 */
 /* 분야 — FS Portal 학술 집계와 같은 장비군 → 분야(혈액·응고·면역·뇨화학), 그 밖은 기타. 화면 묶음용이며 KPI 장비군(famOf)은 그대로 */
 const EQ_FLD=[['혈액','#005BAC'],['응고','#00B9EF'],['면역','#5185C5'],['뇨화학','#84BAE5'],['기타','#9FA0A0']];
-function eqField(m){ const u=String(m||'').toUpperCase().replace(/\s+/g,'');
-  if(/^(XN|XR|XS|XE|XT|XP|KX|POCH|SP-?\d|DI-?\d)/.test(u)) return '혈액'; if(/^(CN|CS|CA|CV)/.test(u)) return '응고'; if(/HISCL/.test(u)) return '면역'; if(/^(UF|UC|UD|AX|UX|UN)/.test(u)) return '뇨화학'; return '기타'; }
+function eqField(m){ const u=' '+String(m||'').toUpperCase().replace(/[(),]/g,' ')+' ';   /* 모델명이 이름 중간에 있어도 찾음(「HEMATO ANALYZER XT-1800I」), 2026-11-16 사용자 결정: 당화혈색소(HLC-723 G11·G8) = 혈액, 자동화·라인(SA·BT·RU·TS·U-WAM 등)·미기재 = 기타 */
+  const has=re=>re.test(u);
+  if(has(/[\s-](XN|XR|XS|XE|XT|XP|XQ|KX|POCH|SP|DI)-?\d/)||has(/HLC-?\d|\bG11\b|\bG8\b|TOSOH/)) return '혈액';
+  if(has(/[\s-](CN|CS|CA)-?\d/)) return '응고'; if(has(/HISCL/)) return '면역'; if(has(/[\s-](UF|UC|UD|AX|UX)-?\d/)) return '뇨화학'; return '기타'; }
 let OV_EQF=null;
 function opEquip(){ if(!SERIAL||!D) return null; const end=D.months[D.months.length-1], ms=last12Set(end), touched=new Set();
   D.rows.forEach(o=>{ if(ms.has(o.mk)&&o.sn&&o.acct) touched.add(o.sn+'|'+o.acct); });
