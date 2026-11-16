@@ -92,7 +92,7 @@ assert(/\['데이터 구분',M\.kind\]/.test(html) && /\['접힌 상세 포함'/
 /* 모든 <script> 블록이 문법 오류 없이 읽혀야 함(2026-11-16 충돌 해소 중 한 줄 중복으로 대시보드가 멈춘 일 재발 방지) */
 { const re=/<script>([\s\S]*?)<\/script>/g; let m, i=0; while((m=re.exec(html))){ i++; try{ new Function(m[1]); }catch(e){ assert(false, 'script 블록 '+i+' 문법 오류: '+e.message); } } }
 /* Overview 운영 장비: 분야 100% 막대 → 누르면 세부 장비 */
-assert(/function eqField\(/.test(html) && /class="oveqseg/.test(html) && /OV_EQF=b\.dataset\.f/.test(html), '운영 장비 분야 막대·세부');
+assert(/function eqField\(/.test(html) && /class="oveqseg/.test(html) && /OV_EQF=\(OV_EQF===b\.dataset\.f/.test(html), '운영 장비 분야 막대·세부(누를 때만)');
 /* 분야 규칙(2026-11-16 사용자 결정): 모델명이 중간에 있어도, 당화혈색소 = 혈액, 자동화·라인 = 기타 */
 { const f=new Function(html.match(/function eqField\(m\)\{[\s\S]*?return '기타'; \}/)[0]+';return eqField;')();
   const T=[['HEMATO ANALYZER XT-1800I','혈액'],['TOSOH 23850 HLC-723 G11','혈액'],['XQ-520','혈액'],['COAG ANALYZER CA-540, 220V','응고'],['HISCL-5000','면역'],['UF-5000','뇨화학'],['U-WAM COMPLETE(EN)','기타'],['SA-10 COMPLETE(SA-10)','기타'],['TS-10 COMPLETE','기타'],['','기타']];
@@ -105,3 +105,14 @@ assert(/function mPred\(months\)/.test(html) && /전월 동기간\(/.test(html) 
 { const ov=html.slice(html.indexOf('function renderOv(){')); const a=ov.indexOf('id="ovKpi"'), b=ov.indexOf('ovg-a'), c=ov.indexOf('${ovEquipCard()}');
   assert(a>0&&b>a&&c>b, 'v3.4 Overview 순서'); assert(/class="rptbrk"/.test(html)&&/Management Issues/.test(html)&&/1 \/ 2/.test(html)&&/2 \/ 2/.test(html), 'v3.4 임원보고 2쪽 구성');
   assert(/CRM 이력과 맞는 장비 없음/.test(html), 'v3.4 유효 운영 0 처리'); }
+
+/* v3.8 Overview 간소화 · 임원보고 2쪽 */
+{ const fn=html.slice(html.indexOf('function ovEquipCard('),html.indexOf('function renderOv('));
+  assert(/sel=\(OV_EQF&&o\.fld\[OV_EQF\]\)\?OV_EQF:null/.test(fn) && /\$\{sel\?detOf\(sel\):''\}/.test(fn), 'v3.8 운영 장비: 모델 구성은 분야를 누를 때만');
+  assert(!/rptstk/.test(fn), 'v3.8 보고서에 장비 모델 상세 없음');
+  const ops=html.slice(html.indexOf('function rptOps('),html.indexOf('function renderOv('));
+  assert(/orgRows\('team'\)/.test(ops) && /wlAgg\(/.test(ops) && /cur\.total/.test(ops) && /OV_ACT/.test(ops), 'v3.8 2쪽은 기존 결과(stats·Workload·Organization·업무 유형)만 읽음');
+  assert(!/function\s+\w*(Calc|calc)\w*\(/.test(ops), 'v3.8 2쪽에 새 계산 함수 없음');
+  assert(/처리 건수 기준/.test(ops) && /방문 기준/.test(ops), 'v3.8 업무 구성 단위 표시');
+  assert(/Service Operations/.test(html) && /body\.rpt #ov \.ovequip/.test(html), 'v3.8 2쪽 Service Operations, 장비 카드는 보고서에서 숨김');
+  assert(/<span class="ovh" hidden>/.test(html), 'v3.8 KPI 카드 설명은 마우스 설명으로'); }
