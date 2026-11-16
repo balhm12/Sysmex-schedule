@@ -838,6 +838,10 @@ body.rpt #ov .ovg-a{display:none}
 body.rpt #ov .rptiss{display:table;width:100%;border-collapse:collapse;font-size:12.5px}body.rpt #ov .rptiss th{text-align:left;font-size:11.5px;color:#65717D;font-weight:600;padding:5px 8px;border-bottom:1px solid #005BAC}body.rpt #ov .rptiss td{padding:6px 8px;border-bottom:1px solid #E3EAF0}body.rpt #ov .rptiss .num{text-align:right;font-family:Arial,sans-serif;font-weight:700}
 body.rpt #ov .rptfoot{display:block;margin-top:10px;padding-top:6px;border-top:1px solid #D9E3EA;font-size:10.5px;color:#65717D;text-align:right}
 body.rpt #ov .rptbrk{display:block;height:28px}
+header.top .vinfo .lbtn.wgthdr{background:#fff;color:#005BAC;border-color:#fff;font-weight:700}header.top .vinfo .lbtn.wgthdr:hover{background:#EAF6FD}
+.wgtcta{display:flex;align-items:center;gap:14px;margin-left:auto;padding:8px 10px 8px 14px;border:1px solid #005BAC;border-left:4px solid #005BAC;border-radius:6px;background:var(--tint);font-size:13px;color:var(--text)}.wgtcta b{color:var(--primary);margin-right:8px}
+.wgtctab{font:inherit;font-size:14px;font-weight:700;height:38px;padding:0 18px;border:0;border-radius:6px;background:#005BAC;color:#fff;cursor:pointer;white-space:nowrap}.wgtctab:hover{background:#004A8C}.wgtctab:focus-visible{outline:2px solid #003A70;outline-offset:2px}
+@media (max-width:700px){.ovtitle:has(.wgtcta){flex-wrap:wrap}.wgtcta{margin-left:0;flex:1 1 100%;flex-wrap:wrap}.wgtctab{height:44px;flex:1}}
 #wl .acadtx td,#wl .acadtx th{text-align:left!important;white-space:normal}#wl .acadtx .wltab{min-width:0}#wl .acadsw{margin:0 0 12px;padding:10px 14px;border:1px solid #84BAE5;border-left:3px solid #005BAC;background:var(--tint);font-size:13px;line-height:1.6}#wl .acadsw b{color:var(--primary);margin-right:8px}
 /* ===== v3.8 Overview 간소화 · 임원보고 2쪽 Service Operations ===== */
 #ov .oveqn{display:flex;flex-direction:column;gap:2px}#ov .oveqn .ovs{font-size:12px;line-height:1.5}
@@ -915,7 +919,7 @@ body.rpt #ov .rptiss{font-size:13px}body.rpt #ov .rptiss td:last-child{color:#3F
     <h1>FSG KPI 대시보드</h1>
     <div class="sub" id="sub"></div>
   </div>
-  <div class="vinfo" id="hdrInfo" hidden><div id="info"></div><div class="vbtns"><button class="lbtn" id="adminToggle" aria-label="관리자 화면으로 전환">관리자</button><button class="lbtn" id="changeCode">접근 코드 변경</button></div></div>
+  <div class="vinfo" id="hdrInfo" hidden><div id="info"></div><div class="vbtns"><button class="lbtn wgthdr" id="wgtHdr" type="button" hidden>가중치 설정</button><button class="lbtn" id="adminToggle" aria-label="관리자 화면으로 전환">관리자</button><button class="lbtn" id="changeCode">접근 코드 변경</button></div></div>
   <button class="hbtn" id="openUpl" aria-expanded="false" hidden>CRM 데이터 올리기</button>
 </div></header>
 
@@ -4333,6 +4337,7 @@ $('lockBtn').addEventListener('click',submitCode);
 $('lockIn').addEventListener('keydown',e=>{if(e.key==='Enter')submitCode();});
 /* 관리자 화면 전환 — 주소 끝에 ?admin 을 붙여 다시 연다(접근 코드는 기기에 기억돼 있어 바로 열림). 누구나 누를 수 있지만 올리기·가중치 저장은 관리자 로그인과 Firebase 규칙이 막는다 */
 $('adminToggle').textContent=ADMIN?'관리자 끄기':'관리자';
+if(ADMIN){ $('wgtHdr').hidden=false; $('wgtHdr').onclick=()=>openWgt(); }   /* 2026-11-16 사용자 「가중치 설정하는 부분이 잘 안 보임」 — 관리자 모드 머리에 항상 보이게 */
 $('adminToggle').setAttribute('aria-label',ADMIN?'관리자 화면 끄기':'관리자 화면으로 전환');
 $('adminToggle').addEventListener('click',()=>{ location.href=location.pathname+(ADMIN?'':'?admin')+location.hash; });
 $('changeCode').addEventListener('click',()=>{try{localStorage.removeItem(KEY_LS);}catch(e){} CODE=null; showLock('새 접근 코드를 입력해 주세요.');});
@@ -4779,6 +4784,9 @@ function orgFsg(T){ const sum=f=>T.reduce((a,r)=>a+(r[f]||0),0), eq=PROD.eq?sum(
 const ORGSC={u:'office',y:'cnt',c:'ftfr',q:'on'};   /* u: office 사무소 6 / team 팀 4 — 한 그림에 섞지 않음(작업지시서 v2) */
 function renderOrgTop(p,team,pp,prov,scope){
   dsTitle('orgTitle','Organization',p,scope,pp.label,prov);
+  /* 2026-11-16 사용자 「가중치 설정하는 부분이 잘 안 보임」 — 관리자 모드면 Organization 제목 줄에 바로(개인 순위의 KPI 점수가 이 가중치로 계산됨) */
+  if(ADMIN){ const t=$('orgTitle'), wk=Object.keys(WGT_ITEMS||{}).sort(), wNow=wk.filter(k=>k<=mkey(Date.now())).pop();
+    if(t) t.insertAdjacentHTML('beforeend',`<div class="wgtcta"><span><b>KPI 가중치</b>${wNow?esc(wNow)+'부터 적용 중인 설정':'코드 기본값 사용 중'}${wk.length&&wk[wk.length-1]>(wNow||'')?' · '+esc(wk[wk.length-1])+'부터 예정':''}</span><button type="button" class="wgtctab" onclick="openWgt()">가중치 설정</button></div>`); }
   orgSync(); const rows=orgTree(), avg=orgAvg(), T=rows.filter(r=>!r.off), F=orgFsg(orgRows('team'));
   const K=k=>OV_K.find(x=>x.k===k), f1=v=>v==null?'-':v.toFixed(1), f0=v=>v==null?'-':fmt(Math.round(v));
   $('orgTopSub').textContent=`처리 건수 = ${p.label} · 담당 장비 = 현재 담당기관 관리표${EQD&&EQD.made?' ('+EQD.made+')':''} 기준(담당자 없는 장비 제외) · 1인당 값은 팀장(장비)·팀장·신입(건수) 제외`;
