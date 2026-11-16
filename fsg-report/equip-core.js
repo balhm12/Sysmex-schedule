@@ -27,7 +27,8 @@ function eqFromRows(h, rows){
   for(const r of rows){ if(!r) continue; const n=String(at(r,iN)??'').trim(), p=String(at(r,iP)??'').trim(); if(!n||n===String(h[iN]).trim()) continue;
     const f={CBC:0,'유린':0,'응고':0,'면역':0}; fam.forEach(([k,i])=>{ f[EQ_FIELD[k]]+=num(r[i]); });
     const e=num(at(r,iE)); if(e>0) any++;
-    out.push([p,n,String(at(r,iS)??'').trim(),e,num(at(r,iB)),num(at(r,iU)),num(at(r,iC)),f.CBC,f['유린'],f['응고'],f['면역']]); }
+    const fd={}; fam.forEach(([k,i])=>{ const v=num(r[i]); if(v) fd[k]=v; });   /* 2026-11-16: 장비군 세부(Overview 분야를 누르면 구성) — 예전 업로드에는 없음 */
+    out.push([p,n,String(at(r,iS)??'').trim(),e,num(at(r,iB)),num(at(r,iU)),num(at(r,iC)),f.CBC,f['유린'],f['응고'],f['면역'],fd]); }
   if(!out.length) throw new Error('기관 행을 찾지 못했습니다.');
   if(!any) throw new Error('장비 수가 모두 비어 있습니다. 엑셀에서 파일을 한 번 열어 저장한 뒤 올려 주세요(수식 계산값이 필요합니다).');
   return out;

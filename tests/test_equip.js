@@ -27,8 +27,9 @@ vm.runInContext([...X.CONSTS.map(n => html.match(new RegExp('^const ' + n + '=.*
 const dash = ctx.parseEq(new Uint8Array(buf), 'FSG_FSR_담당기관관리표_20261104_정리본.xlsx'), mine = EQC.parseEq(buf, 'FSG_FSR_담당기관관리표_20261104_정리본.xlsx');
 assert.strictEqual(JSON.stringify(mine), JSON.stringify(dash), '대시보드 parseEq 와 같은 결과');
 assert.strictEqual(mine.made, '2026-11-04'); assert.strictEqual(mine.rows.length, 6);
-assert.deepStrictEqual(mine.rows[0], ['A', 'ACCT-SECRET-1', '서울', 10, 1, 0, 0, 8, 2, 0, 0], '분야 합: CBC = XN+XR, 유린 = UF');
-assert.deepStrictEqual(mine.rows[3], ['B', 'ACCT-SECRET-4', '서울', 20, 2, 1, 0, 16, 2, 0, 2], 'XN 10 + XN-L 2 + SP 4 = CBC 16, UD 2, HISCL 2');
+assert.deepStrictEqual(mine.rows[0].slice(0, 11), ['A', 'ACCT-SECRET-1', '서울', 10, 1, 0, 0, 8, 2, 0, 0], '분야 합: CBC = XN+XR, 유린 = UF');
+assert(mine.rows[0][11] && typeof mine.rows[0][11] === 'object', '장비군 세부(r[11], 2026-11-16 Overview 분야 구성)');
+assert.deepStrictEqual(mine.rows[3].slice(0, 11), ['B', 'ACCT-SECRET-4', '서울', 20, 2, 1, 0, 16, 2, 0, 2], 'XN 10 + XN-L 2 + SP 4 = CBC 16, UD 2, HISCL 2');
 assert.strictEqual(JSON.stringify(EQC.eqByPerson(mine.rows)), JSON.stringify(ctx.eqByPerson(mine.rows)));
 // 장비 수가 모두 비면(수식 계산값 없음) 막는다 · 시트가 없으면 안내
 assert.throws(() => EQC.parseEq(mkWb(ROWS.map(r => [r[0], r[1], r[2], null, ...r.slice(4)])), 'x.xlsx'), /장비 수가 모두 비어 있습니다/);

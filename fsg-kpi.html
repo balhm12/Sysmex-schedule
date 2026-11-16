@@ -842,6 +842,11 @@ header.top .vinfo .lbtn.wgthdr{background:#fff;color:#005BAC;border-color:#fff;f
 .wgtcta{display:flex;align-items:center;gap:14px;margin-left:auto;padding:8px 10px 8px 14px;border:1px solid #005BAC;border-left:4px solid #005BAC;border-radius:6px;background:var(--tint);font-size:13px;color:var(--text)}.wgtcta b{color:var(--primary);margin-right:8px}
 .wgtctab{font:inherit;font-size:14px;font-weight:700;height:38px;padding:0 18px;border:0;border-radius:6px;background:#005BAC;color:#fff;cursor:pointer;white-space:nowrap}.wgtctab:hover{background:#004A8C}.wgtctab:focus-visible{outline:2px solid #003A70;outline-offset:2px}
 @media (max-width:700px){.ovtitle:has(.wgtcta){flex-wrap:wrap}.wgtcta{margin-left:0;flex:1 1 100%;flex-wrap:wrap}.wgtctab{height:44px;flex:1}}
+#ov .oveqbr{font-size:11.5px;color:var(--muted)}#ov .oveqdg{display:grid;grid-template-columns:1fr 1fr;gap:6px 28px;margin-top:6px}#ov .oveqrs1{display:flex;flex-direction:column;gap:3px;margin-top:4px}
+@media (max-width:760px){#ov .oveqdg{grid-template-columns:1fr}}
+#ov .oveqadm{margin-top:12px;border-top:1px solid var(--border);padding-top:8px;font-size:13px}#ov .oveqadm summary{cursor:pointer;font-weight:700;color:var(--primary);min-height:32px}
+#ov .oveqadmg{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:8px}#ov .oveqadmg .ovtab{margin-top:6px;font-size:12.5px}#ov .oveqadm th,#ov .oveqadm td{text-align:left!important}#ov .oveqadm .num{text-align:right!important}@media (max-width:760px){#ov .oveqadmg{grid-template-columns:1fr}}
+body.rpt #ov .oveqadm,body.pdfx .oveqadm{display:none!important}
 #wl .acadtx td,#wl .acadtx th{text-align:left!important;white-space:normal}#wl .acadtx .wltab{min-width:0}#wl .acadsw{margin:0 0 12px;padding:10px 14px;border:1px solid #84BAE5;border-left:3px solid #005BAC;background:var(--tint);font-size:13px;line-height:1.6}#wl .acadsw b{color:var(--primary);margin-right:8px}
 /* ===== v3.8 Overview 간소화 · 임원보고 2쪽 Service Operations ===== */
 #ov .oveqn{display:flex;flex-direction:column;gap:2px}#ov .oveqn .ovs{font-size:12px;line-height:1.5}
@@ -3564,7 +3569,8 @@ function eqFromRows(h, rows){
   for(const r of rows){ if(!r) continue; const n=String(at(r,iN)??'').trim(), p=String(at(r,iP)??'').trim(); if(!n||n===String(h[iN]).trim()) continue;
     const f={CBC:0,'유린':0,'응고':0,'면역':0}; fam.forEach(([k,i])=>{ f[EQ_FIELD[k]]+=num(r[i]); });
     const e=num(at(r,iE)); if(e>0) any++;
-    out.push([p,n,String(at(r,iS)??'').trim(),e,num(at(r,iB)),num(at(r,iU)),num(at(r,iC)),f.CBC,f['유린'],f['응고'],f['면역']]); }
+    const fd={}; fam.forEach(([k,i])=>{ const v=num(r[i]); if(v) fd[k]=v; });   /* 2026-11-16: 장비군 세부(Overview 분야를 누르면 구성) — 예전 업로드에는 없음 */
+    out.push([p,n,String(at(r,iS)??'').trim(),e,num(at(r,iB)),num(at(r,iU)),num(at(r,iC)),f.CBC,f['유린'],f['응고'],f['면역'],fd]); }
   if(!out.length) throw new Error('기관 행을 찾지 못했습니다.');
   if(!any) throw new Error('장비 수가 모두 비어 있습니다. 엑셀에서 파일을 한 번 열어 저장한 뒤 올려 주세요(수식 계산값이 필요합니다).');
   return out;
@@ -4576,21 +4582,44 @@ function opEquip(){ if(!SERIAL||!D) return null; const end=D.months[D.months.len
   return {reg:used.length, valid, fam, famV, acc:acc.size, accV:accV.size, etcM, fld, end}; }
 function opEquipLine(){ const o=opEquip(), eq=EQD&&EQD.rows?EQD.rows.reduce((a,r)=>a+(+r[3]||0),0):null;
   return (o?`자산대장 운영 장비 ${fmt(o.reg)}대(최근 12개월 서비스 이력 ${fmt(o.valid)}대)`:'자산대장 미등록')+' · '+(eq!=null?`FSR 관리표 담당 장비 ${fmt(eq)}대`:'관리표 미등록')+' — 두 숫자는 기준이 다릅니다'; }
-function ovEquipCard(){ const o=opEquip();
-  if(!o) return `<section class="ovcard ovequip" style="margin-top:14px" aria-labelledby="ovh7"><h3 id="ovh7">운영 장비 현황</h3><p class="ovnote">자산대장이 올라와 있지 않아 장비 수를 보여 줄 수 없습니다(관리자 「자산대장」 올리기).</p></section>`;
-  /* v3.8: 기본은 분야 100% 막대만. 분야를 누를 때만 그 분야의 모델 구성(다시 누르면 닫힘) — 모델 상세를 기본으로 펼치지 않음 */
-  const F=EQ_FLD.filter(([k])=>o.fld[k]&&o.fld[k].n), sel=(OV_EQF&&o.fld[OV_EQF])?OV_EQF:null;
-  const segs=F.map(([k,c])=>{ const z=o.fld[k], pct=z.n*100/o.reg; return `<button type="button" class="oveqseg${k===sel?' on':''}" data-f="${k}" aria-pressed="${k===sel}" style="width:${pct}%;background:${c}" title="${k} ${fmt(z.n)}대 (${pct.toFixed(1)}%) · 12개월 이력 ${fmt(z.v)}대 — 누르면 모델 구성">${pct>=7?`<span class="oveqst${pct<16?' s':''}">${k} ${Math.round(pct)}%</span>`:''}</button>`; }).join('');
-  const lg=F.map(([k,c])=>`<button type="button" class="oveqlgb${k===sel?' on':''}" data-f="${k}" aria-pressed="${k===sel}"><b style="background:${c}"></b>${k} ${fmt(o.fld[k].n)}대</button>`).join('');
-  const detOf=k=>{ const Z=o.fld[k]||{n:0,d:{}}, dk=Object.keys(Z.d).sort((a,b)=>Z.d[b]-Z.d[a]), mxv=Math.max(1,...dk.map(x=>Z.d[x])), col=(EQ_FLD.find(x=>x[0]===k)||['','#005BAC'])[1];
-    const rows=dk.slice(0,8).map(x=>`<div class="oveqr"><span class="oveqk" title="${esc(x)}">${esc(x.replace(/-Series$|( Series)$/,''))}</span><span class="oveqt"><i style="width:${(Z.d[x]*100/mxv).toFixed(1)}%;background:${col}"></i></span><span class="oveqv">${fmt(Z.d[x])}대 <small>${(Z.d[x]*100/(Z.n||1)).toFixed(0)}%</small></span></div>`).join('')+(dk.length>8?`<p class="ovnote" style="margin:2px 0 0">그 밖 ${dk.length-8}종 ${fmt(dk.slice(8).reduce((a,x)=>a+Z.d[x],0))}대</p>`:'');
-    return `<div class="oveqdet" data-f="${k}"><span class="ovl" style="font-size:12.5px">${esc(k)} 모델 구성 <span class="ovsub">${fmt(Z.n)}대 · 분야 안 비율</span><button type="button" class="oveqx" data-f="${k}" aria-label="모델 구성 닫기">닫기</button></span><div class="oveqrs" style="--rows:${Math.ceil(Math.min(dk.length,8)/2)}">${rows}</div></div>`; };
-  const sum=F.reduce((a,[k])=>a+o.fld[k].n,0);
-  return `<section class="ovcard ovequip" style="margin-top:14px" aria-labelledby="ovh7"><h3 id="ovh7"><i class="ovsn">SECTION 04</i>운영 장비 현황 <span class="ovsub">자산대장 상태 「사용」 기준 · FSG 전체(팀 필터와 무관)</span><span class="wlinfo" tabindex="0" title="FSR 담당기관 관리표의 「담당 장비」(Organization)와 기준이 다릅니다 — 관리표는 담당자가 정해진 장비만 셉니다. 최근 12개월 서비스 이력 = 등록 장비 중 CRM 고장 수리·PM 등 활동이 있는 장비(S/N·기관 일치)." aria-label="기준 설명">ⓘ</span><span class="ovtools"><button type="button" class="dsbtn" id="ovEqGo">Instrument 상세 ›</button></span></h3>
-    <div class="oveq"><div class="oveqn"><span class="ovl">등록 장비</span><span class="ovv">${fmt(o.reg)}<small>대</small></span>
-      <span class="ovs">최근 12개월 서비스 이력 ${o.valid?fmt(o.valid)+'대('+(o.reg?Math.round(o.valid*100/o.reg):0)+'%)':'–(CRM 이력과 맞는 장비 없음)'} · 거래처 ${fmt(o.acc)}곳(이력 ${fmt(o.accV)}곳)</span></div>
-    <div class="oveqb"><span class="ovl">분야별 구성 <span class="ovsub">등록 기준 100% · 분야를 누르면 모델 구성</span></span><div class="oveqbar" role="group" aria-label="분야별 구성 — 누르면 모델 구성">${segs}</div><div class="oveqlg">${lg}</div></div></div>
-    ${sel?detOf(sel):''}${sum!==o.reg?`<p class="ovnote">분야 합계 ${fmt(sum)}대가 등록 장비 ${fmt(o.reg)}대와 다릅니다 — 확인 필요</p>`:''}</section>`; }
+/* 2026-11-16 사용자 결정 「장비 기준으로 통일」: Overview 운영 장비 = FSR 담당기관 관리표의 장비 대수(모듈 단위, 주변기기·XP·XQ·기타 제외 — Organization·Instrument 담당 장비와 같은 값).
+   자산대장 「사용」은 등록 건(시스템 1건, 주변기기 포함)이라 작게 참고로만. 담당자 = 명단(ROSTER)에 있는 이름이면 지정, 아니면 미지정. 새 계산식 없음(관리표 엑셀 계산값을 더하기만) */
+const EQB_FLD=[['CBC','#005BAC'],['유린','#84BAE5'],['응고','#00B9EF'],['면역','#5185C5']];
+function eqBase(){ if(!EQD||!EQD.rows||!EQD.rows.length) return null;
+  const names=new Set(ROSTER.map(r=>r[0])), o={total:0,asg:0,un:0,inst:0,instAsg:0,fld:{},fldTeam:{},fam:{},hasFam:false,unRows:[],made:EQD.made||''};
+  EQB_FLD.forEach(([k])=>{ o.fld[k]=0; o.fldTeam[k]={}; o.fam[k]={}; });
+  EQD.rows.forEach(r=>{ const e=+r[3]||0, a=names.has(r[0]); o.total+=e; o.inst++; if(a){ o.asg+=e; o.instAsg++; } else { o.un+=e; if(e) o.unRows.push({n:r[1],sido:r[2]||'',eq:e,p:r[0]||''}); }
+    const tm=a?(wlTeam(r[0])||'기타'):'담당 미지정';
+    EQB_FLD.forEach(([k],i)=>{ const v=+r[7+i]||0; if(!v) return; o.fld[k]+=v; o.fldTeam[k][tm]=(o.fldTeam[k][tm]||0)+v; });
+    if(r[11]&&typeof r[11]==='object'){ o.hasFam=true; Object.keys(r[11]).forEach(g=>{ const F=EQ_FIELD[g]; if(F&&o.fam[F]) o.fam[F][g]=(o.fam[F][g]||0)+(+r[11][g]||0); }); } });
+  o.fsum=EQB_FLD.reduce((a,[k])=>a+o.fld[k],0); o.unRows.sort((x,y)=>y.eq-x.eq); return o; }
+/* 관리자: 자산대장에는 있는데 관리표에 없는 기관(등록 건수) — 관리표 정비용. 기관명은 관리자 화면에만 */
+function eqOutside(){ if(!EQD||!SERIAL) return []; const nz=x=>String(x||'').replace(/\s/g,'').replace(/\((서울|경기|인천|강원|대전|세종|충남|충북|전북|전남|광주|부산|울산|경남|경북|대구|제주)[^)]*\)$/,''), inEq=new Set(EQD.rows.map(r=>nz(r[1])));
+  const m={}; SERIAL.forEach(x=>{ if(x.state!=='사용'||!x.acct) return; if(inEq.has(nz(x.acct))) return; m[x.acct]=(m[x.acct]||0)+1; });
+  return Object.keys(m).map(k=>({n:k,c:m[k]})).sort((a,b)=>b.c-a.c); }
+function ovEquipCard(){ const B=eqBase(), o=opEquip();
+  if(!B){ if(!o) return `<section class="ovcard ovequip" style="margin-top:14px" aria-labelledby="ovh7"><h3 id="ovh7">운영 장비 현황</h3><p class="ovnote">담당기관 관리표와 자산대장이 올라와 있지 않아 장비 수를 보여 줄 수 없습니다(관리자 「담당기관 관리표」·「자산대장」 올리기).</p></section>`;
+    return `<section class="ovcard ovequip" style="margin-top:14px" aria-labelledby="ovh7"><h3 id="ovh7">운영 장비 현황 <span class="ovsub">담당기관 관리표 미등록</span></h3><p class="ovnote">장비 대수는 FSR 담당기관 관리표 기준으로 보여 줍니다. 관리표가 올라와 있지 않아 자산대장 등록 건수만 표시합니다 — 자산대장 「사용」 ${fmt(o.reg)}건(주변기기·XP·XQ 포함, 시스템은 1건).</p></section>`; }
+  const F=EQB_FLD.filter(([k])=>B.fld[k]), base=B.fsum||1, sel=(OV_EQF&&B.fld[OV_EQF])?OV_EQF:null;
+  const segs=F.map(([k,c])=>{ const pct=B.fld[k]*100/base; return `<button type="button" class="oveqseg${k===sel?' on':''}" data-f="${k}" aria-pressed="${k===sel}" style="width:${pct}%;background:${c}${k==='유린'?';color:#1F2A36':''}" title="${k} ${fmt(B.fld[k])}대 (${pct.toFixed(1)}%) — 누르면 구성">${pct>=7?`<span class="oveqst${pct<16?' s':''}">${k} ${Math.round(pct)}%</span>`:''}</button>`; }).join('');
+  const lg=F.map(([k,c])=>`<button type="button" class="oveqlgb${k===sel?' on':''}" data-f="${k}" aria-pressed="${k===sel}"><b style="background:${c}"></b>${k} ${fmt(B.fld[k])}대</button>`).join('');
+  const bars=(obj,col)=>{ const ks=Object.keys(obj).filter(x=>obj[x]).sort((a,b)=>obj[b]-obj[a]), mx=Math.max(1,...ks.map(x=>obj[x])), tot=ks.reduce((a,x)=>a+obj[x],0);
+    return ks.map(x=>`<div class="oveqr"><span class="oveqk" title="${esc(x)}">${esc(x.replace(/^FS\s*/,''))}</span><span class="oveqt"><i style="width:${(obj[x]*100/mx).toFixed(1)}%;background:${x==='담당 미지정'?'#9FA0A0':col}"></i></span><span class="oveqv">${fmt(obj[x])}대 <small>${(obj[x]*100/(tot||1)).toFixed(0)}%</small></span></div>`).join(''); };
+  const detOf=k=>{ const col=(EQB_FLD.find(x=>x[0]===k)||['','#005BAC'])[1], fam=B.fam[k]||{}, hasF=B.hasFam&&Object.keys(fam).length, tm=B.fldTeam[k]||{};
+    return `<div class="oveqdet" data-f="${k}"><span class="ovl" style="font-size:12.5px">${esc(k)} 구성 <span class="ovsub">${fmt(B.fld[k])}대</span><button type="button" class="oveqx" data-f="${k}" aria-label="구성 닫기">닫기</button></span>
+      <div class="oveqdg">${hasF?`<div><span class="ovs">장비군</span><div class="oveqrs1">${bars(fam,col)}</div></div>`:''}<div><span class="ovs">담당 팀</span><div class="oveqrs1">${bars(tm,col)}</div></div></div>${hasF?'':'<p class="ovnote" style="margin:4px 0 0">장비군 구성은 담당기관 관리표를 다시 올리면 보입니다.</p>'}</div>`; };
+  const unL=ADMIN?(()=>{ const out=eqOutside(), U=B.unRows;
+    return `<details class="oveqadm rptno"><summary>관리자 · 관리표 정비 목록 — 담당 미지정 ${fmt(U.length)}곳 · 관리표에 없는 기관 ${fmt(out.length)}곳</summary>
+      <div class="oveqadmg"><div><b>담당 미지정 기관</b> <span class="ovs">관리표 담당자가 명단에 없음 · 장비 많은 순</span>${U.length?`<table class="ovtab dsfull"><thead><tr><th>기관</th><th>시·도</th><th>관리표 담당자 칸</th><th class="num">장비</th></tr></thead><tbody>${U.slice(0,60).map(x=>`<tr><td>${esc(x.n)}</td><td>${esc(x.sido)}</td><td>${esc(x.p||'(비어 있음)')}</td><td class="num">${fmt(x.eq)}</td></tr>`).join('')}</tbody></table>${U.length>60?`<p class="ovnote">외 ${U.length-60}곳</p>`:''}`:'<p class="ovnote">없음</p>'}</div>
+      <div><b>자산대장에만 있는 기관</b> <span class="ovs">「사용」 등록 건수(장비 대수와 다름)</span>${SERIAL?(out.length?`<table class="ovtab dsfull"><thead><tr><th>기관</th><th class="num">등록 건</th></tr></thead><tbody>${out.slice(0,60).map(x=>`<tr><td>${esc(x.n)}</td><td class="num">${fmt(x.c)}</td></tr>`).join('')}</tbody></table>${out.length>60?`<p class="ovnote">외 ${out.length-60}곳</p>`:''}`:'<p class="ovnote">없음</p>'):'<p class="ovnote">자산대장 미등록</p>'}</div></div>
+      <p class="ovnote">기관명은 관리자 화면에만 보입니다(보고서·PDF·일반 화면에는 나오지 않음). 관리표를 고쳐 다시 올리면 숫자가 바뀝니다.</p></details>`; })():'';
+  const fsMis=B.total-B.fsum;
+  return `<section class="ovcard ovequip" style="margin-top:14px" aria-labelledby="ovh7"><h3 id="ovh7"><i class="ovsn">SECTION 04</i>운영 장비 현황 <span class="ovsub">FSR 담당기관 관리표 기준${B.made?' ('+esc(B.made)+')':''} · FSG 전체(팀 필터와 무관)</span><span class="wlinfo" tabindex="0" title="장비 = 관리표의 장비 대수(자산대장 「사용」 장비를 모듈 단위로 1대씩, 주변기기·XP·XQ·기타 제외) — Organization·Instrument 담당 장비와 같은 값. 자산대장 등록 건수는 시스템을 1건으로, 주변기기를 포함해 세서 더 큽니다." aria-label="기준 설명">ⓘ</span><span class="ovtools"><button type="button" class="dsbtn" id="ovEqGo">Instrument 상세 ›</button></span></h3>
+    <div class="oveq"><div class="oveqn"><span class="ovl">운영 장비</span><span class="ovv">${fmt(B.total)}<small>대</small></span>
+      <span class="ovs">담당 지정 <b>${fmt(B.asg)}대</b>(${B.total?Math.round(B.asg*100/B.total):0}%) · 담당 미지정 ${fmt(B.un)}대 · 기관 ${fmt(B.inst)}곳</span>
+      <span class="ovs oveqbr">${o?`참고: 자산대장 「사용」 등록 ${fmt(o.reg)}건(시스템 1건·주변기기 포함) → 장비 ${fmt(B.total)}대 → 담당 ${fmt(B.asg)}대`:'자산대장 미등록'}</span></div>
+    <div class="oveqb"><span class="ovl">분야별 구성 <span class="ovsub">장비 기준 100% · 분야를 누르면 구성</span></span><div class="oveqbar" role="group" aria-label="분야별 구성 — 누르면 구성">${segs}</div><div class="oveqlg">${lg}</div>${fsMis?`<p class="ovnote" style="margin:2px 0 0">분야 합계 ${fmt(B.fsum)}대 ≠ 장비 ${fmt(B.total)}대 — 관리표 확인 필요</p>`:''}</div></div>
+    ${sel?detOf(sel):''}${unL}</section>`; }
 /* v3.8 임원보고 2쪽 「Service Operations」 — 기존 결과만 읽음(새 계산식 없음):
    처리 건수 = stats().total, 방문·정규근무 외 작업시간·시간대·기관 유형 = Workload(wlVisits·wlAgg), 조직 = Organization(orgRows 'team', 월 단위),
    업무 유형 = Overview 처리 건수 5분류(OV_ACT), 장비 = opEquip 분야 합계 */
@@ -4611,9 +4640,9 @@ function rptOps(p,pp,team,cur,prv,act){
   const mixB=A?rptMix('시간대','방문 기준',[{n:'평일 주간',v:A.all.day,c:'#84BAE5',dk:true},{n:'평일 야간',v:A.all.night,c:'#005BAC'},{n:'주말·공휴일',v:A.all.hol,c:'#5185C5'}]):'';
   const mixC=!A?'':wlOn()?rptMix('기관 유형','방문 기준',[{n:'병원',v:A.type.hosp.n,c:'#005BAC'},{n:'수탁기관',v:A.type.lab.n,c:'#5185C5'},{n:'기타 기관',v:A.type.etc.n,c:'#84BAE5',dk:true},{n:'미분류',v:A.type[''].n,c:'#C9D3DD',dk:true}])
     :`<div class="rptmx"><span class="rptmk">기관 유형<small>방문 기준</small></span><span class="rptmb"><span class="rptml">기관 분류가 아직 지정되지 않았습니다(Workload 관리자 「기관 분류 관리」)</span></span><b>–</b></div>`;
-  const o=opEquip(), F=o?EQ_FLD.filter(([k])=>o.fld[k]&&o.fld[k].n):[];
-  const eq=o?`<div class="rpteq"><span class="rptmk">운영 장비<small>자산대장 「사용」 · FSG 전체</small></span><span class="rpteqn">${fmt(o.reg)}<small>대</small></span><span class="rptmb"><span class="rptmbar">${F.map(([k,c])=>{ const w=o.fld[k].n*100/o.reg; return `<i style="width:${w}%;background:${c};color:${k==='뇨화학'||k==='기타'?'#1F2A36':'#fff'}">${rptSegTxt(k,w)}</i>`; }).join('')}</span><span class="rptml">${F.map(([k,c])=>`<span><b style="background:${c}"></b>${k} ${fmt(o.fld[k].n)}</span>`).join('')}</span></span></div>`
-    :`<div class="rpteq"><span class="rptmk">운영 장비</span><span class="rptml">자산대장 미등록</span></div>`;
+  const B=eqBase(), F=B?EQB_FLD.filter(([k])=>B.fld[k]):[];
+  const eq=B?`<div class="rpteq"><span class="rptmk">운영 장비<small>담당기관 관리표 · FSG 전체</small></span><span class="rpteqn">${fmt(B.total)}<small>대</small></span><span class="rptmb"><span class="rptmbar">${F.map(([k,c])=>{ const w=B.fld[k]*100/(B.fsum||1); return `<i style="width:${w}%;background:${c};color:${k==='유린'?'#1F2A36':'#fff'}">${rptSegTxt(k,w)}</i>`; }).join('')}</span><span class="rptml">${F.map(([k,c])=>`<span><b style="background:${c}"></b>${k} ${fmt(B.fld[k])}</span>`).join('')}<span>담당 지정 ${fmt(B.asg)} · 미지정 ${fmt(B.un)}</span></span></span></div>`
+    :`<div class="rpteq"><span class="rptmk">운영 장비</span><span class="rptml">담당기관 관리표 미등록</span></div>`;
   return `<section class="ovrpt rptops"><h3 class="ovrh"><i>SECTION 04</i>Workload Scale <span>${esc(team||'FSG 전체')} · 단위가 서로 다름(처리 건수 ≠ 방문)</span></h3>
     <div class="ovkpi c3 rptk">${cell('처리 건수',fmt(cur.total),'건','단위 처리 건수',dl(cur.total,prv.total,'건'))}${cell('방문 횟수',A?fmt(A.all.n):'–','건','단위 방문',A?dl(A.all.n,Ap&&Ap.all.n,'건'):'방문 자료 없음')}${cell('정규근무 외 작업시간',offH==null?'–':fmt(offH),'시간','단위 인원 × 시간',offH==null?'':dl(offH,offHp,'시간'))}</div>
     <p class="ovnote">처리 건수 = 담당자·필수 참석자 각 1건 · 방문 = 같은 병원·같은 날 이어진 활동 1건 · 정규근무 외 = 평일 18~08시·주말·공휴일 CRM 작업(이동 제외)</p></section>
