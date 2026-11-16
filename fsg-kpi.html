@@ -629,7 +629,7 @@ body[data-view=prd] #prodTabs [data-tab=team]{display:none}
 @media (max-width:1000px){.dsx .ovkpi.c5{grid-template-columns:repeat(2,1fr)}.dsx .ovkpi.c5 .ovkc:nth-child(5){grid-column:1/-1}.dsx .ovpro.c2{grid-template-columns:1fr}.dsx .ovpro.c2 .ovpc{border-left:0!important;border-top:1px solid var(--border)}.dsx .ovpro.c2 .ovpc:first-child{border-top:0}.dsx .ovpro.c3{grid-template-columns:1fr}.dsx .ovpro.c3 .ovpc{border-left:0!important;border-top:1px solid var(--border)}.dsx .ovpro.c3 .ovpc:first-child{border-top:0}#prod.dsx .block.grid-4{grid-template-columns:repeat(2,1fr)}#prod.dsx .block.grid-4>.card.stat:nth-child(3){border-left:0}#prod.dsx .block.grid-4>.card.stat:nth-child(n+3){border-top:1px solid var(--border)!important}}
 @media (max-width:600px){#prod.dsx .stat .stat-value{font-size:30px}.dsx .hc{border-left:0;border-top:1px solid var(--border)}.dsx .hc:first-child{border-top:0}}
 /* 팀·사무소 트리 (2026-11-12): 팀을 누르면 사무소로 나뉜다 */
-.dsx .dsbtn{height:32px;border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:0 12px;font:inherit;font-size:12.5px;font-weight:700;color:var(--ovp);cursor:pointer;white-space:nowrap}
+.dsx .dsbtn,#ov .dsbtn{height:32px;border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:0 12px;font:inherit;font-size:12.5px;font-weight:700;color:var(--ovp);cursor:pointer;white-space:nowrap}
 .dsx .dstw{display:inline-block;width:14px;color:var(--ovp);font-weight:700}
 .dsx .ovtab.dsfull th:first-child .dsth{text-align:left}
 .dsx .ovhb.pick,.dsx .dsmix.pick{all:unset;box-sizing:border-box;display:grid;align-items:center;gap:10px;width:100%;cursor:pointer;border-radius:4px;font-size:13px;min-height:36px}
@@ -803,6 +803,13 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
 .ogguide{margin:10px 0 4px;padding:10px 14px;border:1px solid var(--border);border-left:3px solid #005BAC;border-radius:6px;background:var(--surface);font-size:12.5px;line-height:1.6;color:var(--text)}
 .ogguide em{font-style:normal;font-weight:700;color:#005BAC}.ogguide ul{margin:6px 0 0;padding-left:18px}.ogguide li{margin:3px 0}
 .ogq{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:4px;white-space:nowrap;margin-right:4px}.ogq-ok{background:#EAF2FB;color:#005BAC}.ogq-hi{background:#FDF4E3;color:#8F5C06}.ogq-lo{background:#EEF1F4;color:#4F5B67}
+#wl .ovkpi .ovv{font-size:42px}#wl .ovkpi .ovkc{cursor:help}#wl .wlinfo{margin-left:6px;font-size:12px;font-weight:400;color:var(--muted)}
+@media (max-width:600px){#wl .ovkpi .ovv{font-size:32px}}
+#ogTbl .ogx{display:none!important}
+.oveq{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:20px;align-items:center}.oveqn{display:flex;gap:28px}.oveqn>div{display:flex;flex-direction:column;gap:2px}
+#ov .oveq .ovv{font-size:32px}.oveqbar{display:flex;height:26px;border-radius:4px;overflow:hidden;margin:6px 0 8px;background:var(--grid)}.oveqbar i{display:flex;align-items:center;justify-content:center;color:#fff;font-style:normal;font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden}
+.oveqlg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}.oveqlg b{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:0}
+@media (max-width:760px){.oveq{grid-template-columns:1fr}.oveqn{gap:20px}}
 </style>
 </head>
 <body>
@@ -950,7 +957,7 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
     <div class="dspair dseven"><div id="ogBars"></div><div><h4 class="dsh4">업무 유형 구성비 (100% 누적)</h4><div id="ogMix"></div></div></div></section>
   <div class="ovtitle dstitle" data-scr="pro" id="proTitle"></div>
   <h2 class="sec" data-scr="pro">예방 서비스 핵심 지표 <small id="proSub"></small></h2>
-  <section class="ovkpi c5" id="proKpi" data-scr="pro" aria-label="예방 서비스 지표: PM, 예방정비 지수, 고장 수리, 반복 고장 장비"></section>
+  <section class="ovkpi c4" id="proKpi" data-scr="pro" aria-label="예방 서비스 지표: PM, 예방정비 지수, 고장 수리, 반복 고장 장비"></section>
   <h2 class="sec" data-scr="sq">서비스 품질 <small id="kpiSub"></small></h2>
   <section class="ovkpi c3" id="sqKpiQ" data-scr="sq" aria-label="서비스 품질 지표: FTFR, 재방문율, MTTR"></section>
   <h2 class="sec" data-scr="sq" hidden>업무량 <small>목표가 없는 지표 · 전월 대비는 방향만 표시</small></h2>
@@ -981,7 +988,7 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
       <div class="cv"><canvas id="cMttr"></canvas></div>
     </section>
   </div>
-  <h2 class="sec" data-scr="pro">PM · 고장 수리 추이 <small>건수와 예방정비 지수 · 최근 12개월</small></h2>
+  <h2 class="sec" data-scr="pro">PM · 고장 수리 추이 <small>건수와 예방정비 지수 · 최근 12개월 · 업무량 비교이며, PM 이 고장을 줄였다는 인과(예방 효과)를 뜻하지 않습니다</small></h2>
   <div class="grid">
     <section class="panel" data-scr="pro">
       <h3>고장 수리·PM 건수</h3>
@@ -1000,13 +1007,13 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
       <p class="d">목표 15% 이하</p>
       <div class="tw"><table id="tSeries"></table></div>
     </section>
-    <section class="panel" data-scr="pro">
+    <details class="dsfold panel" data-scr="pro" id="proHealthFold"><summary>상세 — 운영 건전성 · PM 월별 편차</summary>
       <h3>운영 건전성 · PM 월별 편차 <span style="font-size:12px;color:var(--muted);font-weight:400">(최근 12개월, 전사 기준)</span></h3>
       <p class="d" style="margin:0 0 4px">완료한 PM 월별 건수 · 점선 = 12개월 평균 · 편차 = 표준편차 ÷ 평균</p>
       <div class="cv" style="height:200px;margin-bottom:12px"><canvas id="cPm"></canvas></div>
       
       <div class="health" id="health"></div>
-    </section>
+    </details>
   </div>
 
   <h2 class="sec" data-scr="pro">팀 · 사무소별 예방 서비스 <small id="proOgSub"></small><span class="ovtools"><button type="button" class="dsbtn" id="proAllBtn"></button></span></h2>
@@ -3072,7 +3079,7 @@ function prevPeriod(p){
   const last=D.months[D.months.length-1], upto=p.months.filter(m=>m<=last), n=p.months.length;
   const back=p.kind==='fy'?12:n;
   const months=(p.partial&&p.kind!=='m'?upto:p.months).map(m=>shiftMonth(m,-back));
-  const label={m:'전월',q:'전 분기',h:'전 반기',fy:'전년 동기',custom:'직전 같은 기간'}[p.kind]||'직전 기간';
+  const label=({m:p.partial?'전월(한 달 전체)':'전월',q:'전 분기',h:'전 반기',fy:'전년 동기',custom:'직전 같은 기간'}[p.kind]||'직전 기간');   /* v3.2: 진행 중인 달은 전월 한 달 전체와 비교됨을 이름에 표시(계산은 그대로) */
   return {months,label};
 }
 
@@ -3404,6 +3411,9 @@ function renderErrors(p, team){
   D.rows.forEach(o=>{ if(o.purp==='PM'&&o.rec&&ms.has(o.mk)&&(!team||o.atm===team)&&famC[o.fam]) famC[o.fam].s++; });   // 재방문율 분모 = 고장 수리 + PM
   const fk=FAM_ORDER.filter(f=>famC[f]);   // 정해진 장비군 순서
   $('errSub').textContent=`${p.label}, ${team||'FSG 전체'}`;
+  /* v3.2: 장비군이 2개 이하면 막대 그래프 대신 작은 표(실제 자료에서 그때그때 판단 — 차트를 지우지 않음) */
+  { const few=fk.length<=2, cv=$('cFam'), wrap=cv&&cv.parentElement; if(wrap){ wrap.hidden=few; let t=$('famMini'); if(!t){ t=document.createElement('div'); t.id='famMini'; wrap.after(t); }
+    t.innerHTML=few?`<table class="ovtab dsfull" style="margin:6px 0 4px"><thead><tr><th>장비군</th><th class="num">고장 수리</th><th class="num">재방문율</th></tr></thead><tbody>${fk.map(f=>`<tr><td>${esc(f)}</td><td class="num">${fmt(famC[f].n)}건</td><td class="num">${famC[f].s?(famC[f].f/famC[f].s*100).toFixed(1)+'%':'-'}</td></tr>`).join('')||'<tr><td colspan="3" class="ovnote">이 기간 고장 수리가 없습니다.</td></tr>'}</tbody></table><p class="ovnote">장비군이 ${fk.length}개뿐이라 그래프 대신 표로 보여 줍니다.</p>`:''; } }
   upsert('cFam',{type:'bar',data:{labels:fk,datasets:[
     {label:'고장 수리',data:fk.map(f=>famC[f].n),backgroundColor:'#005BAC',barThickness:14}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false,axis:'y'},plugins:{legend:{display:false}},
@@ -4293,10 +4303,10 @@ const ORG_DET_LS='fsg-kpi-orgdet';
 function orgDetOpen(v){ const k=ORG_DET_LS+(VIEW==='org'?'':'-'+VIEW); try{ if(v!==undefined){ localStorage.setItem(k,v?'1':'0'); return v; } return localStorage.getItem(k)==='1'; }catch(e){ return !!v; } }   /* 화면마다 따로 기억(Organization·Workload) */
 function prodTitle(){
   const el=$('prodTitle'), sec=$('prodSec'); if(!el||!PROD) return;
-  if(sec){ const h={org:['상세 분석 — 팀 · 개인','선택한 팀·사무소 상세, 개인 순위·개인별 상세·개인별 담당 장비 · 개인 값은 맡은 업무의 양과 종류이며 성과 평가가 아님'],eqp:['담당 장비 현황','담당기관 관리표 기준 · 현재 시점 · 사람별·1인당 장비는 Organization'],wl:['근무 시간 · 이동 (사람 기준)','야간 OT·휴일 근무 = CRM 기록·인사 연장근무 기준 — 근무 종료가 WEST·EAST 17시·CENTRAL·SOUTH 18시라 위 방문 시간대(08~18시)와 기준이 다릅니다']}[VIEW]; sec.innerHTML=h?h[0]+' <small>'+h[1]+'</small>':''; sec.hidden=!h;
+  if(sec){ const h={org:['상세 분석 — 팀 · 개인','선택한 팀·사무소 상세, 개인 순위·개인별 상세·개인별 담당 장비 · 개인 값은 맡은 업무의 양과 종류이며 성과 평가가 아님'],eqp:['담당 장비 현황','담당기관 관리표 기준 · 현재 시점 · 사람별·1인당 장비는 Organization'],wl:['근무 시간 · 이동 (사람 기준)','야간 OT·휴일 근무 = CRM 기록·인사 연장근무 기준 — 근무 종료가 WEST·EAST 17시·CENTRAL·SOUTH 18시라 위 방문 시간대(08~18시)와 기준이 다릅니다']}[VIEW]; sec.innerHTML=h?h[0]+' <small>'+h[1]+(VIEW==='eqp'?' · '+esc(opEquipLine()):'')+'</small>':''; sec.hidden=!h;
     /* v3.1(2026-11-16): Organization 상세 분석(개인 순위·KPI 점수·직급 보정·개인별 담당 장비)은 기본 접힘, 펼침 상태는 기기에 기억 */
-    const FV=VIEW==='org'||VIEW==='wl', pr=$('prod'), fold=FV&&!orgDetOpen(); if(pr) pr.classList.toggle('pfold',fold);   /* v3.1 PR4: Workload 사람 기준(야간 OT·휴일·이동거리·개인 목록)도 기본 접힘 */
-    if(h&&FV){ sec.insertAdjacentHTML('beforeend',`<span class="ovtools"><button type="button" class="dsbtn" id="prodFoldBtn" aria-expanded="${!fold}" aria-controls="prod">${fold?(VIEW==='wl'?'사람 기준 펼치기':'상세 분석 펼치기'):'접기'}</button></span>`);
+    const FV=VIEW==='org'||VIEW==='wl'||VIEW==='eqp', pr=$('prod'), fold=FV&&!orgDetOpen(); if(pr) pr.classList.toggle('pfold',fold);   /* v3.1 PR4: Workload 사람 기준(야간 OT·휴일·이동거리·개인 목록)도 기본 접힘 */
+    if(h&&FV){ sec.insertAdjacentHTML('beforeend',`<span class="ovtools"><button type="button" class="dsbtn" id="prodFoldBtn" aria-expanded="${!fold}" aria-controls="prod">${fold?(VIEW==='wl'?'사람 기준 펼치기':VIEW==='eqp'?'담당 장비 상세 펼치기':'상세 분석 펼치기'):'접기'}</button></span>`);
       $('prodFoldBtn').onclick=()=>{ orgDetOpen(!orgDetOpen()); prodTitle(); }; } }
   if(VIEW!=='prd'){ el.innerHTML=''; return; }
   const S=prodSelection(), n=Object.keys(PROD.person||{}).length;
@@ -4435,6 +4445,23 @@ function ovIssues(p,pp){
   return L.sort((a,b)=>a.sev-b.sev);
 }
 function ovGo(it){ if(!it) return; $('fTeam').value=it.team||''; if(it.wl&&typeof WL!=='undefined') WL.tab=it.wl; if(it.v==='sq'&&typeof SQ_DET!=='undefined') SQ_DET='inst'; setView(it.v); window.scrollTo(0,0); }
+/* v3.2: 운영 장비 현황 — 자산대장 기준(관리표 담당 장비와 다름). 등록 = 자산대장 상태 '사용', 유효 운영 = 그중 최근 12개월 서비스 이력(S/N·기관 일치) — 운영 건전성 「가동 장비(모수)」와 같은 기준 */
+function opEquip(){ if(!SERIAL||!D) return null; const end=D.months[D.months.length-1], ms=last12Set(end), touched=new Set();
+  D.rows.forEach(o=>{ if(ms.has(o.mk)&&o.sn&&o.acct) touched.add(o.sn+'|'+o.acct); });
+  const used=SERIAL.filter(x=>x.state==='사용'&&x.sn&&x.acct), fam={}, famV={}; let valid=0;
+  used.forEach(x=>{ const f=famOf(x.model), v=touched.has(x.sn+'|'+x.acct); fam[f]=(fam[f]||0)+1; if(v){ valid++; famV[f]=(famV[f]||0)+1; } });
+  return {reg:used.length, valid, fam, famV, end}; }
+function opEquipLine(){ const o=opEquip(), eq=EQD&&EQD.rows?EQD.rows.reduce((a,r)=>a+(+r[3]||0),0):null;
+  return (o?`자산대장 운영 장비 ${fmt(o.reg)}대(최근 12개월 서비스 이력 ${fmt(o.valid)}대)`:'자산대장 미등록')+' · '+(eq!=null?`FSR 관리표 담당 장비 ${fmt(eq)}대`:'관리표 미등록')+' — 두 숫자는 기준이 다릅니다'; }
+function ovEquipCard(){ const o=opEquip();
+  if(!o) return `<section class="ovcard ovequip" style="margin-top:14px" aria-labelledby="ovh7"><h3 id="ovh7">운영 장비 현황</h3><p class="ovnote">자산대장이 올라와 있지 않아 장비 수를 보여 줄 수 없습니다(관리자 「자산대장」 올리기).</p></section>`;
+  const C=['#005BAC','#00B9EF','#5185C5','#84BAE5','#B7D3EE','#9FA0A0'], fk=Object.keys(o.fam).sort((a,b)=>o.fam[b]-o.fam[a]), top=fk.slice(0,5), etc=fk.slice(5).reduce((a,f)=>a+o.fam[f],0);
+  const segs=top.map((f,i)=>({n:f,v:o.fam[f],c:C[i]})).concat(etc?[{n:'그 밖',v:etc,c:C[5]}]:[]);
+  const bar=segs.map(x=>{ const pct=x.v*100/o.reg; return `<i style="width:${pct}%;background:${x.c}" title="${esc(x.n)} ${fmt(x.v)}대 (${pct.toFixed(1)}%)">${pct>=9?esc(x.n.replace(/-Series| Series/,''))+' '+Math.round(pct)+'%':''}</i>`; }).join('');
+  return `<section class="ovcard ovequip" style="margin-top:14px" aria-labelledby="ovh7"><h3 id="ovh7">운영 장비 현황 <span class="ovsub">자산대장 기준 · FSG 전체(팀 필터와 무관)</span><span class="ovtools"><button type="button" class="dsbtn" id="ovEqGo">Instrument 상세 ›</button></span></h3>
+    <div class="oveq"><div class="oveqn"><div><span class="ovl">자산대장 등록(사용)</span><span class="ovv">${fmt(o.reg)}<small>대</small></span></div><div><span class="ovl">유효 운영 장비</span><span class="ovv">${fmt(o.valid)}<small>대</small></span><span class="ovs">최근 12개월 서비스 이력 있음 · ${o.reg?Math.round(o.valid*100/o.reg):0}%</span></div></div>
+    <div class="oveqb"><span class="ovl">장비 시리즈 구성 (등록 기준, 100%)</span><div class="oveqbar">${bar}</div><div class="oveqlg">${segs.map(x=>`<span><b style="background:${x.c}"></b>${esc(x.n)} ${fmt(x.v)}대</span>`).join('')}</div></div></div>
+    <p class="ovnote">FSR 담당기관 관리표의 「담당 장비」(Organization)와 기준이 다릅니다 — 관리표는 담당자가 정해진 장비만 셉니다.</p></section>`; }
 function renderOv(){
   const root=$('ov'); if(!D||!root) return;
   const p=curPeriod(), team=$('fTeam').value||null, pp=prevPeriod(p), cur=stats(p.months,team), prv=stats(pp.months,team), prov=isProvisional(p.months);
@@ -4472,6 +4499,7 @@ function renderOv(){
       ${al.length?`<ul class="ovhl">${(OV.issAll?al:al.slice(0,5)).map((a,k)=>`<li><span class="ovchip ${a.cc}">${a.chip}</span><div><b>${esc(a.t)}</b><span class="ovs">${esc(a.s)}</span></div><button type="button" data-i="${k}">${a.vl} ›</button></li>`).join('')}</ul>${al.length>5?`<button type="button" class="dsmore" id="ovIssMore" aria-expanded="${!!OV.issAll}">${OV.issAll?'5개만 보기':'모두 보기 ('+al.length+'건)'}</button>`:''}`:'<p class="ovnote">지금 확인이 필요한 항목이 없습니다.</p>'}
       <p class="ovnote" style="margin-top:6px">증가 = 비교 기간(${esc(pp.label)}) 대비 20% 이상·10건 이상 · 인원 대비 = 1인당 처리 건수가 FSG 평균의 120% 이상</p></section>
   </div>
+  ${ovEquipCard()}
   <div class="ovrfoot">자료: CRM 「모든 약속/활동」 · FTFR = 한 번에 고친 비율, 재방문율 = 14일 안 재방문 비율, MTTR = 고장 수리 평균 소요 시간 · 근접 기준: 목표의 92%(높을수록 좋은 지표) / 115%(낮을수록 좋은 지표) · 업무 유형은 취소·온라인 정기점검 제외, 담당자·필수 참석자 각각 1건 · 최근 14일의 FTFR·재방문율은 잠정치 · 작성: FSS Team</div>`;
   // 추이
   const o=OV_K.find(x=>x.k===OV.metric), n=OV.range, arr=ts.map(s=>s[o.k]).slice(-n), lb=tl.slice(-n), tg=o.t();
@@ -4493,6 +4521,7 @@ function renderOv(){
   const scx=$('ovScx'); if(scx) scx.onclick=()=>{ $('fTeam').value=''; renderOv(); };
   root.querySelectorAll('.ovhl button').forEach(b=>b.onclick=()=>ovGo((OV.issAll?al:al.slice(0,5))[+b.dataset.i]));
   const im=$('ovIssMore'); if(im) im.onclick=()=>{ OV.issAll=!OV.issAll; renderOv(); };
+  const eg=$('ovEqGo'); if(eg) eg.onclick=()=>{ setView('eqp'); setTimeout(()=>{ const t=document.getElementById('prodSec')||document.getElementById('lifeSub'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); },80); };
   const rb=$('ovRptBtn'); if(rb) rb.onclick=()=>setRpt(true);
 }
 function setRpt(on){ document.body.classList.toggle('rpt',!!on); window.scrollTo(0,0); }
@@ -4619,7 +4648,7 @@ function renderOrgTop(p,team,pp,prov,scope){
     <tr class="tgt"><td>목표</td><td>-</td>${PROD.eq?'<td>-</td><td>-</td>':''}<td>-</td><td>-</td><td>-</td>${PROD.eq?'<td>-</td>':''}<td>-</td><td>100 기준</td><td>${TARGET_FTFR} 이상</td><td>${TARGET_REV} 이하</td><td>${TARGET_MTTR} 이하</td><td>-</td></tr>
     ${rows.map(r=>`<tr class="row${r.off?' ovoff':''}${r.sel?' sel':''}" data-k="${esc(r.k)}"${r.kids?` aria-expanded="${r.open}"`:''}><td>${orgName(r)}</td><td>${r.all} <span class="ovsub">(${r.hc})</span></td>${PROD.eq?`<td>${f0(r.eq)}</td><td>${f1(r.eqh)}</td>`:''}<td>${r.cnt==null?'-':fmt(r.cnt)}</td><td>${f1(r.per)}</td><td>${dv(r)}</td>${PROD.eq?`<td>${f1(r.e100)}</td>`:''}<td>${f1(r.w)}</td><td>${f1(r.gi)}</td>${cell(r.ftfr,'ftfr')}${cell(r.rev,'rev')}${cell(r.mttr,'mttr')}<td>${fmt(r.nRep)}${r.nRep<10?'<span class="ovtag">표본 적음</span>':''}</td></tr>`).join('')}
     <tr class="tgt"><td>FSG</td><td>${F.all} <span class="ovsub">(${F.hc})</span></td>${PROD.eq?`<td>${f0(F.eq)}</td><td>${f1(F.eqh)}</td>`:''}<td>${fmt(F.cnt)}</td><td>${f1(F.per)}</td><td>기준</td>${PROD.eq?`<td>${f1(F.e100)}</td>`:''}<td>${f1(avg.w)}</td><td>100.0</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody></table>`;
-  orgWire($('ogTbl'));
+  orgWire($('ogTbl')); ogCols();
   $('ogNote').innerHTML='담당 장비·장비 100대당 건수는 「담당기관 관리표」 현재 시점 기준이라 지난 기간의 장비 수와 다를 수 있고, 장비·건수 합계에는 팀장이 맡은 기관·방문도 들어갑니다(1인당 장비는 팀장 제외). 재방문율·FTFR 은 그 조직에 배정된 거래처의 평균이며, 고장 수리 표본이 10건 미만이면 비율이 크게 흔들립니다. 팀·사무소마다 인원과 맡은 거래처가 달라 순위로 읽지 않습니다.';
   /* ③ 담당 장비 × 업무량 산점도 */
   try{ orgScatter(); }catch(e){ console.error('조직 산점도',e); $('ogScBox').innerHTML='<p class="empty-note">그래프를 그리지 못했습니다: '+esc(e.message||e)+'</p>'; }
@@ -4643,6 +4672,14 @@ function orgCenter(vals,m){ const d=Math.max(...vals.map(v=>Math.abs(v-m)),m*0.0
 const orgMed=a=>{ const v=a.slice().sort((x,y)=>x-y), n=v.length; return n?(n%2?v[(n-1)/2]:(v[n/2-1]+v[n/2])/2):null; };
 const ORGSC_C={good:'#005BAC',warn:'#E69E0B',bad:'#E7413E',none:'#9FA0A0'};
 /* 산점도 위치 — 중앙값 기준 네 칸(2026-11-16 사용자 요청 「중앙값 기준과 이상적인 모습 표현」). 균형 = 장비·업무가 같이 많거나 같이 적음 */
+/* v3.2: 조직 운영 현황 표 — 핵심 열만 기본, 「모든 열 보기」로 나머지(기기에 기억) */
+const OG_CORE=['팀 · 사무소','인원 (비교)','담당 장비','처리 건수','1인당 처리 건수','FTFR (%)','재방문율 (%)','MTTR (분)'];
+function ogCols(){ const t=document.querySelector('#ogTbl table'); if(!t) return; let all=false; try{ all=localStorage.getItem('fsg-kpi-ogcols')==='1'; }catch(e){}
+  const hs=[...t.tHead.rows[0].cells], ex=hs.map(h=>!OG_CORE.includes(h.textContent.trim()));
+  [...t.rows].forEach(r=>[...r.cells].forEach((c,i)=>{ if(ex[i]) c.classList.toggle('ogx',!all); }));
+  let b=$('ogColBtn'); if(!b){ b=document.createElement('button'); b.type='button'; b.id='ogColBtn'; b.className='dsmore'; $('ogTbl').after(b); }
+  const nx=ex.filter(Boolean).length; b.hidden=!nx; b.textContent=all?'핵심 열만 보기':`모든 열 보기 (+${nx}개: 1인당 장비·장비 100대당·KPI 점수·직급 보정 등)`; b.setAttribute('aria-expanded',all);
+  b.onclick=()=>{ try{ localStorage.setItem('fsg-kpi-ogcols',all?'0':'1'); }catch(e){} ogCols(); }; }
 function orgQuad(x,y,mx,my){ const H=y>=my, R=x>=mx; return H&&!R?{k:'hi',s:'장비 대비 업무 많음'}:!H&&R?{k:'lo',s:'장비 대비 업무 적음'}:{k:'ok',s:H?'균형 · 큰 규모':'균형 · 작은 규모'}; }
 function orgScatter(){
   const box=$('ogScBox'), seg=(id,list,cur,key)=>{ $(id).innerHTML=list.map(([k,n])=>`<button type="button" data-v="${k}" aria-pressed="${k===cur}">${n}</button>`).join(''); $(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{ ORGSC[key]=b.dataset.v; orgScatter(); }); };
@@ -4656,7 +4693,7 @@ function orgScatter(){
   const side=`<div class="ogscside"><table class="ovtab dsfull ogsct"><caption>${UW}별 값 · ${esc(ko.n)} 기준 색</caption><thead><tr><th>${UW}</th><th>담당 장비</th><th>${ORGSC.y==='cnt'?'처리 건수':'1인당 처리'}</th><th>${esc(ko.n)}</th>${qon?'<th>위치</th>':''}</tr></thead><tbody>${srt.map(d=>`<tr class="row${d.row.sel?' sel':''}" data-k="${esc(d.row.k)}" tabindex="0"><td><i class="ogdot" style="background:${ORGSC_C[d.st]}" aria-hidden="true"></i>${esc(d.row.n)}</td><td>${fmt(d.x)}</td><td>${ORGSC.y==='cnt'?fmt(d.y):d.y.toFixed(1)}</td><td>${fv(d.row[ORGSC.c])} <span class="ovsub">${stL[d.st]}</span></td>${qon?`<td><span class="ogq ogq-${orgQuad(d.x,d.y,mx,my).k}">${orgQuad(d.x,d.y,mx,my).s}</span></td>`:''}</tr>`).join('')}</tbody></table><p class="ovnote">처리 건수 많은 순 · 줄을 누르면 그 ${UI} 선택됩니다.</p></div>`;
   box.innerHTML=`<div class="ogscw"><div class="cv ogsc"><canvas id="cOrgSc" role="img" aria-label="담당 장비 수와 ${yl}의 관계. 오른쪽 표와 같은 숫자입니다."></canvas></div>${side}</div>
     <div class="dsleg ogscleg"><span><i style="background:${ORGSC_C.good}"></i>${ko.n} 달성</span><span><i style="background:${ORGSC_C.warn}"></i>근접</span><span><i style="background:${ORGSC_C.bad}"></i>미달</span><span><i style="background:${ORGSC_C.none}"></i>자료 없음</span><span>점 크기 = 인원</span></div>
-    ${qon?`<div class="ogguide"><b>읽는 법</b> — 이상적인 모습은 점이 <em>왼쪽 아래 ↔ 오른쪽 위</em>(옅은 파랑 칸, 담당 장비가 많을수록 업무도 많음)에 있고 <em>파란색</em>(품질 목표 달성)인 상태입니다.
+    ${qon?`<div class="ogguide"><b>읽는 법</b> <span class="ovsub">중앙값 기준의 상대적 비교 — 절대 기준이나 목표가 아닙니다</span><br>이상적인 모습은 점이 <em>왼쪽 아래 ↔ 오른쪽 위</em>(옅은 파랑 칸, 담당 장비가 많을수록 업무도 많음)에 있고 <em>파란색</em>(품질 목표 달성)인 상태입니다.
       <ul><li><span class="ogq ogq-hi">장비 대비 업무 많음</span> 왼쪽 위 — 장비 수에 비해 일이 많습니다. 고장·재방문, 설치·학술 같은 장비 외 업무가 많은지 확인합니다.</li>
       <li><span class="ogq ogq-lo">장비 대비 업무 적음</span> 오른쪽 아래 — 장비 수에 비해 일이 적습니다. 여력이 있거나, PM 이 빠지지 않았는지 확인합니다.</li>
       <li>점선은 ${UW} ${R.length}곳의 <em>중앙값</em>(가운데 값)이라 늘 절반은 위·절반은 아래에 옵니다. 선 아래·왼쪽이 나쁘다는 뜻이 아니고, 서로 견주는 기준입니다.</li></ul></div>`:''}
@@ -4729,11 +4766,10 @@ function renderProTop(p,team,pp,prov,scope,cur,prv){
   const _l=D.months[D.months.length-1], end=p.months.filter(m=>m<=_l).pop()||_l, lab=pp.label, ch=ovChronic(end,team), list=chronicList(end,team), rk=riskList(team);
   $('proSub').textContent=`${p.label}, ${scope} (${lab} 대비)`;
   const cv=window.__pmcv;
-  $('proKpi').innerHTML=dsCell('PM 실적',fmt(cur.pm),'건','PM 월별 편차는 옆 칸',dsDelta(cur.pm,prv.pm,'건',0,lab),'')+
-    dsCell('PM 월별 편차',cv==null?'-':Math.round(cv),cv==null?'':'%','최근 12개월 · 목표 15% 이하',cv==null?'':(cv<=15?'목표 안':'목표 초과'),'월별 PM 건수가 고른 정도',cv==null?'':`<span class="ovchip ${cv<=15?'good':'bad'}">${cv<=15?'달성':'미달'}</span>`)+
+  $('proKpi').innerHTML=dsCell('PM 실적',fmt(cur.pm),'건','PM 월별 편차는 아래 「상세」',dsDelta(cur.pm,prv.pm,'건',0,lab),'')+
     dsCell('예방정비 지수',f1(cur.idx),'%','PM ÷ (PM + 고장 수리) · 목표 없음',dsDelta(cur.idx,prv.idx,'%p',1,lab),'')+
     dsCell('고장 수리',fmt(cur.rep),'건','목표 없음',dsDelta(cur.rep,prv.rep,'건',0,lab),'')+
-    dsCell('반복 고장 장비',fmt(ch.chronic),'대','12개월 내 3회 이상 고장',SERIAL?'자산대장 사용 장비 기준':'자산대장 미등록 · CRM 이력 기준','아래 목록에서 장비를 확인');
+    dsCell('반복 고장 장비',fmt(ch.chronic),'대','12개월 내 3회 이상 고장',SERIAL?'자산대장 사용 장비 기준':'자산대장 미등록 · CRM 이력 기준','목록은 Service Quality 「기관 · 장비 상세」');
   /* PM 월별 건수와 평균선 (renderHealth 가 센 완료 PM, 전사 12개월) */
   { const P=window.__pmM; if(P&&P.v&&P.v.length&&$('cPm')){ const mean=P.v.reduce((a,b)=>a+b,0)/P.v.length;
       upsert('cPm',{type:'line',data:{labels:P.m.map(m=>m.slice(2).replace('-','.')),datasets:[
@@ -4932,6 +4968,8 @@ function renderWl(){
   const TABS=[['sum','요약'],['unit','팀·사무소'],['acad','학술 응대'],['inst','기관 유형'],['reg','지역'],['grp','5대 수탁기관']];   /* 팀·사무소 = 사무소별 방문·야간·주말·수탁기관 (2026-11-16 작업지시서 v2: Organization 에서 옮겨 옴) */
   h+=`<div class="ovseg ovscroll wltabs" role="tablist" aria-label="분석 영역">${TABS.map(([k,n])=>`<button type="button" role="tab" data-t="${k}" aria-selected="${WL.tab===k}" aria-pressed="${WL.tab===k}">${n}</button>`).join('')}</div><div id="wlBody"></div>`;
   el.innerHTML=h;
+  /* v3.2: 요약 KPI — 숫자 크게, 긴 집계 기준(설명 줄)은 칸의 마우스 설명(툴팁)으로 옮기고 ⓘ 표시만 */
+  el.querySelectorAll('.ovkpi .ovkc').forEach(c=>{ const d=c.querySelector('.ovh'); if(!d) return; const t=d.textContent.trim(); d.remove(); if(!t) return; c.title=t; const l=c.querySelector('.ovl'); if(l&&!l.querySelector('.wlinfo')) l.insertAdjacentHTML('beforeend',`<span class="wlinfo" aria-label="집계 기준: ${esc(t)}">ⓘ</span>`); });
   const ctx={p,pp,team,V,A,ac,m12,all,lab};
   el.querySelectorAll('.wltabs button').forEach(b=>b.onclick=()=>{ WL.tab=b.dataset.t; renderWl(); });
   const ib=$('wlInstBtn'); if(ib) ib.onclick=()=>wlInstEditor(all);
@@ -5095,7 +5133,10 @@ function rerender(){
 /* ===== 지금 화면 내보내기 (2026-11-16 사용자 요청 「각 항목별로 그래프 포함 엑셀·PDF」) =====
    계산 없음 — 화면에 보이는 표·핵심 숫자·막대 목록을 그대로 옮기고, 그래프(canvas·svg)는 그림으로. 「접힌 상세 포함」이면 접힌 상세를 잠깐 펼쳐서 함께 */
 const VIEW_NAME={ov:'Overview',sq:'Service Quality',org:'Organization',wl:'Workload',eqp:'Instrument',pro:'Proactive Service'};
-function xMeta(){ const p=curPeriod(), t=$('fTeam').value||'FSG 전체'; return {view:VIEW_NAME[VIEW]||VIEW, period:p.label, team:t, cut:(D&&D.excl&&D.excl.cut)||'-', at:new Date().toISOString().slice(0,16).replace('T',' ')}; }
+function xMeta(){ const p=curPeriod(), pp=prevPeriod(p), t=$('fTeam').value||'FSG 전체', mm=p.months.filter(m=>D.months.includes(m));
+  const src=['CRM 「모든 약속/활동」'].concat(SERIAL?['자산대장']:[],EQD?['FSR 담당기관 관리표']:[],HRDATA?['인사 연장근무']:[],typeof ACAD!=='undefined'&&ACAD?['FS Portal 학술 집계']:[]).join(' · ');
+  return {view:VIEW_NAME[VIEW]||VIEW, period:p.label, months:mm.length?mm[0]+' ~ '+mm[mm.length-1]:'-', cmp:pp.label+' ('+(pp.months[0]||'-')+' ~ '+(pp.months[pp.months.length-1]||'-')+')', team:t, cut:(D&&D.excl&&D.excl.cut)||'-', src,
+    kind:window.__SYNTH?'합성 데이터(테스트용 · 실제 값 아님)':'실데이터(대시보드에 올린 자료)', det:!!($('xDet')&&$('xDet').checked), at:new Date().toISOString().slice(0,16).replace('T',' ')}; }
 function xVisible(el){ if(!el||el.closest('#lock,#upl,.appbar,header.top,#svcBar,#prodBar,.vtabs')) return false; const r=el.getClientRects(); return r.length>0&&getComputedStyle(el).visibility!=='hidden'; }
 async function xWith(fn){ const det=$('xDet')&&$('xDet').checked, pr=$('prod'), wasFold=pr&&pr.classList.contains('pfold'), opened=[];
   if(det){ if(wasFold) pr.classList.remove('pfold'); document.querySelectorAll('details').forEach(d=>{ if(!d.open&&xVisible(d)){ d.open=true; opened.push(d); } }); await new Promise(r=>setTimeout(r,400)); }
@@ -5107,7 +5148,8 @@ function xHead(el){ const H=[...document.querySelectorAll('h2,h3,h4')].filter(h=
 const xNum=t=>{ const m=String(t).trim().replace(/\s+/g,' ').match(/^([▲▼+\-−]?\s?)([\d,]+(?:\.\d+)?)\s*(%|%p|건|분|대|명|시간|곳|배)?$/); if(!m) return t; const v=parseFloat(m[2].replace(/,/g,''))*(/[−\-▼]/.test(m[1])?-1:1); return isNaN(v)?t:v; };
 function xCollect(){
   const items=[], seen=new Set();
-  document.querySelectorAll('.ovkpi, table, canvas, svg.wlsvg, #ovBox svg, .ovhb, .ovpro, .ovhl, .dsmix').forEach(el=>{ if(!xVisible(el)) return;
+  document.querySelectorAll('.ovkpi, table, canvas, svg.wlsvg, #ovBox svg, .ovhb, .ovpro, .ovhl, .dsmix, .health').forEach(el=>{ if(!xVisible(el)) return;
+    if(el.matches('.health')){ const c=[...el.querySelectorAll('.hc')]; if(c.length) items.push({k:'kpi',t:xHead(el),rows:c.map(x=>[((x.querySelector('.l')||{}).textContent||'').trim(),((x.querySelector('.v')||{}).textContent||'').trim(),((x.querySelector('.c')||{}).textContent||'').trim(),''])}); return; }
     if(el.matches('.ovhl')){ const R=[...el.querySelectorAll('li')].map(li=>[((li.querySelector('.ovchip')||{}).textContent||'').trim(),((li.querySelector('b')||{}).textContent||'').trim(),((li.querySelector('.ovs')||{}).textContent||'').trim(),((li.querySelector('button')||{}).textContent||'').replace('›','').trim()]); if(R.length) items.push({k:'tbl',t:xHead(el),rows:[['상태','항목','기준','탭'],...R]}); return; }
     if(el.matches('.dsmix')){ const par=el.parentElement; if(seen.has(par)) return; seen.add(par); const R=[...par.querySelectorAll(':scope>.dsmix')].map(m=>[((m.querySelector('.ovhn')||{}).textContent||'').trim(),[...m.querySelectorAll('.dsmt i')].map(i=>i.getAttribute('title')||i.textContent).join(' · '),((m.querySelector('.ovhv')||{}).textContent||'').trim()]); if(R.length) items.push({k:'tbl',t:xHead(par),rows:[['항목','구성','합계'],...R]}); return; }
     if(el.matches('.ovkpi')){ const c=[...el.querySelectorAll('.ovkc')].filter(xVisible); if(c.length) items.push({k:'kpi',t:xHead(el),rows:c.map(x=>[ (x.querySelector('.ovl')||{}).childNodes?[...x.querySelector('.ovl').childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim():'', ((x.querySelector('.ovv')||{}).textContent||'').trim(), ((x.querySelector('.ovt')||{}).textContent||'').trim(), ((x.querySelector('.ovd')||{}).textContent||'').trim()])}); return; }
@@ -5129,7 +5171,7 @@ async function exportXlsx(){
     const M=xMeta(), items=xCollect(), wb=new ExcelJS.Workbook(); wb.creator='FSG KPI 대시보드';
     const used=new Set(), nm=t=>{ let b=String(t).replace(/[\[\]:*?\/\\]/g,' ').replace(/\s+/g,' ').trim().slice(0,28)||'표', n=b, i=2; while(used.has(n)) n=b.slice(0,26)+' '+(i++); used.add(n); return n; };
     const head=r=>{ r.font={bold:true,color:{argb:'FFFFFFFF'}}; r.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF005BAC'}}; };
-    const s0=wb.addWorksheet(nm('정보')); [['화면',M.view],['보고 기간',M.period],['팀',M.team],['데이터 기준일',M.cut],['내보낸 시각',M.at],['비고','화면에 보이는 값을 그대로 옮김(계산 없음) · 그래프는 「그래프」 시트에 그림으로']].forEach(r=>s0.addRow(r)); s0.getColumn(1).width=16; s0.getColumn(2).width=70; s0.getColumn(1).font={bold:true};
+    const s0=wb.addWorksheet(nm('정보')); [['화면',M.view],['보고 기간',M.period],['집계 기간',M.months],['비교 기간',M.cmp],['팀',M.team],['데이터 구분',M.kind],['데이터 출처',M.src],['데이터 기준일',M.cut],['접힌 상세 포함',M.det?'예':'아니오'],['내보낸 시각',M.at],['비고','화면에 보이는 값을 그대로 옮김(계산 없음) · 그래프는 「그래프」 시트에 그림으로']].forEach(r=>s0.addRow(r)); s0.getColumn(1).width=16; s0.getColumn(2).width=70; s0.getColumn(1).font={bold:true};
     const kp=items.filter(x=>x.k==='kpi'); if(kp.length){ const s=wb.addWorksheet(nm('핵심 지표')); head(s.addRow(['구역','지표','값','목표·설명','전기 대비'])); kp.forEach(x=>x.rows.forEach(r=>s.addRow([x.t,...r]))); [24,22,14,40,30].forEach((w,i)=>s.getColumn(i+1).width=w); }
     items.filter(x=>x.k==='tbl').forEach(x=>{ const s=wb.addWorksheet(nm(x.t)); head(s.addRow(x.rows[0])); x.rows.slice(1).forEach(r=>s.addRow(r.map(xNum))); x.rows[0].forEach((_,i)=>{ const L=Math.max(...x.rows.map(r=>String(r[i]||'').length)); s.getColumn(i+1).width=Math.min(40,Math.max(8,L*1.6)); }); s.views=[{state:'frozen',ySplit:1}]; });
     const im=items.filter(x=>x.k==='img'); if(im.length){ const s=wb.addWorksheet(nm('그래프')); s.getColumn(1).width=100; let row=1;
@@ -5141,7 +5183,7 @@ async function exportXlsx(){
   }catch(e){ console.warn(e); alert('Excel 을 만들지 못했습니다: '+e.message); }
   finally{ btn.disabled=false; btn.textContent=old; } }
 async function exportPdf(){ const M=xMeta(); let h=$('xPrintHead'); if(!h){ h=document.createElement('div'); h.id='xPrintHead'; document.body.insertBefore(h,document.body.firstChild); }
-  h.textContent=`FSG KPI 대시보드 · ${M.view} · ${M.period} · ${M.team} · 데이터 기준일 ${M.cut} · 출력 ${M.at}`;
+  h.textContent=`FSG KPI 대시보드 · ${M.view} · ${M.period}(${M.months}) · 비교 ${M.cmp} · ${M.team} · ${M.kind} · 출처 ${M.src} · 데이터 기준일 ${M.cut} · 출력 ${M.at}`;
   await xWith(async()=>{ document.body.classList.add('pdfx'); await new Promise(r=>setTimeout(r,300)); window.print(); }); document.body.classList.remove('pdfx'); }
 document.addEventListener('click',e=>{ const t=e.target; if(!t||!t.id) return; if(t.id==='xXlsx') exportXlsx(); else if(t.id==='xPdf') exportPdf(); });
 function showMain(){ $('vtabs').hidden=false; $('hdrInfo').hidden=false; setView(VIEW); loadShifts(); loadInstCal(); }

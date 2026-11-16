@@ -85,3 +85,7 @@ assert(/const FV=VIEW==='org'\|\|VIEW==='wl'/.test(html), 'v3.1: Organization·W
 assert(/id="xXlsx"/.test(html) && /id="xPdf"/.test(html) && /function exportXlsx\(/.test(html) && /exceljs\/4\.4\.0/.test(html) && html.indexOf('function exportXlsx(')<html.indexOf('function showMain(){'), '내보내기 버튼·코드');
 /* 산점도 읽는 법: 중앙값 기준 네 칸 의미와 이상적인 모습 */
 assert(/function orgQuad\(/.test(html) && /class="ogguide"/.test(html) && /균형 · 큰 규모/.test(html), '산점도 네 칸 의미·읽는 법');
+/* v3.2: Overview 운영 장비 현황, 조직 표 핵심 열, PM 편차 상세, 내보내기 메타 */
+assert(/function ovEquipCard\(/.test(html) && /\$\{ovEquipCard\(\)\}/.test(html) && /function opEquip\(/.test(html), 'v3.2: Overview 운영 장비 현황(자산대장)');
+assert(/const OG_CORE=/.test(html) && /id="proHealthFold"/.test(html) && /ovkpi c4" id="proKpi"/.test(html), 'v3.2: 조직 표 핵심 열·PM 편차 상세');
+assert(/\['데이터 구분',M\.kind\]/.test(html) && /\['접힌 상세 포함'/.test(html), 'v3.2: 내보내기 정보 시트');
