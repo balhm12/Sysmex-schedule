@@ -2838,6 +2838,9 @@ const LOWFU = {
   SHEET: '저점수조치',
   URL_KEY: 'FSTALK_URL',
   SECRET_KEY: 'FSTALK_SECRET',
+  LAST_KEY: 'LOWFU_LAST',              // 마지막 자동·수동 동기화 결과(시각 · 내용) — 「연동 상태」에서 보여 준다
+  TRIGGER: 'syncLowFollowTrigger',     // 시간 트리거가 부르는 함수. 이름이 _ 로 끝나는 함수는 트리거가 부를 수 없다
+  OLD_TRIGGER: 'syncLowFollowFromPortal_',   // 2026-11-16 이전 설정이 만든 트리거(돌지 않는다) — 설정을 다시 하면 지운다
 };
 
 /* 포털 index.html 의 VOC_REASONS 와 글자 그대로 같아야 한다.
@@ -2873,7 +2876,7 @@ function lowFollowRows_(ss) {
   const c = { ts: ix('응답일시'), org: ix('기관명(표준)'), fsr: ix('담당FSR'), team: ix('팀'),
               q1: ix('신속성·일정'), q2: ix('전문성·해결'), q3: ix('응대·마무리'),
               comment: ix('서술형의견') };
-  const tz = ss.getSpreadsheetTimeZone() || 'Asia/Seoul';
+  const tz = DASH_WEB.TZ;   // 포털이 받는 Firebase 내보내기(buildDashboardData_ 의 fmtTs)와 같은 시간대여야 키가 같다
   const fmt = v => (v instanceof Date)
     ? Utilities.formatDate(v, tz, 'yyyy-MM-dd HH:mm')
     : String(v || '').trim();
@@ -2958,15 +2961,62 @@ function syncLowFollowFromPortal_() {
   return { total: want.length, done: done, changed: changed };
 }
 
+/* 마지막 동기화 결과를 적어 둔다(값·비밀은 적지 않는다) */
+function lowfuNote_(text) {
+  try {
+    PropertiesService.getScriptProperties().setProperty(LOWFU.LAST_KEY,
+      Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm') + ' · ' + text);
+  } catch (e) {}
+}
+
+/* 1시간 트리거가 부르는 함수 (2026-11-16).
+ * 예전 설정은 트리거에 syncLowFollowFromPortal_ 을 걸었는데, 이름이 _ 로 끝나는 함수는 트리거·메뉴가 부를 수 없어
+ * 「Script function not found」로 끝나고 시트가 갱신되지 않는다. 그래서 이름에 _ 가 없는 이 함수를 건다
+ * (다른 트리거도 같은 방식이다: autoCrmRefreshTrigger · uploadRefreshTrigger · resumeUpdateStepsTrigger). */
+function syncLowFollowTrigger() {
+  try {
+    const r = syncLowFollowFromPortal_();
+    lowfuNote_('자동 · 저점수 ' + r.total + '건(조치 완료 ' + r.done + '건) · 바뀐 줄 ' + r.changed + '개');
+  } catch (err) {
+    lowfuNote_('자동 · 실패: ' + err.message);
+    throw err;   // 실행 기록에 실패로 남게 한다
+  }
+}
+
+/* 메뉴용 — 연동이 어디까지 되어 있는지 보여 준다(비밀값은 보여 주지 않는다) */
+function showLowFollowStatus() {
+  const p = PropertiesService.getScriptProperties();
+  const url = p.getProperty(LOWFU.URL_KEY) || '', hasSecret = !!p.getProperty(LOWFU.SECRET_KEY);
+  const trig = ScriptApp.getProjectTriggers().map(t => t.getHandlerFunction());
+  const nNew = trig.filter(n => n === LOWFU.TRIGGER).length, nOld = trig.filter(n => n === LOWFU.OLD_TRIGGER).length;
+  const ss = SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName(LOWFU.SHEET);
+  let low = '-'; try { low = lowFollowRows_(ss).length + '건'; } catch (e) { low = '읽지 못함(' + e.message + ')'; }
+  const lines = [
+    '· FS 포털 DB 주소: ' + (url ? '설정됨 (' + url.replace(/^https?:\/\//, '').split('.')[0] + '…)' : '없음'),
+    '· 데이터베이스 비밀: ' + (hasSecret ? '설정됨' : '없음'),
+    '· 1시간 자동 받아오기: ' + (nNew ? '켜짐' : '꺼짐') + (nOld ? ' — 예전 트리거 ' + nOld + '개가 남아 있음(돌지 않습니다)' : ''),
+    '· 「' + LOWFU.SHEET + '」 시트: ' + (sh ? '있음 (' + Math.max(0, sh.getLastRow() - 1) + '줄)' : '없음 — 한 번도 받아오지 못했습니다'),
+    '· 정제데이터의 저점수 응답: ' + low,
+    '· 마지막 결과: ' + (p.getProperty(LOWFU.LAST_KEY) || '기록 없음'),
+  ];
+  let next = '';
+  if (!url || !hasSecret) next = '메뉴 「저점수 조치: FS 포털 연동 설정」을 실행해 주소와 비밀을 넣어 주세요.';
+  else if (!nNew) next = '메뉴 「저점수 조치: FS 포털 연동 설정」을 한 번 더 실행하면 자동 받아오기가 켜집니다.';
+  else next = '정상입니다. 지금 바로 받으려면 「저점수 조치: FS 포털에서 받아오기」.';
+  alert_('저점수 조치 — FS 포털 연동 상태\n\n' + lines.join('\n') + '\n\n→ ' + next);
+}
+
 /* 메뉴용 — 결과를 알려 준다 */
 function syncLowFollow() {
   try {
     const r = syncLowFollowFromPortal_();
+    lowfuNote_('수동 · 저점수 ' + r.total + '건(조치 완료 ' + r.done + '건) · 바뀐 줄 ' + r.changed + '개');
     alert_('✅ 저점수 조치 동기화 완료\n\n' +
       '· 저점수 응답: ' + r.total + '건 (조치 완료 ' + r.done + '건)\n' +
       '· 이번에 바뀐 줄: ' + r.changed + '개\n\n' +
       '사유·조치 내용은 FS 포털에서 적습니다. 이 시트에서 고쳐도 다음 동기화 때 덮어써집니다.');
   } catch (err) {
+    lowfuNote_('수동 · 실패: ' + err.message);
     alert_('⚠️ 저점수 조치 동기화 실패\n\n' + err.message);
   }
 }
@@ -2989,13 +3039,15 @@ function setupLowFollowSync() {
   try {
     const r = syncLowFollowFromPortal_();
     ScriptApp.getProjectTriggers()
-      .filter(t => t.getHandlerFunction() === 'syncLowFollowFromPortal_')
+      .filter(t => t.getHandlerFunction() === LOWFU.TRIGGER || t.getHandlerFunction() === LOWFU.OLD_TRIGGER)
       .forEach(t => ScriptApp.deleteTrigger(t));
-    ScriptApp.newTrigger('syncLowFollowFromPortal_').timeBased().everyHours(1).create();
+    ScriptApp.newTrigger(LOWFU.TRIGGER).timeBased().everyHours(1).create();
+    lowfuNote_('설정 · 저점수 ' + r.total + '건(조치 완료 ' + r.done + '건)');
     alert_('✅ FS 포털 연동 완료\n\n· 저점수 응답 ' + r.total + '건을 「' + LOWFU.SHEET + '」 시트에 옮겼습니다.\n' +
       '· 1시간마다 자동으로 다시 받아옵니다.');
   } catch (err) {
     p.deleteProperty(LOWFU.SECRET_KEY);
+    lowfuNote_('설정 · 실패: ' + err.message);
     alert_('⚠️ 연결 실패 — 주소·비밀을 다시 확인해 주세요.\n\n' + err.message);
   }
 }
@@ -3128,12 +3180,23 @@ function sweepStaleTemps_() {
 function crmRemoveTemp_(id) {
   try { Drive.Files.remove(id); } catch (e) { try { DriveApp.getFileById(id).setTrashed(true); } catch (e2) {} }
 }
+/* 변환본의 날짜 칸을 「CRM 에 적힌 시각 그대로」 돌려준다 (2026-11-16).
+ * xlsx 를 구글 시트로 변환하면 그 시트의 시간대가 이 시트(Asia/Seoul)와 다를 수 있다(실제로 미국 태평양 시간으로 만들어졌다).
+ * getValues() 는 칸의 시각을 「그 시트의 시간대」로 읽어 Date 를 만들기 때문에, 그대로 Asia/Seoul 로 날짜를 뽑으면
+ * 8~10월은 16시간(11~3월은 17시간) 뒤로 밀린다 — 오전 8시 이후 방문이 다음 날로 넘어가 방문건수의 날짜·월·중복 제거가 틀어졌다
+ * (2026-11-16 실측: 10월 852건이 900건, 9월 807건이 793건, 8월 317건이 325건으로 집계됨).
+ * 그래서 원본 시트의 시간대로 시각을 글자로 뽑은 뒤 한국 시각으로 다시 만든다. 시간대가 같으면 손대지 않는다. */
+function crmWallClock_(d, srcTz) {
+  if (!(d instanceof Date) || !srcTz || srcTz === 'Asia/Seoul') return d;
+  return new Date(Utilities.formatDate(d, srcTz, "yyyy-MM-dd'T'HH:mm:ss") + '+09:00');
+}
 /* 파일 한 개에서 필요한 열만 읽는다 → {head:[열이름...], rows:[[...]]} (없는 열은 빠짐) */
 function crmReadFileCols_(c, wantCols) {
   const isSheet = c.mime === 'application/vnd.google-apps.spreadsheet';
   const bookId = isSheet ? c.file.getId() : crmCacheGet_(c);   // v6: 변환본은 남겨 두고 재사용
   {
     const book = SpreadsheetApp.openById(bookId), sheets = book.getSheets();
+    let srcTz = ''; try { srcTz = book.getSpreadsheetTimeZone() || ''; } catch (e) {}
     let sh = sheets[0];
     for (let i = 0; i < sheets.length; i++) {   // '약속/활동 목적' 열이 있는 시트를 우선(여러 시트가 있는 파일 대비)
       if (sheets[i].getLastRow() < 2) continue;
@@ -3146,7 +3209,7 @@ function crmReadFileCols_(c, wantCols) {
     const want = wantCols.map(n => head.indexOf(n)).filter(i => i >= 0);
     if (!want.length) return { head: [], rows: [] };
     const cols = want.map(i => sh.getRange(2, i + 1, lastRow - 1, 1).getValues());
-    const rows = []; for (let r = 0; r < lastRow - 1; r++) rows.push(cols.map(col => col[r][0]));
+    const rows = []; for (let r = 0; r < lastRow - 1; r++) rows.push(cols.map(col => crmWallClock_(col[r][0], srcTz)));
     return { head: want.map(i => head[i]), rows: rows };
   }
 }
@@ -3557,6 +3620,7 @@ function onOpen() {
     .addSeparator()
     .addItem('저점수 조치: FS 포털에서 받아오기', 'syncLowFollow')
     .addItem('저점수 조치: FS 포털 연동 설정', 'setupLowFollowSync')
+    .addItem('저점수 조치: 연동 상태', 'showLowFollowStatus')
     .addSeparator()
     .addItem('공개 대시보드 Firebase 연동 설정', 'setupFirebasePush')
     .addItem('공개 대시보드 지금 내보내기', 'pushDashboardToFirebaseNow')

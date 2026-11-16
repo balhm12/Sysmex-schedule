@@ -13,6 +13,9 @@
   - **「배포 → 배포 관리 → 수정(연필) → 새 버전」을 누르지 않는다.** 누르면 그 배포가 현재 Head 로 교체된다. Head 가 불완전하면 PC 업로드가 즉시 끊긴다.
   - 같은 이유로 GitHub Secret `VOC_DEPLOYMENT_ID` 는 **넣지 않는다**(넣으면 push 마다 `clasp deploy -i` 로 배포를 갈아치운다). 웹 앱을 일부러 새로 배포할 때만 사용자가 직접 한다.
   - 배포된 버전의 코드는 Actions → Deploy Apps Script (만족도) → Run workflow → `pull_version` 에 버전 번호를 넣어 받아 볼 수 있다(아티팩트, 올리지는 않는다).
+  - **시간 트리거가 부르는 함수 이름은 `_` 로 끝나면 안 된다**(Apps Script 가 부르지 못해 조용히 안 돈다). 2026-11-16: 저점수 조치 1시간 트리거가 `syncLowFollowFromPortal_` 에 걸려 있었다 → `syncLowFollowTrigger`. `tests/test_voc_lowfu.js` 가 모든 `newTrigger` 를 확인한다.
+  - **xlsx 변환본에서 읽은 날짜는 `crmWallClock_` 을 거친다**(2026-11-16): 변환된 시트의 시간대가 달라 CRM 시각이 16~17시간 밀려 방문건수가 틀어졌다(10월 852 → 900). 다른 스프레드시트에서 날짜를 읽는 코드를 새로 쓰면 그 시트의 시간대를 확인한다.
+  - 저점수 조치(FS 포털 → 「저점수조치」 시트)의 설정·확인 절차와 키 규칙은 `apps-script/README.md` 「저점수 조치」. 포털 `vocKey`·`VOC_REASONS` 를 바꾸면 fs-talk `tests/voc_followup.js` 와 이 저장소 `tests/test_voc_lowfu.js` 의 고정값을 같이 고친다.
   - 사라지면 조용히 멈추는 것들(`tests/test_crm_folder.js` 가 함수 존재까지 확인): CRM 폴더 읽기·변환 캐시, CRM 자동 가져오기(2시간), PC 업로드 입구, 허브 시트 읽기, 6분 한도 대응 단계 실행.
 
 ## 데이터 안전 (가장 중요)
