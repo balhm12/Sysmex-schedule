@@ -89,3 +89,5 @@ assert(/function orgQuad\(/.test(html) && /class="ogguide"/.test(html) && /균�
 assert(/function ovEquipCard\(/.test(html) && /\$\{ovEquipCard\(\)\}/.test(html) && /function opEquip\(/.test(html), 'v3.2: Overview 운영 장비 현황(자산대장)');
 assert(/const OG_CORE=/.test(html) && /id="proHealthFold"/.test(html) && /ovkpi c4" id="proKpi"/.test(html), 'v3.2: 조직 표 핵심 열·PM 편차 상세');
 assert(/\['데이터 구분',M\.kind\]/.test(html) && /\['접힌 상세 포함'/.test(html), 'v3.2: 내보내기 정보 시트');
+/* 모든 <script> 블록이 문법 오류 없이 읽혀야 함(2026-11-16 충돌 해소 중 한 줄 중복으로 대시보드가 멈춘 일 재발 방지) */
+{ const re=/<script>([\s\S]*?)<\/script>/g; let m, i=0; while((m=re.exec(html))){ i++; try{ new Function(m[1]); }catch(e){ assert(false, 'script 블록 '+i+' 문법 오류: '+e.message); } } }
