@@ -4787,6 +4787,22 @@ function wlAcadCrm(months, team){ const ms=new Set(months); let n=0,tot=0,cal=0,
   D.rows.forEach(o=>{ if(o.ft) has=true; if(!ms.has(o.mk)||!o.credits.length) return; const k=team?o.cteams.filter(t=>t===team).length:o.credits.length; if(!k) return;
     tot+=k; if(/학술/.test(o.ft)){ n+=k; if(/calibration|data\s*비교/i.test(o.purp+' '+o.err)) cal+=k; } });
   return {has, n, tot, cal, share:tot?n*100/tot:null}; }
+/* CRM 학술 업무 — 팀·사무소별(2026-11-16 사용자 요청). 인정 건수(담당자·필수 참석자)를 그 사람의 팀·사무소에 나눠 셈(공동 작업은 참여 단위마다).
+   팀 4개 + CENTRAL·SOUTH 는 사무소 행(└)을 바로 아래에 — Organization 트리와 같은 순서 */
+function wlAcadUnitHtml(months){
+  const ms=new Set(months), z=()=>({n:0,tot:0,cal:0}), T={}, U={}, add=(m,k,o,ac,cl)=>{ const x=m[k]||(m[k]=z()); x.tot++; if(ac){ x.n++; if(cl) x.cal++; } };
+  D.rows.forEach(o=>{ if(!ms.has(o.mk)||!o.credits.length) return; const ac=/학술/.test(o.ft), cl=ac&&/calibration|data\s*비교/i.test(o.purp+' '+o.err);
+    o.credits.forEach(nm=>{ const t=wlTeam(nm), u=wlUnit(nm); if(t) add(T,t,o,ac,cl); if(u&&u!==t) add(U,u,o,ac,cl); }); });
+  const hc=f=>ROSTER.filter(r=>r[0]!=='김민결'&&f(r[0])).length, fsg=Object.values(T).reduce((a,x)=>({n:a.n+x.n,tot:a.tot+x.tot,cal:a.cal+x.cal}),z());
+  const ref=fsg.tot?fsg.n*100/fsg.tot:null, rows=[], bars=[];
+  const line=(name,x,n,sub,key)=>{ const sh=x.tot?x.n*100/x.tot:null; rows.push({c:[(sub?'└ ':'')+name,wlF(n),wlF(x.n),wlF(x.tot),sh==null?'-':sh.toFixed(1)+'%',n?(x.n/n).toFixed(1):'-',(wlP(x.cal,x.n)||'-')+(x.n?'%':'')],cls:sub?'wlsub':''}); if(!sub||1) bars.push({n:(sub?'└ ':'')+name,v:sh}); };
+  ['FS WEST','FS EAST','FS CENTRAL','FS SOUTH','FSS Team','FSOM Team'].forEach(t=>{ const x=T[t]; if(!x) return; line(t.replace(/^FS\s*/,''),x,hc(n=>wlTeam(n)===t),false);
+    PROD_UNITS.filter(u=>u.startsWith(t+' ')).forEach(u=>{ if(U[u]) line(UNIT_SHORT(u),U[u],hc(n=>wlUnit(n)===u),true); }); });
+  Object.keys(T).filter(t=>!['FS WEST','FS EAST','FS CENTRAL','FS SOUTH','FSS Team','FSOM Team'].includes(t)).forEach(t=>line(t,T[t],hc(n=>wlTeam(n)===t),false));
+  rows.push({c:['FSG 전체',wlF(hc(()=>true)),wlF(fsg.n),wlF(fsg.tot),ref==null?'-':ref.toFixed(1)+'%','-',(wlP(fsg.cal,fsg.n)||'-')+(fsg.n?'%':'')],cls:'wltot'});
+  return `<section class="ovcard" style="margin-top:14px"><h3>CRM 학술 업무 — 팀 · 사무소별 <span class="ovchip none">단위: 처리 건수</span> <span class="ovsub">양식 타입 「학술 요청」 · 담당자·필수 참석자 각 1건 · 사무소는 팀 바로 아래(└)</span></h3>
+    <div class="ovgrid dspair"><div>${dsBars(bars,{type:'dot',ref,unit:'%',dec:1})}<p class="ovnote">학술 비중 = 그 팀·사무소 처리 건수 중 학술 요청 · 점선 = FSG 전체 ${ref==null?'-':ref.toFixed(1)+'%'} · 많고 적음이 좋고 나쁨이 아님</p></div>
+    ${wlTbl(['팀 · 사무소','인원','학술 요청','전체 처리','학술 비중','1인당 학술','Calibration·Data 비교'],rows)}</div></section>`; }
 /* ---------- 그리기 ---------- */
 const wlF=v=>v==null?'-':Math.round(v).toLocaleString('ko-KR'), wlP=(a,b)=>b?(a*100/b).toFixed(1):null, wlH=m=>m==null?'-':(m/60).toLocaleString('ko-KR',{maximumFractionDigits:0});
 function wlNA(label,why){ return `<div class="ovkc st wlna"><span class="ovl">${label}<em class="ovchip none">데이터 미확보</em></span><span class="ovv">–</span><span class="ovt">${why}</span></div>`; }
@@ -4859,11 +4875,13 @@ function wlBody(c){
         {c:['정규근무 외 작업시간',wlH(A.all.off)+'시간']}])}<p class="ovnote">집중도는 분모가 0이면 산출하지 않습니다. 야간 방문이 많다고 긴급 방문으로 보지 않습니다.</p></section></div>`;
   }
   if(T==='acad'){
+    const acU=D.rows.some(o=>o.ft)?wlAcadUnitHtml(c.p.months):'<section class="ovcard"><p class="empty-note">CRM 자료에 양식 타입이 없어 팀·사무소별 학술 업무를 계산하지 못했습니다. CRM 을 다시 올리면 계산합니다.</p></section>';
     if(!ac){ h+='<section class="ovcard"><p class="empty-note">학술 자료가 없습니다. FS Portal 「Sysmex Talk 집계」·「학술요청 집계」에서 「KPI용 내보내기」 파일을 받아 관리자 화면 「업무부하 학술 자료」 칸에 올려 주세요.</p></section>'; }
     else{ const A2=wlAcadAgg(m12), mm=m12.map(m=>(A2.byM[m]||{}).n||0), mn=m12.map(m=>{ const x=A2.byM[m]; return x?(x.night+x.hol):0; });
       h+=`<div class="ovgrid dspair"><section class="ovcard"><h3>학술 응대 — 시간대 <span class="ovsub">${esc(c.p.label)}</span></h3>${dsBars([{n:'평일 주간',v:ac.day},{n:'평일 야간',v:ac.night},{n:'주말·공휴일',v:ac.hol}],{type:'bar',unit:'건',dec:0})}</section>
         <section class="ovcard"><h3>월별 학술 응대 <span class="ovsub">최근 12개월</span></h3>${wlLine(m12,[{n:'전체',v:mm},{n:'야간·주말',v:mn}],'건')}<p class="ovnote">${esc(m12.filter(m=>A2.byM[m]&&A2.byM[m].src.has('slack')).length?'Slack 접수가 있는 달은 Slack, 그 전은 Sysmex Talk 글 수':'Sysmex Talk 글 수')} — 두 자료는 단위가 달라 바뀐 달의 증감은 비교하지 않습니다. Sysmex Talk 은 글 작성 시각이라 평일 09시 전 글은 전날 밤 응대로 보아 야간에 넣었고, 글을 안 남긴 응대는 빠져 실제보다 적게 잡힙니다(참고값).</p></section></div>`;
       h+=`<section class="ovcard" style="margin-top:14px"><h3>아직 계산하지 않는 항목 <span class="ovsub">데이터 미확보</span></h3>${wlTbl(['항목','필요한 자료'],[{c:['학술 소요시간·평균 응대시간','통화·응대 시간 기록']},{c:['팀·사무소별 학술 응대','응대한 직원 정보(Slack 확인자·Talk 작성자를 업무 기록으로 쓰려면 사용자 결정 필요)']}])}</section>`; }
+    h+=acU;
   }
   if(T==='inst'){
     if(!wlOn()){ h+='<section class="ovcard"><p class="empty-note">기관 분류를 지정하지 않았습니다. 관리자 화면 「기관 분류 관리」에서 수탁기관·일반병원을 지정해 주세요.</p></section>'; }
