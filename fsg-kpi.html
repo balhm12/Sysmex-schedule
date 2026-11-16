@@ -660,14 +660,14 @@ body[data-view=prd] #prodTabs [data-tab=team]{display:none}
 .dsx .dsmix{display:grid;grid-template-columns:104px 1fr 76px;gap:10px;align-items:center;padding:5px 4px;font-size:13px}
 .dsx .dsmix>*{min-width:0}.dsx .dsmt{display:flex;height:20px;background:var(--card);gap:2px;overflow:hidden}.dsx .dsmt i{display:block;min-width:0;flex-shrink:1;color:#fff;font-style:normal;font-size:11.5px;line-height:20px;text-align:center;overflow:hidden;white-space:nowrap}
 .dsx .dsmt i:nth-child(n+4){color:#1A2433}.dsx .dsmt em{font-style:normal;font-size:12px;color:var(--muted);padding-left:6px}
-.dsx .dsmore{display:block;margin:10px auto 0;height:36px;padding:0 16px;border:1px solid var(--border);background:var(--surface);border-radius:6px;font:inherit;font-size:13px;font-weight:700;color:var(--ovp);cursor:pointer}
+.dsx .dsmore,#ov .dsmore{display:block;margin:10px auto 0;height:36px;padding:0 16px;border:1px solid var(--border);background:var(--surface);border-radius:6px;font:inherit;font-size:13px;font-weight:700;color:var(--ovp);cursor:pointer}
 .dsx details.dsfold{margin-top:14px;border:1px solid var(--border);background:var(--surface)}
 .dsx details.dsfold>summary{cursor:pointer;padding:12px 16px;font-size:14px;font-weight:700;color:var(--ovp);min-height:44px;display:flex;align-items:center;gap:8px}
 .dsx details.dsfold>summary small{font-size:12px;font-weight:400;color:var(--muted)}.dsx details.dsfold>.panel{border:0;border-top:1px solid var(--border)}
 .dsx .dschk{font-size:12.5px;color:var(--muted);white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:5px;min-height:36px}
 .dsx .panel.nodata .thead,.dsx .panel.nodata .tw,.dsx .panel.nodata .lifeGuide{display:none}
 @media (max-width:1000px){.dsx .ovkpi.c6{grid-template-columns:repeat(3,1fr)}}
-@media (max-width:600px){.dsx .ovkpi.c6{grid-template-columns:repeat(2,1fr)}.dsx .ovhb.st{grid-template-columns:78px 1fr 92px}.dsx .dsmix{grid-template-columns:62px 1fr 60px}.dsx .dsmore{width:100%;height:44px}}
+@media (max-width:600px){.dsx .ovkpi.c6{grid-template-columns:repeat(2,1fr)}.dsx .ovhb.st{grid-template-columns:78px 1fr 92px}.dsx .dsmix{grid-template-columns:62px 1fr 60px}.dsx .dsmore,#ov .dsmore{width:100%;height:44px}}
 .dsx .tpt thead th{background:var(--tint);color:var(--ovp);font-weight:700;font-size:12.5px;border-bottom:1px solid var(--muted)}
 .dsx tbody th{background:none;color:var(--text)}
 .dsx .tpt tbody th{color:var(--text)}
@@ -4399,6 +4399,26 @@ function ovChronic(end,team){
   if(SERIAL){ const used=new Set(SERIAL.filter(s=>s.state==='사용'&&s.sn&&s.acct).map(s=>s.sn+'|'+s.acct)); keys=keys.filter(k=>used.has(k)); }
   const cut=D.maxT-90*DAY; return {chronic:keys.length, risk:SERIAL?keys.filter(k=>last[k]>=cut).length:null};
 }
+/* v3.1 PR3: 확인이 필요한 곳 — 탭마다 기존 계산을 그대로 읽어 이슈를 모으고, 누르면 그 탭으로(팀 필터 전달, 팀 단위가 없는 자료는 FSG 전체) */
+function ovIssues(p,pp){
+  const L=[], inc=(c,v)=>v!=null&&c!=null&&c-v>=10&&v>0&&(c-v)/v>=0.2, pc=(c,v)=>'+'+Math.round((c-v)*100/v)+'%';
+  TEAMS.forEach(t=>{ const s=stats(p.months,t), sp=stats(pp.months,t);
+    OV_K.slice(0,3).forEach(o=>{ const v=s[o.k], st=ovSt(o,v); if(st.st==='bad'||st.st==='warn') L.push({sev:st.st==='bad'?0:2,chip:st.chip,cc:st.st,t:`${t} ${o.n} ${ovF(o,v)}${o.u}`,s:'목표 '+o.tl(),v:'sq',team:t,vl:'Service Quality'}); });
+    if(inc(s.total,sp.total)) L.push({sev:3,chip:'증가',cc:'none',t:`${t} 처리 건수 ${fmt(s.total)}건`,s:`${pp.label} ${fmt(sp.total)}건 대비 ${pc(s.total,sp.total)}`,v:'org',team:t,vl:'Organization'}); });
+  try{ ensureProd(); const R=orgRows('team').filter(r=>r.per!=null), tot=R.reduce((a,r)=>a+(r.hc||0),0), avg=tot?R.reduce((a,r)=>a+r.per*(r.hc||0),0)/tot:null;
+    if(avg) R.forEach(r=>{ if(r.per>=avg*1.2) L.push({sev:3,chip:'부담',cc:'none',t:`${r.n} 1인당 처리 ${r.per.toFixed(1)}건`,s:`FSG 평균 ${avg.toFixed(1)}건의 ${Math.round(r.per*100/avg)}%`,v:'org',team:orgParent?orgParent(r.k):r.k,vl:'Organization'}); }); }catch(e){}
+  try{ const all=wlVisits(D.rows), pick=(ms,t)=>{ const S=new Set(ms); return all.filter(v=>S.has(v.mk)&&(!t||v.teams.has(t))); };
+    TEAMS.forEach(t=>{ const A=wlAgg(pick(p.months,t),wlInfo), B=wlAgg(pick(pp.months,t),wlInfo), h=Math.round(A.all.off/60), hp=Math.round(B.all.off/60);
+      if(inc(h,hp)) L.push({sev:3,chip:'증가',cc:'none',t:`${t} 정규근무 외 작업 ${fmt(h)}시간`,s:`${pp.label} ${fmt(hp)}시간 대비 ${pc(h,hp)}`,v:'wl',team:t,wl:'sum',vl:'Workload'});
+      if(wlOn()&&inc(A.type.lab.n,B.type.lab.n)) L.push({sev:3,chip:'증가',cc:'none',t:`${t} 수탁기관 방문 ${fmt(A.type.lab.n)}건`,s:`${pp.label} ${fmt(B.type.lab.n)}건 대비 ${pc(A.type.lab.n,B.type.lab.n)}`,v:'wl',team:t,wl:'inst',vl:'Workload'}); });
+    const ac=wlAcadAgg(p.months), acp=wlAcadAgg(pp.months); if(ac&&acp&&inc(ac.n,acp.n)) L.push({sev:3,chip:'증가',cc:'none',t:`학술 응대 ${fmt(ac.n)}건 (FSG 전체)`,s:`${pp.label} ${fmt(acp.n)}건 대비 ${pc(ac.n,acp.n)} · 팀 구분 없는 자료`,v:'wl',team:'',wl:'acad',vl:'Workload'}); }catch(e){}
+  try{ const ms=new Set(p.months), U=insUnits().filter(x=>ms.has(x.mk)&&x.kind==='설치'&&x.sn&&x.f90>0); const by={}; U.forEach(x=>{ by[x.atm||'-']=(by[x.atm||'-']||0)+1; });
+    TEAMS.forEach(t=>{ if(by[t]) L.push({sev:1,chip:'초기 고장',cc:'warn',t:`${t} 설치 후 90일 내 고장 ${by[t]}대`,s:`${p.label} 설치 장비 중`,v:'eqp',team:t,vl:'Instrument'}); }); }catch(e){}
+  try{ const rk=SERIAL?riskList(null):null; if(rk){ const by={}; rk.items.forEach(x=>{ if(x.tier==='위험') by[x.atm||'-']=(by[x.atm||'-']||0)+1; });
+    TEAMS.forEach(t=>{ if(by[t]) L.push({sev:1,chip:'위험',cc:'bad',t:`${t} 위험 장비 ${by[t]}대`,s:'90일 안 재고장 가능성 등급 「위험」',v:'pro',team:t,vl:'Proactive'}); }); } }catch(e){}
+  return L.sort((a,b)=>a.sev-b.sev);
+}
+function ovGo(it){ if(!it) return; $('fTeam').value=it.team||''; if(it.wl&&typeof WL!=='undefined') WL.tab=it.wl; if(it.v==='sq'&&typeof SQ_DET!=='undefined') SQ_DET='inst'; setView(it.v); window.scrollTo(0,0); }
 function renderOv(){
   const root=$('ov'); if(!D||!root) return;
   const p=curPeriod(), team=$('fTeam').value||null, pp=prevPeriod(p), cur=stats(p.months,team), prv=stats(pp.months,team), prov=isProvisional(p.months);
@@ -4413,9 +4433,7 @@ function renderOv(){
   for(const o of D.rows){ const inC=ms.has(o.mk), inP=pms.has(o.mk); if(!inC&&!inP) continue; const n=team?o.cteams.filter(t=>t===team).length:o.credits.length; if(!n) continue; const b=ovBucket(o.purp); if(inC) act[b]+=n; if(inP) actP[b]+=n; }
   const aTot=OV_ACT.reduce((a,x)=>a+act[x[0]],0), aTotP=OV_ACT.reduce((a,x)=>a+actP[x[0]],0);
   // 확인이 필요한 곳 — 팀별 상태
-  const T=TEAMS.map(t=>({n:t,s:stats(p.months,t)})), al=[];
-  T.forEach(x=>OV_K.slice(0,3).forEach(o=>{ const v=x.s[o.k], st=ovSt(o,v); if(st.st==='bad'||st.st==='warn') al.push({n:x.n,o,v,st}); }));
-  al.sort((a,b)=>(a.st.st==='bad'?0:1)-(b.st.st==='bad'?0:1));
+  const al=ovIssues(p,pp);
   const ch=ovChronic(end,team), rk=riskList(team);
   const logoEl=document.querySelector('header.top img'), logoSrc=logoEl?logoEl.src:'';
   const kpSt=OV_K.slice(0,3).map(o=>ovSt(o,cur[o.k]).st), nOk=kpSt.filter(x=>x==='good').length, nNear=kpSt.filter(x=>x==='warn').length, nBad=kpSt.filter(x=>x==='bad').length;
@@ -4434,22 +4452,10 @@ function renderOv(){
   <div class="ovgrid ovg-a">
     <section class="ovcard ovtrcard" aria-labelledby="ovh2"><h3 id="ovh2"><span id="ovTrT"></span>${SB}<span class="ovtools"><span class="ovseg" role="group" aria-label="기간 범위"><button data-r="6">6개월</button><button data-r="12">12개월</button></span></span></h3>
       <div class="ovsum" id="ovSum"></div><div class="ovchart" id="ovBox"></div><p class="ovnote" id="ovTrN"></p></section>
-    <section class="ovcard" aria-labelledby="ovh6"><h3 id="ovh6">확인이 필요한 곳 <span class="ovscope">모든 팀</span></h3><p class="ovnote" style="margin:0 0 4px">팀별로 목표에 못 미치거나 근접한 항목입니다.</p>
-      ${al.length?`<ul class="ovhl">${al.slice(0,6).map(a=>`<li><span class="ovchip ${a.st.st}">${a.st.chip}</span><div><b>${esc(a.n)} ${a.o.n} ${ovF(a.o,a.v)}${a.o.u}</b><span class="ovs">목표 ${a.o.tl()}</span></div><button data-t="${esc(a.n)}">팀 보기</button></li>`).join('')}</ul>`:'<p class="ovnote">목표에 못 미치는 팀이 없습니다.</p>'}</section>
+    <section class="ovcard" aria-labelledby="ovh6"><h3 id="ovh6">확인이 필요한 곳 <span class="ovscope">모든 팀</span></h3><p class="ovnote" style="margin:0 0 4px">중요한 순(목표 미달 → 위험 장비·초기 고장 → 근접 → 업무 증가) · 누르면 해당 탭으로 이동</p>
+      ${al.length?`<ul class="ovhl">${(OV.issAll?al:al.slice(0,5)).map((a,k)=>`<li><span class="ovchip ${a.cc}">${a.chip}</span><div><b>${esc(a.t)}</b><span class="ovs">${esc(a.s)}</span></div><button type="button" data-i="${k}">${a.vl} ›</button></li>`).join('')}</ul>${al.length>5?`<button type="button" class="dsmore" id="ovIssMore" aria-expanded="${!!OV.issAll}">${OV.issAll?'5개만 보기':'모두 보기 ('+al.length+'건)'}</button>`:''}`:'<p class="ovnote">지금 확인이 필요한 항목이 없습니다.</p>'}
+      <p class="ovnote" style="margin-top:6px">증가 = 비교 기간(${esc(pp.label)}) 대비 20% 이상·10건 이상 · 인원 대비 = 1인당 처리 건수가 FSG 평균의 120% 이상</p></section>
   </div>
-  <div class="ovgrid ovg-b">
-    <section class="ovcard" aria-labelledby="ovh3"><h3 id="ovh3"><i class="ovsn">SECTION 03</i>업무 유형 ${SB} <span class="ovsub">${esc(p.label)} · 취소·온라인 정기점검 제외</span></h3>
-      <div class="ovdw"><div id="ovDn"></div><table class="ovlg" id="ovLg"><tbody>${OV_ACT.map((a,i)=>`<tr><td><span class="ovsw" style="background:${a[2]}"></span>${a[1]}</td><td>${fmt(act[a[0]])}건</td><td>${aTot?(act[a[0]]/aTot*100).toFixed(1):'-'}%</td><td>${actP[a[0]]===act[a[0]]?'':(act[a[0]]>actP[a[0]]?'▲ ':'▼ ')+fmt(Math.abs(act[a[0]]-actP[a[0]]))}</td></tr>`).join('')}<tr class="tot"><td>합계</td><td>${fmt(aTot)}건</td><td>100%</td><td>${aTot===aTotP?'':(aTot>aTotP?'▲ ':'▼ ')+fmt(Math.abs(aTot-aTotP))}</td></tr></tbody></table></div></section>
-    <section class="ovcard" aria-labelledby="ovh4"><h3 id="ovh4"><i class="ovsn">SECTION 04</i>조직 비교 <span class="ovtools"><span class="ovseg ovscroll" id="ovMseg" role="group" aria-label="비교 지표"></span></span></h3><div id="ovBars"></div></section>
-  </div>
-  <section class="ovcard" style="margin-top:14px" aria-labelledby="ovh4b"><h3 id="ovh4b">팀 비교표 <span class="ovsub">머리글을 누르면 정렬 · 행을 누르면 그 팀만 봅니다</span></h3><div class="ovtw" id="ovTbl"></div>
-    <p class="ovnote">팀 인원이 달라 건수만으로 성과를 판단하지 않습니다. 1인당 값과 가중치 업무량(1인당 KPI 점수)은 팀장·신입을 뺀 인원 기준입니다. 야간·휴일·이동거리는 부서원 KPI에서 함께 봅니다.</p></section>
-  <section class="ovcard" style="margin-top:14px" aria-labelledby="ovh5"><h3 id="ovh5"><i class="ovsn">SECTION 05</i>예방 서비스 ${SB}</h3>
-    <div class="ovpro"><div class="ovpc"><div class="ovl">PM 실적</div><div class="ovv">${fmt(cur.pm)}<small>건</small></div><div class="ovh">${cur.pm===prv.pm?lab+'과 같음':lab+' 대비 '+(cur.pm>prv.pm?'▲ ':'▼ ')+fmt(Math.abs(cur.pm-prv.pm))+'건'}</div></div>
-      <div class="ovpc"><div class="ovl">예방정비 지수</div><div class="ovv">${f1(cur.idx)}<small>%</small></div><div class="ovh">PM ÷ (PM + 고장 수리) · 목표 없음</div></div>
-      <div class="ovpc"><div class="ovl">반복 고장 장비</div><div class="ovv">${fmt(ch.chronic)}<small>대</small></div><div class="ovh">12개월 내 3회 이상 고장${SERIAL?' · 자산대장 사용 장비':' · 자산대장 미등록(CRM 이력 기준)'}</div></div>
-      <div class="ovpc${rk?'':' ovnd'}"><div class="ovl">위험 장비</div><div class="ovv">${rk?fmt(rk.counts['위험'])+'<small>대</small>':'자산대장 미등록'}</div><div class="ovh">${rk?'주의 '+fmt(rk.counts['주의'])+'대 · 90일 안에 다시 고장 날 가능성 기준':'자산대장을 올리면 표시'}</div></div>
-      <div class="ovpc ovnd"><div class="ovl">표준 사전점검</div><div class="ovv">집계하지 않음</div><div class="ovh">CRM 활동 목적에 구분이 없습니다</div></div></div></section>
   <div class="ovrfoot">자료: CRM 「모든 약속/활동」 · FTFR = 한 번에 고친 비율, 재방문율 = 14일 안 재방문 비율, MTTR = 고장 수리 평균 소요 시간 · 근접 기준: 목표의 92%(높을수록 좋은 지표) / 115%(낮을수록 좋은 지표) · 업무 유형은 취소·온라인 정기점검 제외, 담당자·필수 참석자 각각 1건 · 최근 14일의 FTFR·재방문율은 잠정치 · 작성: FSS Team</div>`;
   // 추이
   const o=OV_K.find(x=>x.k===OV.metric), n=OV.range, arr=ts.map(s=>s[o.k]).slice(-n), lb=tl.slice(-n), tg=o.t();
@@ -4465,14 +4471,13 @@ function renderOv(){
     svg.addEventListener('pointerleave',()=>{ cross.setAttribute('opacity',0);dot.setAttribute('opacity',0);tip.style.display='none'; }); };
   draw(); $('ovTrN').textContent=tg==null?'목표가 정해져 있지 않아 목표선이 없습니다.':'점선은 목표입니다. 그래프에 마우스를 올리면 월별 값을 볼 수 있습니다.';
   OV._draw=draw;
-  $('ovDn').innerHTML=ovDonut(OV_ACT.map(a=>({v:act[a[0]],c:a[2]})),aTot);
   // 이벤트
   root.querySelectorAll('.ovkc').forEach(b=>b.onclick=()=>{ OV.metric=b.dataset.k; renderOv(); });
   root.querySelectorAll('[data-r]').forEach(b=>{ b.setAttribute('aria-pressed',+b.dataset.r===OV.range); b.onclick=()=>{ OV.range=+b.dataset.r; renderOv(); }; });
   const scx=$('ovScx'); if(scx) scx.onclick=()=>{ $('fTeam').value=''; renderOv(); };
-  root.querySelectorAll('.ovhl button').forEach(b=>b.onclick=()=>{ $('fTeam').value=b.dataset.t; renderOv(); $('ovh4').scrollIntoView({behavior:'smooth',block:'center'}); });
+  root.querySelectorAll('.ovhl button').forEach(b=>b.onclick=()=>ovGo((OV.issAll?al:al.slice(0,5))[+b.dataset.i]));
+  const im=$('ovIssMore'); if(im) im.onclick=()=>{ OV.issAll=!OV.issAll; renderOv(); };
   const rb=$('ovRptBtn'); if(rb) rb.onclick=()=>setRpt(true);
-  ovOrg();
 }
 function setRpt(on){ document.body.classList.toggle('rpt',!!on); window.scrollTo(0,0); }
 $('rptBack').addEventListener('click',()=>setRpt(false)); $('rptPrint').addEventListener('click',()=>window.print());

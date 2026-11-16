@@ -77,3 +77,5 @@ console.log('test_kpi_overview: OK (업무 유형 묶음 ' + Object.keys(core).l
 /* v3.1 PR2: 반복 고장 목록은 Service Quality 한 곳, Proactive 는 위험·주의만, 병원별 표는 SQ 기관별 품질로 */
 assert(/function renderSqChr\(/.test(html) && /id="tChrSq"/.test(html) && /mode='risk';/.test(html), 'v3.1: 반복 고장 목록 = Service Quality, Proactive = 위험 목록');
 assert(/data-k="ftfr"/.test(html) && /if\(0\) html \+= '<div class="block"><div class="block-head"><h2>담당 병원별/.test(html), 'v3.1: 기관별 품질에 FTFR, Organization 병원별 표는 이동');
+/* v3.1 PR3: Overview = 핵심 KPI·품질 추이·확인이 필요한 곳(탭 이동) */
+assert(/function ovIssues\(/.test(html) && /function ovGo\(/.test(html) && !/SECTION 03<\/i>업무 유형/.test(html) && !/SECTION 05<\/i>예방 서비스/.test(html), 'v3.1: Overview 3영역, 이슈 → 탭 이동');
