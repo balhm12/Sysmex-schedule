@@ -5094,11 +5094,12 @@ function wlAgg(V, info){
     if(I.g&&R.grp[I.g]){ add(R.grp[I.g],v); add(R.grpReg[I.g][r],v); } else add(R.labOther,v); });
   return R;
 }
-/* 학술 응대 — 데이터 소스 전환(2026-11-16 지시서): Sysmex Talk 은 2026-11-10 운영 종료, Slack 은 2026-11-11 부터.
+/* 학술 응대 — 데이터 소스 전환(2026-11-16 지시서): Sysmex Talk 은 2026-11-10 운영 종료(검색 자료는 11-03 까지), Slack 은 2026-11-04 부터(11-16 결정).
    날짜로 나눠 이어 붙임(같은 날을 두 소스에서 세지 않음): 11-10 까지 Talk 글 수, 11-11 부터 Slack 학술요청 접수 건. 2026년 11월은 두 소스 합.
    Slack 에는 Talk 시절 기록(백필)도 있지만 전환일 전 Slack 은 쓰지 않는다 — Talk 자료는 소급 변경하지 않는다.
    수집 범위: Talk = 전환일 전날까지(내보낸 날 made 가 더 이르면 made 까지), Slack = 내보낸 날(made)까지. 범위 밖 날짜는 0 이 아니라 「집계 대기」 */
-const ACAD_CUT='2026-11-11', ACAD_TALK_END='2026-11-10';
+const ACAD_CUT='2026-11-04', ACAD_TALK_END='2026-11-03';   /* 2026-11-16 사용자 결정: Sysmex Talk 검색 자료가 11-03 까지라 11/4~10 공백 → Slack 시작을 11-04 로(Slack 기록은 1년치가 쌓여 있음) */
+const ACAD_MD=d=>+d.slice(5,7)+'/'+ +d.slice(8,10), ACAD_DOT=d=>d.replace(/-/g,'.');
 const acadDay=t=>new Date(t).toISOString().slice(0,10);
 function acadCover(){ const T=ACAD&&ACAD.talk, S=ACAD&&ACAD.slack, tEnd=T?(T.made&&T.made<ACAD_TALK_END?T.made:ACAD_TALK_END):null;
   return {talk:T?{to:tEnd}:null, slack:S?{to:S.made||S.to||null}:null}; }
@@ -5177,13 +5178,13 @@ function renderWl(){
   const last=D.months[D.months.length-1], m12=Array.from({length:12},(_,i)=>shiftMonth(last,i-11));
   const lab=A.type.lab, cls=A.all.n-A.type[''].n, labShare=wlP(lab.n,cls), labShareP=wlP(Ap.type.lab.n,Ap.all.n-Ap.type[''].n), labShareY=wlP(Ay.type.lab.n,Ay.all.n-Ay.type[''].n);
   const offH=A.all.off, two=(a,b)=>a+'<br>'+b;
-  const srcTxt=ac?(ac.gap&&ac.gap.mix?'Talk ~11/10 '+wlF(ac.talk||0)+' + Slack 11/11~ '+wlF(ac.slack||0):([...ac.src].map(s=>s==='talk'?'Sysmex Talk 글':'Slack 접수').join(' + ')||'자료 없음')):'';
+  const srcTxt=ac?(ac.gap&&ac.gap.mix?'Talk ~'+ACAD_MD(ACAD_TALK_END)+' '+wlF(ac.talk||0)+' + Slack '+ACAD_MD(ACAD_CUT)+'~ '+wlF(ac.slack||0):([...ac.src].map(s=>s==='talk'?'Sysmex Talk 글':'Slack 접수').join(' + ')||'자료 없음')):'';
   /* 비교는 같은 소스끼리만(Talk 글 수 ↔ Slack 접수 건은 단위가 달라 증감을 내지 않음), 집계 대기 기간과도 비교하지 않음 */
   const acKey=x=>[...x.src].sort().join('+')||'-', acOk=x=>!!(x&&ac&&!(x.gap&&x.gap.wait)&&acKey(x)===acKey(ac));
   const acWait=ac&&ac.gap&&ac.gap.wait, acNone=acWait&&ac.gap.none, acChip=acWait?`<em class="ovchip ${acNone?'none':'warn'}">${acNone?'집계 대기':'일부 반영'}</em>`:'';
   let h=`<div class="ovtitle dstitle"><div><h2>Workload</h2><p>${esc(p.label)} · ${esc(team||'FSG 전체')} · 비교 ${esc(pp.label)} · 시간대 평일 08~18시 = 주간 · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}</p></div>${ADMIN?'<span class="ovtools"><button type="button" class="dsbtn" id="wlInstBtn">기관 분류 관리</button></span>':''}</div>`;
   h+=`<h2 class="sec">업무부하 요약 <span class="ovchip none">단위: 방문(현장 출동 횟수)</span> <small>같은 병원·같은 날 이어진 활동 = 1건 · Productivity 처리 건수와 다름 · 학술 = FS Portal 집계 · 많다고 좋은 실적이 아님</small></h2><section class="ovkpi c3 wlk" aria-label="업무부하 핵심 지표">`;
-  h+= !ac? wlNA('학술 응대','학술 자료를 아직 올리지 않음') : acNone? wlNA('학술 응대',acadGapTxt(ac.gap)) : dsCell('학술 응대',wlF(ac.n),'건',two(srcTxt,'주간 '+wlF(ac.day)+' · 야간 '+wlF(ac.night)+' · 주말 '+wlF(ac.hol)),acWait?acadGapTxt(ac.gap):two(wlD(ac.n,acOk(acp)?acp.n:null,'건',pp.label),wlD(ac.n,acOk(acy)?acy.n:null,'건',yoy.label.replace('전년 같은 기간','전년'))),'문의 응대 건수 기준 — Talk 글 수(~11/10)·Slack 접수 건(11/11~) · CRM 학술 요청(처리 건수)과 합산하지 않음',acChip);
+  h+= !ac? wlNA('학술 응대','학술 자료를 아직 올리지 않음') : acNone? wlNA('학술 응대',acadGapTxt(ac.gap)) : dsCell('학술 응대',wlF(ac.n),'건',two(srcTxt,'주간 '+wlF(ac.day)+' · 야간 '+wlF(ac.night)+' · 주말 '+wlF(ac.hol)),acWait?acadGapTxt(ac.gap):two(wlD(ac.n,acOk(acp)?acp.n:null,'건',pp.label),wlD(ac.n,acOk(acy)?acy.n:null,'건',yoy.label.replace('전년 같은 기간','전년'))),'문의 응대 건수 기준 — Talk 글 수(~'+ACAD_MD(ACAD_TALK_END)+')·Slack 접수 건('+ACAD_MD(ACAD_CUT)+'~) · CRM 학술 요청(처리 건수)과 합산하지 않음',acChip);
   const cr=wlAcadCrm(p.months,team), crp=wlAcadCrm(pp.months,team), cry=wlAcadCrm(yoy.months,team), r1=v=>v==null?null:Math.round(v*10)/10;
   h+= !cr.has? wlNA('학술 업무 비중','CRM 자료에 양식 타입이 없음 — CRM 을 다시 올리면 계산') : dsCell('학술 업무 비중',cr.share==null?'-':cr.share.toFixed(1),'%',`CRM 학술 요청 ${wlF(cr.n)} / ${wlF(cr.tot)}건 · Calibration·Data 비교 ${wlP(cr.cal,cr.n)||'-'}%`,two(wlD(r1(cr.share),r1(crp.share),'%p',pp.label),wlD(r1(cr.share),r1(cry.share),'%p',yoy.label.replace('전년 같은 기간','전년'))),'처리 건수 기준 · CRM 양식 타입 「학술 요청」 · 전화 응대(왼쪽)와 다른 자료');
   h+= !ac? wlNA('야간·주말 학술 응대','학술 자료 미확보') : acNone? wlNA('야간·주말 학술 응대',acadGapTxt(ac.gap)) : dsCell('야간·주말 학술 응대',wlF(ac.night+ac.hol),'건','전체의 '+(wlP(ac.night+ac.hol,ac.n)||'-')+'%',acWait?acadGapTxt(ac.gap):two(wlD(ac.night+ac.hol,acOk(acp)?(acp.night+acp.hol):null,'건',pp.label),wlD(ac.night+ac.hol,acOk(acy)?(acy.night+acy.hol):null,'건',yoy.label.replace('전년 같은 기간','전년'))),'평일 18~08시·주말·공휴일',acChip);
@@ -5231,13 +5232,13 @@ function wlBody(c){
     else{ const A2=wlAcadAgg(m12), M=m=>A2.byM[m]||{n:0,talk:0,slack:0,night:0,hol:0,gap:acadGap([m])}, wt=m=>M(m).gap&&M(m).gap.none;
       const mm=m12.map(m=>wt(m)?null:M(m).n), mT=m12.map(m=>m<ACAD_CUT.slice(0,7)||m===ACAD_CUT.slice(0,7)?M(m).talk:null), mS=m12.map(m=>m>=ACAD_CUT.slice(0,7)?(wt(m)?null:M(m).slack):null);
       const C=acadCover(), inMix=c.p.months.includes(ACAD_CUT.slice(0,7))||m12.includes(ACAD_CUT.slice(0,7));
-      if(inMix) h+=`<div class="acadsw" role="note"><b>학술 응대 데이터 소스 전환</b> 2026.11.10 Sysmex Talk 종료 / 2026.11.11 Slack 집계 시작 — 2026년 11월은 두 소스 합(같은 날짜는 한 소스만 셈)</div>`;
+      if(inMix) h+=`<div class="acadsw" role="note"><b>학술 응대 데이터 소스 전환</b> ${ACAD_DOT(ACAD_TALK_END)}까지 Sysmex Talk / ${ACAD_DOT(ACAD_CUT)}부터 Slack 집계 — 2026년 11월은 두 소스 합(같은 날짜는 한 소스만 셈)</div>`;
       if(ac.gap&&ac.gap.wait) h+=`<p class="empty-note">${esc(acadGapTxt(ac.gap))}${ac.gap.wait!=='talk'?' — FS Portal 서버가 3시간마다 자동 반영합니다(연결 전이면 「학술요청 집계」 → 「KPI용 내보내기」 파일로도 올릴 수 있음).':''}</p>`;
       h+=`<div class="ovgrid dspair"><section class="ovcard"><h3>학술 응대 — 시간대 <span class="ovsub">${esc(c.p.label)}${ac.gap&&ac.gap.wait?' · 일부 기간 집계 대기':''}</span></h3>${ac.gap&&ac.gap.none?'<p class="empty-note">집계 대기</p>':dsBars([{n:'평일 주간',v:ac.day},{n:'평일 야간',v:ac.night},{n:'주말·공휴일',v:ac.hol}],{type:'bar',unit:'건',dec:0})}</section>
-        <section class="ovcard"><h3>월별 학술 응대 <span class="ovsub">최근 12개월 · 소스별</span></h3>${wlLine(m12,[{n:'합계',v:mm},{n:'Sysmex Talk(~11/10)',v:mT,c:'#84BAE5'},{n:'Slack(11/11~)',v:mS,c:'#5185C5'}],'건')}<p class="ovnote">빈 곳 = 집계 대기(0 아님) · Talk 글 수와 Slack 접수 건은 단위가 달라 전환 전후 증감은 비교하지 않습니다.</p></section></div>`;
+        <section class="ovcard"><h3>월별 학술 응대 <span class="ovsub">최근 12개월 · 소스별</span></h3>${wlLine(m12,[{n:'합계',v:mm},{n:'Sysmex Talk(~'+ACAD_MD(ACAD_TALK_END)+')',v:mT,c:'#84BAE5'},{n:'Slack('+ACAD_MD(ACAD_CUT)+'~)',v:mS,c:'#5185C5'}],'건')}<p class="ovnote">빈 곳 = 집계 대기(0 아님) · Talk 글 수와 Slack 접수 건은 단위가 달라 전환 전후 증감은 비교하지 않습니다.</p></section></div>`;
       const rows=m12.map(m=>{ const x=M(m), g=x.gap; return {c:[m.slice(2).replace('-','/'),m<=ACAD_TALK_END.slice(0,7)?wlF(x.talk):'-',m>=ACAD_CUT.slice(0,7)?(g&&g.wait&&g.wait!=='talk'&&g.none?'대기':wlF(x.slack)):'-',g&&g.none?'집계 대기':wlF(x.n),g&&g.wait?(g.none?'미연동':'일부 반영'):(m===ACAD_CUT.slice(0,7)?'두 소스 합':'')],cls:g&&g.none?'wlmut':''}; });
       h+=`<section class="ovcard" style="margin-top:14px"><h3>월별 소스·집계 상태 <span class="ovchip none">단위: 문의 응대 건수</span></h3>${wlTbl(['월','Sysmex Talk','Slack','합계','상태'],rows)}<p class="ovnote">수집 범위: Sysmex Talk ${C.talk?'~ '+C.talk.to:'자료 없음'} · Slack ${C.slack?ACAD_CUT+' ~ '+C.slack.to+(ACAD.slack&&ACAD.slack.auto?'(FS Portal 서버 자동 반영)':'(내보낸 날)'):'미연동'} · CRM 「학술 요청」(처리 건수)과 합산하지 않음</p></section>`;
-      h+=`<section class="ovcard" style="margin-top:14px"><h3>집계 기준 — 두 소스 비교 <span class="ovsub">같은 기준이 아니라 전환 전후 차이가 있음</span></h3><div class="acadtx">${wlTbl(['항목','Sysmex Talk (~2026.11.10)','Slack (2026.11.11~)'],[
+      h+=`<section class="ovcard" style="margin-top:14px"><h3>집계 기준 — 두 소스 비교 <span class="ovsub">같은 기준이 아니라 전환 전후 차이가 있음</span></h3><div class="acadtx">${wlTbl(['항목','Sysmex Talk (~'+ACAD_DOT(ACAD_TALK_END)+')','Slack ('+ACAD_DOT(ACAD_CUT)+'~)'],[
         {c:['세는 단위','「학술」이 들어간 업무 방 글 1개 = 1건(한 문의에 글이 여럿이면 여러 건)','요청 채널(CSO·CS쉐어링) 맨 위 글 1개 = 1건, 스레드 답글은 세지 않음 · 한 글에 접수가 여럿인 묶음 글은 접수마다']},
         {c:['학술 판정','글에 「학술」 단어','양식 <학술요청>·「학술 요청/문의」 말(FS Portal 판정) — 기술요청·일반 대화·공지 제외']},
         {c:['시각','글 작성 시각(평일 09시 전 글은 전날 밤 응대로 야간)','Slack 접수 시각(08~18시 = 주간)']},
@@ -5376,7 +5377,7 @@ function rerender(){
    계산 없음 — 화면에 보이는 표·핵심 숫자·막대 목록을 그대로 옮기고, 그래프(canvas·svg)는 그림으로. 「접힌 상세 포함」이면 접힌 상세를 잠깐 펼쳐서 함께 */
 const VIEW_NAME={ov:'Overview',sq:'Service Quality',org:'Organization',wl:'Workload',eqp:'Instrument',pro:'Proactive Service'};
 function xMeta(){ const p=curPeriod(), pp=prevPeriod(p), t=$('fTeam').value||'FSG 전체', mm=p.months.filter(m=>D.months.includes(m));
-  const src=['CRM 「모든 약속/활동」'].concat(SERIAL?['자산대장']:[],EQD?['FSR 담당기관 관리표']:[],HRDATA?['인사 연장근무']:[],typeof ACAD!=='undefined'&&ACAD?['학술 응대: Sysmex Talk ~2026-11-10 · Slack 2026-11-11~'+(ACAD.slack&&ACAD.slack.made?'(Slack '+ACAD.slack.made+'까지)':'(Slack 미연동)')]:[]).join(' · ');
+  const src=['CRM 「모든 약속/활동」'].concat(SERIAL?['자산대장']:[],EQD?['FSR 담당기관 관리표']:[],HRDATA?['인사 연장근무']:[],typeof ACAD!=='undefined'&&ACAD?['학술 응대: Sysmex Talk ~'+ACAD_TALK_END+' · Slack '+ACAD_CUT+'~'+(ACAD.slack&&ACAD.slack.made?'(Slack '+ACAD.slack.made+'까지)':'(Slack 미연동)')]:[]).join(' · ');
   return {view:VIEW_NAME[VIEW]||VIEW, period:p.label, months:pp.cur||(mm.length?mm[0]+' ~ '+mm[mm.length-1]:'-'), cmp:pp.rng?pp.label.replace(/\(.*\)/,'')+' '+pp.rng+(VIEW==='org'?' · 조직·개인 표는 전월 한 달 전체':''):pp.label+' ('+(pp.months[0]||'-')+' ~ '+(pp.months[pp.months.length-1]||'-')+')', team:t, cut:(D&&D.excl&&D.excl.cut)||'-', src,
     kind:window.__SYNTH?'합성 데이터(테스트용 · 실제 값 아님)':'실데이터(대시보드에 올린 자료)', det:!!($('xDet')&&$('xDet').checked), at:new Date().toISOString().slice(0,16).replace('T',' ')}; }
 function xVisible(el){ if(!el||el.closest('#lock,#upl,.appbar,header.top,#svcBar,#prodBar,.vtabs')) return false; const r=el.getClientRects(); return r.length>0&&getComputedStyle(el).visibility!=='hidden'; }
