@@ -353,6 +353,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 #prod .pfoot{margin-top:22px;font-size:12px;color:var(--muted)}
 #prod .hint#periodHint{font-size:12px;color:var(--muted)}
 #prod #globalControls{display:none}
+#prod.pfold>:not(#prodTitle):not(#prodSec){display:none!important}
 #prodBar[hidden],.f[hidden]{display:none}
 #prodBar .rng{display:flex;gap:6px;align-items:center}
 #prodBar .rng select{min-width:110px}
@@ -4264,9 +4265,15 @@ function renderProd(){
   } else if(window.__prodRender) window.__prodRender();
   prodTitle();
 }
+const ORG_DET_LS='fsg-kpi-orgdet';
+function orgDetOpen(v){ try{ if(v!==undefined){ localStorage.setItem(ORG_DET_LS,v?'1':'0'); return v; } return localStorage.getItem(ORG_DET_LS)==='1'; }catch(e){ return !!v; } }
 function prodTitle(){
   const el=$('prodTitle'), sec=$('prodSec'); if(!el||!PROD) return;
-  if(sec){ const h={org:['상세 분석 — 팀 · 개인','선택한 팀·사무소 상세, 개인 순위·개인별 상세·개인별 담당 장비 · 개인 값은 맡은 업무의 양과 종류이며 성과 평가가 아님'],eqp:['담당 장비 현황','담당기관 관리표 기준 · 현재 시점 · 사람별·1인당 장비는 Organization'],wl:['근무 시간 · 이동 (사람 기준)','야간 OT·휴일 근무 = CRM 기록·인사 연장근무 기준 — 근무 종료가 WEST·EAST 17시·CENTRAL·SOUTH 18시라 위 방문 시간대(08~18시)와 기준이 다릅니다']}[VIEW]; sec.innerHTML=h?h[0]+' <small>'+h[1]+'</small>':''; sec.hidden=!h; }
+  if(sec){ const h={org:['상세 분석 — 팀 · 개인','선택한 팀·사무소 상세, 개인 순위·개인별 상세·개인별 담당 장비 · 개인 값은 맡은 업무의 양과 종류이며 성과 평가가 아님'],eqp:['담당 장비 현황','담당기관 관리표 기준 · 현재 시점 · 사람별·1인당 장비는 Organization'],wl:['근무 시간 · 이동 (사람 기준)','야간 OT·휴일 근무 = CRM 기록·인사 연장근무 기준 — 근무 종료가 WEST·EAST 17시·CENTRAL·SOUTH 18시라 위 방문 시간대(08~18시)와 기준이 다릅니다']}[VIEW]; sec.innerHTML=h?h[0]+' <small>'+h[1]+'</small>':''; sec.hidden=!h;
+    /* v3.1(2026-11-16): Organization 상세 분석(개인 순위·KPI 점수·직급 보정·개인별 담당 장비)은 기본 접힘, 펼침 상태는 기기에 기억 */
+    const pr=$('prod'), fold=VIEW==='org'&&!orgDetOpen(); if(pr) pr.classList.toggle('pfold',fold);
+    if(h&&VIEW==='org'){ sec.insertAdjacentHTML('beforeend',`<span class="ovtools"><button type="button" class="dsbtn" id="prodFoldBtn" aria-expanded="${!fold}" aria-controls="prod">${fold?'상세 분석 펼치기':'접기'}</button></span>`);
+      $('prodFoldBtn').onclick=()=>{ orgDetOpen(!orgDetOpen()); prodTitle(); }; } }
   if(VIEW!=='prd'){ el.innerHTML=''; return; }
   const S=prodSelection(), n=Object.keys(PROD.person||{}).length;
   el.innerHTML=`<div><h2>Productivity</h2><p>${esc(S.label)} · 비교 ${esc(S.cmpLabel)} · 직원 ${n}명 · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}${SRC&&SRC.at?' · 마지막 업데이트 '+esc(SRC.at):''}${S.prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div>`;
@@ -4565,7 +4572,7 @@ function renderOrgTop(p,team,pp,prov,scope){
   dsTitle('orgTitle','Organization',p,scope,pp.label,prov);
   orgSync(); const rows=orgTree(), avg=orgAvg(), T=rows.filter(r=>!r.off), F=orgFsg(orgRows('team'));
   const K=k=>OV_K.find(x=>x.k===k), f1=v=>v==null?'-':v.toFixed(1), f0=v=>v==null?'-':fmt(Math.round(v));
-  $('orgTopSub').textContent=`${p.label} · 팀을 누르면 사무소로 나뉩니다 · 1인당 값은 팀장(장비)·팀장·신입(건수) 제외`;
+  $('orgTopSub').textContent=`처리 건수 = ${p.label} · 담당 장비 = 현재 담당기관 관리표${EQD&&EQD.made?' ('+EQD.made+')':''} 기준(담당자 없는 장비 제외) · 1인당 값은 팀장(장비)·팀장·신입(건수) 제외`;
   orgAllBtn('orgAllBtn');
   /* ① 상단 KPI 4칸 — 고른 팀·사무소(없으면 FSG) */
   const S=ORG.sel?rows.find(r=>r.k===ORG.sel)||orgRows('office').find(r=>r.k===ORG.sel):null, X=S?{eq:S.eq,eqInst:S.eqInst,eqh:S.eqh,e100:S.e100,cnt:S.cnt,per:S.per,np:S.nPeople,hc:S.hc}:F, who=S?S.n:'FSG 전체';
@@ -4619,7 +4626,7 @@ function orgScatter(){
   box.innerHTML=`<div class="ogscw"><div class="cv ogsc"><canvas id="cOrgSc" role="img" aria-label="담당 장비 수와 ${yl}의 관계. 오른쪽 표와 같은 숫자입니다."></canvas></div>${side}</div>
     <div class="dsleg ogscleg"><span><i style="background:${ORGSC_C.good}"></i>${ko.n} 달성</span><span><i style="background:${ORGSC_C.warn}"></i>근접</span><span><i style="background:${ORGSC_C.bad}"></i>미달</span><span><i style="background:${ORGSC_C.none}"></i>자료 없음</span><span>점 크기 = 인원</span></div>
     <p class="ovnote">담당 장비: 현재 관리표 기준 / 처리 건수: 선택 기간 기준. 시점이 다른 데이터의 참고 비교입니다.</p>
-    <p class="ovnote">${qon?`점선 = ${UW} 중앙값(담당 장비 ${Math.round(mx)}대 · ${ORGSC.y==='cnt'?'처리 건수 '+Math.round(my)+'건':'1인당 처리 건수 '+my.toFixed(1)+'건'}). 위치를 견주는 기준이며 과부하·인력 부족을 판정하는 값이 아닙니다. `:''}담당 장비가 없는 ${UN} 점을 그리지 않습니다(0으로 넣지 않음). 점을 누르면 그 ${UI} 선택되고 아래 「상세 분석」에 나옵니다.</p>`;
+    <p class="ovnote">${qon?`점선 = ${UW} 중앙값(담당 장비 ${Math.round(mx)}대 · ${ORGSC.y==='cnt'?'처리 건수 '+Math.round(my)+'건':'1인당 처리 건수 '+my.toFixed(1)+'건'}). 위치를 견주는 기준이며 과부하·인력 부족을 판정하는 값이 아닙니다. `:''}담당 장비가 없는 ${UN} 점을 그리지 않습니다(0으로 넣지 않음). 점을 누르면 그 ${UI} 선택되고 아래 「상세 분석」(펼치기)에 나옵니다.</p>`;
   box.querySelectorAll('.ogsct tr[data-k]').forEach(t=>{ t.onclick=()=>orgPick(t.dataset.k); t.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); orgPick(t.dataset.k); } }; });
   const quad={id:'orgq',afterDatasetsDraw(c){ const {ctx,chartArea:a,scales:{x,y}}=c, px=x.getPixelForValue(mx), py=y.getPixelForValue(my); ctx.save();
       const wide=a.right-a.left>=520;
