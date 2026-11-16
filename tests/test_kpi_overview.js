@@ -104,11 +104,11 @@ assert(/function mPred\(months\)/.test(html) && /전월 동기간\(/.test(html) 
 /* v3.4: Overview 순서 KPI → 추이·이슈 → 운영 장비, 임원보고 2쪽(같은 값 재사용), 유효 운영 0이면 「–」 */
 { const ov=html.slice(html.indexOf('function renderOv(){')); const a=ov.indexOf('id="ovKpi"'), b=ov.indexOf('ovg-a'), c=ov.indexOf('${ovEquipCard()}');
   assert(a>0&&b>a&&c>b, 'v3.4 Overview 순서'); assert(/class="rptbrk"/.test(html)&&/Management Issues/.test(html)&&/1 \/ 2/.test(html)&&/2 \/ 2/.test(html), 'v3.4 임원보고 2쪽 구성');
-  assert(/CRM 이력과 맞는 장비 없음/.test(html), 'v3.4 유효 운영 0 처리'); }
+  }
 
 /* v3.8 Overview 간소화 · 임원보고 2쪽 */
 { const fn=html.slice(html.indexOf('function ovEquipCard('),html.indexOf('function renderOv('));
-  assert(/sel=\(OV_EQF&&o\.fld\[OV_EQF\]\)\?OV_EQF:null/.test(fn) && /\$\{sel\?detOf\(sel\):''\}/.test(fn), 'v3.8 운영 장비: 모델 구성은 분야를 누를 때만');
+  assert(/sel=\(OV_EQF&&B\.fld\[OV_EQF\]\)\?OV_EQF:null/.test(fn) && /\$\{sel\?detOf\(sel\):''\}/.test(fn), 'v3.8 운영 장비: 모델 구성은 분야를 누를 때만');
   assert(!/rptstk/.test(fn), 'v3.8 보고서에 장비 모델 상세 없음');
   const ops=html.slice(html.indexOf('function rptOps('),html.indexOf('function renderOv('));
   assert(/orgRows\('team'\)/.test(ops) && /wlAgg\(/.test(ops) && /cur\.total/.test(ops) && /OV_ACT/.test(ops), 'v3.8 2쪽은 기존 결과(stats·Workload·Organization·업무 유형)만 읽음');
@@ -120,3 +120,23 @@ assert(/function mPred\(months\)/.test(html) && /전월 동기간\(/.test(html) 
 { const fn=html.slice(html.indexOf('function prevPeriod('),html.indexOf('/* ===== 집계 ====='));
   assert(/inProg=p\.partial&&upto\.includes\(last\)/.test(fn)&&/months\.tTo=Date\.UTC\(y,mo-1,dd\+1\)/.test(fn),'진행 중 다개월 기간 동기간 비교');
   assert(/yoy\.months\[yoy\.months\.length-1\]/.test(html),'Workload 전년 비교는 마지막 달 기준으로 자름'); }
+
+/* 2026-11-16 사용자 결정 「장비 기준으로 통일」: Overview 운영 장비 = 담당기관 관리표 장비(Organization·Instrument 담당 장비와 같은 값), 미지정은 명단 밖 담당자 */
+{ const a=html.indexOf('const EQB_FLD='), b=html.indexOf('function eqOutside(');
+  const env=`const ROSTER=[['테스트1','FS WEST'],['테스트2','FS EAST']]; const wlTeam=n=>({'테스트1':'FS WEST','테스트2':'FS EAST'})[n]||null; const EQ_FIELD={'XN':'CBC','UF':'유린','CN':'응고','HISCL':'면역'}; let EQD=null;`;
+  const api=new Function(env+html.slice(a,b)+';return {eqBase,set EQD(v){EQD=v;}};')();
+  api.EQD={made:'2026-11-04',rows:[['테스트1','가 병원','서울',10,0,0,0,6,2,1,1,{XN:6,UF:2,CN:1,HISCL:1}],['테스트2','나 병원','경기',5,0,0,0,5,0,0,0,{XN:5}],['','다 의원','부산',3,0,0,0,3,0,0,0,{XN:3}],['대리점','라 센터','대구',2,0,0,0,0,2,0,0]]};
+  const B=api.eqBase();
+  assert(B.total===20&&B.asg===15&&B.un===5&&B.inst===4&&B.instAsg===2, '관리표 장비 합계·담당 지정·미지정 '+JSON.stringify([B.total,B.asg,B.un]));
+  assert(B.fsum===B.total&&B.fld.CBC===14&&B.fld['유린']===4, '분야 합계 = 장비');
+  assert(B.fldTeam.CBC['FS WEST']===6&&B.fldTeam.CBC['담당 미지정']===3&&B.fam.CBC.XN===14, '분야 구성(팀·장비군)');
+  assert(B.unRows.length===2&&B.unRows[0].eq===3, '미지정 목록 장비 많은 순');
+  const fn=html.slice(html.indexOf('function ovEquipCard('),html.indexOf('/* v3.8 임원보고 2쪽'));
+  assert(/eqBase\(\)/.test(fn)&&/ADMIN\?/.test(fn)&&/rptno/.test(fn), '관리자에게만 정비 목록');
+  assert(/body\.rpt #ov \.oveqadm,body\.pdfx \.oveqadm\{display:none!important\}/.test(html), '보고서·PDF 에 기관명 목록 없음');
+  const ops=html.slice(html.indexOf('function rptOps('),html.indexOf('function renderOv('));
+  assert(/eqBase\(\)/.test(ops)&&!/opEquip\(\)/.test(ops), '보고서 2쪽 장비도 관리표 기준'); }
+
+/* 2026-11-16: 기간을 바꾸면 PROD 를 다시 계산한 뒤 그림(한 번 늦게 바뀌던 것) */
+{ const i=html.indexOf("$('fPeriod').addEventListener('change',()=>{ PROD_DIRTY=true; rerender(); });"); assert(i>0, '기간 변경 → PROD_DIRTY 먼저');
+  assert(!/\['fPeriod','fTeam'\]\.forEach\(id=>\$\(id\)\.addEventListener\('change',\(\)=>rerender\(\)\)\)/.test(html), '예전 처리기 없음'); }
