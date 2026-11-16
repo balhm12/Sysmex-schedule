@@ -20,8 +20,10 @@ assert(/VIEW_ALIAS=\{[^}]*prd:'org'/.test(html), '예전 저장값 prd 는 Organ
 assert(!html.includes('id="vtPrd"'), 'Productivity 탭 버튼이 없어야 함');
 assert(/org:\{[^}]*tabs:\['team','overview','person','equip'\]/.test(html), 'Organization 상세 분석 하위 탭');
 assert(html.includes('id="cOrgSc"') && /type:'bubble'/.test(html), '담당 장비 × 업무량 거품 그림');
-assert(/function orgExt[\s\S]{0,400}eqAgg\(PROD\.eq\.by/.test(html) && /function orgVisits[\s\S]{0,300}wlVisits\(D\.rows\)/.test(html), '조직 장비·특수업무는 기존 함수(eqAgg·wlVisits)를 씀');
-assert(html.includes('과부하 여부를 판정하지 않습니다'), '사분면 해석 주의 문구');
+assert(/function orgExt[\s\S]{0,400}eqAgg\(PROD\.eq\.by/.test(html), '조직 담당 장비는 기존 함수(eqAgg)를 씀');
+assert(html.includes('담당 장비: 현재 관리표 기준 / 처리 건수: 선택 기간 기준. 시점이 다른 데이터의 참고 비교입니다.'), '산점도 주석 (작업지시서 v2)');
+assert(/orgRows\('office'\)\.filter\(r=>r\.eq&&/.test(html) && html.includes('사무소 중앙값'), '산점도 = 사무소만, 기준선 = 사무소 중앙값');
+assert(html.includes('장비 100대당 처리 건수') && !html.includes('장비 100대당 서비스 발생'), '지표 이름 = 장비 100대당 처리 건수');
 const sv = between('function setView(v){', 'function showMain');
 assert(sv.includes('rerender()') && sv.includes('scr-off'));
 assert(between('function rerender(){', 'function showMain').includes('renderOv()'));
