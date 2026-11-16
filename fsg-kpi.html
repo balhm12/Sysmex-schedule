@@ -820,6 +820,8 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
 .oveqdet{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
 @media (pointer:coarse){.oveqlgb{min-height:44px}}
 @media (max-width:760px){.oveqst.s{display:none}.oveqbar{height:30px}}
+.oveqdet.alt{display:none}
+@media print{body.pdfx .oveqdet.alt{display:block}body.pdfx .oveqseg{opacity:1;box-shadow:none}body.pdfx .ovequip{break-inside:auto}}
 </style>
 </head>
 <body>
@@ -4466,7 +4468,7 @@ let OV_EQF=null;
 function opEquip(){ if(!SERIAL||!D) return null; const end=D.months[D.months.length-1], ms=last12Set(end), touched=new Set();
   D.rows.forEach(o=>{ if(ms.has(o.mk)&&o.sn&&o.acct) touched.add(o.sn+'|'+o.acct); });
   const used=SERIAL.filter(x=>x.state==='사용'&&x.sn&&x.acct), fam={}, famV={}, acc=new Set(), accV=new Set(); let valid=0;
-  const etcM={}, fld={}; used.forEach(x=>{ const f=famOf(x.model), v=touched.has(x.sn+'|'+x.acct), F=eqField(x.model), d=f==='기타'?((x.model||'').trim().split(/[\s/]/)[0]||'(모델 미기재)'):f, Z=fld[F]||(fld[F]={n:0,v:0,d:{}}); Z.n++; if(v) Z.v++; Z.d[d]=(Z.d[d]||0)+1; fam[f]=(fam[f]||0)+1; acc.add(x.acct); if(f==='기타'){ const k=(x.model||'(모델 미기재)').trim()||'(모델 미기재)'; etcM[k]=(etcM[k]||0)+1; } if(v){ valid++; famV[f]=(famV[f]||0)+1; accV.add(x.acct); } });
+  const etcM={}, fld={}; used.forEach(x=>{ const f=famOf(x.model), v=touched.has(x.sn+'|'+x.acct), F=eqField(x.model), d=f==='기타'?(((x.model||'').toUpperCase().match(/\b[A-Z]{1,5}-?\d{1,5}[A-Z]?\b/)||[])[0]||(x.model||'').trim().split(/[\s/]/)[0]||'(모델 미기재)'):f, Z=fld[F]||(fld[F]={n:0,v:0,d:{}}); Z.n++; if(v) Z.v++; Z.d[d]=(Z.d[d]||0)+1; fam[f]=(fam[f]||0)+1; acc.add(x.acct); if(f==='기타'){ const k=(x.model||'(모델 미기재)').trim()||'(모델 미기재)'; etcM[k]=(etcM[k]||0)+1; } if(v){ valid++; famV[f]=(famV[f]||0)+1; accV.add(x.acct); } });
   return {reg:used.length, valid, fam, famV, acc:acc.size, accV:accV.size, etcM, fld, end}; }
 function opEquipLine(){ const o=opEquip(), eq=EQD&&EQD.rows?EQD.rows.reduce((a,r)=>a+(+r[3]||0),0):null;
   return (o?`자산대장 운영 장비 ${fmt(o.reg)}대(최근 12개월 서비스 이력 ${fmt(o.valid)}대)`:'자산대장 미등록')+' · '+(eq!=null?`FSR 관리표 담당 장비 ${fmt(eq)}대`:'관리표 미등록')+' — 두 숫자는 기준이 다릅니다'; }
@@ -4476,9 +4478,11 @@ function ovEquipCard(){ const o=opEquip();
   const F=EQ_FLD.filter(([k])=>o.fld[k]&&o.fld[k].n), sel=(OV_EQF&&o.fld[OV_EQF])?OV_EQF:(F.slice().sort((a,b)=>o.fld[b[0]].n-o.fld[a[0]].n)[0]||[''])[0];
   const segs=F.map(([k,c])=>{ const z=o.fld[k], pct=z.n*100/o.reg; return `<button type="button" class="oveqseg${k===sel?' on':''}" data-f="${k}" aria-pressed="${k===sel}" style="width:${pct}%;background:${c}" title="${k} ${fmt(z.n)}대 (${pct.toFixed(1)}%) · 12개월 이력 ${fmt(z.v)}대 — 누르면 세부">${pct>=7?`<span class="oveqst${pct<16?' s':''}">${k} ${Math.round(pct)}%</span>`:''}</button>`; }).join('');
   const lg=F.map(([k,c])=>`<button type="button" class="oveqlgb${k===sel?' on':''}" data-f="${k}"><b style="background:${c}"></b>${k} ${fmt(o.fld[k].n)}대</button>`).join('');
-  const Z=o.fld[sel]||{n:0,d:{}}, dk=Object.keys(Z.d).sort((a,b)=>Z.d[b]-Z.d[a]), mxv=Math.max(1,...dk.map(k=>Z.d[k])), col=(EQ_FLD.find(x=>x[0]===sel)||['','#005BAC'])[1];
-  const det=dk.slice(0,8).map(k=>`<div class="oveqr"><span class="oveqk" title="${esc(k)}">${esc(k.replace(/-Series$|( Series)$/,''))}</span><span class="oveqt"><i style="width:${(Z.d[k]*100/mxv).toFixed(1)}%;background:${col}"></i></span><span class="oveqv">${fmt(Z.d[k])}대 <small>${(Z.d[k]*100/(Z.n||1)).toFixed(0)}%</small></span></div>`).join('')+(dk.length>8?`<p class="ovnote" style="margin:2px 0 0">그 밖 ${dk.length-8}종 ${fmt(dk.slice(8).reduce((a,k)=>a+Z.d[k],0))}대</p>`:'');
-  const bar=`<div class="oveqbar" role="group" aria-label="분야별 구성 — 누르면 세부">${segs}</div><div class="oveqlg">${lg}</div><div class="oveqdet"><span class="ovl" style="font-size:12.5px">${esc(sel)} 세부 <span class="ovsub">${fmt(Z.n)}대 · 분야 안 비율</span></span><div class="oveqrs" style="--rows:${Math.ceil(Math.min(dk.length,8)/2)}">${det}</div></div>`;
+  /* 세부: 화면은 고른 분야만, PDF(인쇄)는 모든 분야를 펼쳐서(2026-11-16 사용자 「PDF는 분야로 보고 펼쳐지는 형태」) */
+  const detOf=k=>{ const Z=o.fld[k]||{n:0,d:{}}, dk=Object.keys(Z.d).sort((a,b)=>Z.d[b]-Z.d[a]), mxv=Math.max(1,...dk.map(x=>Z.d[x])), col=(EQ_FLD.find(x=>x[0]===k)||['','#005BAC'])[1];
+    const rows=dk.slice(0,8).map(x=>`<div class="oveqr"><span class="oveqk" title="${esc(x)}">${esc(x.replace(/-Series$|( Series)$/,''))}</span><span class="oveqt"><i style="width:${(Z.d[x]*100/mxv).toFixed(1)}%;background:${col}"></i></span><span class="oveqv">${fmt(Z.d[x])}대 <small>${(Z.d[x]*100/(Z.n||1)).toFixed(0)}%</small></span></div>`).join('')+(dk.length>8?`<p class="ovnote" style="margin:2px 0 0">그 밖 ${dk.length-8}종 ${fmt(dk.slice(8).reduce((a,x)=>a+Z.d[x],0))}대</p>`:'');
+    return `<div class="oveqdet${k===sel?'':' alt'}" data-f="${k}"><span class="ovl" style="font-size:12.5px">${esc(k)} 세부 <span class="ovsub">${fmt(Z.n)}대 · 분야 안 비율</span></span><div class="oveqrs" style="--rows:${Math.ceil(Math.min(dk.length,8)/2)}">${rows}</div></div>`; };
+  const bar=`<div class="oveqbar" role="group" aria-label="분야별 구성 — 누르면 세부">${segs}</div><div class="oveqlg">${lg}</div>${detOf(sel)}${F.filter(([k])=>k!==sel).map(([k])=>detOf(k)).join('')}`;
   return `<section class="ovcard ovequip" style="margin:0 0 14px" aria-labelledby="ovh7"><h3 id="ovh7">운영 장비 현황 <span class="ovsub">자산대장 상태 「사용」 기준 · FSG 전체(팀 필터와 무관)</span><span class="ovtools"><button type="button" class="dsbtn" id="ovEqGo">Instrument 상세 ›</button></span></h3>
     <div class="oveq"><div class="oveqn"><div><span class="ovl">등록 장비</span><span class="ovv">${fmt(o.reg)}<small>대</small></span></div><div><span class="ovl">유효 운영</span><span class="ovv">${fmt(o.valid)}<small>대</small></span><span class="ovs">12개월 서비스 이력 · ${o.reg?Math.round(o.valid*100/o.reg):0}%</span></div><div><span class="ovl">거래처</span><span class="ovv">${fmt(o.acc)}<small>곳</small></span><span class="ovs">이력 있는 곳 ${fmt(o.accV)}</span></div></div>
     <div class="oveqb"><span class="ovl">분야별 구성 <span class="ovsub">등록 기준 100% · 분야를 누르면 세부 장비</span></span>${bar}</div></div>
