@@ -3092,12 +3092,19 @@ function curPeriod(){
   return {id:'custom',kind:'custom',grp:'기간 지정',label:`${a.replace('-','.')} ~ ${b.replace('-','.')} (${months.length}개월)`,months,partial};
 }
 function syncRange(){ const c=$('fPeriod').value==='custom'; $('fRange').hidden=!c; $('pRange').hidden=!c; }
+/* 기간 판정 — months 배열에 tTo(그 시각 전까지, 벽시계 ms)가 있으면 그 달은 그날까지만(전월 동기간) */
+function mPred(months){ const ms=new Set(months), tTo=months&&months.tTo; return tTo? (mk,t)=>ms.has(mk)&&(t==null||t<tTo) : (mk)=>ms.has(mk); }
 function prevPeriod(p){
   /* 비교 기간: 월→전월, 분기→전 분기, 반기→전 반기, 연→전년 같은 기간. 진행 중인 기간은 데이터가 있는 달까지만 같은 길이로 비교 */
   const last=D.months[D.months.length-1], upto=p.months.filter(m=>m<=last), n=p.months.length;
   const back=p.kind==='fy'?12:n;
   const months=(p.partial&&p.kind!=='m'?upto:p.months).map(m=>shiftMonth(m,-back));
-  const label=({m:p.partial?'전월(한 달 전체)':'전월',q:'전 분기',h:'전 반기',fy:'전년 동기',custom:'직전 같은 기간'}[p.kind]||'직전 기간');   /* v3.2: 진행 중인 달은 전월 한 달 전체와 비교됨을 이름에 표시(계산은 그대로) */
+  /* v3.2(2026-11-16 결정): 진행 중인 달은 「전월 동기간」(1일 ~ 자료 마지막 날과 같은 날). 전월이 더 짧으면 그 달 말일까지(실제 범위를 표시). 마감된 달은 한 달 전체 */
+  if(p.kind==='m'&&p.partial&&months.length===1){ const day=new Date(D.maxT).getUTCDate(), [y,mo]=months[0].split('-').map(Number), dim=new Date(Date.UTC(y,mo,0)).getUTCDate(), dd=Math.min(day,dim);
+    months.tTo=Date.UTC(y,mo-1,dd+1); months.rng=`${y}.${String(mo).padStart(2,'0')}.01~${String(mo).padStart(2,'0')}.${String(dd).padStart(2,'0')}`;
+    const cy=p.months[0].split('-'); months.cur=`${cy[0]}.${cy[1]}.01~${cy[1]}.${String(day).padStart(2,'0')}`;
+    return {months,label:`전월 동기간(${mo}/1~${dd})`,rng:months.rng,cur:months.cur}; }
+  const label=({m:'전월',q:'전 분기',h:'전 반기',fy:'전년 동기',custom:'직전 같은 기간'}[p.kind]||'직전 기간');   /* v3.2: 진행 중인 달은 전월 한 달 전체와 비교됨을 이름에 표시(계산은 그대로) */
   return {months,label};
 }
 
@@ -3109,9 +3116,9 @@ function prevPeriod(p){
 function stats(months, team){
   /* 건수·MTTR = 인정 인원 수만큼(담당자+필수 참석자, 로스터 인원) — 부서원 탭과 같은 기준.
      팀을 고르면 그 팀 인원 몫만 센다. 재방문율·FTFR = kpiCore 거래처 평균. */
-  const ms=new Set(months); const s={total:0,rep:0,pm:0,cal:0,calR:0,durS:0,durN:0,repD:0,pmD:0,instD:0,calD:0,repRows:0};
+  const inP=mPred(months); const s={total:0,rep:0,pm:0,cal:0,calR:0,durS:0,durN:0,repD:0,pmD:0,instD:0,calD:0,repRows:0};
   for(const o of D.rows){
-    if(!ms.has(o.mk)) continue;
+    if(!inP(o.mk,o.t)) continue;
     const n=team? o.cteams.filter(t=>t===team).length : o.credits.length;
     if(o.purp==='고장 수리'&&(!team||o.atm===team)) s.repRows++;
     if(!n) continue;
@@ -3123,7 +3130,7 @@ function stats(months, team){
     else if(o.purp==='원격 Calibration') s.calR+=n;
   }
   s.idx = s.pm+s.rep? s.pm/(s.pm+s.rep)*100 : null;
-  const rv=D.core.revisitAvg(x=>ms.has(mkey(x.t)), team);
+  const rv=D.core.revisitAvg(x=>inP(mkey(x.t),x.t), team);
   s.ftfr = rv.ftfr; s.rev = rv.revisit; s.rvAccts = rv.accounts;
   s.mttr = s.durN? s.durS/s.durN : null;
   s.hasData = months.some(m=>D.months.includes(m));
@@ -3339,8 +3346,8 @@ function renderOrg(p, team){
   $('orgSub').textContent=`FSG 로스터 ${ROSTER_DATE} 시행 기준 · 카드를 누르면 그 팀만 봅니다`;
 }
 function serStats(months, team, sn){
-  const ms=new Set(months); let n=0,f=0,d=0; const units=new Set();
-  for(const o of D.rows){ if(!ms.has(o.mk)) continue; if(o.purp!=='고장 수리'&&o.purp!=='PM') continue; if(team&&o.atm!==team) continue; if(sn&&o.ser!==sn) continue;
+  const inP=mPred(months); let n=0,f=0,d=0; const units=new Set();
+  for(const o of D.rows){ if(!inP(o.mk,o.t)) continue; if(o.purp!=='고장 수리'&&o.purp!=='PM') continue; if(team&&o.atm!==team) continue; if(sn&&o.ser!==sn) continue;
     if(o.rec) d++;
     if(o.purp==='고장 수리'){ n++; if(o.rec){ f+=o.rv; units.add(o.sn+'|'+o.acct);} } }
   return {n,f,u:units.size,r:d?f/d*100:null};
@@ -3659,7 +3666,7 @@ function insUnits(){
 function insOffice(x){ const r=PROD_ROSTER.find(r=>r[0]===x.own); return r?UNIT_SHORT(r[1]):([...x.teams][0]||'-').replace(/^FS\s*/,''); }
 function renderInstall(p, team){
   if(!D) return; const ms=new Set(p.months), pp=prevPeriod(p), pms=new Set(pp.months), U=insUnits();
-  const inT=x=>!team||x.atm===team, cu=U.filter(x=>ms.has(x.mk)&&inT(x)), pu=U.filter(x=>pms.has(x.mk)&&inT(x));
+  const inT=x=>!team||x.atm===team, cu=U.filter(x=>ms.has(x.mk)&&inT(x)), pu=U.filter(x=>mPred(pp.months)(x.mk,x.t)&&inT(x));
   const ins=a=>a.filter(x=>x.kind==='설치');
   const ev=ins(cu).filter(x=>x.sn), f90=ev.filter(x=>x.f90>0).length, part=ev.filter(x=>x.part).length;
   /* 예정: 오늘 ~ 한 달 뒤(진행 중 포함). 팀 = 일정표 담당팀(비어 있으면 전체에서만 보임) */
@@ -4306,7 +4313,9 @@ function prodSelection(){
   const p=curPeriod(), pp=prevPeriod(p);
   const sel=p.months, cmp=pp.months, rng=a=>a.length>1?`${dotMk(a[0])} ~ ${dotMk(a[a.length-1])}`:(a[0]?dotMk(a[0]):'-');
   const inData=sel.filter(m=>ms.includes(m)), end=inData.length?inData[inData.length-1]:last;
-  return {sel,cmp,label:p.label,cmpLabel:`${rng(cmp)} (${pp.label})`,short:pp.label+' 대비',end,
+  /* 조직·개인(buildProdData, 월간보고 엔진과 같은 계산)은 월 단위라 진행 중인 달도 전월 한 달 전체와 비교 — 이름에 그대로 적는다 */
+  const pl=cmp.tTo?'전월 전체(조직·개인 비교는 월 단위)':pp.label;
+  return {sel,cmp,label:p.label,cmpLabel:`${rng(cmp)} (${pl})`,short:(cmp.tTo?'전월 전체':pp.label)+' 대비',end,
     trend:rangeMk(shiftMonth(end,-11),end),prov:inData.length?isProvisional(inData):false};
 }
 let PROD_SHOWN=false;
@@ -4444,14 +4453,16 @@ function ovChronic(end,team){
   const cut=D.maxT-90*DAY; return {chronic:keys.length, risk:SERIAL?keys.filter(k=>last[k]>=cut).length:null};
 }
 /* v3.1 PR3: 확인이 필요한 곳 — 탭마다 기존 계산을 그대로 읽어 이슈를 모으고, 누르면 그 탭으로(팀 필터 전달, 팀 단위가 없는 자료는 FSG 전체) */
+/* 「확인이 필요한 곳」 판단 기준(2026-11-16 1차 운영 기준 확정) — 바꾸려면 여기만 */
+const OV_ISS={incRate:0.2, incAbs:10, focus:1.2};
 function ovIssues(p,pp){
-  const L=[], inc=(c,v)=>v!=null&&c!=null&&c-v>=10&&v>0&&(c-v)/v>=0.2, pc=(c,v)=>'+'+Math.round((c-v)*100/v)+'%';
+  const L=[], inc=(c,v)=>v!=null&&c!=null&&v>0&&c-v>=OV_ISS.incAbs&&(c-v)/v>=OV_ISS.incRate, pc=(c,v)=>'+'+Math.round((c-v)*100/v)+'%';
   TEAMS.forEach(t=>{ const s=stats(p.months,t), sp=stats(pp.months,t);
     OV_K.slice(0,3).forEach(o=>{ const v=s[o.k], st=ovSt(o,v); if(st.st==='bad'||st.st==='warn') L.push({sev:st.st==='bad'?0:2,chip:st.chip,cc:st.st,t:`${t} ${o.n} ${ovF(o,v)}${o.u}`,s:'목표 '+o.tl(),v:'sq',team:t,vl:'Service Quality'}); });
     if(inc(s.total,sp.total)) L.push({sev:3,chip:'증가',cc:'none',t:`${t} 처리 건수 ${fmt(s.total)}건`,s:`${pp.label} ${fmt(sp.total)}건 대비 ${pc(s.total,sp.total)}`,v:'org',team:t,vl:'Organization'}); });
   try{ ensureProd(); const R=orgRows('team').filter(r=>r.per!=null), tot=R.reduce((a,r)=>a+(r.hc||0),0), avg=tot?R.reduce((a,r)=>a+r.per*(r.hc||0),0)/tot:null;
-    if(avg) R.forEach(r=>{ if(r.per>=avg*1.2) L.push({sev:3,chip:'부담',cc:'none',t:`${r.n} 1인당 처리 ${r.per.toFixed(1)}건`,s:`FSG 평균 ${avg.toFixed(1)}건의 ${Math.round(r.per*100/avg)}%`,v:'org',team:orgParent?orgParent(r.k):r.k,vl:'Organization'}); }); }catch(e){}
-  try{ const all=wlVisits(D.rows), pick=(ms,t)=>{ const S=new Set(ms); return all.filter(v=>S.has(v.mk)&&(!t||v.teams.has(t))); };
+    if(avg) R.forEach(r=>{ if(r.per>=avg*OV_ISS.focus) L.push({sev:3,chip:'업무 집중',cc:'none',t:`${r.n} 1인당 처리 ${r.per.toFixed(1)}건`,s:`FSG 평균 ${avg.toFixed(1)}건의 ${Math.round(r.per*100/avg)}%`,v:'org',team:orgParent?orgParent(r.k):r.k,vl:'Organization'}); }); }catch(e){}
+  try{ const all=wlVisits(D.rows), pick=(ms,t)=>{ const f=mPred(ms); return all.filter(v=>f(v.mk,v.t)&&(!t||v.teams.has(t))); };
     TEAMS.forEach(t=>{ const A=wlAgg(pick(p.months,t),wlInfo), B=wlAgg(pick(pp.months,t),wlInfo), h=Math.round(A.all.off/60), hp=Math.round(B.all.off/60);
       if(inc(h,hp)) L.push({sev:3,chip:'증가',cc:'none',t:`${t} 정규근무 외 작업 ${fmt(h)}시간`,s:`${pp.label} ${fmt(hp)}시간 대비 ${pc(h,hp)}`,v:'wl',team:t,wl:'sum',vl:'Workload'});
       if(wlOn()&&inc(A.type.lab.n,B.type.lab.n)) L.push({sev:3,chip:'증가',cc:'none',t:`${t} 수탁기관 방문 ${fmt(A.type.lab.n)}건`,s:`${pp.label} ${fmt(B.type.lab.n)}건 대비 ${pc(A.type.lab.n,B.type.lab.n)}`,v:'wl',team:t,wl:'inst',vl:'Workload'}); });
@@ -4529,7 +4540,7 @@ function renderOv(){
       <div class="ovsum" id="ovSum"></div><div class="ovchart" id="ovBox"></div><p class="ovnote" id="ovTrN"></p></section>
     <section class="ovcard" aria-labelledby="ovh6"><h3 id="ovh6">확인이 필요한 곳 <span class="ovscope">모든 팀</span></h3><p class="ovnote" style="margin:0 0 4px">중요한 순(목표 미달 → 위험 장비·초기 고장 → 근접 → 업무 증가)<span class="rptno"> · 누르면 해당 탭으로 이동</span></p>
       ${al.length?`<ul class="ovhl">${(OV.issAll?al:al.slice(0,5)).map((a,k)=>`<li><span class="ovchip ${a.cc}">${a.chip}</span><div><b>${esc(a.t)}</b><span class="ovs">${esc(a.s)}</span></div><button type="button" data-i="${k}">${a.vl} ›</button></li>`).join('')}</ul>${al.length>5?`<button type="button" class="dsmore" id="ovIssMore" aria-expanded="${!!OV.issAll}">${OV.issAll?'5개만 보기':'모두 보기 ('+al.length+'건)'}</button>`:''}`:'<p class="ovnote">지금 확인이 필요한 항목이 없습니다.</p>'}
-      <p class="ovnote" style="margin-top:6px">증가 = 비교 기간(${esc(pp.label)}) 대비 20% 이상·10건 이상 · 인원 대비 = 1인당 처리 건수가 FSG 평균의 120% 이상</p></section>
+      <p class="ovnote" style="margin-top:6px">증가 = ${esc(pp.label)}${pp.rng?' ('+esc(pp.rng)+')':''} 대비 ${Math.round(OV_ISS.incRate*100)}% 이상이면서 ${OV_ISS.incAbs}건 이상(비교 값이 0이면 판정 안 함) · 업무 집중 = 1인당 처리 건수가 FSG 같은 기간 평균의 ${Math.round(OV_ISS.focus*100)}% 이상(과부하 판정 아님)</p></section>
   </div>
   <div class="ovrfoot">자료: CRM 「모든 약속/활동」 · FTFR = 한 번에 고친 비율, 재방문율 = 14일 안 재방문 비율, MTTR = 고장 수리 평균 소요 시간 · 근접 기준: 목표의 92%(높을수록 좋은 지표) / 115%(낮을수록 좋은 지표) · 업무 유형은 취소·온라인 정기점검 제외, 담당자·필수 참석자 각각 1건 · 최근 14일의 FTFR·재방문율은 잠정치 · 작성: FSS Team</div>`;
   // 추이
@@ -4930,16 +4941,16 @@ function wlAgg(V, info){
 function wlAcadDays(){ if(!ACAD) return null; const T=(ACAD.talk&&ACAD.talk.days)||{}, S=(ACAD.slack&&ACAD.slack.days)||{};
   const sk=Object.keys(S).sort(), cut=sk[0]||'9999'; const out={};
   Object.keys(T).forEach(d=>{ if(d<cut) out[d]={h:T[d],src:'talk'}; }); sk.forEach(d=>{ out[d]={h:S[d],src:'slack'}; }); return {days:out, cut:sk[0]||null}; }
-function wlAcadAgg(months){ const A=wlAcadDays(); if(!A) return null; const ms=new Set(months), o={n:0,day:0,night:0,hol:0,src:new Set(),byM:{}};
+function wlAcadAgg(months){ const A=wlAcadDays(); if(!A) return null; const inP=mPred(months), o={n:0,day:0,night:0,hol:0,src:new Set(),byM:{}};
   Object.keys(A.days).forEach(d=>{ const mk=d.slice(0,7); const x=A.days[d], t0=Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10)), hol=wlHol(t0);
     let n=0,dy=0,nt=0; const a0=x.src==='talk'?WL_ACAD_TALK_D0:WL_D0; x.h.forEach((c,h)=>{ if(!c) return; n+=c; if(h>=a0&&h<WL_D1) dy+=c; else nt+=c; });
     const M=o.byM[mk]||(o.byM[mk]={n:0,day:0,night:0,hol:0,src:new Set()}); M.n+=n; if(hol) M.hol+=n; else { M.day+=dy; M.night+=nt; } if(n) M.src.add(x.src);
-    if(!ms.has(mk)) return; o.n+=n; if(hol) o.hol+=n; else { o.day+=dy; o.night+=nt; } if(n) o.src.add(x.src); });
+    if(!inP(mk,t0)) return; o.n+=n; if(hol) o.hol+=n; else { o.day+=dy; o.night+=nt; } if(n) o.src.add(x.src); });
   return o; }
 /* CRM 학술 업무 비중(2026-11-16, 사용자 지적 「양식 타입에 학술 요청, Error 1 에 학술 내용」) — 처리 건수(담당자·필수 참석자 인정) 중 양식 타입 「학술 요청」 비율.
    대부분 Calibration·Data 비교라 FS 가 현장에서 한 학술 지원 작업이다. 전화 학술 응대(위 칸, FS Portal 집계)와는 다른 자료 */
-function wlAcadCrm(months, team){ const ms=new Set(months); let n=0,tot=0,cal=0,has=false;
-  D.rows.forEach(o=>{ if(o.ft) has=true; if(!ms.has(o.mk)||!o.credits.length) return; const k=team?o.cteams.filter(t=>t===team).length:o.credits.length; if(!k) return;
+function wlAcadCrm(months, team){ const inP=mPred(months); let n=0,tot=0,cal=0,has=false;
+  D.rows.forEach(o=>{ if(o.ft) has=true; if(!inP(o.mk,o.t)||!o.credits.length) return; const k=team?o.cteams.filter(t=>t===team).length:o.credits.length; if(!k) return;
     tot+=k; if(/학술/.test(o.ft)){ n+=k; if(/calibration|data\s*비교/i.test(o.purp+' '+o.err)) cal+=k; } });
   return {has, n, tot, cal, share:tot?n*100/tot:null}; }
 /* CRM 학술 업무 — 팀·사무소별(2026-11-16 사용자 요청). 인정 건수(담당자·필수 참석자)를 그 사람의 팀·사무소에 나눠 셈(공동 작업은 참여 단위마다).
@@ -4979,8 +4990,9 @@ function renderWl(){
   const el=$('wl'); if(!el||!D) return;
   const p=curPeriod(), pp=prevPeriod(p), team=$('fTeam').value||null;
   const yoy={months:p.months.map(m=>shiftMonth(m,-12)), label:'전년 같은 기간'};
+  if(pp.months.tTo){ const day=new Date(D.maxT).getUTCDate(), [y,mo]=yoy.months[0].split('-').map(Number); yoy.months.tTo=Date.UTC(y,mo-1,day+1); yoy.label=`전년 동기간(${mo}/1~${day})`; }   /* 진행 중인 달은 전년도 같은 날까지 */
   const all=wlVisits(D.rows);
-  const pick=(months)=>{ const s=new Set(months); return all.filter(v=>s.has(v.mk)&&(!team||v.teams.has(team))); };
+  const pick=(months)=>{ const f=mPred(months); return all.filter(v=>f(v.mk,v.t)&&(!team||v.teams.has(team))); };
   const V=pick(p.months), A=wlAgg(V,wlInfo), Ap=wlAgg(pick(pp.months),wlInfo), Ay=wlAgg(pick(yoy.months),wlInfo);
   const ac=wlAcadAgg(p.months), acp=wlAcadAgg(pp.months), acy=wlAcadAgg(yoy.months);
   const last=D.months[D.months.length-1], m12=Array.from({length:12},(_,i)=>shiftMonth(last,i-11));
@@ -4989,13 +5001,13 @@ function renderWl(){
   const srcTxt=ac?([...ac.src].map(s=>s==='talk'?'Sysmex Talk 글':'Slack 접수').join(' + ')||'자료 없음'):'';
   let h=`<div class="ovtitle dstitle"><div><h2>Workload</h2><p>${esc(p.label)} · ${esc(team||'FSG 전체')} · 비교 ${esc(pp.label)} · 시간대 평일 08~18시 = 주간 · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}</p></div>${ADMIN?'<span class="ovtools"><button type="button" class="dsbtn" id="wlInstBtn">기관 분류 관리</button></span>':''}</div>`;
   h+=`<h2 class="sec">업무부하 요약 <span class="ovchip none">단위: 방문(현장 출동 횟수)</span> <small>같은 병원·같은 날 이어진 활동 = 1건 · Productivity 처리 건수와 다름 · 학술 = FS Portal 집계 · 많다고 좋은 실적이 아님</small></h2><section class="ovkpi c3 wlk" aria-label="업무부하 핵심 지표">`;
-  h+= ac? dsCell('학술 응대',wlF(ac.n),'건',two(srcTxt,'주간 '+wlF(ac.day)+' · 야간 '+wlF(ac.night)+' · 주말 '+wlF(ac.hol)),two(wlD(ac.n,acp&&acp.n,'건',pp.label),wlD(ac.n,acy&&acy.n,'건','전년')),'Talk 은 참고값(글 수) · 방문과 단위 다름') : wlNA('학술 응대','학술 자료를 아직 올리지 않음');
+  h+= ac? dsCell('학술 응대',wlF(ac.n),'건',two(srcTxt,'주간 '+wlF(ac.day)+' · 야간 '+wlF(ac.night)+' · 주말 '+wlF(ac.hol)),two(wlD(ac.n,acp&&acp.n,'건',pp.label),wlD(ac.n,acy&&acy.n,'건',yoy.label.replace('전년 같은 기간','전년'))),'Talk 은 참고값(글 수) · 방문과 단위 다름') : wlNA('학술 응대','학술 자료를 아직 올리지 않음');
   const cr=wlAcadCrm(p.months,team), crp=wlAcadCrm(pp.months,team), cry=wlAcadCrm(yoy.months,team), r1=v=>v==null?null:Math.round(v*10)/10;
-  h+= !cr.has? wlNA('학술 업무 비중','CRM 자료에 양식 타입이 없음 — CRM 을 다시 올리면 계산') : dsCell('학술 업무 비중',cr.share==null?'-':cr.share.toFixed(1),'%',`CRM 학술 요청 ${wlF(cr.n)} / ${wlF(cr.tot)}건 · Calibration·Data 비교 ${wlP(cr.cal,cr.n)||'-'}%`,two(wlD(r1(cr.share),r1(crp.share),'%p',pp.label),wlD(r1(cr.share),r1(cry.share),'%p','전년')),'처리 건수 기준 · CRM 양식 타입 「학술 요청」 · 전화 응대(왼쪽)와 다른 자료');
-  h+= ac? dsCell('야간·주말 학술 응대',wlF(ac.night+ac.hol),'건','전체의 '+(wlP(ac.night+ac.hol,ac.n)||'-')+'%',two(wlD(ac.night+ac.hol,acp&&(acp.night+acp.hol),'건',pp.label),wlD(ac.night+ac.hol,acy&&(acy.night+acy.hol),'건','전년')),'평일 18~08시·주말·공휴일') : wlNA('야간·주말 학술 응대','학술 자료 미확보');
-  h+= wlOn()? dsCell('수탁기관 방문 비중',labShare==null?'-':labShare,'%',`${wlF(lab.n)} / ${wlF(cls)}건 · 미분류 ${wlF(A.type[''].n)}건 제외`,two(wlD(labShare&&+labShare,labShareP&&+labShareP,'%p',pp.label),wlD(labShare&&+labShare,labShareY&&+labShareY,'%p','전년')),'기관 유형 = 관리자 지정') : wlNA('수탁기관 방문 비중','기관 분류를 아직 지정하지 않음');
-  h+= wlOn()? dsCell('수탁기관 야간 방문',wlF(lab.night),'건',`주말 ${wlF(lab.hol)}건 · 야간 ${wlP(lab.night,lab.n)||'-'}%`,two(wlD(lab.night,Ap.type.lab.night,'건',pp.label),wlD(lab.night,Ay.type.lab.night,'건','전년')),'평일 18~08시에 걸친 방문') : wlNA('수탁기관 야간 방문','기관 분류 미지정');
-  h+= dsCell('정규근무 외 작업시간',wlH(offH),'시간',`참여 인원 × 작업시간 · 이동 제외`,two(wlD(Math.round(offH/60),Math.round(Ap.all.off/60),'시간',pp.label),wlD(Math.round(offH/60),Math.round(Ay.all.off/60),'시간','전년')),'평일 18~08시·주말 CRM 작업');
+  h+= !cr.has? wlNA('학술 업무 비중','CRM 자료에 양식 타입이 없음 — CRM 을 다시 올리면 계산') : dsCell('학술 업무 비중',cr.share==null?'-':cr.share.toFixed(1),'%',`CRM 학술 요청 ${wlF(cr.n)} / ${wlF(cr.tot)}건 · Calibration·Data 비교 ${wlP(cr.cal,cr.n)||'-'}%`,two(wlD(r1(cr.share),r1(crp.share),'%p',pp.label),wlD(r1(cr.share),r1(cry.share),'%p',yoy.label.replace('전년 같은 기간','전년'))),'처리 건수 기준 · CRM 양식 타입 「학술 요청」 · 전화 응대(왼쪽)와 다른 자료');
+  h+= ac? dsCell('야간·주말 학술 응대',wlF(ac.night+ac.hol),'건','전체의 '+(wlP(ac.night+ac.hol,ac.n)||'-')+'%',two(wlD(ac.night+ac.hol,acp&&(acp.night+acp.hol),'건',pp.label),wlD(ac.night+ac.hol,acy&&(acy.night+acy.hol),'건',yoy.label.replace('전년 같은 기간','전년'))),'평일 18~08시·주말·공휴일') : wlNA('야간·주말 학술 응대','학술 자료 미확보');
+  h+= wlOn()? dsCell('수탁기관 방문 비중',labShare==null?'-':labShare,'%',`${wlF(lab.n)} / ${wlF(cls)}건 · 미분류 ${wlF(A.type[''].n)}건 제외`,two(wlD(labShare&&+labShare,labShareP&&+labShareP,'%p',pp.label),wlD(labShare&&+labShare,labShareY&&+labShareY,'%p',yoy.label.replace('전년 같은 기간','전년'))),'기관 유형 = 관리자 지정') : wlNA('수탁기관 방문 비중','기관 분류를 아직 지정하지 않음');
+  h+= wlOn()? dsCell('수탁기관 야간 방문',wlF(lab.night),'건',`주말 ${wlF(lab.hol)}건 · 야간 ${wlP(lab.night,lab.n)||'-'}%`,two(wlD(lab.night,Ap.type.lab.night,'건',pp.label),wlD(lab.night,Ay.type.lab.night,'건',yoy.label.replace('전년 같은 기간','전년'))),'평일 18~08시에 걸친 방문') : wlNA('수탁기관 야간 방문','기관 분류 미지정');
+  h+= dsCell('정규근무 외 작업시간',wlH(offH),'시간',`참여 인원 × 작업시간 · 이동 제외`,two(wlD(Math.round(offH/60),Math.round(Ap.all.off/60),'시간',pp.label),wlD(Math.round(offH/60),Math.round(Ay.all.off/60),'시간',yoy.label.replace('전년 같은 기간','전년'))),'평일 18~08시·주말 CRM 작업');
   h+=`</section>`;
   const TABS=[['sum','요약'],['unit','팀·사무소'],['acad','학술 응대'],['inst','기관 유형'],['reg','지역'],['grp','5대 수탁기관']];   /* 팀·사무소 = 사무소별 방문·야간·주말·수탁기관 (2026-11-16 작업지시서 v2: Organization 에서 옮겨 옴) */
   h+=`<div class="ovseg ovscroll wltabs" role="tablist" aria-label="분석 영역">${TABS.map(([k,n])=>`<button type="button" role="tab" data-t="${k}" aria-selected="${WL.tab===k}" aria-pressed="${WL.tab===k}">${n}</button>`).join('')}</div><div id="wlBody"></div>`;
@@ -5167,7 +5179,7 @@ function rerender(){
 const VIEW_NAME={ov:'Overview',sq:'Service Quality',org:'Organization',wl:'Workload',eqp:'Instrument',pro:'Proactive Service'};
 function xMeta(){ const p=curPeriod(), pp=prevPeriod(p), t=$('fTeam').value||'FSG 전체', mm=p.months.filter(m=>D.months.includes(m));
   const src=['CRM 「모든 약속/활동」'].concat(SERIAL?['자산대장']:[],EQD?['FSR 담당기관 관리표']:[],HRDATA?['인사 연장근무']:[],typeof ACAD!=='undefined'&&ACAD?['FS Portal 학술 집계']:[]).join(' · ');
-  return {view:VIEW_NAME[VIEW]||VIEW, period:p.label, months:mm.length?mm[0]+' ~ '+mm[mm.length-1]:'-', cmp:pp.label+' ('+(pp.months[0]||'-')+' ~ '+(pp.months[pp.months.length-1]||'-')+')', team:t, cut:(D&&D.excl&&D.excl.cut)||'-', src,
+  return {view:VIEW_NAME[VIEW]||VIEW, period:p.label, months:pp.cur||(mm.length?mm[0]+' ~ '+mm[mm.length-1]:'-'), cmp:pp.rng?pp.label.replace(/\(.*\)/,'')+' '+pp.rng+(VIEW==='org'?' · 조직·개인 표는 전월 한 달 전체':''):pp.label+' ('+(pp.months[0]||'-')+' ~ '+(pp.months[pp.months.length-1]||'-')+')', team:t, cut:(D&&D.excl&&D.excl.cut)||'-', src,
     kind:window.__SYNTH?'합성 데이터(테스트용 · 실제 값 아님)':'실데이터(대시보드에 올린 자료)', det:!!($('xDet')&&$('xDet').checked), at:new Date().toISOString().slice(0,16).replace('T',' ')}; }
 function xVisible(el){ if(!el||el.closest('#lock,#upl,.appbar,header.top,#svcBar,#prodBar,.vtabs')) return false; const r=el.getClientRects(); return r.length>0&&getComputedStyle(el).visibility!=='hidden'; }
 async function xWith(fn){ const det=$('xDet')&&$('xDet').checked, pr=$('prod'), wasFold=pr&&pr.classList.contains('pfold'), opened=[];
