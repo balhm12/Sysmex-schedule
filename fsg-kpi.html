@@ -548,11 +548,18 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 .scr-off{display:none !important}.grid.one{grid-template-columns:1fr}
 .vtabs .vtl{display:flex;gap:4px;min-width:0;max-width:100%;overflow-x:auto;scrollbar-width:none}
 .vtabs .vtl::-webkit-scrollbar{display:none}.vtabs button.vt{white-space:nowrap}
-body[data-view=org] #prodTabs,body[data-view=eqp] #prodTabs{display:none}
+body[data-view=eqp] #prodTabs{display:none}
+.ogsctl{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.dsx .cv.ogsc{height:380px}@media (max-width:600px){.dsx .cv.ogsc{height:320px}}.ogscleg{margin-top:6px}
+@media (max-width:1000px){.dsx .dspair.dseven{grid-template-columns:1fr !important}}   /* 휴대폰에서 두 칸이 나란히 남아 막대가 눌리던 것 — .dseven 이 1000px 이하 1칸 규칙보다 우선했음 */
+.lbex{display:inline-flex;align-items:center;gap:6px;margin:0 0 8px;font-size:13px;min-height:40px}.lbex input{width:18px;height:18px}
+.ogtab td:first-child,.ogtab th:first-child{position:sticky;left:0;background:var(--surface,#fff);z-index:1}
+body[data-view=org] #prodTabs [data-tab=ot],body[data-view=org] #prodTabs [data-tab=move]{display:none}
+body[data-view=org] #panel-overview>.ovkpi,body[data-view=org] #panel-overview>.dsnav{display:none}
 body[data-view=wl] #prodTabs [data-tab]:not([data-tab=ot]):not([data-tab=move]){display:none}
 body[data-view=prd] #prodTabs [data-tab=move]{display:none}
 body[data-view=org] .pfoot,body[data-view=eqp] .pfoot,body[data-view=wl] .pfoot{display:none}
 body[data-view=prd] #prodTabs [data-tab=ot]{display:none}
+body[data-view=org] #mainArea,body[data-view=eqp] #mainArea{padding-bottom:0}body[data-view=org] #prod,body[data-view=eqp] #prod{padding-top:0}body[data-view=org] #mainArea #foot:empty,body[data-view=eqp] #mainArea #foot:empty{display:none}
 #otPerson .block-head{flex-wrap:wrap;align-items:center}#otPerson .otpx{width:auto;margin:0 0 0 auto;flex:0 0 auto;min-height:40px;padding:0 14px}.otmoved{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.otmoved .more-btn{width:auto;margin:0}
 body[data-view=pro] #kpis .kpi:nth-child(1),body[data-view=pro] #kpis .kpi:nth-child(n+5){display:none}
 body[data-view=prd] #prodTabs [data-tab=team]{display:none}
@@ -882,9 +889,8 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
 <nav class="vtabs" id="vtabs" hidden><div class="wrap"><div class="vtl" role="tablist" aria-label="대시보드 화면 선택">
   <button class="vt" role="tab" id="vtOv" data-view="ov" aria-selected="false" aria-controls="ov">Overview<small>핵심 현황</small></button>
   <button class="vt" role="tab" id="vtSq" data-view="sq" aria-selected="false" aria-controls="mainArea">Service Quality<small>서비스 품질</small></button>
-  <button class="vt" role="tab" id="vtOrg" data-view="org" aria-selected="false" aria-controls="mainArea">Organization<small>팀·사무소</small></button>
-  <button class="vt" role="tab" id="vtWl" data-view="wl" aria-selected="false" aria-controls="wl">Workload<small>업무부하</small></button>
-  <button class="vt" role="tab" id="vtPrd" data-view="prd" aria-selected="false" aria-controls="prod">Productivity<small>개인·업무부하</small></button>
+  <button class="vt" role="tab" id="vtOrg" data-view="org" aria-selected="false" aria-controls="mainArea">Organization<small>조직·사무소</small></button>
+  <button class="vt" role="tab" id="vtWl" data-view="wl" aria-selected="false" aria-controls="wl">Workload<small>업무 부담</small></button>
   <button class="vt" role="tab" id="vtEqp" data-view="eqp" aria-selected="false" aria-controls="mainArea">Instrument<small>장비</small></button>
   <button class="vt" role="tab" id="vtPro" data-view="pro" aria-selected="false" aria-controls="mainArea">Proactive Service<small>예방 서비스</small></button>
   </div>
@@ -912,13 +918,15 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
 <main class="wrap" id="mainArea" hidden>
   <div class="ovtitle dstitle" data-scr="sq" id="sqTitle"></div>
   <div class="ovtitle dstitle" data-scr="org" id="orgTitle"></div>
-  <h2 class="sec" data-scr="org">팀 · 사무소 현황 <small id="orgTopSub"></small><span class="ovtools"><button type="button" class="dsbtn" id="orgAllBtn"></button></span></h2>
-  <div id="orgKpi" data-scr="org"></div>
-  <section class="ovcard" data-scr="org" style="margin-top:14px" aria-labelledby="ogh"><h3 id="ogh">팀 · 사무소 비교 <span class="ovsub">건수는 막대, 목표·평균 대비는 점 · 이름 옆은 비교 인원</span><span class="ovtools"><span class="ovseg ovscroll" id="ogMseg" role="group" aria-label="비교 지표"></span></span></h3>
-    <div class="dspair dseven"><div id="ogBars"></div><div><h4 class="dsh4">업무 유형 구성비 (100% 누적)</h4><div id="ogMix"></div></div></div></section>
-  <section class="ovcard" data-scr="org" style="margin-top:14px" aria-labelledby="ogTblT"><h3 id="ogTblT">비교표 <span class="ovchip none">단위: 처리 건수(KPI)</span> <span class="ovsub">팀을 누르면 사무소로 나뉘고, 누른 팀·사무소의 상세를 아래에서 봅니다</span></h3>
+  <h2 class="sec" data-scr="org">조직 운영 현황 <small id="orgTopSub"></small><span class="ovtools"><button type="button" class="dsbtn" id="orgAllBtn"></button></span></h2>
+  <section class="ovkpi c4" id="orgKpi" data-scr="org" aria-label="조직 핵심 지표: 담당 장비, 1인당 담당 장비, 1인당 처리 건수, 장비 100대당 처리 건수"></section>
+  <section class="ovcard" data-scr="org" style="margin-top:14px" aria-labelledby="ogTblT"><h3 id="ogTblT">조직별 운영 현황 <span class="ovchip none">단위: 처리 건수(KPI)</span> <span class="ovsub">팀을 누르면 사무소로 나뉘고, 누른 팀·사무소의 상세를 아래 「상세 분석」에서 봅니다</span></h3>
     <div class="ovtw" id="ogTbl"></div><p class="ovnote dshint">표는 옆으로 밀어서 모든 열을 볼 수 있습니다.</p><p class="ovnote" id="ogNote"></p></section>
-  <section class="ovcard" data-scr="org" style="margin-top:14px" id="ogWl" aria-label="사무소별 업무부하 (방문 기준)"></section>
+  <section class="ovcard" data-scr="org" style="margin-top:14px" aria-labelledby="ogScT"><h3 id="ogScT">담당 장비 × 처리 건수 <span class="ovsub">점 = 사무소 · 크기 = 인원 · 색 = 고른 품질 지표의 목표 달성</span></h3>
+    <div class="ogsctl"><span class="ovseg" id="ogScQ" role="group" aria-label="사분면 기준선"></span><span class="ovseg" id="ogScY" role="group" aria-label="세로축"></span><span class="ovseg" id="ogScC" role="group" aria-label="점 색 기준"></span></div>
+    <div id="ogScBox"></div></section>
+  <section class="ovcard" data-scr="org" style="margin-top:14px" aria-labelledby="ogh"><h3 id="ogh">팀 · 사무소별 인력 · 장비 · 업무량 비교 <span class="ovsub">건수·규모는 막대, 목표·평균 대비는 점 · 이름 옆은 비교 인원</span><span class="ovtools"><span class="ovseg ovscroll" id="ogMseg" role="group" aria-label="비교 지표"></span></span></h3>
+    <div class="dspair dseven"><div id="ogBars"></div><div><h4 class="dsh4">업무 유형 구성비 (100% 누적)</h4><div id="ogMix"></div></div></div></section>
   <div class="ovtitle dstitle" data-scr="pro" id="proTitle"></div>
   <h2 class="sec" data-scr="pro">예방 서비스 핵심 지표 <small id="proSub"></small></h2>
   <section class="ovkpi c5" id="proKpi" data-scr="pro" aria-label="예방 서비스 지표: PM, 예방정비 지수, 고장 수리, 반복 고장 장비"></section>
@@ -931,8 +939,8 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
 
   <details class="dsfold" data-scr="org"><summary>전기 대비 증감 표 <small id="tpSub"></small></summary>
   <section class="panel tp" id="tpBox"></section></details>
-  <h2 class="sec" data-scr="org">팀 구성 <small id="orgSub"></small></h2>
-  <section class="teams" id="teams" data-scr="org"></section>
+  <details class="dsfold" data-scr="org"><summary>팀 구성 <small id="orgSub"></small></summary>
+  <section class="teams" id="teams" data-scr="org"></section></details>
 
   <h2 class="sec" data-scr="sq">서비스 품질 추이 <small id="trendSub"></small></h2>
   <div class="grid3" data-scr="sq">
@@ -2026,11 +2034,12 @@ function renderOverview(){
 
   html += '<section class="ovcard" style="margin-top:14px" aria-labelledby="lbh"><h3 id="lbh">개인 순위 <span class="ovsub">KPI 종합 점수 · '+PL(period)+' · 열 제목을 누르면 정렬, 행을 누르면 개인별 상세</span></h3>'+
     '<p class="ovnote" style="margin:0 0 10px">순위와 점수는 <b>맡은 업무의 양과 종류</b>(가중치 업무량)를 나타냅니다. 거래처 수·담당 장비·직급·근무 형태에 따라 달라지므로 <b>개인의 종합적인 성과를 뜻하지 않으며</b> 평가 점수로 쓰지 않습니다.</p>'+cavHtml+
-    '<div class="lbf" id="lbFilters"></div><div class="ovtw"><table class="ovtab dsfull" id="lbTable"></table></div><button type="button" class="dsmore" id="lbMore" hidden></button></section>';
+    '<label class="chk lbex"><input type="checkbox" id="lbExLead"'+($('pExLead').checked?' checked':'')+'> 순위에서 팀장·신입 제외</label><div class="lbf" id="lbFilters"></div><div class="ovtw"><table class="ovtab dsfull" id="lbTable"></table></div><button type="button" class="dsmore" id="lbMore" hidden></button></section>';
 
   html += '<section class="ovcard" style="margin-top:14px"><h3>비즈니스(장비 그룹)별 처리 건수 <span class="ovsub">전사 · '+PL(period)+' · 사람별은 개인별 상세</span></h3><div id="group-cmp-chart"></div></section>';
 
   el.innerHTML = html;
+  (function(){ var c = document.getElementById('lbExLead'); if (c) c.onchange = function(){ var p = document.getElementById('pExLead'); p.checked = c.checked; p.dispatchEvent(new Event('change')); }; })();
 
   /* 팀·사무소를 누르면 아래 순위표도 그 조직으로 좁힌다 */
   if (state._orgSel !== ORG.sel){ state._orgSel = ORG.sel; state.lbTeam = ORG.sel; }
@@ -2173,11 +2182,7 @@ function renderTeam(){
   var html = '<div class="controls" style="margin-bottom:18px;">'+
     '<div class="control-group" style="flex-wrap:wrap;row-gap:6px;min-width:0;"><span class="control-label">팀</span><div class="segmented" id="teamSeg"></div></div></div>';
 
-  html += '<div class="block grid grid-2">'+
-    chartCard('team-score-total-chart', '팀별 1인당 KPI 점수', PL(period)+' · 팀장·신입 제외')+
-    chartCard('team-score-avg-chart', '팀별 직급 보정 지수', '100 = FSG 같은 직급 중앙값 · 팀장·신입 제외')+
-    '</div>';
-
+  /* 2026-11-16: 팀끼리 비교(1인당 KPI 점수·직급 보정 지수·사무소 비교)는 위 Organization 비교표와 같은 숫자라 빼고, 고른 팀(사무소)만 본다 */
   var mttr = mttrRepairAvg(teamData, period);
   var rv = teamRevisit(team, period);
   var reliable = DATA.revisit[team].reliable;
@@ -2189,8 +2194,6 @@ function renderTeam(){
     statTile('FTFR', pctStr(rv.ftfr), '', reliable?targetPill(rv.ftfr, DATA.benchmarks.ftfr_target,'higher-better'):'', reliable?('목표 '+DATA.benchmarks.ftfr_target+'% 이상'):'&nbsp;')+
     '</div>';
 
-  if (TGROUPS[topOf(team)]) html += '<div class="block"><div class="block-head"><h2>사무소 비교</h2><span class="hint">'+DATA.team_short[topOf(team)]+' · '+PL(period)+' · 1인당 값은 팀장·신입 제외 · 사무소는 4~5명 기준이라 참고용</span></div>'+
-    '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="officeTable"></table></div></div>';
   html += '<div class="block grid grid-2">'+
     chartCard('team-group-chart', '비즈니스(장비 그룹)별 처리 건수', PL(period))+
     chartCard('team-svc-chart', '서비스 유형별 처리 건수', PL(period))+
@@ -2208,14 +2211,6 @@ function renderTeam(){
   el.innerHTML = html;
 
   teamButtons(document.getElementById('teamSeg'), team, false, function(t){ state.team = t; state.sortKey='total'; state.sortDir='desc'; renderTeam(); });
-  if (TGROUPS[topOf(team)]) renderOfficeCmp(topOf(team), period);
-
-  var teamLabels = VIEW.map(function(t){return DATA.team_short[t];});
-  var teamColors = VIEW.map(function(t){return t===team ? '#005BAC' : '#9FA0A0';});
-  var teamScoreCore = VIEW.map(function(t){return DATA.team[t].score_avg_core ? DATA.team[t].score_avg_core[period] : (DATA.team[t].score_avg[period] || 0);});
-  var teamIndex = VIEW.map(function(t){return DATA.team[t].index_avg ? (DATA.team[t].index_avg[period] || 0) : 0;});
-  barChart(document.getElementById('team-score-total-chart'), teamLabels, teamScoreCore.map(function(v){ return Math.round(v*10)/10; }), teamColors, {unit:'점'});
-  barChart(document.getElementById('team-score-avg-chart'), teamLabels, teamIndex.map(function(v){ return Math.round(v*10)/10; }), teamColors, {unit:'', targetLine:100, targetText:'기준'});
 
   barChart(document.getElementById('team-group-chart'), DATA.groups.map(function(g){return DATA.group_label[g];}), groupCaseArr(teamData, period), DATA.groups.map(function(g){return DATA.group_label[g]==='기타' ? '#9FA0A0' : '#005BAC';}), {unit:'건'});
   var BL2 = ['#005BAC','#00B9EF','#5185C5','#84BAE5','#9FA0A0'];
@@ -2754,13 +2749,13 @@ function renderEquip(){
     statTile('담당 기관', fmt(cur.inst), '곳', '', '관리표 기준 · 현재 시점')+
     '</div>';
   html += '<div class="block">'+'<div class="card chart-card" style="min-width:0"><div class="block-head"><h2>분야별 담당 장비</h2><span class="hint">대 · 시스템은 개 · 현재 관리표 기준</span></div><div class="table-scroll"><table class="data-table" id="eqFieldTable"></table></div></div></div>';
-  html += '<p class="ovnote">사람별 담당 장비는 <a href="#people" data-go="prd">Productivity 「담당 장비」</a>, 사무소별 1인당 담당 장비는 <a href="#organization" data-go="org">Organization 비교표</a>에서 봅니다.</p>';
+  html += '<p class="ovnote">사람별 담당 장비는 <a href="#organization" data-go="org" data-tab="equip">Organization 「상세 분석 → 개인별 담당 장비」</a>, 조직별 1인당 담당 장비는 <a href="#organization" data-go="org">Organization 「조직별 운영 현황」</a>에서 봅니다.</p>';
   } else {
   html += '<div class="block"><div class="block-head"><h2>개인별 담당 장비</h2><span class="hint">열 제목 클릭 시 정렬 · 처리 건수는 '+PL(period)+'</span></div>'+
     '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="eqTable"></table></div></div>';
   }
   el.innerHTML = html;
-  el.querySelectorAll('a[data-go]').forEach(function(x){ x.onclick = function(e){ e.preventDefault(); setView(x.getAttribute('data-go')); if (x.getAttribute('data-go') === 'prd') switchTab('equip'); window.scrollTo(0,0); }; });
+  el.querySelectorAll('a[data-go]').forEach(function(x){ x.onclick = function(e){ e.preventDefault(); setView(x.getAttribute('data-go')); if (x.getAttribute('data-tab')) switchTab(x.getAttribute('data-tab')); window.scrollTo(0,0); }; });
   teamButtons(document.getElementById('eqSeg'), scope, true, function(t){ state.eqScope = t; renderEquip(); });
   var UNITS = DATA.teams;
   var FT = document.getElementById('eqFieldTable');
@@ -4209,20 +4204,20 @@ $('changeCode').addEventListener('click',()=>{try{localStorage.removeItem(KEY_LS
 
 /* ===== 탭: 서비스 운영 KPI | 부서원 KPI — 같은 CRM 데이터(RAW)로 둘 다 계산 ===== */
 const VIEW_LS='fsg-kpi-view';
-const SCREENS={ov:{hash:'#overview'},sq:{hash:'#service-quality',scr:'sq',dsx:1},org:{hash:'#organization',scr:'org',prod:'team',dsx:1},wl:{hash:'#workload',prod:'ot',tabs:['ot','move'],dsx:1},prd:{hash:'#people',prod:'overview',tabs:['overview','person','equip'],dsx:1},eqp:{hash:'#instrument',scr:'eqp',prod:'equip',dsx:1},pro:{hash:'#proactive',scr:'pro',dsx:1}};
-const VIEW_ALIAS={svc:'sq',prod:'prd'};   /* 예전 저장값·주소(#people)를 새 화면으로 */
-let VIEW=(()=>{ const h=location.hash; for(const k in SCREENS) if(SCREENS[k].hash===h) return k; let v=null; try{v=localStorage.getItem(VIEW_LS);}catch(e){} v=VIEW_ALIAS[v]||v; return SCREENS[v]?v:'ov'; })();
+const SCREENS={ov:{hash:'#overview'},sq:{hash:'#service-quality',scr:'sq',dsx:1},org:{hash:'#organization',scr:'org',prod:'team',tabs:['team','overview','person','equip'],dsx:1},wl:{hash:'#workload',prod:'ot',tabs:['ot','move'],dsx:1},eqp:{hash:'#instrument',scr:'eqp',prod:'equip',dsx:1},pro:{hash:'#proactive',scr:'pro',dsx:1}};
+const VIEW_ALIAS={svc:'sq',prod:'org',prd:'org'};   /* 예전 저장값을 새 화면으로 — Productivity 는 2026-11-16 Organization 「상세 분석」으로 합침 */
+let VIEW=(()=>{ const h=location.hash; if(h==='#people') return 'org'; for(const k in SCREENS) if(SCREENS[k].hash===h) return k; let v=null; try{v=localStorage.getItem(VIEW_LS);}catch(e){} v=VIEW_ALIAS[v]||v; return SCREENS[v]?v:'ov'; })();
 let PROD=null, PROD_DIRTY=true;
 let SHIFT={}, SHIFT_INFO={state:'loading'}, _shiftLoading=null;   /* 근무일정표 시프트 근무일 — loadShifts() */
 const PROD_SKELETON=`<div class="ovtitle dstitle" id="prodTitle"></div>
   <h2 class="sec" id="prodSec" hidden></h2>
   <nav class="tabs" id="prodTabs">
-    <button data-tab="overview" class="active">전체 개요</button>
-    <button data-tab="team">팀별 비교</button>
+    <button data-tab="team">선택한 팀 · 사무소</button>
+    <button data-tab="overview" class="active">개인 순위</button>
     <button data-tab="person">개인별 상세</button>
     <button data-tab="ot">야간·휴일 근무</button>
     <button data-tab="move">이동거리</button>
-    <button data-tab="equip">담당 장비</button>
+    <button data-tab="equip">개인별 담당 장비</button>
   </nav>
   <div class="controls" id="globalControls">
     <div class="control-group"><span class="control-label">기간</span><div class="segmented" id="periodSeg"></div></div>
@@ -4267,7 +4262,7 @@ function renderProd(){
 }
 function prodTitle(){
   const el=$('prodTitle'), sec=$('prodSec'); if(!el||!PROD) return;
-  if(sec){ const h={org:['팀별 상세 분석','팀을 고르면 그 팀의 순위·병원별 재방문율을 봅니다'],eqp:['담당 장비 현황','담당기관 관리표 기준 · 현재 시점 · 사람별은 Productivity 「담당 장비」, 1인당 장비는 Organization 비교표'],wl:['근무 시간 · 이동 (사람 기준)','야간 OT·휴일 근무 = CRM 기록·인사 연장근무 기준 — 근무 종료가 WEST·EAST 17시·CENTRAL·SOUTH 18시라 위 방문 시간대(08~18시)와 기준이 다릅니다']}[VIEW]; sec.innerHTML=h?h[0]+' <small>'+h[1]+'</small>':''; sec.hidden=!h; }
+  if(sec){ const h={org:['상세 분석 — 팀 · 개인','선택한 팀·사무소 상세, 개인 순위·개인별 상세·개인별 담당 장비 · 개인 값은 맡은 업무의 양과 종류이며 성과 평가가 아님'],eqp:['담당 장비 현황','담당기관 관리표 기준 · 현재 시점 · 사람별·1인당 장비는 Organization'],wl:['근무 시간 · 이동 (사람 기준)','야간 OT·휴일 근무 = CRM 기록·인사 연장근무 기준 — 근무 종료가 WEST·EAST 17시·CENTRAL·SOUTH 18시라 위 방문 시간대(08~18시)와 기준이 다릅니다']}[VIEW]; sec.innerHTML=h?h[0]+' <small>'+h[1]+'</small>':''; sec.hidden=!h; }
   if(VIEW!=='prd'){ el.innerHTML=''; return; }
   const S=prodSelection(), n=Object.keys(PROD.person||{}).length;
   el.innerHTML=`<div><h2>Productivity</h2><p>${esc(S.label)} · 비교 ${esc(S.cmpLabel)} · 직원 ${n}명 · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}${SRC&&SRC.at?' · 마지막 업데이트 '+esc(SRC.at):''}${S.prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div>`;
@@ -4510,8 +4505,12 @@ function orgRows(mode){
   return (mode==='team'?TEAMS:PROD_UNITS).map(u=>{ const o=PROD.team[u]||{}, rv=((PROD.revisit||{})[u]||{}).team_total||{}, mm=(o.mttr||{})[PR]||{}, cs=(o.case||{})[PR]||{}; let a=0,c=0; Object.keys(mm).forEach(x=>{a+=mm[x].avg*mm[x].n;c+=mm[x].n;});
     const rep=cs['고장수리']||0, pm=cs['PM']||0;
     return {k:u, n:mode==='team'?u.replace(/^FS\s*/,''):UNIT_SHORT(u), team:(PROD.team_parent||{})[u]||u, all:(o.members||[]).length, hc:o.n_core||0, cnt:g(o,'total_case'), per:g(o,'case_avg_core'), w:g(o,'score_avg_core'), gi:g(o,'index_avg'),
-      eqh:PROD.eq?eqAgg(PROD.eq.by,o.members||[],()=>0,n=>(PROD.grade||{})[n]==='팀장').perHead:null, rep, pm, pidx:(rep+pm)?pm/(rep+pm)*100:null, ftfr:rv['이번년도FTFR'], rev:rv['이번년도재방문율'], mttr:c?a/c:null, nRep:c, cs}; });
+      eqh:PROD.eq?eqAgg(PROD.eq.by,o.members||[],()=>0,n=>(PROD.grade||{})[n]==='팀장').perHead:null, rep, pm, pidx:(rep+pm)?pm/(rep+pm)*100:null, ftfr:rv['이번년도FTFR'], rev:rv['이번년도재방문율'], mttr:c?a/c:null, nRep:c, cs, ...orgExt(u,mode,o.members||[])}; });
 }
+/* Organization 통합(2026-11-16 작업지시서 v2): 담당 장비 = 관리표 eqAgg(담당 장비 화면과 같은 함수, 새 계산식 없음). 야간·휴일·수탁기관(방문)은 Workload 에서만 */
+function orgExt(u,mode,members){ const out={eq:null,eqInst:null,e100:null,nPeople:null};
+  if(PROD.eq){ const A=eqAgg(PROD.eq.by,members,n=>(((PROD.person||{})[n]||{}).total_case||{})['이번 년도']||0,n=>(PROD.grade||{})[n]==='팀장'); out.eq=A.eq; out.eqInst=A.inst; out.e100=A.eq?A.per100:null; out.nPeople=A.nPeople; }
+  return out; }
 function orgAvg(){ const T=orgRows('team'), W=f=>{let a=0,b=0;T.forEach(r=>{if(r[f]!=null&&r.hc){a+=r[f]*r.hc;b+=r.hc;}});return b?a/b:null;}; return {per:W('per'),w:W('w'),hc:T.reduce((a,r)=>a+r.hc,0)}; }
 /* 비교 그림 — 0에서 시작해야 하는 건수는 막대(type:'bar'), 목표·평균과의 거리를 볼 값은 도트 플롯(type:'dot'). 도트 플롯은 축 범위와 기준선을 항상 적는다 */
 function dsBars(rows,o){
@@ -4548,39 +4547,98 @@ function orgSync(){ const ft=$('fTeam').value||''; if(orgParent(ORG.sel)!==ft) O
 const orgName=r=>(r.off?'':`<b class="dstw" aria-hidden="true">${r.kids?(r.open?'▾':'▸'):''}</b>`)+(r.off?'└ ':'')+esc(r.n);
 function orgWire(root){ if(!root) return; root.querySelectorAll('[data-k]').forEach(el=>{ el.onclick=()=>orgPick(el.dataset.k); if(el.tagName==='TR'){ el.tabIndex=0; el.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); orgPick(el.dataset.k); } }; } }); }
 function orgAllBtn(id){ const b=$(id); if(!b) return; const all=TEAMS.filter(t=>orgKids(t).length), on=all.length&&all.every(t=>ORG.open.has(t)); b.textContent=on?'사무소 모두 접기':'사무소 모두 펼치기'; b.setAttribute('aria-pressed',on?'true':'false'); b.onclick=()=>orgAll(!on); }
-const ORG_M=[{k:'per',n:'1인당 처리 건수',u:'건',d:1,type:'bar',avg:'per'},{k:'w',n:'1인당 KPI 점수',u:'점',d:1,type:'dot',avg:'w'},{k:'cnt',n:'처리 건수',u:'건',d:0,type:'bar'},
+const ORG_M=[{k:'all',n:'인원',u:'명',d:0,type:'bar'},{k:'eq',n:'담당 장비',u:'대',d:0,type:'bar',eq:1},{k:'cnt',n:'처리 건수',u:'건',d:0,type:'bar'},{k:'per',n:'1인당 처리 건수',u:'건',d:1,type:'bar',avg:'per'},
+  {k:'eqh',n:'1인당 담당 장비',u:'대',d:1,type:'bar',eq:1},{k:'e100',n:'장비 100대당 처리 건수',u:'건',d:1,type:'bar',eq:1},{k:'w',n:'1인당 KPI 점수',u:'점',d:1,type:'dot',avg:'w'},
   {k:'ftfr',n:'FTFR',u:'%',d:1,type:'dot',t:'ftfr'},{k:'rev',n:'재방문율',u:'%',d:1,type:'dot',t:'rev'},{k:'mttr',n:'MTTR',u:'분',d:1,type:'dot',t:'mttr'}];
+/* FSG 합계 — 팀 행을 더함(장비·건수), 1인당은 팀장 제외 인원 기준. 장비 100대당 = 처리 건수 ÷ 담당 장비 × 100 (eqAgg.per100 과 같은 식) */
+function orgFsg(T){ const sum=f=>T.reduce((a,r)=>a+(r[f]||0),0), eq=PROD.eq?sum('eq'):null, np=sum('nPeople'), cas=T.reduce((a,r)=>a+(r.cnt||0),0);
+  return {eq, eqInst:PROD.eq?sum('eqInst'):null, eqh:eq!=null&&np?eq/np:null, e100:eq?cas/eq*100:null, cnt:cas, per:orgAvg().per, np, all:sum('all'), hc:sum('hc')}; }
+const ORGSC={y:'cnt',c:'ftfr',q:'on'};
 function renderOrgTop(p,team,pp,prov,scope){
   dsTitle('orgTitle','Organization',p,scope,pp.label,prov);
-  orgSync(); const rows=orgTree(), avg=orgAvg();
-  const K=k=>OV_K.find(x=>x.k===k), sgn=d=>Math.abs(d)<0.05?'평균과 같음':'평균 대비 '+(d>0?'+':'−')+Math.abs(d).toFixed(1);
-  $('orgTopSub').textContent=`${p.label} · 팀을 누르면 사무소로 나뉩니다 · 1인당 값은 팀장·신입 제외`;
+  orgSync(); const rows=orgTree(), avg=orgAvg(), T=rows.filter(r=>!r.off), F=orgFsg(orgRows('team'));
+  const K=k=>OV_K.find(x=>x.k===k), f1=v=>v==null?'-':v.toFixed(1), f0=v=>v==null?'-':fmt(Math.round(v));
+  $('orgTopSub').textContent=`${p.label} · 팀을 누르면 사무소로 나뉩니다 · 1인당 값은 팀장(장비)·팀장·신입(건수) 제외`;
   orgAllBtn('orgAllBtn');
-  const kcell=r=>{ const sts=[ovSt(K('ftfr'),r.ftfr).st,ovSt(K('rev'),r.rev).st,ovSt(K('mttr'),r.mttr).st], nb=sts.filter(x=>x==='bad').length, nw=sts.filter(x=>x==='warn').length, ng=sts.filter(x=>x==='good').length;
-    const chip=nb?`<span class="ovchip bad">미달 ${nb}</span>`:nw?`<span class="ovchip warn">근접 ${nw}</span>`:ng===3?'<span class="ovchip good">3개 달성</span>':'<span class="ovchip none">자료 없음</span>';
-    return `<button type="button" class="ovkc pick${r.off?' off':''}${r.sel?' sel':''}" data-k="${esc(r.k)}" aria-pressed="${r.sel}"${r.kids?` aria-expanded="${r.open}"`:''}><span class="ovl"><span>${r.off?esc(orgParent(r.k).replace(/^FS\s*/,''))+' · ':''}${esc(r.n)}</span>${chip}</span><span class="ovv">${r.per==null?'-':r.per.toFixed(1)}<small>건</small></span><span class="ovt">1인당 처리 건수 · ${r.per==null||avg.per==null?'':sgn(r.per-avg.per)}</span><span class="ovd">1인당 KPI 점수 ${r.w==null?'-':r.w.toFixed(1)}점 · 처리 건수 ${r.cnt==null?'-':fmt(r.cnt)}건 · ${r.all}명</span>${r.kids?`<span class="dsexp">${r.open?'▾ 사무소 접기':'▸ 사무소 '+r.kids+'곳으로 나누기'}</span>`:''}</button>`; };
-  const tr=rows.filter(r=>!r.off), of=rows.filter(r=>r.off);
-  $('orgKpi').innerHTML=`<section class="ovkpi c${tr.length}" aria-label="팀별 현황">${tr.map(kcell).join('')}</section>`+(of.length?`<section class="ovkpi sub c${of.length}" aria-label="사무소별 현황">${of.map(kcell).join('')}</section>`:'');
-  orgWire($('orgKpi'));
-  // 비교: 지표에 따라 막대(0 기준) 또는 도트 플롯(목표·평균 대비)
-  const m=ORG_M.find(x=>x.k===ORG.m)||ORG_M[0], ko=m.t&&K(m.t);
-  $('ogMseg').innerHTML=ORG_M.map(x=>`<button type="button" data-m="${x.k}" aria-pressed="${x.k===m.k}">${x.n}</button>`).join('');
-  $('ogMseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{ ORG.m=b.dataset.m; rerender(); });
-  $('ogBars').innerHTML=dsBars(rows.map(r=>({n:r.n,html:orgName(r),k:r.k,off:r.off,sel:r.sel,kids:r.kids,open:r.open,sub:r.hc+'명',v:r[m.k],title:ko?`고장 수리 ${fmt(r.nRep)}건 기준`:''})),{pick:true,unit:m.u,dec:m.d,type:m.type,ref:ko?ko.t():(m.avg?avg[m.avg]:null),refLab:ko?'목표':'FSG 평균',state:ko?v=>ovSt(ko,v):null,extra:ko?'점 색: 파랑 달성 · 주황 근접 · 빨강 미달':''});
-  orgWire($('ogBars'));
+  /* ① 상단 KPI 4칸 — 고른 팀·사무소(없으면 FSG) */
+  const S=ORG.sel?rows.find(r=>r.k===ORG.sel)||orgRows('office').find(r=>r.k===ORG.sel):null, X=S?{eq:S.eq,eqInst:S.eqInst,eqh:S.eqh,e100:S.e100,cnt:S.cnt,per:S.per,np:S.nPeople,hc:S.hc}:F, who=S?S.n:'FSG 전체';
+  const noEq='<span class="ovchip none">관리표 미등록</span>', nd=PROD.eq?'':' ovnd';
+  $('orgKpi').innerHTML=
+    `<div class="ovkc st${nd}"><span class="ovl">담당 장비 수${PROD.eq?'':noEq}</span><span class="ovv">${PROD.eq?f0(X.eq):'-'}<small>${PROD.eq?'대':''}</small></span><span class="ovt">${esc(who)} · 담당기관 관리표(현재 시점)</span><span class="ovd">${PROD.eq?'담당 기관 '+f0(X.eqInst)+'곳':'관리자가 「담당기관 관리표」를 올리면 표시'}</span></div>`+
+    `<div class="ovkc st${nd}"><span class="ovl">1인당 담당 장비${PROD.eq?'':noEq}</span><span class="ovv">${PROD.eq?f1(X.eqh):'-'}<small>${PROD.eq?'대':''}</small></span><span class="ovt">팀장 제외 ${X.np==null?'-':X.np}명 기준</span><span class="ovd">${PROD.eq&&S&&F.eqh!=null&&X.eqh!=null?'FSG '+f1(F.eqh)+'대 대비 '+(X.eqh>=F.eqh?'+':'−')+Math.abs(X.eqh-F.eqh).toFixed(1):'목표 없음'}</span></div>`+
+    `<div class="ovkc st"><span class="ovl">1인당 처리 건수</span><span class="ovv">${f1(X.per)}<small>건</small></span><span class="ovt">팀장·신입 제외 ${X.hc}명 · ${esc(p.label)}</span><span class="ovd">${S&&avg.per!=null&&X.per!=null?'FSG '+f1(avg.per)+'건 대비 '+(X.per>=avg.per?'+':'−')+Math.abs(X.per-avg.per).toFixed(1):'처리 건수 '+f0(X.cnt)+'건'}</span></div>`+
+    `<div class="ovkc st${nd}"><span class="ovl">장비 100대당 처리 건수${PROD.eq?'':noEq}</span><span class="ovv">${PROD.eq?f1(X.e100):'-'}<small>${PROD.eq?'건':''}</small></span><span class="ovt">선택 기간 처리 건수 ÷ 담당 장비(현재 관리표) × 100</span><span class="ovd">${PROD.eq&&S&&F.e100!=null&&X.e100!=null?'FSG '+f1(F.e100)+'건 대비 '+(X.e100>=F.e100?'+':'−')+Math.abs(X.e100-F.e100).toFixed(1):'팀장 방문·담당 기관 포함'}</span></div>`;
+  /* ② 조직별 운영 현황 표 */
   const cell=(v,k)=>{ const o=K(k), s=v==null?null:ovSt(o,v); return `<td class="${s?'st-'+s.st:''}">${v==null?'-':v.toFixed(1)}${s&&s.chip?`<span class="ovtag">${s.chip}</span>`:''}</td>`; };
-  $('ogTbl').innerHTML=`<table class="ovtab dsfull"><thead><tr>${['팀 · 사무소','인원 (비교)','처리 건수','1인당 처리 건수','평균 대비','1인당 KPI 점수','직급 보정 지수','FTFR (%)','재방문율 (%)','MTTR (분)','고장 수리 (표본)'].concat(PROD.eq?['1인당 담당 장비']:[]).map(h=>`<th><span class="dsth">${h}</span></th>`).join('')}</tr></thead><tbody>
-    <tr class="tgt"><td>목표</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>100 기준</td><td>${TARGET_FTFR} 이상</td><td>${TARGET_REV} 이하</td><td>${TARGET_MTTR} 이하</td><td>-</td>${PROD.eq?'<td>현재 관리표</td>':''}</tr>
-    ${rows.map(r=>`<tr class="row${r.off?' ovoff':''}${r.sel?' sel':''}" data-k="${esc(r.k)}"${r.kids?` aria-expanded="${r.open}"`:''}><td>${orgName(r)}</td><td>${r.all} <span class="ovsub">(${r.hc})</span></td><td>${r.cnt==null?'-':fmt(r.cnt)}</td><td>${r.per==null?'-':r.per.toFixed(1)}</td><td>${r.per==null||avg.per==null?'-':(Math.abs(r.per-avg.per)<0.05?'0.0':(r.per>avg.per?'+':'−')+Math.abs(r.per-avg.per).toFixed(1))}</td><td>${r.w==null?'-':r.w.toFixed(1)}</td><td>${r.gi==null?'-':r.gi.toFixed(1)}</td>${cell(r.ftfr,'ftfr')}${cell(r.rev,'rev')}${cell(r.mttr,'mttr')}<td>${fmt(r.nRep)}${r.nRep<10?'<span class="ovtag">표본 적음</span>':''}</td>${PROD.eq?`<td>${r.eqh==null?'-':r.eqh.toFixed(1)}대</td>`:''}</tr>`).join('')}
-    <tr class="tgt"><td>FSG 평균</td><td>(${avg.hc})</td><td>-</td><td>${avg.per==null?'-':avg.per.toFixed(1)}</td><td>기준</td><td>${avg.w==null?'-':avg.w.toFixed(1)}</td><td>100.0</td><td>-</td><td>-</td><td>-</td><td>-</td>${PROD.eq?`<td>${(()=>{const T=orgRows('team');let e=0,h=0;T.forEach(r=>{if(r.eqh!=null){e+=r.eqh*r.hc;h+=r.hc;}});return h?(e/h).toFixed(1)+'대':'-';})()}</td>`:''}</tr></tbody></table>`;
+  const H=['팀 · 사무소','인원 (비교)'].concat(PROD.eq?['담당 장비','1인당 장비']:[],['처리 건수','1인당 처리 건수','평균 대비'],PROD.eq?['장비 100대당 처리 건수']:[],['1인당 KPI 점수','직급 보정 지수','FTFR (%)','재방문율 (%)','MTTR (분)','고장 수리 (표본)']);
+  const dv=r=>r.per==null||avg.per==null?'-':(Math.abs(r.per-avg.per)<0.05?'0.0':(r.per>avg.per?'+':'−')+Math.abs(r.per-avg.per).toFixed(1));
+  $('ogTbl').innerHTML=`<table class="ovtab dsfull ogtab"><thead><tr>${H.map(h=>`<th><span class="dsth">${h}</span></th>`).join('')}</tr></thead><tbody>
+    <tr class="tgt"><td>목표</td><td>-</td>${PROD.eq?'<td>-</td><td>-</td>':''}<td>-</td><td>-</td><td>-</td>${PROD.eq?'<td>-</td>':''}<td>-</td><td>100 기준</td><td>${TARGET_FTFR} 이상</td><td>${TARGET_REV} 이하</td><td>${TARGET_MTTR} 이하</td><td>-</td></tr>
+    ${rows.map(r=>`<tr class="row${r.off?' ovoff':''}${r.sel?' sel':''}" data-k="${esc(r.k)}"${r.kids?` aria-expanded="${r.open}"`:''}><td>${orgName(r)}</td><td>${r.all} <span class="ovsub">(${r.hc})</span></td>${PROD.eq?`<td>${f0(r.eq)}</td><td>${f1(r.eqh)}</td>`:''}<td>${r.cnt==null?'-':fmt(r.cnt)}</td><td>${f1(r.per)}</td><td>${dv(r)}</td>${PROD.eq?`<td>${f1(r.e100)}</td>`:''}<td>${f1(r.w)}</td><td>${f1(r.gi)}</td>${cell(r.ftfr,'ftfr')}${cell(r.rev,'rev')}${cell(r.mttr,'mttr')}<td>${fmt(r.nRep)}${r.nRep<10?'<span class="ovtag">표본 적음</span>':''}</td></tr>`).join('')}
+    <tr class="tgt"><td>FSG</td><td>${F.all} <span class="ovsub">(${F.hc})</span></td>${PROD.eq?`<td>${f0(F.eq)}</td><td>${f1(F.eqh)}</td>`:''}<td>${fmt(F.cnt)}</td><td>${f1(F.per)}</td><td>기준</td>${PROD.eq?`<td>${f1(F.e100)}</td>`:''}<td>${f1(avg.w)}</td><td>100.0</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody></table>`;
   orgWire($('ogTbl'));
-  $('ogNote').textContent='팀·사무소마다 인원과 맡은 거래처·장비가 달라 순위로 읽지 않습니다. 재방문율·FTFR 은 그 조직에 배정된 거래처의 평균이고, 고장 수리 건수(표본)가 10건 미만이면 비율이 크게 흔들립니다. ▸ 표시가 있는 팀(CENTRAL·SOUTH)을 누르면 사무소로 나뉘고, 누른 팀·사무소가 아래 상세에 선택됩니다.';
-  // 업무 유형 구성비 — 100% 누적 막대
+  $('ogNote').innerHTML='담당 장비·장비 100대당 건수는 「담당기관 관리표」 현재 시점 기준이라 지난 기간의 장비 수와 다를 수 있고, 장비·건수 합계에는 팀장이 맡은 기관·방문도 들어갑니다(1인당 장비는 팀장 제외). 재방문율·FTFR 은 그 조직에 배정된 거래처의 평균이며, 고장 수리 표본이 10건 미만이면 비율이 크게 흔들립니다. 팀·사무소마다 인원과 맡은 거래처가 달라 순위로 읽지 않습니다.';
+  /* ③ 담당 장비 × 업무량 산점도 */
+  try{ orgScatter(); }catch(e){ console.error('조직 산점도',e); $('ogScBox').innerHTML='<p class="empty-note">그래프를 그리지 못했습니다: '+esc(e.message||e)+'</p>'; }
+  /* ④ 인원 대비 업무량 — 지표에 따라 막대(0 기준) 또는 도트 플롯(목표·평균 대비) */
+  const MS=ORG_M.filter(x=>!x.eq||PROD.eq), m=MS.find(x=>x.k===ORG.m)||MS.find(x=>x.k==='per'), ko=m.t&&K(m.t);
+  $('ogMseg').innerHTML=MS.map(x=>`<button type="button" data-m="${x.k}" aria-pressed="${x.k===m.k}">${x.n}</button>`).join('');
+  $('ogMseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{ ORG.m=b.dataset.m; rerender(); });
+  const ref=ko?ko.t():(m.avg?avg[m.avg]:(m.k==='eqh'?F.eqh:m.k==='e100'?F.e100:null));
+  $('ogBars').innerHTML=dsBars(rows.map(r=>({n:r.n,html:orgName(r),k:r.k,off:r.off,sel:r.sel,kids:r.kids,open:r.open,sub:r.hc+'명',v:r[m.k],title:ko?`고장 수리 ${fmt(r.nRep)}건 기준`:''})),{pick:true,unit:m.u,dec:m.d,type:m.type,ref,refLab:ko?'목표':'FSG 평균',state:ko?v=>ovSt(ko,v):null,extra:ko?'점 색: 파랑 달성 · 주황 근접 · 빨강 미달':''});
+  orgWire($('ogBars'));
   const BK=PROD.buckets||[], BL=PROD.bucket_label||{}, C=['#005BAC','#00B9EF','#5185C5','#84BAE5','#9FA0A0'];
   $('ogMix').innerHTML=`<div class="dsleg">${BK.map((b,i)=>`<span><i style="background:${C[i%C.length]}"></i>${esc(BL[b]||b)}</span>`).join('')}</div>`+rows.map(r=>{ const tot=BK.reduce((a,b)=>a+(r.cs[b]||0),0);
     return `<button type="button" class="dsmix pick${r.off?' off':''}${r.sel?' sel':''}" data-k="${esc(r.k)}" aria-pressed="${r.sel}"><span class="ovhn">${orgName(r)}</span><span class="dsmt" role="img" aria-label="${esc(r.n)} 업무 유형 구성비">${tot?BK.map((b,i)=>{ const v=r.cs[b]||0, w=v/tot*100; return v?`<i style="width:${w.toFixed(1)}%;background:${C[i%C.length]}" title="${esc(BL[b]||b)} ${fmt(v)}건 (${w.toFixed(1)}%)">${w>=9?Math.round(w)+'%':''}</i>`:''; }).join(''):'<em>자료 없음</em>'}</span><span class="ovhv">${fmt(tot)}건</span></button>`; }).join('')+'<p class="ovnote">막대 길이는 구성비(100%)이고 오른쪽 숫자는 처리 건수입니다. 막대에 마우스를 올리면 건수를 볼 수 있습니다.</p>';
   orgWire($('ogMix'));
-  try{ const w=$('ogWl'); if(w){ w.innerHTML=wlOfficeHtml(team); w.querySelectorAll('a[data-go]').forEach(x=>x.onclick=e=>{ e.preventDefault(); setView(x.dataset.go); window.scrollTo(0,0); }); } }catch(e){ console.error('사무소별 업무부하',e); }
+}
+/* 담당 장비 × 처리 건수 — Chart.js 거품 그림, 점 = 사무소 6개(팀과 섞지 않음, 작업지시서 v2). 사분면 기준선 = 표시된 사무소 값의 중앙값. 비교용 위치 기준이며 과부하를 판정하지 않는다 */
+const orgMed=a=>{ const v=a.slice().sort((x,y)=>x-y), n=v.length; return n?(n%2?v[(n-1)/2]:(v[n/2-1]+v[n/2])/2):null; };
+const ORGSC_C={good:'#005BAC',warn:'#E69E0B',bad:'#E7413E',none:'#9FA0A0'};
+function orgScatter(){
+  const box=$('ogScBox'), seg=(id,list,cur,key)=>{ $(id).innerHTML=list.map(([k,n])=>`<button type="button" data-v="${k}" aria-pressed="${k===cur}">${n}</button>`).join(''); $(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{ ORGSC[key]=b.dataset.v; orgScatter(); }); };
+  seg('ogScQ',[['on','기준선 보이기'],['off','숨기기']],ORGSC.q,'q'); seg('ogScY',[['cnt','처리 건수'],['per','1인당 처리 건수']],ORGSC.y,'y'); seg('ogScC',[['ftfr','FTFR'],['rev','재방문율'],['mttr','MTTR']],ORGSC.c,'c');
+  if(!PROD.eq){ box.innerHTML='<p class="empty-note">담당 장비 수가 없어 그릴 수 없습니다. 관리자가 「담당기관 관리표」를 올리면 표시됩니다.</p>'; return; }
+  const R=orgRows('office').filter(r=>r.eq&&r[ORGSC.y]!=null); if(R.length<2){ box.innerHTML='<p class="empty-note">점이 2개 미만이라 그리지 않습니다.</p>'; return; }
+  const ko=OV_K.find(x=>x.k===ORGSC.c), yl=ORGSC.y==='cnt'?'처리 건수 (건)':'1인당 처리 건수 (건)', mx=orgMed(R.map(r=>r.eq)), my=orgMed(R.map(r=>r[ORGSC.y])), qon=ORGSC.q==='on', rmax=Math.max(...R.map(r=>r.all||1));
+  const pts=R.map(r=>{ const st=ovSt(ko,r[ORGSC.c]).st||'none'; return {x:r.eq,y:r[ORGSC.y],r:8+16*Math.sqrt((r.all||1)/rmax),row:r,st}; });
+  box.innerHTML=`<div class="cv ogsc"><canvas id="cOrgSc" role="img" aria-label="담당 장비 수와 ${yl}의 관계. 아래 조직별 운영 현황 표와 같은 숫자입니다."></canvas></div>
+    <div class="dsleg ogscleg"><span><i style="background:${ORGSC_C.good}"></i>${ko.n} 달성</span><span><i style="background:${ORGSC_C.warn}"></i>근접</span><span><i style="background:${ORGSC_C.bad}"></i>미달</span><span><i style="background:${ORGSC_C.none}"></i>자료 없음</span><span>점 크기 = 인원</span></div>
+    <p class="ovnote">담당 장비: 현재 관리표 기준 / 처리 건수: 선택 기간 기준. 시점이 다른 데이터의 참고 비교입니다.</p>
+    <p class="ovnote">${qon?`점선 = 사무소 중앙값(담당 장비 ${Math.round(mx)}대 · ${ORGSC.y==='cnt'?'처리 건수 '+Math.round(my)+'건':'1인당 처리 건수 '+my.toFixed(1)+'건'}). 위치를 견주는 기준이며 과부하·인력 부족을 판정하는 값이 아닙니다. `:''}담당 장비가 없는 사무소는 점을 그리지 않습니다(0으로 넣지 않음). 점을 누르면 그 사무소가 선택되고 아래 「상세 분석」에 나옵니다.</p>`;
+  const quad={id:'orgq',afterDatasetsDraw(c){ const {ctx,chartArea:a,scales:{x,y}}=c, px=x.getPixelForValue(mx), py=y.getPixelForValue(my); ctx.save();
+      const wide=a.right-a.left>=520;
+      if(qon){ ctx.strokeStyle=css('--muted')||'#9FA0A0'; ctx.setLineDash([5,4]); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(px,a.top); ctx.lineTo(px,a.bottom); ctx.moveTo(a.left,py); ctx.lineTo(a.right,py); ctx.stroke(); ctx.setLineDash([]);
+      ctx.font='12px '+(css('--font')||'sans-serif'); ctx.fillStyle=css('--muted')||'#6B6B6B';
+      if(wide){ ctx.textAlign='left'; ctx.textBaseline='top'; ctx.fillText('적은 장비 · 많은 업무',a.left+6,a.top+4); ctx.textBaseline='bottom'; ctx.fillText('적은 장비 · 적은 업무',a.left+6,a.bottom-4);
+      ctx.textAlign='right'; ctx.textBaseline='top'; ctx.fillText('많은 장비 · 많은 업무',a.right-6,a.top+4); ctx.textBaseline='bottom'; ctx.fillText('많은 장비 · 적은 업무',a.right-6,a.bottom-4); } }
+      ctx.font='700 12.5px '+(css('--font')||'sans-serif'); ctx.fillStyle=css('--text')||'#3F3F3F'; ctx.textBaseline='middle';
+      c.getDatasetMeta(0).data.forEach((el,i)=>{ const d=pts[i], tw=ctx.measureText(d.row.n).width, rr=(el.options&&el.options.radius)||d.r, right=el.x+rr+4+tw<=a.right; ctx.textAlign=right?'left':'right'; ctx.fillText(d.row.n,right?el.x+rr+4:el.x-rr-4,el.y); }); ctx.restore(); }};
+  upsert('cOrgSc',{type:'bubble',data:{datasets:[{data:pts,backgroundColor:pts.map(d=>ORGSC_C[d.st]+'CC'),borderColor:pts.map(d=>d.row.sel?'#003A70':ORGSC_C[d.st]),borderWidth:pts.map(d=>d.row.sel?3:1)}]},plugins:[quad],
+    options:{responsive:true,maintainAspectRatio:false,animation:false,layout:{padding:{top:22,right:12}},plugins:{legend:{display:false},tooltip:{callbacks:{title:it=>it[0].raw.row.n,label:it=>{ const r=it.raw.row, q=v=>v==null?'-':v.toFixed(1);
+        return [`담당 장비 ${fmt(r.eq)}대 · 인원 ${r.all}명 (비교 ${r.hc}명)`,`처리 건수 ${fmt(r.cnt)}건 · 1인당 ${q(r.per)}건`,`FTFR ${q(r.ftfr)}% · 재방문율 ${q(r.rev)}% · MTTR ${q(r.mttr)}분`]; }}}},
+      onClick:(e,els)=>{ if(els&&els.length){ const r=pts[els[0].index].row; orgPick(r.k); } },
+      onHover:(e,els)=>{ if(e.native&&e.native.target) e.native.target.style.cursor=els&&els.length?'pointer':'default'; },
+      scales:{x:axis({title:{display:true,text:'담당 장비 (대, 현재 관리표)',color:css('--text')},grace:'12%',ticks:{color:css('--text'),precision:0}}),y:axis({title:{display:true,text:yl,color:css('--text')},grace:'15%',ticks:{color:css('--text')}})}}});
+}
+/* 장비 구성에 따른 업무 부담 — 조직별 담당 장비 구성(관리표 분야 4종, 100% 누적) + 장비군별 고장 수리·PM·평균 수리 시간(CRM, stats() 와 같은 인정 건수 기준) */
+const ORG_FLD=['CBC','유린','응고','면역'], ORG_FLDC=['#005BAC','#00B9EF','#5185C5','#84BAE5'];
+const FAM_FLD={'XR-Series':'CBC','XN-Series':'CBC','XN-L Series':'CBC','SP-50':'CBC','SP-10':'CBC','G11':'CBC','UF-Series':'유린','UC-3500':'유린','CN-Series':'응고','CA/CS':'응고','HISCL-Series':'면역'};
+function orgEquipHtml(p,team,rows){
+  const ms=new Set(p.months), A={};
+  for(const o of D.rows){ if(!ms.has(o.mk)) continue; const n=team?o.cteams.filter(t=>t===team).length:o.credits.length; if(!n) continue;
+    const f=o.fam||'기타', x=A[f]||(A[f]={rep:0,pm:0,all:0,dS:0,dN:0}); x.all+=n; if(o.purp==='고장 수리'){ x.rep+=n; if(o.dur!=null){ x.dS+=o.dur*n; x.dN+=n; } } else if(o.purp==='PM') x.pm+=n; }
+  $('ogEqSub').textContent=`${p.label} · ${team?team.replace(/^FS\s*/,'')+' 팀':'FSG 전체'} · 같은 장비 수라도 장비 종류에 따라 부담이 다릅니다`;
+  const mix=PROD.eq?`<h4 class="dsh4">조직별 담당 장비 구성 (분야, 100% 누적)</h4><div class="dsleg">${ORG_FLD.map((f,i)=>`<span><i style="background:${ORG_FLDC[i]}"></i>${f}</span>`).join('')}</div>`+rows.map(r=>{ const t=r.fld?ORG_FLD.reduce((a,f)=>a+(r.fld[f]||0),0):0;
+      return `<button type="button" class="dsmix pick${r.off?' off':''}${r.sel?' sel':''}" data-k="${esc(r.k)}" aria-pressed="${r.sel}"><span class="ovhn">${orgName(r)}</span><span class="dsmt" role="img" aria-label="${esc(r.n)} 담당 장비 분야 구성">${t?ORG_FLD.map((f,i)=>{ const v=r.fld[f]||0, w=v/t*100; return v?`<i style="width:${w.toFixed(1)}%;background:${ORG_FLDC[i]}" title="${f} ${fmt(v)}대 (${w.toFixed(1)}%)">${w>=12?Math.round(w)+'%':''}</i>`:''; }).join(''):'<em>자료 없음</em>'}</span><span class="ovhv">${fmt(t)}대</span></button>`; }).join('')
+    :'<p class="empty-note">담당 장비 구성은 「담당기관 관리표」를 올리면 표시됩니다.</p>';
+  const eqF=PROD.eq?(()=>{ const sc=team?rows.find(r=>r.k===team&&!r.off):null, src=sc?[sc]:rows.filter(r=>!r.off), o={}; ORG_FLD.forEach(f=>o[f]=src.reduce((a,r)=>a+((r.fld||{})[f]||0),0)); return o; })():null;
+  const famL=FAM_ORDER.filter(f=>A[f]&&A[f].all), body=ORG_FLD.concat(['기타']).map(fl=>{ const fs=famL.filter(f=>(FAM_FLD[f]||'기타')===fl); if(!fs.length) return '';
+      const sum=k=>fs.reduce((a,f)=>a+A[f][k],0), rep=sum('rep'), eq=eqF&&fl!=='기타'?eqF[fl]:null, dS=sum('dS'), dN=sum('dN');
+      return `<tr class="tgt"><td>${fl}</td><td>${eq==null?'-':fmt(eq)}</td><td>${fmt(rep)}</td><td>${eq?(rep/eq*100).toFixed(1):'-'}</td><td>${fmt(sum('pm'))}</td><td>${dN?(dS/dN).toFixed(1):'-'}</td><td>${fmt(sum('all'))}</td></tr>`+
+        fs.map(f=>{ const x=A[f]; return `<tr><td>└ ${esc(f)}</td><td>-</td><td>${fmt(x.rep)}</td><td>-</td><td>${fmt(x.pm)}</td><td>${x.dN?(x.dS/x.dN).toFixed(1):'-'}${x.dN&&x.dN<10?'<span class="ovtag">표본 적음</span>':''}</td><td>${fmt(x.all)}</td></tr>`; }).join(''); }).join('');
+  return `<div class="dspair dseven"><div>${mix}</div><div><h4 class="dsh4">장비군별 고장 수리 · PM · 평균 수리 시간</h4><div class="ovtw"><table class="ovtab dsfull ogeqt"><thead><tr>${['분야 · 장비군','담당 장비 (대)','고장 수리 (건)','장비 100대당 고장','PM (건)','평균 수리 시간 (분)','처리 건수'].map(h=>`<th><span class="dsth">${h}</span></th>`).join('')}</tr></thead><tbody>${body||'<tr><td colspan="7">이 기간 자료가 없습니다.</td></tr>'}</tbody></table></div>
+    <p class="ovnote">담당 장비는 관리표 분야 단위(장비군별 대수는 관리표에 없어 「-」), 고장 수리·PM·처리 건수는 담당자·필수 참석자 인정 건수(KPI 기준), 평균 수리 시간 = 고장 수리 (종료 − 시작) 평균(일정표 예약 시간 기준, 참고용). 팀을 고르면 그 팀 인원 몫만 셉니다(사무소 단위는 장비군 자료가 없어 팀 기준).</p></div></div>`;
 }
 /* 반복 고장 장비 목록 — ovChronic 과 같은 기준(12개월 내 고장 수리 3회 이상, 자산대장이 있으면 '사용' 장비만, 위험 = 최근 90일 안에 고장) */
 function chronicList(end,team){
@@ -4761,7 +4819,7 @@ function renderWl(){
   h+= wlOn()? dsCell('수탁기관 야간 방문',wlF(lab.night),'건',`주말 ${wlF(lab.hol)}건 · 야간 ${wlP(lab.night,lab.n)||'-'}%`,two(wlD(lab.night,Ap.type.lab.night,'건',pp.label),wlD(lab.night,Ay.type.lab.night,'건','전년')),'평일 18~08시에 걸친 방문') : wlNA('수탁기관 야간 방문','기관 분류 미지정');
   h+= dsCell('정규근무 외 작업시간',wlH(offH),'시간',`참여 인원 × 작업시간 · 이동 제외`,two(wlD(Math.round(offH/60),Math.round(Ap.all.off/60),'시간',pp.label),wlD(Math.round(offH/60),Math.round(Ay.all.off/60),'시간','전년')),'평일 18~08시·주말 CRM 작업');
   h+=`</section>`;
-  const TABS=[['sum','요약'],['acad','학술 응대'],['inst','기관 유형'],['reg','지역'],['grp','5대 수탁기관']];
+  const TABS=[['sum','요약'],['unit','팀·사무소'],['acad','학술 응대'],['inst','기관 유형'],['reg','지역'],['grp','5대 수탁기관']];   /* 팀·사무소 = 사무소별 방문·야간·주말·수탁기관 (2026-11-16 작업지시서 v2: Organization 에서 옮겨 옴) */
   h+=`<div class="ovseg ovscroll wltabs" role="tablist" aria-label="분석 영역">${TABS.map(([k,n])=>`<button type="button" role="tab" data-t="${k}" aria-selected="${WL.tab===k}" aria-pressed="${WL.tab===k}">${n}</button>`).join('')}</div><div id="wlBody"></div>`;
   el.innerHTML=h;
   const ctx={p,pp,team,V,A,ac,m12,all,lab};
@@ -4777,7 +4835,7 @@ function wlOfficeHtml(team){
   const rows=U.map(u=>{ const o=A.unit[u]||{n:0,night:0,hol:0,off:0}, l=A.unitLab[u]||{n:0,night:0}, n=hc(u);
     const g5n=V.filter(v=>v.units.has(u)&&wlInfo(v.acct).g).length;
     return {c:[UNIT_SHORT(u),wlF(n),wlF(o.n),wlF(l.n),wlF(o.night),wlF(o.hol),wlOn()?wlF(g5n):'-',n?(o.night/n).toFixed(1):'-',n?(o.off/60/n).toFixed(1):'-']}; });
-  return `<h3>사무소별 업무부하 <span class="ovchip none">단위: 방문(현장 출동 횟수)</span> <span class="ovsub">같은 병원·같은 날 이어진 활동 = 1건 · 공동 방문은 참여 사무소마다 1건 · 위 표의 처리 건수와 단위가 다름</span></h3>${wlTbl(['사무소','인원','방문','수탁기관','평일 야간','주말·공휴일','5대 수탁','1인당 야간','1인당 정규근무 외(시간)'],rows)}<p class="ovnote">시간대·기관·지역별 자세한 분석은 <a href="#workload" data-go="wl">Workload</a>에서 봅니다. 학술 응대는 응대 직원 정보가 없어 사무소별로 나누지 않습니다.</p>`;
+  return `<h3>사무소별 업무부하 <span class="ovchip none">단위: 방문(현장 출동 횟수)</span> <span class="ovsub">같은 병원·같은 날 이어진 활동 = 1건 · 공동 방문은 참여 사무소마다 1건 · Organization 의 처리 건수(KPI)와 단위가 다름</span></h3>${wlTbl(['사무소','인원','방문','수탁기관','평일 야간','주말·공휴일','5대 수탁','1인당 야간','1인당 정규근무 외(시간)'],rows)}<p class="ovnote">시간대·기관·지역별 자세한 분석은 <a href="#workload" data-go="wl">Workload</a>에서 봅니다. 학술 응대는 응대 직원 정보가 없어 사무소별로 나누지 않습니다.</p>`;
 }
 function wlMonthSeries(all,m12,team,fn){ const s=new Set(m12), by={}; all.forEach(v=>{ if(!s.has(v.mk)||(team&&!v.teams.has(team))) return; const k=fn(v); if(k==null) return; (by[k]||(by[k]={}))[v.mk]=(by[k][v.mk]||0)+1; }); return by; }
 function wlBody(c){
@@ -4822,6 +4880,7 @@ function wlBody(c){
       { const U=PROD_UNITS, reg=WL_REG.concat(['']); h+=`<section class="ovcard" style="margin-top:14px"><h3>기관 지역 × 수행 사무소 <span class="ovsub">수탁기관 방문 건수 — 기관 지역과 방문한 직원의 사무소를 따로 셈</span></h3>${wlTbl(['기관 지역'].concat(U.map(UNIT_SHORT)),reg.map(r=>({c:[r||'미분류'].concat(U.map(u=>wlF((A.regUnit[r+'|'+u]||{n:0}).n)))})))}</section>`; }
     }
   }
+  if(T==='unit'){ h+=`<section class="ovcard">${wlOfficeHtml(team).replace(/<p class="ovnote">시간대·기관·지역별 자세한 분석은[^<]*<a[^>]*>Workload<\/a>에서 봅니다\. /,'<p class="ovnote">')}</section>`; }
   if(T==='grp'){
     if(!wlOn()){ h+='<section class="ovcard"><p class="empty-note">5대 수탁기관 그룹을 지정하면 표시됩니다.</p></section>'; }
     else{ const G5=WL_GROUPS.map(([g,n])=>({k:g,n,o:A.grp[g]})).sort((a,b)=>b.o.night-a.o.night), g5n=G5.reduce((a,x)=>a+x.o.night,0), L=A.type.lab;
@@ -4900,7 +4959,7 @@ function setView(v){
   if(!SCREENS[v]) v='ov'; VIEW=v; document.body.dataset.view=v; try{localStorage.setItem(VIEW_LS,v);}catch(e){}
   const c=SCREENS[v];
   document.querySelectorAll('#vtabs .vt').forEach(b=>b.setAttribute('aria-selected',b.dataset.view===v));
-  $('svcBar').hidden=v==='prd'; $('prodBar').hidden=v!=='prd';
+  $('svcBar').hidden=false; $('prodBar').hidden=true;
   $('ov').hidden=v!=='ov'; $('wl').hidden=v!=='wl'; $('mainArea').hidden=!c.scr; $('prod').hidden=!c.prod; $('mainArea').classList.toggle('dsx',!!(c.scr&&c.dsx)); $('prod').classList.toggle('dsx',!!(c.prod&&c.dsx));
   $('mainArea').querySelectorAll('[data-scr]').forEach(el=>el.classList.toggle('scr-off',!el.dataset.scr.split(' ').includes(c.scr)));
   $('mainArea').querySelectorAll('.grid').forEach(g=>{ const k=[...g.children].filter(x=>!x.classList.contains('scr-off')).length; g.classList.toggle('one',k<=1); });

@@ -88,7 +88,7 @@ assert.strictEqual(JSON.stringify(ctx2.eqAgg(by, ['L', 'P', 'Q'], n => ({ L: 100
 const rEq = K.sliceFunction(html, 'renderEquip'); assert(/eqAgg\(/.test(rEq) && /팀장/.test(rEq), 'renderEquip 은 eqAgg(팀장 제외)로 계산');
 // 2026-11-16: 1인당 담당 장비는 Organization 비교표(orgRows → eqAgg perHead, 팀장 제외), 개인별 표는 Productivity 「담당 장비」 탭
 assert(/eqh:PROD\.eq\?eqAgg\(.*'팀장'\)\.perHead/.test(html), '1인당 담당 장비 = orgRows eqAgg(팀장 제외)');
-assert(/prd:\{[^}]*tabs:\[[^\]]*'equip'/.test(html), 'Productivity 하위 탭 「담당 장비」');
+assert(/org:\{[^}]*tabs:\[[^\]]*'equip'/.test(html), 'Organization 상세 분석 하위 탭 「개인별 담당 장비」 (2026-11-16 Productivity 통합)');
 // 같은 값이 직전 기간으로도 나온다(같은 장비 수로 나눔)
 assert(east.per100Prev === null || typeof east.per100Prev === 'number');
 

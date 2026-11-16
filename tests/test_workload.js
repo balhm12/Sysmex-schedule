@@ -74,7 +74,7 @@ assert(/body\[data-view=prd\] #prodTabs \[data-tab=ot\]\{display:none\}/.test(ht
 assert(/wl:\{hash:'#workload',prod:'ot',tabs:\['ot','move'\]/.test(html), 'Workload 아래 = 야간 OT + 이동거리');
 assert(!/prd:\{[^}]*tabs:\[[^\]]*'move'/.test(html), 'Productivity 하위 탭에서 이동거리를 뺌');
 assert(!/\['org','조직'\]/.test(html), 'Workload 「조직」 탭은 Organization 으로');
-assert(/function wlOfficeHtml\(/.test(html) && /id="ogWl"/.test(html), '사무소별 업무부하 = Organization');
+assert(/function wlOfficeHtml\(/.test(html) && /\['unit','팀·사무소'\]/.test(html) && /T==='unit'\)\{[^\n]*wlOfficeHtml\(team\)/.test(html) && !/id="ogWl"/.test(html), '사무소별 업무부하(방문) = Workload 「팀·사무소」 (작업지시서 v2: Organization 에서는 뺌)');
 assert(!/id="pmBars"/.test(html) && !/teamRevisitCards/.test(html), 'Productivity 의 팀 비교·팀별 재방문율은 Organization 비교표로 (중복 제거)');
 assert(!/<h2 class="sec" data-scr="sq">업무량 추이/.test(html), 'Service Quality 의 업무량 추이는 Proactive Service 와 중복');
 assert(/function otPersonHtml\(/.test(html) && /function otPersonDraw\(/.test(html), '개인 야간·휴일 블록은 OT 패널 아래로');
