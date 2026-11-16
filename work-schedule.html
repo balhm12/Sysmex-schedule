@@ -914,7 +914,7 @@ const INSTITUTION_LIST = ["(사)부산의료선교회세계로병원", "(사)한
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 44; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
+const BUILD_VERSION = 45; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1409,7 +1409,12 @@ function legendNightItems(){
 }
 function renderLegend(){
   const el = document.getElementById('legend');
-  const items = HALF_STATUS.filter(s=>s.key).concat(legendNightItems());
+  // 같은 상태가 두 번 나오지 않게 합니다. OFF 는 오전·오후 목록과 야간 목록에 둘 다
+  // 있어서 칩이 두 개 그려졌습니다(2026-11-17). 필터 키가 같으므로 칩 하나로
+  // 오전·오후 OFF 와 야간 OFF 를 모두 걸러 줍니다.
+  const seenKey = new Set();
+  const items = HALF_STATUS.filter(s=>s.key).concat(legendNightItems())
+    .filter(s=>{ if(seenKey.has(s.key)) return false; seenKey.add(s.key); return true; });
   let html = items.map(s=>{
     const active = activeFilters.has(s.key);
     const style = active ? (' style="background:' + s.color + ';color:white;border-color:' + s.color + ';"') : '';
