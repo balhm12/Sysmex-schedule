@@ -4274,13 +4274,13 @@ function renderProd(){
   prodTitle();
 }
 const ORG_DET_LS='fsg-kpi-orgdet';
-function orgDetOpen(v){ try{ if(v!==undefined){ localStorage.setItem(ORG_DET_LS,v?'1':'0'); return v; } return localStorage.getItem(ORG_DET_LS)==='1'; }catch(e){ return !!v; } }
+function orgDetOpen(v){ const k=ORG_DET_LS+(VIEW==='org'?'':'-'+VIEW); try{ if(v!==undefined){ localStorage.setItem(k,v?'1':'0'); return v; } return localStorage.getItem(k)==='1'; }catch(e){ return !!v; } }   /* 화면마다 따로 기억(Organization·Workload) */
 function prodTitle(){
   const el=$('prodTitle'), sec=$('prodSec'); if(!el||!PROD) return;
   if(sec){ const h={org:['상세 분석 — 팀 · 개인','선택한 팀·사무소 상세, 개인 순위·개인별 상세·개인별 담당 장비 · 개인 값은 맡은 업무의 양과 종류이며 성과 평가가 아님'],eqp:['담당 장비 현황','담당기관 관리표 기준 · 현재 시점 · 사람별·1인당 장비는 Organization'],wl:['근무 시간 · 이동 (사람 기준)','야간 OT·휴일 근무 = CRM 기록·인사 연장근무 기준 — 근무 종료가 WEST·EAST 17시·CENTRAL·SOUTH 18시라 위 방문 시간대(08~18시)와 기준이 다릅니다']}[VIEW]; sec.innerHTML=h?h[0]+' <small>'+h[1]+'</small>':''; sec.hidden=!h;
     /* v3.1(2026-11-16): Organization 상세 분석(개인 순위·KPI 점수·직급 보정·개인별 담당 장비)은 기본 접힘, 펼침 상태는 기기에 기억 */
-    const pr=$('prod'), fold=VIEW==='org'&&!orgDetOpen(); if(pr) pr.classList.toggle('pfold',fold);
-    if(h&&VIEW==='org'){ sec.insertAdjacentHTML('beforeend',`<span class="ovtools"><button type="button" class="dsbtn" id="prodFoldBtn" aria-expanded="${!fold}" aria-controls="prod">${fold?'상세 분석 펼치기':'접기'}</button></span>`);
+    const FV=VIEW==='org'||VIEW==='wl', pr=$('prod'), fold=FV&&!orgDetOpen(); if(pr) pr.classList.toggle('pfold',fold);   /* v3.1 PR4: Workload 사람 기준(야간 OT·휴일·이동거리·개인 목록)도 기본 접힘 */
+    if(h&&FV){ sec.insertAdjacentHTML('beforeend',`<span class="ovtools"><button type="button" class="dsbtn" id="prodFoldBtn" aria-expanded="${!fold}" aria-controls="prod">${fold?(VIEW==='wl'?'사람 기준 펼치기':'상세 분석 펼치기'):'접기'}</button></span>`);
       $('prodFoldBtn').onclick=()=>{ orgDetOpen(!orgDetOpen()); prodTitle(); }; } }
   if(VIEW!=='prd'){ el.innerHTML=''; return; }
   const S=prodSelection(), n=Object.keys(PROD.person||{}).length;
