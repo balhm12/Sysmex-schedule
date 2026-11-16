@@ -101,3 +101,7 @@ assert(/function eqField\(/.test(html) && /class="oveqseg/.test(html) && /OV_EQF
 assert(/function mPred\(months\)/.test(html) && /전월 동기간\(/.test(html) && /const OV_ISS=\{incRate:0\.2, incAbs:10, focus:1\.2\}/.test(html) && /chip:'업무 집중'/.test(html), 'v3.2 전월 동기간·이슈 기준');
 { const f=new Function(html.match(/function mPred\(months\)\{[^\n]*\}/)[0]+';return mPred;')(); const M=['2026-10']; M.tTo=Date.UTC(2026,9,17); const g=f(M);
   assert(g('2026-10',Date.UTC(2026,9,16,23))&&!g('2026-10',Date.UTC(2026,9,17,0))&&!g('2026-09',Date.UTC(2026,8,5)), 'mPred 전월 동기간 경계'); assert(f(['2026-10'])('2026-10',Date.UTC(2026,9,30)), 'mPred 마감 월 전체'); }
+/* v3.4: Overview 순서 KPI → 추이·이슈 → 운영 장비, 임원보고 2쪽(같은 값 재사용), 유효 운영 0이면 「–」 */
+{ const ov=html.slice(html.indexOf('function renderOv(){')); const a=ov.indexOf('id="ovKpi"'), b=ov.indexOf('ovg-a'), c=ov.indexOf('${ovEquipCard()}');
+  assert(a>0&&b>a&&c>b, 'v3.4 Overview 순서'); assert(/class="rptbrk"/.test(html)&&/Management Issues/.test(html)&&/1 \/ 2/.test(html)&&/2 \/ 2/.test(html), 'v3.4 임원보고 2쪽 구성');
+  assert(/CRM 이력과 맞는 장비 없음/.test(html), 'v3.4 유효 운영 0 처리'); }
