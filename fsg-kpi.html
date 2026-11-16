@@ -806,10 +806,11 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
 #wl .ovkpi .ovv{font-size:42px}#wl .ovkpi .ovkc{cursor:help}#wl .wlinfo{margin-left:6px;font-size:12px;font-weight:400;color:var(--muted)}
 @media (max-width:600px){#wl .ovkpi .ovv{font-size:32px}}
 #ogTbl .ogx{display:none!important}
-.oveq{display:grid;grid-template-columns:minmax(260px,1fr) 2fr;gap:20px;align-items:center}.oveqn{display:flex;gap:28px}.oveqn>div{display:flex;flex-direction:column;gap:2px}
+.oveq{display:grid;grid-template-columns:minmax(380px,1.2fr) 2fr;gap:20px;align-items:center}.oveqn{display:flex;gap:28px}.oveqn>div{display:flex;flex-direction:column;gap:2px}
 #ov .oveq .ovv{font-size:32px}.oveqbar{display:flex;height:26px;border-radius:4px;overflow:hidden;margin:6px 0 8px;background:var(--grid)}.oveqbar i{display:flex;align-items:center;justify-content:center;color:#fff;font-style:normal;font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden}
 .oveqlg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}.oveqlg b{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:0}
-@media (max-width:760px){.oveq{grid-template-columns:1fr}.oveqn{gap:20px}}
+@media (max-width:760px){.oveq{grid-template-columns:1fr;gap:12px}.oveqn{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}#ov .oveq .ovv{font-size:24px}#ov .oveq .ovs{font-size:11px}.ovequip>.ovnote{display:none}}
+.oveqn .ovs{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -4448,18 +4449,18 @@ function ovGo(it){ if(!it) return; $('fTeam').value=it.team||''; if(it.wl&&typeo
 /* v3.2: 운영 장비 현황 — 자산대장 기준(관리표 담당 장비와 다름). 등록 = 자산대장 상태 '사용', 유효 운영 = 그중 최근 12개월 서비스 이력(S/N·기관 일치) — 운영 건전성 「가동 장비(모수)」와 같은 기준 */
 function opEquip(){ if(!SERIAL||!D) return null; const end=D.months[D.months.length-1], ms=last12Set(end), touched=new Set();
   D.rows.forEach(o=>{ if(ms.has(o.mk)&&o.sn&&o.acct) touched.add(o.sn+'|'+o.acct); });
-  const used=SERIAL.filter(x=>x.state==='사용'&&x.sn&&x.acct), fam={}, famV={}; let valid=0;
-  used.forEach(x=>{ const f=famOf(x.model), v=touched.has(x.sn+'|'+x.acct); fam[f]=(fam[f]||0)+1; if(v){ valid++; famV[f]=(famV[f]||0)+1; } });
-  return {reg:used.length, valid, fam, famV, end}; }
+  const used=SERIAL.filter(x=>x.state==='사용'&&x.sn&&x.acct), fam={}, famV={}, acc=new Set(), accV=new Set(); let valid=0;
+  used.forEach(x=>{ const f=famOf(x.model), v=touched.has(x.sn+'|'+x.acct); fam[f]=(fam[f]||0)+1; acc.add(x.acct); if(v){ valid++; famV[f]=(famV[f]||0)+1; accV.add(x.acct); } });
+  return {reg:used.length, valid, fam, famV, acc:acc.size, accV:accV.size, end}; }
 function opEquipLine(){ const o=opEquip(), eq=EQD&&EQD.rows?EQD.rows.reduce((a,r)=>a+(+r[3]||0),0):null;
   return (o?`자산대장 운영 장비 ${fmt(o.reg)}대(최근 12개월 서비스 이력 ${fmt(o.valid)}대)`:'자산대장 미등록')+' · '+(eq!=null?`FSR 관리표 담당 장비 ${fmt(eq)}대`:'관리표 미등록')+' — 두 숫자는 기준이 다릅니다'; }
 function ovEquipCard(){ const o=opEquip();
-  if(!o) return `<section class="ovcard ovequip" style="margin-top:14px" aria-labelledby="ovh7"><h3 id="ovh7">운영 장비 현황</h3><p class="ovnote">자산대장이 올라와 있지 않아 장비 수를 보여 줄 수 없습니다(관리자 「자산대장」 올리기).</p></section>`;
+  if(!o) return `<section class="ovcard ovequip" style="margin:0 0 14px" aria-labelledby="ovh7"><h3 id="ovh7">운영 장비 현황</h3><p class="ovnote">자산대장이 올라와 있지 않아 장비 수를 보여 줄 수 없습니다(관리자 「자산대장」 올리기).</p></section>`;
   const C=['#005BAC','#00B9EF','#5185C5','#84BAE5','#B7D3EE','#9FA0A0'], fk=Object.keys(o.fam).sort((a,b)=>o.fam[b]-o.fam[a]), top=fk.slice(0,5), etc=fk.slice(5).reduce((a,f)=>a+o.fam[f],0);
   const segs=top.map((f,i)=>({n:f,v:o.fam[f],c:C[i]})).concat(etc?[{n:'그 밖',v:etc,c:C[5]}]:[]);
   const bar=segs.map(x=>{ const pct=x.v*100/o.reg; return `<i style="width:${pct}%;background:${x.c}" title="${esc(x.n)} ${fmt(x.v)}대 (${pct.toFixed(1)}%)">${pct>=9?esc(x.n.replace(/-Series| Series/,''))+' '+Math.round(pct)+'%':''}</i>`; }).join('');
-  return `<section class="ovcard ovequip" style="margin-top:14px" aria-labelledby="ovh7"><h3 id="ovh7">운영 장비 현황 <span class="ovsub">자산대장 기준 · FSG 전체(팀 필터와 무관)</span><span class="ovtools"><button type="button" class="dsbtn" id="ovEqGo">Instrument 상세 ›</button></span></h3>
-    <div class="oveq"><div class="oveqn"><div><span class="ovl">자산대장 등록(사용)</span><span class="ovv">${fmt(o.reg)}<small>대</small></span></div><div><span class="ovl">유효 운영 장비</span><span class="ovv">${fmt(o.valid)}<small>대</small></span><span class="ovs">최근 12개월 서비스 이력 있음 · ${o.reg?Math.round(o.valid*100/o.reg):0}%</span></div></div>
+  return `<section class="ovcard ovequip" style="margin:0 0 14px" aria-labelledby="ovh7"><h3 id="ovh7">운영 장비 현황 <span class="ovsub">자산대장 상태 「사용」 기준 · FSG 전체(팀 필터와 무관)</span><span class="ovtools"><button type="button" class="dsbtn" id="ovEqGo">Instrument 상세 ›</button></span></h3>
+    <div class="oveq"><div class="oveqn"><div><span class="ovl">등록 장비</span><span class="ovv">${fmt(o.reg)}<small>대</small></span></div><div><span class="ovl">유효 운영</span><span class="ovv">${fmt(o.valid)}<small>대</small></span><span class="ovs">12개월 서비스 이력 · ${o.reg?Math.round(o.valid*100/o.reg):0}%</span></div><div><span class="ovl">거래처</span><span class="ovv">${fmt(o.acc)}<small>곳</small></span><span class="ovs">이력 있는 곳 ${fmt(o.accV)}</span></div></div>
     <div class="oveqb"><span class="ovl">장비 시리즈 구성 (등록 기준, 100%)</span><div class="oveqbar">${bar}</div><div class="oveqlg">${segs.map(x=>`<span><b style="background:${x.c}"></b>${esc(x.n)} ${fmt(x.v)}대</span>`).join('')}</div></div></div>
     <p class="ovnote">FSR 담당기관 관리표의 「담당 장비」(Organization)와 기준이 다릅니다 — 관리표는 담당자가 정해진 장비만 셉니다.</p></section>`; }
 function renderOv(){
@@ -4487,6 +4488,7 @@ function renderOv(){
   root.innerHTML=`
   <div class="ovtitle"><div><h2>Overview ${SB}${team?'<button type="button" class="ovscx" id="ovScx">FSG 전체로 보기</button>':''}</h2><p>${esc(p.label)} · ${esc(scope)} · 비교 ${esc(lab)} · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}${SRC&&SRC.at?' · 마지막 업데이트 '+esc(SRC.at):''}${prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div><div class="ovtb2"><button type="button" id="ovRptBtn">보고용 보기</button></div></div>
   <div class="rptHead"><div class="rl"><img alt="Sysmex" src="${logoSrc}"><small>FSG KPI</small><b>Overview</b></div><div class="rr"><h1>${esc(p.label)} 서비스 운영 현황</h1><p>${esc(rptSum)}</p><span>${esc(scope)} · 비교 ${esc(lab)} · 자료 CRM ${esc((D.excl&&D.excl.cut)||'-')} 기준 · 작성 ${esc(rptDate)}</span></div></div>
+  ${ovEquipCard()}
   <h3 class="ovrh"><i>SECTION 01</i>Key Service Performance ${SB}</h3>
   <section class="ovkpi" id="ovKpi" role="tablist" aria-label="핵심 지표 4개. 선택하면 아래 추이 그래프가 바뀝니다">${OV_K.map(o=>{ const v=cur[o.k], st=ovSt(o,v);
     return `<button class="ovkc" role="tab" aria-selected="${o.k===OV.metric}" data-k="${o.k}"><span class="ovl">${o.n}${st.chip?`<span class="ovchip ${st.st}">${st.chip}</span>`:''}</span>
@@ -4499,7 +4501,6 @@ function renderOv(){
       ${al.length?`<ul class="ovhl">${(OV.issAll?al:al.slice(0,5)).map((a,k)=>`<li><span class="ovchip ${a.cc}">${a.chip}</span><div><b>${esc(a.t)}</b><span class="ovs">${esc(a.s)}</span></div><button type="button" data-i="${k}">${a.vl} ›</button></li>`).join('')}</ul>${al.length>5?`<button type="button" class="dsmore" id="ovIssMore" aria-expanded="${!!OV.issAll}">${OV.issAll?'5개만 보기':'모두 보기 ('+al.length+'건)'}</button>`:''}`:'<p class="ovnote">지금 확인이 필요한 항목이 없습니다.</p>'}
       <p class="ovnote" style="margin-top:6px">증가 = 비교 기간(${esc(pp.label)}) 대비 20% 이상·10건 이상 · 인원 대비 = 1인당 처리 건수가 FSG 평균의 120% 이상</p></section>
   </div>
-  ${ovEquipCard()}
   <div class="ovrfoot">자료: CRM 「모든 약속/활동」 · FTFR = 한 번에 고친 비율, 재방문율 = 14일 안 재방문 비율, MTTR = 고장 수리 평균 소요 시간 · 근접 기준: 목표의 92%(높을수록 좋은 지표) / 115%(낮을수록 좋은 지표) · 업무 유형은 취소·온라인 정기점검 제외, 담당자·필수 참석자 각각 1건 · 최근 14일의 FTFR·재방문율은 잠정치 · 작성: FSS Team</div>`;
   // 추이
   const o=OV_K.find(x=>x.k===OV.metric), n=OV.range, arr=ts.map(s=>s[o.k]).slice(-n), lb=tl.slice(-n), tg=o.t();
