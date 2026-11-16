@@ -4695,6 +4695,7 @@ function orgScatter(){
   box.innerHTML=`<div class="ogscw"><div class="cv ogsc"><canvas id="cOrgSc" role="img" aria-label="담당 장비 수와 ${yl}의 관계. 오른쪽 표와 같은 숫자입니다."></canvas></div>${side}</div>
     <div class="dsleg ogscleg"><span><i style="background:${ORGSC_C.good}"></i>${ko.n} 달성</span><span><i style="background:${ORGSC_C.warn}"></i>근접</span><span><i style="background:${ORGSC_C.bad}"></i>미달</span><span><i style="background:${ORGSC_C.none}"></i>자료 없음</span><span>점 크기 = 인원</span></div>
     ${qon?`<div class="ogguide"><b>읽는 법</b> <span class="ovsub">중앙값 기준의 상대적 비교 — 절대 기준이나 목표가 아닙니다</span><br>이상적인 모습은 점이 <em>왼쪽 아래 ↔ 오른쪽 위</em>(옅은 파랑 칸, 담당 장비가 많을수록 업무도 많음)에 있고 <em>파란색</em>(품질 목표 달성)인 상태입니다.
+    ${qon?`<div class="ogguide"><b>읽는 법</b> — 이상적인 모습은 점이 <em>왼쪽 아래 ↔ 오른쪽 위</em>(옅은 파랑 칸, 담당 장비가 많을수록 업무도 많음)에 있고 <em>파란색</em>(품질 목표 달성)인 상태입니다.
       <ul><li><span class="ogq ogq-hi">장비 대비 업무 많음</span> 왼쪽 위 — 장비 수에 비해 일이 많습니다. 고장·재방문, 설치·학술 같은 장비 외 업무가 많은지 확인합니다.</li>
       <li><span class="ogq ogq-lo">장비 대비 업무 적음</span> 오른쪽 아래 — 장비 수에 비해 일이 적습니다. 여력이 있거나, PM 이 빠지지 않았는지 확인합니다.</li>
       <li>점선은 ${UW} ${R.length}곳의 <em>중앙값</em>(가운데 값)이라 늘 절반은 위·절반은 아래에 옵니다. 선 아래·왼쪽이 나쁘다는 뜻이 아니고, 서로 견주는 기준입니다.</li></ul></div>`:''}
