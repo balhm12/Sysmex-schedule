@@ -822,6 +822,12 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
 @media (max-width:760px){.oveqst.s{display:none}.oveqbar{height:30px}}
 .oveqdet.alt{display:none}
 @media print{body.pdfx .oveqdet.alt{display:block}body.pdfx .oveqseg{opacity:1;box-shadow:none}body.pdfx .ovequip{break-inside:auto}}
+/* 보고용 보기·인쇄: 운영 장비 카드는 숫자 한 줄 → 분야 막대 → 모든 분야 세부(2열) */
+body.rpt #ov .oveq{grid-template-columns:1fr;gap:10px}body.rpt #ov .oveqn{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+body.rpt #ov .oveq .ovl{flex-direction:row;justify-content:flex-start;align-items:baseline;gap:6px;font-size:12.5px}body.rpt #ov .oveq .ovv{font-size:26px;white-space:nowrap}
+body.rpt #ov .oveqdet.alt{display:block}body.rpt #ov .oveqdet{margin-top:6px;padding-top:6px}body.rpt #ov .oveqr{grid-template-columns:78px 1fr 92px;min-height:20px;font-size:12px}
+body.rpt #ov .oveqseg{opacity:1;box-shadow:none;cursor:default}body.rpt #ov .oveqlgb{cursor:default;border-color:transparent;font-weight:400;color:var(--muted)}
+body.rpt #ov .rptno{display:none}
 </style>
 </head>
 <body>
@@ -4521,7 +4527,7 @@ function renderOv(){
   <div class="ovgrid ovg-a">
     <section class="ovcard ovtrcard" aria-labelledby="ovh2"><h3 id="ovh2"><span id="ovTrT"></span>${SB}<span class="ovtools"><span class="ovseg" role="group" aria-label="기간 범위"><button data-r="6">6개월</button><button data-r="12">12개월</button></span></span></h3>
       <div class="ovsum" id="ovSum"></div><div class="ovchart" id="ovBox"></div><p class="ovnote" id="ovTrN"></p></section>
-    <section class="ovcard" aria-labelledby="ovh6"><h3 id="ovh6">확인이 필요한 곳 <span class="ovscope">모든 팀</span></h3><p class="ovnote" style="margin:0 0 4px">중요한 순(목표 미달 → 위험 장비·초기 고장 → 근접 → 업무 증가) · 누르면 해당 탭으로 이동</p>
+    <section class="ovcard" aria-labelledby="ovh6"><h3 id="ovh6">확인이 필요한 곳 <span class="ovscope">모든 팀</span></h3><p class="ovnote" style="margin:0 0 4px">중요한 순(목표 미달 → 위험 장비·초기 고장 → 근접 → 업무 증가)<span class="rptno"> · 누르면 해당 탭으로 이동</span></p>
       ${al.length?`<ul class="ovhl">${(OV.issAll?al:al.slice(0,5)).map((a,k)=>`<li><span class="ovchip ${a.cc}">${a.chip}</span><div><b>${esc(a.t)}</b><span class="ovs">${esc(a.s)}</span></div><button type="button" data-i="${k}">${a.vl} ›</button></li>`).join('')}</ul>${al.length>5?`<button type="button" class="dsmore" id="ovIssMore" aria-expanded="${!!OV.issAll}">${OV.issAll?'5개만 보기':'모두 보기 ('+al.length+'건)'}</button>`:''}`:'<p class="ovnote">지금 확인이 필요한 항목이 없습니다.</p>'}
       <p class="ovnote" style="margin-top:6px">증가 = 비교 기간(${esc(pp.label)}) 대비 20% 이상·10건 이상 · 인원 대비 = 1인당 처리 건수가 FSG 평균의 120% 이상</p></section>
   </div>
