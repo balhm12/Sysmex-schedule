@@ -79,3 +79,5 @@ assert(/function renderSqChr\(/.test(html) && /id="tChrSq"/.test(html) && /mode=
 assert(/data-k="ftfr"/.test(html) && /if\(0\) html \+= '<div class="block"><div class="block-head"><h2>담당 병원별/.test(html), 'v3.1: 기관별 품질에 FTFR, Organization 병원별 표는 이동');
 /* v3.1 PR3: Overview = 핵심 KPI·품질 추이·확인이 필요한 곳(탭 이동) */
 assert(/function ovIssues\(/.test(html) && /function ovGo\(/.test(html) && !/SECTION 03<\/i>업무 유형/.test(html) && !/SECTION 05<\/i>예방 서비스/.test(html), 'v3.1: Overview 3영역, 이슈 → 탭 이동');
+/* v3.1 PR4: Workload 사람 기준(야간 OT·휴일·이동거리·개인 목록)은 기본 접힘 — 화면별 기억 */
+assert(/const FV=VIEW==='org'\|\|VIEW==='wl'/.test(html), 'v3.1: Organization·Workload 상세 기본 접힘');
