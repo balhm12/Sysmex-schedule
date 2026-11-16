@@ -800,6 +800,9 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
   body.pdfx .ovcard,body.pdfx .panel,body.pdfx section{break-inside:avoid}
   body.pdfx details.dsfold>*{display:block}
 }
+.ogguide{margin:10px 0 4px;padding:10px 14px;border:1px solid var(--border);border-left:3px solid #005BAC;border-radius:6px;background:var(--surface);font-size:12.5px;line-height:1.6;color:var(--text)}
+.ogguide em{font-style:normal;font-weight:700;color:#005BAC}.ogguide ul{margin:6px 0 0;padding-left:18px}.ogguide li{margin:3px 0}
+.ogq{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:4px;white-space:nowrap;margin-right:4px}.ogq-ok{background:#EAF2FB;color:#005BAC}.ogq-hi{background:#FDF4E3;color:#8F5C06}.ogq-lo{background:#EEF1F4;color:#4F5B67}
 </style>
 </head>
 <body>
@@ -4639,6 +4642,8 @@ function orgCenter(vals,m){ const d=Math.max(...vals.map(v=>Math.abs(v-m)),m*0.0
   return {min:mn,max:mx,afterBuildTicks:ax=>{ ax.ticks=ax.ticks.filter(t=>Math.abs(t.value/st-Math.round(t.value/st))<1e-6); },ticks:{color:css('--text'),stepSize:st}}; }
 const orgMed=a=>{ const v=a.slice().sort((x,y)=>x-y), n=v.length; return n?(n%2?v[(n-1)/2]:(v[n/2-1]+v[n/2])/2):null; };
 const ORGSC_C={good:'#005BAC',warn:'#E69E0B',bad:'#E7413E',none:'#9FA0A0'};
+/* 산점도 위치 — 중앙값 기준 네 칸(2026-11-16 사용자 요청 「중앙값 기준과 이상적인 모습 표현」). 균형 = 장비·업무가 같이 많거나 같이 적음 */
+function orgQuad(x,y,mx,my){ const H=y>=my, R=x>=mx; return H&&!R?{k:'hi',s:'장비 대비 업무 많음'}:!H&&R?{k:'lo',s:'장비 대비 업무 적음'}:{k:'ok',s:H?'균형 · 큰 규모':'균형 · 작은 규모'}; }
 function orgScatter(){
   const box=$('ogScBox'), seg=(id,list,cur,key)=>{ $(id).innerHTML=list.map(([k,n])=>`<button type="button" data-v="${k}" aria-pressed="${k===cur}">${n}</button>`).join(''); $(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{ ORGSC[key]=b.dataset.v; orgScatter(); }); };
   seg('ogScU',[['office','사무소 6'],['team','팀 4']],ORGSC.u,'u'); seg('ogScQ',[['on','기준선 보이기'],['off','숨기기']],ORGSC.q,'q'); seg('ogScY',[['cnt','처리 건수'],['per','1인당 처리 건수']],ORGSC.y,'y'); seg('ogScC',[['ftfr','FTFR'],['rev','재방문율'],['mttr','MTTR']],ORGSC.c,'c');
@@ -4648,9 +4653,13 @@ function orgScatter(){
   const narrow=(box.clientWidth||window.innerWidth)<560;   /* 휴대폰: 점이 화면 폭에 비해 커서 서로 덮이던 것 — 크기를 줄임 */
   const pts=R.map(r=>{ const st=ovSt(ko,r[ORGSC.c]).st||'none'; return {x:r.eq,y:r[ORGSC.y],r:(narrow?5:8)+(narrow?10:16)*Math.sqrt((r.all||1)/rmax),row:r,st}; });
   const stL={good:'달성',warn:'근접',bad:'미달',none:'자료 없음'}, fv=v=>v==null?'-':(ORGSC.c==='mttr'?Math.round(v)+'분':v.toFixed(1)+'%'), srt=pts.slice().sort((a,b)=>b.y-a.y);
-  const side=`<div class="ogscside"><table class="ovtab dsfull ogsct"><caption>${UW}별 값 · ${esc(ko.n)} 기준 색</caption><thead><tr><th>${UW}</th><th>담당 장비</th><th>${ORGSC.y==='cnt'?'처리 건수':'1인당 처리'}</th><th>${esc(ko.n)}</th></tr></thead><tbody>${srt.map(d=>`<tr class="row${d.row.sel?' sel':''}" data-k="${esc(d.row.k)}" tabindex="0"><td><i class="ogdot" style="background:${ORGSC_C[d.st]}" aria-hidden="true"></i>${esc(d.row.n)}</td><td>${fmt(d.x)}</td><td>${ORGSC.y==='cnt'?fmt(d.y):d.y.toFixed(1)}</td><td>${fv(d.row[ORGSC.c])} <span class="ovsub">${stL[d.st]}</span></td></tr>`).join('')}</tbody></table><p class="ovnote">처리 건수 많은 순 · 줄을 누르면 그 ${UI} 선택됩니다.</p></div>`;
+  const side=`<div class="ogscside"><table class="ovtab dsfull ogsct"><caption>${UW}별 값 · ${esc(ko.n)} 기준 색</caption><thead><tr><th>${UW}</th><th>담당 장비</th><th>${ORGSC.y==='cnt'?'처리 건수':'1인당 처리'}</th><th>${esc(ko.n)}</th>${qon?'<th>위치</th>':''}</tr></thead><tbody>${srt.map(d=>`<tr class="row${d.row.sel?' sel':''}" data-k="${esc(d.row.k)}" tabindex="0"><td><i class="ogdot" style="background:${ORGSC_C[d.st]}" aria-hidden="true"></i>${esc(d.row.n)}</td><td>${fmt(d.x)}</td><td>${ORGSC.y==='cnt'?fmt(d.y):d.y.toFixed(1)}</td><td>${fv(d.row[ORGSC.c])} <span class="ovsub">${stL[d.st]}</span></td>${qon?`<td><span class="ogq ogq-${orgQuad(d.x,d.y,mx,my).k}">${orgQuad(d.x,d.y,mx,my).s}</span></td>`:''}</tr>`).join('')}</tbody></table><p class="ovnote">처리 건수 많은 순 · 줄을 누르면 그 ${UI} 선택됩니다.</p></div>`;
   box.innerHTML=`<div class="ogscw"><div class="cv ogsc"><canvas id="cOrgSc" role="img" aria-label="담당 장비 수와 ${yl}의 관계. 오른쪽 표와 같은 숫자입니다."></canvas></div>${side}</div>
     <div class="dsleg ogscleg"><span><i style="background:${ORGSC_C.good}"></i>${ko.n} 달성</span><span><i style="background:${ORGSC_C.warn}"></i>근접</span><span><i style="background:${ORGSC_C.bad}"></i>미달</span><span><i style="background:${ORGSC_C.none}"></i>자료 없음</span><span>점 크기 = 인원</span></div>
+    ${qon?`<div class="ogguide"><b>읽는 법</b> — 이상적인 모습은 점이 <em>왼쪽 아래 ↔ 오른쪽 위</em>(옅은 파랑 칸, 담당 장비가 많을수록 업무도 많음)에 있고 <em>파란색</em>(품질 목표 달성)인 상태입니다.
+      <ul><li><span class="ogq ogq-hi">장비 대비 업무 많음</span> 왼쪽 위 — 장비 수에 비해 일이 많습니다. 고장·재방문, 설치·학술 같은 장비 외 업무가 많은지 확인합니다.</li>
+      <li><span class="ogq ogq-lo">장비 대비 업무 적음</span> 오른쪽 아래 — 장비 수에 비해 일이 적습니다. 여력이 있거나, PM 이 빠지지 않았는지 확인합니다.</li>
+      <li>점선은 ${UW} ${R.length}곳의 <em>중앙값</em>(가운데 값)이라 늘 절반은 위·절반은 아래에 옵니다. 선 아래·왼쪽이 나쁘다는 뜻이 아니고, 서로 견주는 기준입니다.</li></ul></div>`:''}
     <p class="ovnote">담당 장비: 현재 관리표 기준 / 처리 건수: 선택 기간 기준. 시점이 다른 데이터의 참고 비교입니다.</p>
     <p class="ovnote">${qon?`점선 = ${UW} 중앙값(담당 장비 ${Math.round(mx)}대 · ${ORGSC.y==='cnt'?'처리 건수 '+Math.round(my)+'건':'1인당 처리 건수 '+my.toFixed(1)+'건'}). 위치를 견주는 기준이며 과부하·인력 부족을 판정하는 값이 아닙니다. `:''}담당 장비가 없는 ${UN} 점을 그리지 않습니다(0으로 넣지 않음). 점을 누르면 그 ${UI} 선택되고 아래 「상세 분석」(펼치기)에 나옵니다.</p>`;
   box.querySelectorAll('.ogsct tr[data-k]').forEach(t=>{ t.onclick=()=>orgPick(t.dataset.k); t.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); orgPick(t.dataset.k); } }; });
@@ -4658,8 +4667,10 @@ function orgScatter(){
       const wide=a.right-a.left>=520;
       if(qon){ ctx.strokeStyle=css('--muted')||'#9FA0A0'; ctx.setLineDash([5,4]); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(px,a.top); ctx.lineTo(px,a.bottom); ctx.moveTo(a.left,py); ctx.lineTo(a.right,py); ctx.stroke(); ctx.setLineDash([]);
       ctx.font='11.5px '+(css('--font')||'sans-serif'); ctx.fillStyle=css('--muted')||'#6B6B6B'; ctx.globalAlpha=.75;
-      if(wide){ ctx.textAlign='left'; ctx.textBaseline='top'; ctx.fillText('적은 장비 · 많은 업무',a.left+6,a.top+4); ctx.textBaseline='bottom'; ctx.fillText('적은 장비 · 적은 업무',a.left+6,a.bottom-4);
-      ctx.textAlign='right'; ctx.textBaseline='top'; ctx.fillText('많은 장비 · 많은 업무',a.right-6,a.top+4); ctx.textBaseline='bottom'; ctx.fillText('많은 장비 · 적은 업무',a.right-6,a.bottom-4); } ctx.globalAlpha=1; }
+      ctx.globalAlpha=1; ctx.fillStyle='rgba(0,91,172,.045)'; ctx.fillRect(a.left,py,px-a.left,a.bottom-py); ctx.fillRect(px,a.top,a.right-px,py-a.top);   /* 균형(장비와 업무가 같이 많거나 같이 적음) 두 칸만 옅게 */
+      ctx.fillStyle=css('--muted')||'#6B6B6B'; ctx.globalAlpha=.8;
+      if(wide){ ctx.textAlign='left'; ctx.textBaseline='top'; ctx.fillText('장비 대비 업무 많음',a.left+6,a.top+4); ctx.textBaseline='bottom'; ctx.fillText('균형 · 작은 규모',a.left+6,a.bottom-4);
+      ctx.textAlign='right'; ctx.textBaseline='top'; ctx.fillText('균형 · 큰 규모',a.right-6,a.top+4); ctx.textBaseline='bottom'; ctx.fillText('장비 대비 업무 적음',a.right-6,a.bottom-4); } ctx.globalAlpha=1; }
       /* 이름 자리 고르기 — 다른 점·이미 놓은 이름과 겹치지 않는 첫 자리(오른쪽 → 왼쪽 → 위 → 아래 → 대각선 → 더 멀리), 멀리 놓이면 가는 선으로 잇는다 */
       ctx.font='700 12.5px '+(css('--font')||'sans-serif'); ctx.textBaseline='middle';
       const els=c.getDatasetMeta(0).data, H=16, G=4, boxes=[], cir=els.map((el,i)=>({x:el.x,y:el.y,r:(el.options&&el.options.radius)||pts[i].r}));

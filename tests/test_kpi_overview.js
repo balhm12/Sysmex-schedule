@@ -83,3 +83,5 @@ assert(/function ovIssues\(/.test(html) && /function ovGo\(/.test(html) && !/SEC
 assert(/const FV=VIEW==='org'\|\|VIEW==='wl'/.test(html), 'v3.1: Organization·Workload 상세 기본 접힘');
 /* 내보내기: 지금 화면 Excel(ExcelJS, 누를 때만)·PDF(인쇄) */
 assert(/id="xXlsx"/.test(html) && /id="xPdf"/.test(html) && /function exportXlsx\(/.test(html) && /exceljs\/4\.4\.0/.test(html) && html.indexOf('function exportXlsx(')<html.indexOf('function showMain(){'), '내보내기 버튼·코드');
+/* 산점도 읽는 법: 중앙값 기준 네 칸 의미와 이상적인 모습 */
+assert(/function orgQuad\(/.test(html) && /class="ogguide"/.test(html) && /균형 · 큰 규모/.test(html), '산점도 네 칸 의미·읽는 법');
