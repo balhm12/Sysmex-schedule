@@ -45,3 +45,9 @@
 - 적용·되돌리기는 2단계와 같다(콘솔 규칙 탭에 붙여넣고 게시, 문제가 있으면 2단계 파일 또는 복사해 둔 규칙). 2단계 없이 바로 3단계를 게시해도 된다(3단계가 2단계를 포함).
 - 기존 관리자는 규칙을 바꾸기 전에도 가중치를 저장할 수 있다(2단계·1단계의 `kpi-dashboard` 쓰기 권한 안). 가중치 관리자만 3단계가 필요하다.
 - 확인: 가중치 관리자 계정으로 저장이 되고, 같은 계정으로 「CRM 데이터 올리기」는 거부되는지.
+
+## 3단계 추가: 학술 응대 자동 반영(2026-11-16) — `kpi-dashboard/acadAuto`
+FS Portal 서버(Apps Script)가 Slack 학술요청 접수 건수(날짜·시간별 숫자만, 이름·본문 없음)를 3시간마다 `kpi-dashboard/acadAuto`에 쓴다.
+- **쓰기**: `kpi-dashboard/acadBots/{UID}` 가 `true` 인 계정만(서버 전용 계정). 지정(`acadBots`)은 기존 관리자만. 값 검사: kind = fsportal-acad, src = slack, made = YYYY-MM-DD, at = 숫자.
+- **처음 한 번(사용자)**: ① Firebase 콘솔(sysmex-system-schedule) → Authentication → 사용자 추가(이메일·비밀번호, 서버 전용) → UID 복사 ② 규칙 탭에 `database.rules.stage3.json` 붙여넣고 게시 ③ Realtime Database → `kpi-dashboard/acadBots` 아래에 키 = UID, 값 = true(불리언) 추가 ④ FS Portal Apps Script 「프로젝트 설정 → 스크립트 속성」에 `KPI_BOT_EMAIL`·`KPI_BOT_PW` 추가(채팅·저장소에 쓰지 않음).
+- 확인: FS Portal 요청함 「연결 시험」 또는 3시간 안에 KPI Workload 학술 응대 「수집 범위」가 「FS Portal 서버 자동 반영」으로 바뀌는지. 계정을 바꾸면 `acadBots` 의 UID 만 바꾸면 된다(규칙 수정 불필요).
