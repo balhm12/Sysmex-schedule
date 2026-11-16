@@ -93,3 +93,7 @@ assert(/\['데이터 구분',M\.kind\]/.test(html) && /\['접힌 상세 포함'/
 { const re=/<script>([\s\S]*?)<\/script>/g; let m, i=0; while((m=re.exec(html))){ i++; try{ new Function(m[1]); }catch(e){ assert(false, 'script 블록 '+i+' 문법 오류: '+e.message); } } }
 /* Overview 운영 장비: 분야 100% 막대 → 누르면 세부 장비 */
 assert(/function eqField\(/.test(html) && /class="oveqseg/.test(html) && /OV_EQF=b\.dataset\.f/.test(html), '운영 장비 분야 막대·세부');
+/* 분야 규칙(2026-11-16 사용자 결정): 모델명이 중간에 있어도, 당화혈색소 = 혈액, 자동화·라인 = 기타 */
+{ const f=new Function(html.match(/function eqField\(m\)\{[\s\S]*?return '기타'; \}/)[0]+';return eqField;')();
+  const T=[['HEMATO ANALYZER XT-1800I','혈액'],['TOSOH 23850 HLC-723 G11','혈액'],['XQ-520','혈액'],['COAG ANALYZER CA-540, 220V','응고'],['HISCL-5000','면역'],['UF-5000','뇨화학'],['U-WAM COMPLETE(EN)','기타'],['SA-10 COMPLETE(SA-10)','기타'],['TS-10 COMPLETE','기타'],['','기타']];
+  T.forEach(([m,e])=>assert(f(m)===e, `eqField(${m}) = ${f(m)} (기대 ${e})`)); }
