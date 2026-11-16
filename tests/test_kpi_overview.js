@@ -74,3 +74,6 @@ assert(!/vinfo|lbtn/.test(tabsHtml), '화면 탭 줄에 정보·버튼이 남아
 assert(/\$\('hdrInfo'\)\.hidden=true/.test(between('function showEmpty', 'function showMain')) && /\$\('hdrInfo'\)\.hidden=false/.test(between('function showMain', 'loadShifts')), '헤더 정보·버튼이 잠금 상태와 같이 움직이지 않음');
 assert(/window\.self!==window\.top/.test(html) && /\.embed \.appbar\{display:none\}/.test(html), '포털 안 페이지 탭 숨김 없음');
 console.log('test_kpi_overview: OK (업무 유형 묶음 ' + Object.keys(core).length + '개 kpiCore 와 일치 · 새 계산식 없음 · 화면 전환·주소 · 목표·상태 기준 공유)');
+/* v3.1 PR2: 반복 고장 목록은 Service Quality 한 곳, Proactive 는 위험·주의만, 병원별 표는 SQ 기관별 품질로 */
+assert(/function renderSqChr\(/.test(html) && /id="tChrSq"/.test(html) && /mode='risk';/.test(html), 'v3.1: 반복 고장 목록 = Service Quality, Proactive = 위험 목록');
+assert(/data-k="ftfr"/.test(html) && /if\(0\) html \+= '<div class="block"><div class="block-head"><h2>담당 병원별/.test(html), 'v3.1: 기관별 품질에 FTFR, Organization 병원별 표는 이동');

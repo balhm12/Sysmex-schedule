@@ -999,7 +999,7 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
   <h2 class="sec" data-scr="pro">반복 고장·위험 장비 <small id="chrSub"></small></h2>
   <section class="ovpro c2" id="proRisk" data-scr="pro" aria-label="반복 고장 장비, 위험 장비, 표준 사전점검"></section>
   <section class="panel" style="margin-top:14px" data-scr="pro">
-    <div class="thead"><div><h3 id="chrH">반복 고장 장비 목록</h3><p class="d" style="margin:0" id="chrNote"></p></div><span class="ovseg" id="chrSeg" role="group" aria-label="목록 보기" style="display:none"></span></div>
+    <div class="thead"><div><h3 id="chrH">반복 고장 장비 목록</h3><p class="d" style="margin:0" id="chrNote"></p></div><span class="ovseg" id="chrSeg" role="group" aria-label="목록 보기" style="display:none" hidden></span></div>
     <div class="tw lim" style="max-height:420px"><table id="tChr"></table></div><p class="ovnote dshint">표는 옆으로 밀어서 모든 열을 볼 수 있습니다.</p>
   </section>
 
@@ -1075,9 +1075,14 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
     <div class="tw"><table id="tLifeCoh"></table></div>
   </section>
 
-  <section class="panel" style="margin-top:16px" data-scr="sq">
+  <h2 class="sec" data-scr="sq">기관 · 장비 상세 <small>기관별 품질과 반복 고장 장비를 한곳에서 · 위 팀 필터 적용(담당 팀 단위)</small><span class="ovtools"><span class="ovseg" id="sqDetSeg" role="group" aria-label="상세 보기"><button type="button" data-d="inst">기관별 품질</button><button type="button" data-d="chr">반복 고장 장비</button></span></span></h2>
+  <section class="panel" id="sqChrPanel" data-scr="sq" hidden>
+    <div class="thead"><div><h3>반복 고장 장비 목록</h3><p class="d" style="margin:0" id="chrSqNote"></p></div></div>
+    <div class="tw lim" style="max-height:420px"><table id="tChrSq"></table></div><p class="ovnote dshint">표는 옆으로 밀어서 모든 열을 볼 수 있습니다.</p>
+  </section>
+  <section class="panel" id="sqInstPanel" data-scr="sq">
     <div class="thead">
-      <div><h3>기관별 현황</h3><p class="d" style="margin:0">반복 고장 장비 = 12개월 내 3회 이상 고장</p></div>
+      <div><h3>기관별 품질</h3><p class="d" style="margin:0">재방문율 = 재방문 ÷ (고장 수리 + PM) · FTFR = 같은 에러 재수리 없이 끝난 고장 수리 비율 · 반복 고장 장비 = 12개월 내 3회 이상 고장</p></div>
       <div class="rng" style="gap:12px;flex-wrap:wrap;align-items:flex-end"><label class="dschk"><input type="checkbox" id="fInstOver"> 재방문율 목표 초과만</label>
       <div class="f"><label for="fSearch">기관 검색</label><input type="text" id="fSearch" placeholder="기관명"></div></div>
     </div>
@@ -1090,6 +1095,7 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
         <th class="s num" data-k="pm" tabindex="0">PM</th>
         <th class="s num" data-k="fail" tabindex="0">재방문</th>
         <th class="s num" data-k="rate" tabindex="0">재방문율</th>
+        <th class="s num" data-k="ftfr" tabindex="0">FTFR</th>
         <th class="s num" data-k="chronic" tabindex="0">반복 고장 장비</th>
       </tr></thead><tbody></tbody></table></div>
     <button type="button" class="dsmore" id="instMore" hidden></button>
@@ -2210,7 +2216,8 @@ function renderTeam(){
     '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="rankTable"></table></div></div>';
 
   var hospTotal = DATA.revisit[team].total_hospital_count || DATA.revisit[team].hospitals.length;
-  html += '<div class="block"><div class="block-head"><h2>담당 병원별 재방문율 / FTFR</h2><span class="hint">고장 수리+PM 기준(방문 3건 이상) · '+team+' 서비스 건수 상위 '+DATA.revisit[team].hospitals.length+'개 병원 (전체 '+hospTotal+'개 중)</span></div>'+
+  html += '<p class="ovnote" style="margin:4px 0 18px">담당 병원별 재방문율·FTFR 은 Service Quality 「기관 · 장비 상세 → 기관별 품질」로 옮겼습니다(v3.1). <button type="button" class="dsbtn" onclick="window.goSqInst&&goSqInst()">기관별 품질 보기 ›</button></p>';
+  if(0) html += '<div class="block"><div class="block-head"><h2>담당 병원별 재방문율 / FTFR</h2><span class="hint">고장 수리+PM 기준(방문 3건 이상) · '+team+' 서비스 건수 상위 '+DATA.revisit[team].hospitals.length+'개 병원 (전체 '+hospTotal+'개 중)</span></div>'+
     '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="hospTable"></table></div></div>';
 
   el.innerHTML = html;
@@ -2227,7 +2234,7 @@ function renderTeam(){
   ], {unit:'건', partial:DATA.trend_partial});
 
   renderRankTable(team, period);
-  renderHospTable(team);
+  if(document.getElementById('hospTable')) renderHospTable(team);
 }
 
 function renderOfficeCmp(g, period){
@@ -3258,6 +3265,7 @@ function render(){
 
   renderHealth(end, p);
   try{ if(VIEW==='pro') renderProTop(p,team,pp,prov,scope,cur,prv); }catch(e){ console.error('화면 통일', e); }
+  try{ if(VIEW==='sq') renderSqChr(p,team); }catch(e){ console.error('반복 고장 목록', e); }
   renderErrors(p, team);
   renderFamTrend(p, team);
   renderLife(end);
@@ -3658,11 +3666,11 @@ function renderInst(p, team){
   for(const o of D.rows){ if(o.internal) continue;
     if(m12.has(o.mk)&&o.purp==='고장 수리'&&o.sn){const k=o.acct; (rep12[k]=rep12[k]||{})[o.sn]=((rep12[k]||{})[o.sn]||0)+1;}
     if(!ms.has(o.mk)) continue; if(team&&o.atm!==team) continue;
-    const x=a[o.acct]=a[o.acct]||{name:o.acct,rep:0,pm:0,fail:0,sn:0,den:0,tc:{},fc:{}};
+    const x=a[o.acct]=a[o.acct]||{name:o.acct,rep:0,pm:0,fail:0,sn:0,den:0,af:0,rd:0,tc:{},fc:{}};
     if(o.atm) x.tc[o.atm]=(x.tc[o.atm]||0)+1; x.fc[o.fam]=(x.fc[o.fam]||0)+1;
-    if(o.purp==='고장 수리'){x.rep++; if(o.rec){x.fail+=o.rv; x.den++;}} else if(o.purp==='PM'){x.pm++; if(o.rec) x.den++;} }
+    if(o.purp==='고장 수리'){x.rep++; if(o.rec){x.fail+=o.rv; x.den++; x.af+=o.fail; x.rd++;}} else if(o.purp==='PM'){x.pm++; if(o.rec) x.den++;} }
   const top=o=>{const e=Object.entries(o).sort((x,y)=>y[1]-x[1]);return e.length?e[0][0]:'-';};
-  instRows=Object.values(a).map(x=>({name:x.name,team:top(x.tc),fam:top(x.fc),rep:x.rep,pm:x.pm,fail:x.fail,rate:x.den?x.fail/x.den*100:-1,
+  instRows=Object.values(a).map(x=>({name:x.name,team:top(x.tc),fam:top(x.fc),rep:x.rep,pm:x.pm,fail:x.fail,rate:x.den?x.fail/x.den*100:-1,ftfr:x.rd?(x.rd-x.af)/x.rd*100:-1,
     chronic:Object.values(rep12[x.name]||{}).filter(n=>n>=3).length}));
   drawInst();
 }
@@ -3673,7 +3681,7 @@ function drawInst(){
   r.sort((a,b)=>{const va=a[sortKey],vb=b[sortKey];return (typeof va==='string'?va.localeCompare(vb,'ko'):va-vb)*sortDir;});
   if($('fInstOver')&&$('fInstOver').checked) r=r.filter(x=>x.rate>TARGET_REV);
   const lim=window.__instAll?150:15, s=r.slice(0,lim);
-  document.querySelector('#tInst tbody').innerHTML=s.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.team}</td><td>${esc(x.fam)}</td><td class="num">${fmt(x.rep)}</td><td class="num">${fmt(x.pm)}</td><td class="num">${fmt(x.fail)}</td><td class="num ${x.rate>TARGET_REV&&x.rep>=3?'bad':''}">${x.rate<0?'-':f1(x.rate)+'%'}${x.rate>=0&&(x.rep+x.pm)<5?' <span class="ovtag">표본 적음</span>':''}</td><td class="num ${x.chronic>0?'bad':''}">${x.chronic||'-'}</td></tr>`).join('');
+  document.querySelector('#tInst tbody').innerHTML=s.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.team}</td><td>${esc(x.fam)}</td><td class="num">${fmt(x.rep)}</td><td class="num">${fmt(x.pm)}</td><td class="num">${fmt(x.fail)}</td><td class="num ${x.rate>TARGET_REV&&x.rep>=3?'bad':''}">${x.rate<0?'-':f1(x.rate)+'%'}${x.rate>=0&&(x.rep+x.pm)<5?' <span class="ovtag">표본 적음</span>':''}</td><td class="num ${x.ftfr>=0&&x.ftfr<TARGET_FTFR&&x.rep>=3?'bad':''}">${x.ftfr<0?'-':f1(x.ftfr)+'%'}</td><td class="num ${x.chronic>0?'bad':''}">${x.chronic||'-'}</td></tr>`).join('');
   $('instN').textContent=`${fmt(r.length)}개 기관${r.length>s.length?` 중 ${fmt(s.length)}개 표시`:''} · 고장 수리+PM 이 5건 미만인 기관은 비율이 크게 흔들립니다(표본 적음)`;
   const mb=$('instMore'); if(mb){ mb.hidden=r.length<=15; mb.textContent=window.__instAll?'상위 15개만 보기':`전체 보기 (${fmt(Math.min(r.length,150))}개)`; mb.setAttribute('aria-expanded',window.__instAll?'true':'false'); }
 }
@@ -4718,10 +4726,23 @@ function renderProTop(p,team,pp,prov,scope,cur,prv){
 }
 /* 위험·반복 고장 장비 목록 — 자산대장이 있으면 「위험·주의」(점수 순)와 「반복 고장 3회+」 두 보기, 없으면 반복 고장 목록만 */
 let CHR_MODE='risk';
+/* v3.1 PR2: 반복 고장 장비(12개월 3회+) 목록 — Service Quality 한 곳. 등급 열은 Proactive 위험 모델 결과를 그대로 붙여 보여 줌(계산 변경 없음) */
+let SQ_DET='inst';
+function goSqInst(){ SQ_DET='inst'; const T=$('fTeam').value; setView('sq'); setTimeout(()=>{ const h=document.getElementById('sqInstPanel'); if(h) h.scrollIntoView({behavior:'smooth',block:'start'}); },60); }
+function renderSqChr(p,team){
+  if(!$('tChrSq')||!D) return; const _l=D.months[D.months.length-1], end=p.months.filter(m=>m<=_l).pop()||_l, list=chronicList(end,team), rk=SERIAL?riskList(team):null;
+  const dstr=t=>t==null?'-':new Date(t).toISOString().slice(0,10), tier={}; if(rk) rk.items.forEach(x=>{ tier[x.sn+'|'+x.acct]=x.tier; });
+  $('chrSqNote').textContent=(SERIAL?'12개월 내 고장 수리 3회 이상(자산대장 사용 장비)':'12개월 내 고장 수리 3회 이상(CRM 이력 기준)')+` · ${team||'FSG 전체'} · ${fmt(list.length)}대 · 등급은 Proactive Service 위험 장비 예측과 같은 값`;
+  $('tChrSq').innerHTML=`<thead><tr><th>기관</th><th>담당 팀</th><th>장비</th><th class="num">12개월 고장 수리</th><th class="num">최근 고장일</th>${rk?'<th>위험 등급</th>':''}</tr></thead><tbody>`+
+    (list.length?list.slice(0,200).map(r=>{ const t=tier[r.sn+'|'+r.acct]||'정상'; return `<tr><td>${esc(r.acct)}</td><td>${esc(r.atm||'-')}</td><td>${esc(r.sn)}${r.fam?` <span class="ovsub">${esc(r.fam)}</span>`:''}</td><td class="num">${r.n}</td><td class="num">${dstr(r.last)}</td>${rk?`<td>${t==='위험'?'<span class="ovchip bad">위험</span>':t==='주의'?'<span class="ovchip warn">주의</span>':esc(t)}</td>`:''}</tr>`; }).join(''):`<tr><td colspan="${rk?6:5}" class="ovnote">해당하는 장비가 없습니다.</td></tr>`)+'</tbody>';
+  const seg=$('sqDetSeg'); if(seg){ seg.querySelectorAll('button').forEach(b=>{ b.setAttribute('aria-pressed',b.dataset.d===SQ_DET); b.onclick=()=>{ SQ_DET=b.dataset.d; renderSqChr(curPeriod(),$('fTeam').value||null); }; }); }
+  $('sqChrPanel').hidden=SQ_DET!=='chr'; $('sqInstPanel').hidden=SQ_DET!=='inst';
+}
 function renderChrTable(){
   const c=window.__chrCtx; if(!c||!$('tChr')) return;
-  const dstr=t=>t==null?'-':new Date(t).toISOString().slice(0,10), rk=c.rk, list=c.list, mode=rk?CHR_MODE:'chronic';
-  const seg=$('chrSeg'); if(seg){ seg.style.display=rk?'':'none';
+  const dstr=t=>t==null?'-':new Date(t).toISOString().slice(0,10), rk=c.rk, list=c.list, mode='risk';   /* v3.1: Proactive = 위험·주의만, 반복 고장 3회+ 목록은 Service Quality(renderSqChr) */
+  if(!rk){ $('chrH').textContent='위험·주의 장비 목록'; $('chrNote').textContent='자산대장이 등록되면 위험·주의 등급 목록이 나옵니다. 반복 고장 장비는 Service Quality 「기관 · 장비 상세」에서 봅니다.'; $('tChr').innerHTML=''; const sg=$('chrSeg'); if(sg) sg.style.display='none'; return; }
+  const seg=$('chrSeg'); if(seg){ seg.style.display='none';
     seg.innerHTML=[['risk','위험·주의'],['chronic','반복 고장 3회+']].map(b=>`<button type="button" data-m="${b[0]}" aria-pressed="${mode===b[0]}">${b[1]}</button>`).join('');
     seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{ CHR_MODE=b.dataset.m; renderChrTable(); }); }
   $('chrH').textContent=mode==='risk'?'위험·주의 장비 목록':'반복 고장 장비 목록';
