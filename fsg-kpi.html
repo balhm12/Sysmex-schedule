@@ -838,6 +838,31 @@ body.rpt #ov .ovg-a{display:none}
 body.rpt #ov .rptiss{display:table;width:100%;border-collapse:collapse;font-size:12.5px}body.rpt #ov .rptiss th{text-align:left;font-size:11.5px;color:#65717D;font-weight:600;padding:5px 8px;border-bottom:1px solid #005BAC}body.rpt #ov .rptiss td{padding:6px 8px;border-bottom:1px solid #E3EAF0}body.rpt #ov .rptiss .num{text-align:right;font-family:Arial,sans-serif;font-weight:700}
 body.rpt #ov .rptfoot{display:block;margin-top:10px;padding-top:6px;border-top:1px solid #D9E3EA;font-size:10.5px;color:#65717D;text-align:right}
 body.rpt #ov .rptbrk{display:block;height:28px}
+/* ===== v3.8 Overview 간소화 · 임원보고 2쪽 Service Operations ===== */
+#ov .oveqn{display:flex;flex-direction:column;gap:2px}#ov .oveqn .ovs{font-size:12px;line-height:1.5}
+@media (max-width:760px){#ov .oveqn{display:flex}#ov .oveqn .ovv{font-size:28px}}
+#ov .oveqdet{margin-top:10px}#ov .oveqdet .ovl{display:flex;align-items:center;gap:8px}
+#ov .oveqx{margin-left:auto;font:inherit;font-size:12px;border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:4px;padding:0 10px;min-height:28px;cursor:pointer}
+@media (pointer:coarse){#ov .oveqx{min-height:44px}}
+#ov .ovissl{display:block;font-size:13.5px;line-height:1.4}#ov .ovisst{font-weight:700}#ov .ovissv{font-family:Arial,sans-serif;font-weight:700;margin-left:4px}#ov .ovhl .ovs{display:block;font-size:12px;color:var(--muted)}
+#ov .ovisstip{font-size:12px;cursor:help;white-space:nowrap}#ov .ovkc .wlinfo{margin-left:4px;font-size:11.5px;font-weight:400;color:var(--muted)}
+.rptops2{display:none}
+body.rpt #ov .ovequip,body.rpt #ov .wlinfo{display:none!important}
+body.rpt #ov .rptops2{display:grid;grid-template-columns:1fr 1.35fr;gap:22px}
+body.rpt #ov .rptk{grid-template-columns:repeat(3,1fr)}body.rpt #ov .rptk .ovkc{padding:10px 8px 8px}body.rpt #ov .rptk .ovv{font-size:30px}
+body.rpt #ov .rptk .ovl{flex-direction:row;gap:6px;align-items:center}body.rpt #ov .rptunit{font-size:10.5px;font-weight:500;padding:1px 6px}
+body.rpt #ov .rptops .ovnote{font-size:10.5px;margin:6px 0 0;color:#65717D}
+body.rpt #ov .rptorg{width:100%;border-collapse:collapse;font-size:13px}body.rpt #ov .rptorg th{font-size:11.5px;color:#65717D;font-weight:600;text-align:left;padding:5px 8px;border-bottom:1px solid #005BAC}
+body.rpt #ov .rptorg td{padding:8px;border-bottom:1px solid #E3EAF0}body.rpt #ov .rptorg .num{text-align:right;font-family:Arial,sans-serif}body.rpt #ov .rptorg small{color:#65717D;font-size:10.5px}
+body.rpt #ov .rptorg tfoot td{font-weight:700;border-top:1px solid #005BAC;border-bottom:0}
+body.rpt #ov .rptmx,body.rpt #ov .rpteq{display:grid;grid-template-columns:96px 1fr 52px;gap:10px;align-items:start;padding:7px 0;border-bottom:1px solid #E3EAF0}
+body.rpt #ov .rpteq{grid-template-columns:96px 64px 1fr;border-bottom:0;margin-top:4px;padding-top:9px;border-top:1px solid #B5B6B6}
+body.rpt #ov .rptmk{font-size:12.5px;font-weight:600;color:#3F3F3F;line-height:1.3}body.rpt #ov .rptmk small{display:block;font-size:10.5px;font-weight:400;color:#65717D}
+body.rpt #ov .rptmx>b{text-align:right;font-family:Arial,sans-serif;font-size:13px;padding-top:2px}
+body.rpt #ov .rpteqn{font-family:Arial,sans-serif;font-size:20px;color:#005BAC;line-height:1}body.rpt #ov .rpteqn small{font-size:11px;margin-left:2px}
+body.rpt #ov .rptmbar{display:flex;height:18px;border-radius:3px;overflow:hidden;background:#E3EAF0}
+body.rpt #ov .rptmbar i{display:flex;align-items:center;justify-content:center;font-style:normal;font-size:10.5px;font-weight:700;white-space:nowrap;overflow:hidden}
+body.rpt #ov .rptml{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:10.5px;color:#65717D;margin-top:4px}body.rpt #ov .rptml b{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:3px}
 body.rpt #ov .ovrfoot{display:none}
 body.rpt #ov .ovrcs svg{max-height:170px}
 @media print{ body.rpt #ov .rptbrk{height:0;break-before:page;page-break-before:always} body.rpt #ov .ovequip,body.rpt #ov .ovrpt{break-inside:avoid} body.rpt #ov{max-width:none} }
@@ -4538,24 +4563,47 @@ function opEquipLine(){ const o=opEquip(), eq=EQD&&EQD.rows?EQD.rows.reduce((a,r
   return (o?`자산대장 운영 장비 ${fmt(o.reg)}대(최근 12개월 서비스 이력 ${fmt(o.valid)}대)`:'자산대장 미등록')+' · '+(eq!=null?`FSR 관리표 담당 장비 ${fmt(eq)}대`:'관리표 미등록')+' — 두 숫자는 기준이 다릅니다'; }
 function ovEquipCard(){ const o=opEquip();
   if(!o) return `<section class="ovcard ovequip" style="margin-top:14px" aria-labelledby="ovh7"><h3 id="ovh7">운영 장비 현황</h3><p class="ovnote">자산대장이 올라와 있지 않아 장비 수를 보여 줄 수 없습니다(관리자 「자산대장」 올리기).</p></section>`;
-  /* 분야 100% 막대(누르면 그 분야의 세부 장비 막대) — 2026-11-16 사용자 「분야로 보고 클릭하면 세부로, 막대형 유지」 */
-  const F=EQ_FLD.filter(([k])=>o.fld[k]&&o.fld[k].n), sel=(OV_EQF&&o.fld[OV_EQF])?OV_EQF:(F.slice().sort((a,b)=>o.fld[b[0]].n-o.fld[a[0]].n)[0]||[''])[0];
-  const segs=F.map(([k,c])=>{ const z=o.fld[k], pct=z.n*100/o.reg; return `<button type="button" class="oveqseg${k===sel?' on':''}" data-f="${k}" aria-pressed="${k===sel}" style="width:${pct}%;background:${c}" title="${k} ${fmt(z.n)}대 (${pct.toFixed(1)}%) · 12개월 이력 ${fmt(z.v)}대 — 누르면 세부">${pct>=7?`<span class="oveqst${pct<16?' s':''}">${k} ${Math.round(pct)}%</span>`:''}</button>`; }).join('');
-  const lg=F.map(([k,c])=>`<button type="button" class="oveqlgb${k===sel?' on':''}" data-f="${k}"><b style="background:${c}"></b>${k} ${fmt(o.fld[k].n)}대</button>`).join('');
-  /* 세부: 화면은 고른 분야만, PDF(인쇄)는 모든 분야를 펼쳐서(2026-11-16 사용자 「PDF는 분야로 보고 펼쳐지는 형태」) */
+  /* v3.8: 기본은 분야 100% 막대만. 분야를 누를 때만 그 분야의 모델 구성(다시 누르면 닫힘) — 모델 상세를 기본으로 펼치지 않음 */
+  const F=EQ_FLD.filter(([k])=>o.fld[k]&&o.fld[k].n), sel=(OV_EQF&&o.fld[OV_EQF])?OV_EQF:null;
+  const segs=F.map(([k,c])=>{ const z=o.fld[k], pct=z.n*100/o.reg; return `<button type="button" class="oveqseg${k===sel?' on':''}" data-f="${k}" aria-pressed="${k===sel}" style="width:${pct}%;background:${c}" title="${k} ${fmt(z.n)}대 (${pct.toFixed(1)}%) · 12개월 이력 ${fmt(z.v)}대 — 누르면 모델 구성">${pct>=7?`<span class="oveqst${pct<16?' s':''}">${k} ${Math.round(pct)}%</span>`:''}</button>`; }).join('');
+  const lg=F.map(([k,c])=>`<button type="button" class="oveqlgb${k===sel?' on':''}" data-f="${k}" aria-pressed="${k===sel}"><b style="background:${c}"></b>${k} ${fmt(o.fld[k].n)}대</button>`).join('');
   const detOf=k=>{ const Z=o.fld[k]||{n:0,d:{}}, dk=Object.keys(Z.d).sort((a,b)=>Z.d[b]-Z.d[a]), mxv=Math.max(1,...dk.map(x=>Z.d[x])), col=(EQ_FLD.find(x=>x[0]===k)||['','#005BAC'])[1];
     const rows=dk.slice(0,8).map(x=>`<div class="oveqr"><span class="oveqk" title="${esc(x)}">${esc(x.replace(/-Series$|( Series)$/,''))}</span><span class="oveqt"><i style="width:${(Z.d[x]*100/mxv).toFixed(1)}%;background:${col}"></i></span><span class="oveqv">${fmt(Z.d[x])}대 <small>${(Z.d[x]*100/(Z.n||1)).toFixed(0)}%</small></span></div>`).join('')+(dk.length>8?`<p class="ovnote" style="margin:2px 0 0">그 밖 ${dk.length-8}종 ${fmt(dk.slice(8).reduce((a,x)=>a+Z.d[x],0))}대</p>`:'');
-    return `<div class="oveqdet${k===sel?'':' alt'}" data-f="${k}"><span class="ovl" style="font-size:12.5px">${esc(k)} 세부 <span class="ovsub">${fmt(Z.n)}대 · 분야 안 비율</span></span><div class="oveqrs" style="--rows:${Math.ceil(Math.min(dk.length,8)/2)}">${rows}</div></div>`; };
-  /* 보고서(2쪽) 전용 표현: 분야마다 가로 누적 막대 하나(주요 모델 4개 + 그 밖, 칸 안에 모델·대수, 끝에 분야 합계) — 같은 o.fld 값, 새 계산 없음 */
-  const SH=['#003A70','#005BAC','#3D7CC9','#84BAE5','#C9D3DD'], fmax=Math.max(1,...F.map(([k])=>o.fld[k].n)), miss=(o.fld['기타']&&o.fld['기타'].d['(모델 미기재)'])||0;
-  const stack=`<div class="rptstk">${F.map(([k])=>{ const Z=o.fld[k], dk=Object.keys(Z.d).sort((a,b)=>Z.d[b]-Z.d[a]), top=dk.slice(0,4), etc=dk.slice(4).reduce((a,x)=>a+Z.d[x],0);
-    const seg=top.map((x,i)=>({n:x.replace(/-Series$|( Series)$/,''),v:Z.d[x],c:SH[i]})).concat(etc?[{n:'그 밖 '+(dk.length-4)+'종',v:etc,c:SH[4]}]:[]);
-    return `<div class="rptsr"><span class="rptsk">${esc(k)}</span><span class="rptsb"><span class="rptsbi" style="width:${(Z.n*100/fmax).toFixed(1)}%">${seg.map(x=>{ const w=x.v*100/Z.n, wide=w*Z.n/fmax>=9; return `<i style="width:${w}%;background:${x.c};color:${x.c===SH[4]||x.c===SH[3]?'#1F2A36':'#fff'}" title="${esc(x.n)} ${fmt(x.v)}대">${wide?esc(x.n)+' '+fmt(x.v):''}</i>`; }).join('')}</span><b>${fmt(Z.n)}대 · ${(Z.n*100/o.reg).toFixed(0)}%</b></span></div>`; }).join('')}<p class="ovnote">칸 = 주요 모델(분야 안 상위 4개, 나머지는 「그 밖」) · 막대 길이 = 분야 대수 · 합계 ${fmt(F.reduce((a,[k])=>a+o.fld[k].n,0))}대 = 등록 장비 ${fmt(o.reg)}대${miss?` · 모델 미기재 ${fmt(miss)}대는 기타에 포함`:''}</p></div>`;
-  const bar=`<div class="oveqbar" role="group" aria-label="분야별 구성 — 누르면 세부">${segs}</div><div class="oveqlg">${lg}</div>${detOf(sel)}${F.filter(([k])=>k!==sel).map(([k])=>detOf(k)).join('')}${stack}`;
-  return `<section class="ovcard ovequip" style="margin-top:14px" aria-labelledby="ovh7"><h3 id="ovh7"><i class="ovsn">SECTION 04</i>운영 장비 현황 <span class="ovsub">자산대장 상태 「사용」 기준 · FSG 전체(팀 필터와 무관)</span><span class="ovtools"><button type="button" class="dsbtn" id="ovEqGo">Instrument 상세 ›</button></span></h3>
-    <div class="oveq"><div class="oveqn"><div><span class="ovl">등록 장비</span><span class="ovv">${fmt(o.reg)}<small>대</small></span></div><div><span class="ovl">최근 12개월 서비스 이력</span>${o.valid?`<span class="ovv">${fmt(o.valid)}<small>대</small></span><span class="ovs">등록 장비의 ${o.reg?Math.round(o.valid*100/o.reg):0}% · CRM 고장 수리·PM 등 활동 기준</span>`:`<span class="ovv">–</span><span class="ovs">CRM 이력과 맞는 장비 없음(S/N·기관 표기 확인)</span>`}</div><div><span class="ovl">거래처</span><span class="ovv">${fmt(o.acc)}<small>곳</small></span><span class="ovs">등록 장비가 있는 거래처 · 그중 12개월 이력 ${fmt(o.accV)}곳</span></div></div>
-    <div class="oveqb"><span class="ovl">분야별 구성 <span class="ovsub">등록 기준 100% · 분야를 누르면 세부 장비</span></span>${bar}</div></div>
-    <p class="ovnote">FSR 담당기관 관리표의 「담당 장비」(Organization)와 기준이 다릅니다 — 관리표는 담당자가 정해진 장비만 셉니다.</p></section>`; }
+    return `<div class="oveqdet" data-f="${k}"><span class="ovl" style="font-size:12.5px">${esc(k)} 모델 구성 <span class="ovsub">${fmt(Z.n)}대 · 분야 안 비율</span><button type="button" class="oveqx" data-f="${k}" aria-label="모델 구성 닫기">닫기</button></span><div class="oveqrs" style="--rows:${Math.ceil(Math.min(dk.length,8)/2)}">${rows}</div></div>`; };
+  const sum=F.reduce((a,[k])=>a+o.fld[k].n,0);
+  return `<section class="ovcard ovequip" style="margin-top:14px" aria-labelledby="ovh7"><h3 id="ovh7"><i class="ovsn">SECTION 04</i>운영 장비 현황 <span class="ovsub">자산대장 상태 「사용」 기준 · FSG 전체(팀 필터와 무관)</span><span class="wlinfo" tabindex="0" title="FSR 담당기관 관리표의 「담당 장비」(Organization)와 기준이 다릅니다 — 관리표는 담당자가 정해진 장비만 셉니다. 최근 12개월 서비스 이력 = 등록 장비 중 CRM 고장 수리·PM 등 활동이 있는 장비(S/N·기관 일치)." aria-label="기준 설명">ⓘ</span><span class="ovtools"><button type="button" class="dsbtn" id="ovEqGo">Instrument 상세 ›</button></span></h3>
+    <div class="oveq"><div class="oveqn"><span class="ovl">등록 장비</span><span class="ovv">${fmt(o.reg)}<small>대</small></span>
+      <span class="ovs">최근 12개월 서비스 이력 ${o.valid?fmt(o.valid)+'대('+(o.reg?Math.round(o.valid*100/o.reg):0)+'%)':'–(CRM 이력과 맞는 장비 없음)'} · 거래처 ${fmt(o.acc)}곳(이력 ${fmt(o.accV)}곳)</span></div>
+    <div class="oveqb"><span class="ovl">분야별 구성 <span class="ovsub">등록 기준 100% · 분야를 누르면 모델 구성</span></span><div class="oveqbar" role="group" aria-label="분야별 구성 — 누르면 모델 구성">${segs}</div><div class="oveqlg">${lg}</div></div></div>
+    ${sel?detOf(sel):''}${sum!==o.reg?`<p class="ovnote">분야 합계 ${fmt(sum)}대가 등록 장비 ${fmt(o.reg)}대와 다릅니다 — 확인 필요</p>`:''}</section>`; }
+/* v3.8 임원보고 2쪽 「Service Operations」 — 기존 결과만 읽음(새 계산식 없음):
+   처리 건수 = stats().total, 방문·정규근무 외 작업시간·시간대·기관 유형 = Workload(wlVisits·wlAgg), 조직 = Organization(orgRows 'team', 월 단위),
+   업무 유형 = Overview 처리 건수 5분류(OV_ACT), 장비 = opEquip 분야 합계 */
+/* 칸 안 글자: 이름이 들어갈 만큼 넓으면 「이름 n%」, 좁으면 「n%」만, 더 좁으면 비움(이름은 아래 범례) */
+function rptSegTxt(n,w){ const p=Math.round(w)+'%'; return w>=String(n).length*2.6+7?esc(n)+' '+p:w>=6?p:''; }
+function rptMix(label,unit,segs){ const t=segs.reduce((a,x)=>a+x.v,0);
+  if(!t) return `<div class="rptmx"><span class="rptmk">${label}<small>${unit}</small></span><span class="rptmb"><span class="rptmbar"></span><span class="rptml">자료 없음</span></span><b>0</b></div>`;
+  return `<div class="rptmx"><span class="rptmk">${label}<small>${unit}</small></span><span class="rptmb"><span class="rptmbar">${segs.filter(x=>x.v).map(x=>{ const w=x.v*100/t; return `<i style="width:${w}%;background:${x.c};color:${x.dk?'#1F2A36':'#fff'}">${rptSegTxt(x.n,w)}</i>`; }).join('')}</span><span class="rptml">${segs.map(x=>`<span><b style="background:${x.c}"></b>${esc(x.n)} ${fmt(x.v)} (${(x.v*100/t).toFixed(0)}%)</span>`).join('')}</span></span><b>${fmt(t)}</b></div>`; }
+function rptOps(p,pp,team,cur,prv,act){
+  let A=null,Ap=null; try{ const all=wlVisits(D.rows), pick=ms=>{ const f=mPred(ms); return all.filter(v=>f(v.mk,v.t)&&(!team||v.teams.has(team))); }; A=wlAgg(pick(p.months),wlInfo); Ap=wlAgg(pick(pp.months),wlInfo); }catch(e){}
+  const lab=pp.label, dl=(c,v,u)=>wlD(c,v,u,lab), offH=A?Math.round(A.all.off/60):null, offHp=Ap?Math.round(Ap.all.off/60):null;
+  const cell=(l,v,u,unit,d)=>`<div class="ovkc st"><span class="ovl">${l}<span class="ovchip none rptunit">${unit}</span></span><span class="ovv">${v}<small>${u}</small></span><span class="ovd">${d}</span></div>`;
+  let R=[]; try{ R=orgRows('team'); }catch(e){}
+  const av=R.length?orgAvg():null, tc=R.reduce((a,r)=>a+(r.cnt||0),0), hcAll=R.reduce((a,r)=>a+(r.all||0),0);
+  const org=R.length?`<table class="rptorg"><thead><tr><th>팀</th><th class="num">인원</th><th class="num">처리 건수</th><th class="num">1인당 처리 건수</th></tr></thead><tbody>${R.map(r=>`<tr><td>${esc(r.n)}</td><td class="num">${r.all}${r.hc!==r.all?` <small>(비교 ${r.hc})</small>`:''}</td><td class="num">${r.cnt==null?'-':fmt(r.cnt)}</td><td class="num">${r.per==null?'-':r.per.toFixed(1)}</td></tr>`).join('')}</tbody><tfoot><tr><td>4팀 합계</td><td class="num">${hcAll}${av&&av.hc!==hcAll?` <small>(비교 ${av.hc})</small>`:''}</td><td class="num">${fmt(tc)}</td><td class="num">${av&&av.per!=null?av.per.toFixed(1):'-'}</td></tr></tfoot></table><p class="ovnote">Organization과 같은 값 · 1인당 = 팀장·신입 제외 비교 인원 기준 · 월 단위 계산(진행 중인 달은 그 달의 자료까지)</p>`:'<p class="ovnote">조직 자료 없음</p>';
+  const tot=OV_ACT.reduce((a,x)=>a+act[x[0]],0);
+  const mixA=rptMix('업무 유형','처리 건수 기준',OV_ACT.map(([k,n,c],i)=>({n,v:act[k],c,dk:i>=3})));
+  const mixB=A?rptMix('시간대','방문 기준',[{n:'평일 주간',v:A.all.day,c:'#84BAE5',dk:true},{n:'평일 야간',v:A.all.night,c:'#005BAC'},{n:'주말·공휴일',v:A.all.hol,c:'#5185C5'}]):'';
+  const mixC=!A?'':wlOn()?rptMix('기관 유형','방문 기준',[{n:'병원',v:A.type.hosp.n,c:'#005BAC'},{n:'수탁기관',v:A.type.lab.n,c:'#5185C5'},{n:'기타 기관',v:A.type.etc.n,c:'#84BAE5',dk:true},{n:'미분류',v:A.type[''].n,c:'#C9D3DD',dk:true}])
+    :`<div class="rptmx"><span class="rptmk">기관 유형<small>방문 기준</small></span><span class="rptmb"><span class="rptml">기관 분류가 아직 지정되지 않았습니다(Workload 관리자 「기관 분류 관리」)</span></span><b>–</b></div>`;
+  const o=opEquip(), F=o?EQ_FLD.filter(([k])=>o.fld[k]&&o.fld[k].n):[];
+  const eq=o?`<div class="rpteq"><span class="rptmk">운영 장비<small>자산대장 「사용」 · FSG 전체</small></span><span class="rpteqn">${fmt(o.reg)}<small>대</small></span><span class="rptmb"><span class="rptmbar">${F.map(([k,c])=>{ const w=o.fld[k].n*100/o.reg; return `<i style="width:${w}%;background:${c};color:${k==='뇨화학'||k==='기타'?'#1F2A36':'#fff'}">${rptSegTxt(k,w)}</i>`; }).join('')}</span><span class="rptml">${F.map(([k,c])=>`<span><b style="background:${c}"></b>${k} ${fmt(o.fld[k].n)}</span>`).join('')}</span></span></div>`
+    :`<div class="rpteq"><span class="rptmk">운영 장비</span><span class="rptml">자산대장 미등록</span></div>`;
+  return `<section class="ovrpt rptops"><h3 class="ovrh"><i>SECTION 04</i>Workload Scale <span>${esc(team||'FSG 전체')} · 단위가 서로 다름(처리 건수 ≠ 방문)</span></h3>
+    <div class="ovkpi c3 rptk">${cell('처리 건수',fmt(cur.total),'건','단위 처리 건수',dl(cur.total,prv.total,'건'))}${cell('방문 횟수',A?fmt(A.all.n):'–','건','단위 방문',A?dl(A.all.n,Ap&&Ap.all.n,'건'):'방문 자료 없음')}${cell('정규근무 외 작업시간',offH==null?'–':fmt(offH),'시간','단위 인원 × 시간',offH==null?'':dl(offH,offHp,'시간'))}</div>
+    <p class="ovnote">처리 건수 = 담당자·필수 참석자 각 1건 · 방문 = 같은 병원·같은 날 이어진 활동 1건 · 정규근무 외 = 평일 18~08시·주말·공휴일 CRM 작업(이동 제외)</p></section>
+  <div class="rptops2"><section class="ovrpt rptops"><h3 class="ovrh"><i>SECTION 05</i>Organization <span>4팀 · 처리 건수 기준</span></h3>${org}</section>
+  <section class="ovrpt rptops"><h3 class="ovrh"><i>SECTION 06</i>Work Mix <span>구성비 100% · 단위를 각 줄에 표시</span></h3>${mixA}${mixB}${mixC}${eq}</section></div>`; }
 function renderOv(){
   const root=$('ov'); if(!D||!root) return;
   const p=curPeriod(), team=$('fTeam').value||null, pp=prevPeriod(p), cur=stats(p.months,team), prv=stats(pp.months,team), prov=isProvisional(p.months);
@@ -4584,20 +4632,22 @@ function renderOv(){
   <div class="rptHead"><div class="rl"><img alt="Sysmex" src="${logoSrc}"><small>FSG Service Performance</small><b>Overview</b></div><div class="rr"><h1>${esc(XM.months)} 서비스 운영 현황${prov||p.partial?' <em class="rptprov">잠정 실적</em>':''}</h1><p>${esc(rptSum)}</p><span>${esc(scope)} · 집계 ${esc(XM.months)} · 데이터 기준일 ${esc(XM.cut)}${window.__SYNTH?' · <b class="rptsyn">합성 데이터(테스트)</b>':''}</span></div></div>
   <h3 class="ovrh"><i>SECTION 01</i>Key Service Performance ${SB}</h3>
   <section class="ovkpi" id="ovKpi" role="tablist" aria-label="핵심 지표 4개. 선택하면 아래 추이 그래프가 바뀝니다">${OV_K.map(o=>{ const v=cur[o.k], st=ovSt(o,v);
-    return `<button class="ovkc" role="tab" aria-selected="${o.k===OV.metric}" data-k="${o.k}"><span class="ovl">${o.n}${st.chip?`<span class="ovchip ${st.st}">${st.chip}</span>`:''}</span>
-      <span class="ovv">${ovF(o,v)}<small>${o.u}</small></span><span class="ovt">${o.t()==null?'목표 없음':'목표 '+o.tl()+' · '+ovGap(o,v)}</span><span class="ovd">${ovDelta(o,v,prv[o.k],lab)}</span><span class="ovh">${o.h}</span></button>`; }).join('')}</section>
+    const tip=o.n+' = '+o.h+(o.t()==null?' · 목표 없음':' · 목표 '+o.tl()+' · '+ovGap(o,v));   /* v3.8: 설명·산식·목표 차이는 마우스 설명으로 */
+    return `<button class="ovkc" role="tab" aria-selected="${o.k===OV.metric}" data-k="${o.k}" title="${esc(tip)}"><span class="ovl">${o.n}<span class="wlinfo" aria-hidden="true">ⓘ</span>${st.chip?`<span class="ovchip ${st.st}">${st.chip}</span>`:''}</span>
+      <span class="ovv">${ovF(o,v)}<small>${o.u}</small></span><span class="ovt">${o.t()==null?'목표 없음':'목표 '+o.tl()}</span><span class="ovd">${ovDelta(o,v,prv[o.k],lab)}</span><span class="ovh" hidden>${esc(o.h)}</span></button>`; }).join('')}</section>
   <section class="ovrpt"><h3 class="ovrh"><i>SECTION 02</i>Service Quality Trend ${SB} <span>최근 12개월 · 점선은 목표</span></h3><div class="ovrcs">${rptTr}</div></section>
   <section class="ovrpt"><h3 class="ovrh"><i>SECTION 03</i>Management Issues <span>「확인이 필요한 곳」 상위 ${Math.min(5,al.length)}건 · 중요한 순</span></h3>${al.length?`<table class="rptiss"><thead><tr><th>상태</th><th>팀 · 조직</th><th>KPI · 이슈</th><th class="num">현재</th><th>목표 대비 · 판정 기준</th></tr></thead><tbody>${al.slice(0,5).map(a=>`<tr><td><span class="ovchip ${a.cc}">${esc(a.chip)}</span></td><td>${esc(a.team||'FSG 전체')}</td><td>${esc(a.nm||a.t)}</td><td class="num">${esc(a.val||'-')}</td><td>${esc(a.gap||a.s)}</td></tr>`).join('')}</tbody></table>`:'<p class="ovnote">지금 확인이 필요한 항목이 없습니다.</p>'}</section>
   <div class="ovgrid ovg-a">
     <section class="ovcard ovtrcard" aria-labelledby="ovh2"><h3 id="ovh2"><span id="ovTrT"></span>${SB}<span class="ovtools"><span class="ovseg" role="group" aria-label="기간 범위"><button data-r="6">6개월</button><button data-r="12">12개월</button></span></span></h3>
       <div class="ovsum" id="ovSum"></div><div class="ovchart" id="ovBox"></div><p class="ovnote" id="ovTrN"></p></section>
-    <section class="ovcard" aria-labelledby="ovh6"><h3 id="ovh6">확인이 필요한 곳 <span class="ovscope">모든 팀</span></h3><p class="ovnote" style="margin:0 0 4px">중요한 순(목표 미달 → 위험 장비·초기 고장 → 근접 → 업무 증가)<span class="rptno"> · 누르면 해당 탭으로 이동</span></p>
-      ${al.length?`<ul class="ovhl">${(OV.issAll?al:al.slice(0,5)).map((a,k)=>`<li><span class="ovchip ${a.cc}">${a.chip}</span><div><b>${esc(a.t)}</b><span class="ovs">${esc(a.s)}</span></div><button type="button" data-i="${k}">${a.vl} ›</button></li>`).join('')}</ul>${al.length>5?`<button type="button" class="dsmore" id="ovIssMore" aria-expanded="${!!OV.issAll}">${OV.issAll?'5개만 보기':'모두 보기 ('+al.length+'건)'}</button>`:''}`:'<p class="ovnote">지금 확인이 필요한 항목이 없습니다.</p>'}
-      <p class="ovnote" style="margin-top:6px">증가 = ${esc(pp.label)}${pp.rng?' ('+esc(pp.rng)+')':''} 대비 ${Math.round(OV_ISS.incRate*100)}% 이상이면서 ${OV_ISS.incAbs}건 이상(비교 값이 0이면 판정 안 함) · 업무 집중 = 1인당 처리 건수가 FSG 같은 기간 평균의 ${Math.round(OV_ISS.focus*100)}% 이상(과부하 판정 아님)</p></section>
+    <section class="ovcard" aria-labelledby="ovh6"><h3 id="ovh6">확인이 필요한 곳 <span class="ovscope">모든 팀</span><span class="wlinfo ovisstip" tabindex="0" title="${esc(`중요한 순(목표 미달 → 위험 장비·초기 고장 → 근접 → 업무 증가) · 증가 = ${pp.label}${pp.rng?' ('+pp.rng+')':''} 대비 ${Math.round(OV_ISS.incRate*100)}% 이상이면서 ${OV_ISS.incAbs}건 이상(비교 값이 0이면 판정 안 함) · 업무 집중 = 1인당 처리 건수가 FSG 같은 기간 평균의 ${Math.round(OV_ISS.focus*100)}% 이상(과부하 판정 아님)`)}" aria-label="판정 기준">ⓘ 판정 기준</span></h3>
+      ${al.length?`<ul class="ovhl">${(OV.issAll?al:al.slice(0,5)).map((a,k)=>`<li><span class="ovchip ${a.cc}">${a.chip}</span><div><span class="ovissl"><span class="ovisst">${esc(a.team||'FSG 전체')}</span> · ${esc(a.nm||a.t)} <span class="ovissv">${esc(a.val||'')}</span></span><span class="ovs">${esc(a.gap||a.s)}</span></div><button type="button" data-i="${k}">${a.vl} ›</button></li>`).join('')}</ul>${al.length>5?`<button type="button" class="dsmore" id="ovIssMore" aria-expanded="${!!OV.issAll}">${OV.issAll?'5개만 보기':'모두 보기 ('+al.length+'건)'}</button>`:''}`:'<p class="ovnote">지금 확인이 필요한 항목이 없습니다.</p>'}
+</section>
   </div>
   <div class="rptfoot">${esc(rptFoot)} · 1 / 2</div>
-  <div class="rptbrk"></div><div class="rptHead rptHead2"><div class="rl"><img alt="Sysmex" src="${logoSrc}"><small>FSG Service Performance</small><b>Installed Base</b></div><div class="rr"><h1>운영 장비 현황</h1><span>자산대장 상태 「사용」 기준 · FSG 전체 · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}</span></div></div>
   ${ovEquipCard()}
+  <div class="rptbrk"></div><div class="rptHead rptHead2"><div class="rl"><img alt="Sysmex" src="${logoSrc}"><small>FSG Service Performance</small><b>Service Operations</b></div><div class="rr"><h1>${esc(XM.months)} 업무 규모 · 조직 운영${prov||p.partial?' <em class="rptprov">잠정 실적</em>':''}</h1><span>${esc(scope)} · 집계 ${esc(XM.months)} · 비교 ${esc(XM.cmp)} · 데이터 기준일 ${esc(XM.cut)}${window.__SYNTH?' · <b class="rptsyn">합성 데이터(테스트)</b>':''}</span></div></div>
+  ${rptOps(p,pp,team,cur,prv,act)}
   <div class="rptfoot">${esc(rptFoot)} · 2 / 2</div>
   <div class="ovrfoot">자료: CRM 「모든 약속/활동」 · FTFR = 한 번에 고친 비율, 재방문율 = 14일 안 재방문 비율, MTTR = 고장 수리 평균 소요 시간 · 근접 기준: 목표의 92%(높을수록 좋은 지표) / 115%(낮을수록 좋은 지표) · 업무 유형은 취소·온라인 정기점검 제외, 담당자·필수 참석자 각각 1건 · 최근 14일의 FTFR·재방문율은 잠정치 · 작성: FSS Team</div>`;
   // 추이
@@ -4620,7 +4670,7 @@ function renderOv(){
   const scx=$('ovScx'); if(scx) scx.onclick=()=>{ $('fTeam').value=''; renderOv(); };
   root.querySelectorAll('.ovhl button').forEach(b=>b.onclick=()=>ovGo((OV.issAll?al:al.slice(0,5))[+b.dataset.i]));
   const im=$('ovIssMore'); if(im) im.onclick=()=>{ OV.issAll=!OV.issAll; renderOv(); };
-  root.querySelectorAll('.oveqseg,.oveqlgb').forEach(b=>b.onclick=()=>{ OV_EQF=b.dataset.f; renderOv(); });
+  root.querySelectorAll('.oveqseg,.oveqlgb,.oveqx').forEach(b=>b.onclick=()=>{ OV_EQF=(OV_EQF===b.dataset.f||b.classList.contains('oveqx'))?null:b.dataset.f; renderOv(); });
   const eg=$('ovEqGo'); if(eg) eg.onclick=()=>{ setView('eqp'); setTimeout(()=>{ const t=document.getElementById('prodSec')||document.getElementById('lifeSub'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); },80); };
   const rb=$('ovRptBtn'); if(rb) rb.onclick=()=>setRpt(true);
 }
