@@ -862,6 +862,17 @@ body.rpt #ov .tgl{stroke:#C8312E;stroke-width:1.6;opacity:.85}body.rpt #ov .tgt{
 body.rpt #ov .ovkpi .ovv{font-size:34px;font-weight:400}body.rpt #ov .ovkpi .ovchip{font-size:12.5px;padding:2px 10px}
 body.rpt #ov .rptiss{font-size:13px}body.rpt #ov .rptiss td:last-child{color:#3F3F3F}
 .ovrtg{font-size:12px;color:var(--muted);font-weight:400}
+/* 5개 탭 PDF(2026-11-16 지시): 기본 = 핵심 KPI·차트·주요 목록, 상세 목록은 「접힌 상세 포함」일 때만(별첨) */
+#xPrintFoot{display:none}
+@media print{
+  body.pdfx:not(.pdfdet) .xdet,body.pdfx:not(.pdfdet) #prod.pfold{display:none!important}
+  body.pdfx .ovtools{display:none!important}
+  body.pdfx h2.sec,body.pdfx .ovh{break-after:avoid}
+  body.pdfx[data-view=sq] #sqChrPanel{display:block!important}body.pdfx.pdfdet[data-view=sq] #sqInstPanel{display:block!important}body.pdfx #sqDetSeg{display:none!important}
+  body.pdfx.pdfdet .xdet{break-before:page}
+  body.pdfx #xPrintFoot{display:block;break-before:avoid;break-inside:avoid;font-size:10.5px;color:#65717D;margin:10px 20px 0;padding-top:6px;border-top:1px solid #D9E3EA}
+  body.pdfx .ovkpi,body.pdfx .cv,body.pdfx table{break-inside:avoid}
+}
 </style>
 </head>
 <body>
@@ -1114,7 +1125,7 @@ body.rpt #ov .rptiss{font-size:13px}body.rpt #ov .rptiss td:last-child{color:#3F
     <section class="panel"><h3>수행 사무소별 설치</h3><p class="d">실제로 설치한 사무소 기준(담당 팀과 다르면 지원 설치)</p><div id="insPerf"></div>
       <h3 style="margin-top:14px">설치 예정 (설치일정표 참고)</h3><p class="d" id="insCalNote"></p><div class="tw lim" style="max-height:330px"><table id="tInsCal"></table></div></section>
   </div>
-  <section class="panel" style="margin-top:16px" data-scr="eqp">
+  <section class="panel xdet" style="margin-top:16px" data-scr="eqp">
     <div class="thead"><div><h3>담당 기관 설치 목록 (CRM)</h3><p class="d" style="margin:0">설치 후 90일 고장 = 같은 S/N에 설치 다음 날부터 90일 안에 들어온 고장 수리 건수</p></div></div>
     <div class="tw lim" style="max-height:420px"><table id="tInsList"></table></div>
     <p class="d" id="insListN" style="margin:8px 0 0"></p>
@@ -1155,7 +1166,7 @@ body.rpt #ov .rptiss{font-size:13px}body.rpt #ov .rptiss td:last-child{color:#3F
     <div class="thead"><div><h3>반복 고장 장비 목록</h3><p class="d" style="margin:0" id="chrSqNote"></p></div></div>
     <div class="tw lim" style="max-height:420px"><table id="tChrSq"></table></div><p class="ovnote dshint">표는 옆으로 밀어서 모든 열을 볼 수 있습니다.</p>
   </section>
-  <section class="panel" id="sqInstPanel" data-scr="sq">
+  <section class="panel xdet" id="sqInstPanel" data-scr="sq">
     <div class="thead">
       <div><h3>기관별 품질</h3><p class="d" style="margin:0">재방문율 = 재방문 ÷ (고장 수리 + PM) · FTFR = 같은 에러 재수리 없이 끝난 고장 수리 비율 · 반복 고장 장비 = 12개월 내 3회 이상 고장</p></div>
       <div class="rng" style="gap:12px;flex-wrap:wrap;align-items:flex-end"><label class="dschk"><input type="checkbox" id="fInstOver"> 재방문율 목표 초과만</label>
@@ -5275,7 +5286,9 @@ async function exportXlsx(){
 async function exportPdf(){ if(VIEW==='ov'){ const was=document.body.classList.contains('rpt'); setRpt(true); await new Promise(r=>setTimeout(r,300)); window.print(); if(!was) setRpt(false); return; }
   const M=xMeta(); let h=$('xPrintHead'); if(!h){ h=document.createElement('div'); h.id='xPrintHead'; document.body.insertBefore(h,document.body.firstChild); }
   h.textContent=`FSG KPI 대시보드 · ${M.view} · ${M.period}(${M.months}) · 비교 ${M.cmp} · ${M.team} · ${M.kind} · 출처 ${M.src} · 데이터 기준일 ${M.cut} · 출력 ${M.at}`;
-  await xWith(async()=>{ document.body.classList.add('pdfx'); await new Promise(r=>setTimeout(r,300)); window.print(); }); document.body.classList.remove('pdfx'); }
+  let f=$('xPrintFoot'); if(!f){ f=document.createElement('div'); f.id='xPrintFoot'; document.body.appendChild(f); }
+  f.textContent=`집계 ${M.months} · 비교 ${M.cmp} · 출처 ${M.src} · 데이터 기준일 ${M.cut} · ${M.kind}${M.det?' · 별첨(접힌 상세) 포함':' · 상세 목록은 「접힌 상세 포함」으로 별첨'}`;
+  await xWith(async()=>{ document.body.classList.add('pdfx'); document.body.classList.toggle('pdfdet',!!M.det); await new Promise(r=>setTimeout(r,300)); window.print(); }); document.body.classList.remove('pdfx','pdfdet'); }
 document.addEventListener('click',e=>{ const t=e.target; if(!t||!t.id) return; if(t.id==='xXlsx') exportXlsx(); else if(t.id==='xPdf') exportPdf(); });
 function showMain(){ $('vtabs').hidden=false; $('hdrInfo').hidden=false; setView(VIEW); loadShifts(); loadInstCal(); }
 /* 근무일정표(같은 Firebase 프로젝트 work-schedule/{팀}/{날짜}/{성명}.night)에서 EAST·WEST 시프트 근무일(석간·석/야)을 읽는다.
