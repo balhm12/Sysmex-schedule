@@ -914,7 +914,7 @@ const INSTITUTION_LIST = ["(사)부산의료선교회세계로병원", "(사)한
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 43; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
+const BUILD_VERSION = 44; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1039,7 +1039,10 @@ let viewMode = 'week'; // 'month' | 'week'
 let _today = new Date();
 let viewYear = _today.getFullYear(), viewMonth = _today.getMonth()+1;
 let weekAnchor = todayISO();
-let activeFilter = null; // 범례에서 선택한 필터 상태 키 (없으면 null)
+// 범례에서 고른 필터 상태 키들. 비어 있으면 전체 보기.
+// 여러 개를 고르면 '고른 것 중 하나라도 맞는' 칸이 보입니다(또는 조건) —
+// 한 칸에는 상태가 하나뿐이라 '모두 맞는' 조건으로 묶으면 아무것도 안 남습니다.
+const activeFilters = new Set();
 let dutyOnlyView = false; // true면 석/야간·석간·주말당직·전화당직만 표시
 
 function showToast(msg){
@@ -1345,20 +1348,22 @@ function setEntry(team, date, name, entry){
 // ============================================================
 // 필터 매칭 헬퍼 (범례 클릭 시 해당 상태만 강조)
 // ============================================================
+function filterOn(){ return activeFilters.size > 0; }
+function filterHas(st){ return !!(st && activeFilters.has(st.key)); }
 function slotMatchesFilter(val){
-  if(!activeFilter) return true;
-  const st = matchStatus(val);
-  return !!(st && st.key === activeFilter);
+  if(!filterOn()) return true;
+  return filterHas(matchStatus(val));
 }
 function nightMatchesFilter(nightVal, tk){
-  if(!activeFilter) return true;
-  const st = nightStatusOf(nightVal, tk);
-  return !!(st && st.key === activeFilter);
+  if(!filterOn()) return true;
+  return filterHas(nightStatusOf(nightVal, tk));
 }
+// 그 사람의 그날 칸 중 하나라도 고른 상태에 걸리면 true.
+// 야간과 오전·오후를 같이 골랐을 수 있으므로 둘 다 봅니다.
 function entryMatchesFilter(entry, tk){
-  if(!activeFilter) return true;
-  if(nightMapFor(tk)[activeFilter]){ const st = nightStatusOf(entry.night, tk); return !!(st && st.key === activeFilter); }
-  return SLOT_KEYS.some(k=>{ const st = matchStatus(entry[k]); return st && st.key===activeFilter; });
+  if(!filterOn()) return true;
+  if(filterHas(nightStatusOf(entry.night, tk))) return true;
+  return SLOT_KEYS.some(k=> filterHas(matchStatus(entry[k])));
 }
 
 // ============================================================
@@ -1376,9 +1381,11 @@ function renderTeamTabs(){
     tab.onclick = ()=>{
       _teamTouched = true;
       currentTeam = tk;
-      if(activeFilter){
+      if(activeFilters.size){
+        // 팀마다 야간 상태가 달라서(대전당직·광주당직 등) 그 팀에 없는 것만 빼고
+        // 나머지 선택은 그대로 둡니다.
         const validKeys = new Set(HALF_STATUS.map(s=>s.key).concat(legendNightItems().map(s=>s.key)));
-        if(!validKeys.has(activeFilter)) activeFilter = null;
+        [...activeFilters].forEach(k=>{ if(!validKeys.has(k)) activeFilters.delete(k); });
       }
       renderTeamTabs(); renderLegend(); render();
     };
@@ -1404,23 +1411,24 @@ function renderLegend(){
   const el = document.getElementById('legend');
   const items = HALF_STATUS.filter(s=>s.key).concat(legendNightItems());
   let html = items.map(s=>{
-    const active = activeFilter === s.key;
+    const active = activeFilters.has(s.key);
     const style = active ? (' style="background:' + s.color + ';color:white;border-color:' + s.color + ';"') : '';
     const dotStyle = 'background:' + (active ? 'white' : s.color) + ';';
     return '<div class="chip' + (active?' active':'') + '" data-filter="' + s.key + '"' + style + '><span class="dot" style="' + dotStyle + '"></span>' + s.label + '</div>';
   }).join('');
-  if(activeFilter) html += '<div class="chip chip-clear" id="clearFilterChip">× 필터 해제</div>';
+  if(activeFilters.size) html += '<div class="chip chip-clear" id="clearFilterChip">× 필터 해제 (' + activeFilters.size + ')</div>';
   el.innerHTML = html;
   el.querySelectorAll('.chip[data-filter]').forEach(chip=>{
     chip.onclick = ()=>{
       const key = chip.dataset.filter;
-      activeFilter = (activeFilter === key) ? null : key;
+      // 누를 때마다 그 상태만 켜고 끕니다 (다른 선택은 그대로).
+      if(activeFilters.has(key)) activeFilters.delete(key); else activeFilters.add(key);
       renderLegend();
       render();
     };
   });
   const clearChip = document.getElementById('clearFilterChip');
-  if(clearChip) clearChip.onclick = ()=>{ activeFilter = null; renderLegend(); render(); };
+  if(clearChip) clearChip.onclick = ()=>{ activeFilters.clear(); renderLegend(); render(); };
 }
 
 // ============================================================
@@ -2553,7 +2561,7 @@ function renderWeekGrid(){
         }
         if(html) td.innerHTML = html; else { td.classList.add('empty'); td.textContent='-'; }
         const wst = weekendStatusOf(e.weekend, mtk);
-        const matches = !activeFilter || (wst && wst.key===activeFilter) || entryMatchesFilter(e, mtk);
+        const matches = !filterOn() || filterHas(wst) || entryMatchesFilter(e, mtk);
         if(!matches) td.classList.add('wcell-dim');
       }, {groupStart:true, dateLabel, rowSpan:1});
     }
