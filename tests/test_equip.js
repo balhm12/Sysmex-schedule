@@ -85,7 +85,10 @@ assert.strictEqual(EQC.eqAgg({}, ['L'], () => 5, () => true).perHead, 0, '팀장
 // 대시보드의 같은 함수를 실제로 실행한 결과와 같다 + 화면(renderEquip)이 eqAgg 를 쓰고 팀장 제외를 안내한다
 const ctx2 = vm.createContext({}); vm.runInContext(K.sliceFunction(html, 'eqAgg') + '\nthis.eqAgg = eqAgg;', ctx2);
 assert.strictEqual(JSON.stringify(ctx2.eqAgg(by, ['L', 'P', 'Q'], n => ({ L: 100, P: 40, Q: 20 })[n], n => n === 'L')), JSON.stringify(ag), '대시보드 eqAgg 와 같은 결과');
-const rEq = K.sliceFunction(html, 'renderEquip'); assert(/eqAgg\(/.test(rEq) && /cur\.per100/.test(rEq) && /cur\.perHead/.test(rEq) && /팀장/.test(rEq), 'renderEquip 은 eqAgg(팀장 제외)로 계산');
+const rEq = K.sliceFunction(html, 'renderEquip'); assert(/eqAgg\(/.test(rEq) && /팀장/.test(rEq), 'renderEquip 은 eqAgg(팀장 제외)로 계산');
+// 2026-11-16: 1인당 담당 장비는 Organization 비교표(orgRows → eqAgg perHead, 팀장 제외), 개인별 표는 Productivity 「담당 장비」 탭
+assert(/eqh:PROD\.eq\?eqAgg\(.*'팀장'\)\.perHead/.test(html), '1인당 담당 장비 = orgRows eqAgg(팀장 제외)');
+assert(/prd:\{[^}]*tabs:\[[^\]]*'equip'/.test(html), 'Productivity 하위 탭 「담당 장비」');
 // 같은 값이 직전 기간으로도 나온다(같은 장비 수로 나눔)
 assert(east.per100Prev === null || typeof east.per100Prev === 'number');
 
