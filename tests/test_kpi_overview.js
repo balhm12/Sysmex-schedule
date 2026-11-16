@@ -97,3 +97,7 @@ assert(/function eqField\(/.test(html) && /class="oveqseg/.test(html) && /OV_EQF
 { const f=new Function(html.match(/function eqField\(m\)\{[\s\S]*?return '기타'; \}/)[0]+';return eqField;')();
   const T=[['HEMATO ANALYZER XT-1800I','혈액'],['TOSOH 23850 HLC-723 G11','혈액'],['XQ-520','혈액'],['COAG ANALYZER CA-540, 220V','응고'],['HISCL-5000','면역'],['UF-5000','뇨화학'],['U-WAM COMPLETE(EN)','기타'],['SA-10 COMPLETE(SA-10)','기타'],['TS-10 COMPLETE','기타'],['','기타']];
   T.forEach(([m,e])=>assert(f(m)===e, `eqField(${m}) = ${f(m)} (기대 ${e})`)); }
+/* v3.2 결정: 진행 중인 달 = 전월 동기간(mPred·tTo), 이슈 기준 설정값 OV_ISS(20%·10건·120%, 비교 0이면 판정 안 함), 업무 집중 */
+assert(/function mPred\(months\)/.test(html) && /전월 동기간\(/.test(html) && /const OV_ISS=\{incRate:0\.2, incAbs:10, focus:1\.2\}/.test(html) && /chip:'업무 집중'/.test(html), 'v3.2 전월 동기간·이슈 기준');
+{ const f=new Function(html.match(/function mPred\(months\)\{[^\n]*\}/)[0]+';return mPred;')(); const M=['2026-10']; M.tTo=Date.UTC(2026,9,17); const g=f(M);
+  assert(g('2026-10',Date.UTC(2026,9,16,23))&&!g('2026-10',Date.UTC(2026,9,17,0))&&!g('2026-09',Date.UTC(2026,8,5)), 'mPred 전월 동기간 경계'); assert(f(['2026-10'])('2026-10',Date.UTC(2026,9,30)), 'mPred 마감 월 전체'); }

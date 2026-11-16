@@ -11,7 +11,8 @@ const ROSTER=[['테스트1','FS WEST','T1'],['테스트2','FS EAST','T1'],['테�
 const OFFICE={'테스트3':'대전','테스트4':'부산'}; const PROD_UNITS=['FS WEST','FS EAST','FS CENTRAL 대전','FS CENTRAL 광주','FS SOUTH 부산','FS SOUTH 대구'];
 let EQD={rows:[['테스트1','가 수탁 A','경기'],['테스트2','가 수탁 B','경기도'],['테스트1','가 수탁 C','서울'],['테스트1','가 수탁 D','인천']]};
 const mkey=ms=>{const d=new Date(ms);return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');};
-const esc=s=>String(s); const $=()=>null;`;
+const esc=s=>String(s); const $=()=>null;
+function mPred(months){ const ms=new Set(months), tTo=months&&months.tTo; return tTo? (mk,t)=>ms.has(mk)&&(t==null||t<tTo) : (mk)=>ms.has(mk); }`;
 const api=new Function(env+block+';return {wlSplit,wlBand,wlVisits,wlAgg,wlAcadAgg,parseAcad,wlRegionAuto,wlInfo,wlSug,set INST(v){INST=v;},set ACAD(v){ACAD=v;}};')();
 const T=(y,m,d,h,mi)=>Date.UTC(y,m-1,d,h,mi||0);   // 벽시계 시각
 // 2026-11-11(수) 평일, 2026-11-14(토), 2026-10-09(금, 한글날 공휴일)
