@@ -553,6 +553,7 @@ body[data-view=wl] #prodTabs [data-tab]:not([data-tab=ot]):not([data-tab=move]){
 body[data-view=prd] #prodTabs [data-tab=move]{display:none}
 body[data-view=org] .pfoot,body[data-view=eqp] .pfoot,body[data-view=wl] .pfoot{display:none}
 body[data-view=prd] #prodTabs [data-tab=ot]{display:none}
+body[data-view=org] #mainArea,body[data-view=eqp] #mainArea{padding-bottom:0}body[data-view=org] #prod,body[data-view=eqp] #prod{padding-top:0}body[data-view=org] #mainArea #foot:empty,body[data-view=eqp] #mainArea #foot:empty{display:none}
 #otPerson .block-head{flex-wrap:wrap;align-items:center}#otPerson .otpx{width:auto;margin:0 0 0 auto;flex:0 0 auto;min-height:40px;padding:0 14px}.otmoved{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.otmoved .more-btn{width:auto;margin:0}
 body[data-view=pro] #kpis .kpi:nth-child(1),body[data-view=pro] #kpis .kpi:nth-child(n+5){display:none}
 body[data-view=prd] #prodTabs [data-tab=team]{display:none}
@@ -2173,11 +2174,7 @@ function renderTeam(){
   var html = '<div class="controls" style="margin-bottom:18px;">'+
     '<div class="control-group" style="flex-wrap:wrap;row-gap:6px;min-width:0;"><span class="control-label">팀</span><div class="segmented" id="teamSeg"></div></div></div>';
 
-  html += '<div class="block grid grid-2">'+
-    chartCard('team-score-total-chart', '팀별 1인당 KPI 점수', PL(period)+' · 팀장·신입 제외')+
-    chartCard('team-score-avg-chart', '팀별 직급 보정 지수', '100 = FSG 같은 직급 중앙값 · 팀장·신입 제외')+
-    '</div>';
-
+  /* 2026-11-16: 팀끼리 비교(1인당 KPI 점수·직급 보정 지수·사무소 비교)는 위 Organization 비교표와 같은 숫자라 빼고, 고른 팀(사무소)만 본다 */
   var mttr = mttrRepairAvg(teamData, period);
   var rv = teamRevisit(team, period);
   var reliable = DATA.revisit[team].reliable;
@@ -2189,8 +2186,6 @@ function renderTeam(){
     statTile('FTFR', pctStr(rv.ftfr), '', reliable?targetPill(rv.ftfr, DATA.benchmarks.ftfr_target,'higher-better'):'', reliable?('목표 '+DATA.benchmarks.ftfr_target+'% 이상'):'&nbsp;')+
     '</div>';
 
-  if (TGROUPS[topOf(team)]) html += '<div class="block"><div class="block-head"><h2>사무소 비교</h2><span class="hint">'+DATA.team_short[topOf(team)]+' · '+PL(period)+' · 1인당 값은 팀장·신입 제외 · 사무소는 4~5명 기준이라 참고용</span></div>'+
-    '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="officeTable"></table></div></div>';
   html += '<div class="block grid grid-2">'+
     chartCard('team-group-chart', '비즈니스(장비 그룹)별 처리 건수', PL(period))+
     chartCard('team-svc-chart', '서비스 유형별 처리 건수', PL(period))+
@@ -2208,14 +2203,6 @@ function renderTeam(){
   el.innerHTML = html;
 
   teamButtons(document.getElementById('teamSeg'), team, false, function(t){ state.team = t; state.sortKey='total'; state.sortDir='desc'; renderTeam(); });
-  if (TGROUPS[topOf(team)]) renderOfficeCmp(topOf(team), period);
-
-  var teamLabels = VIEW.map(function(t){return DATA.team_short[t];});
-  var teamColors = VIEW.map(function(t){return t===team ? '#005BAC' : '#9FA0A0';});
-  var teamScoreCore = VIEW.map(function(t){return DATA.team[t].score_avg_core ? DATA.team[t].score_avg_core[period] : (DATA.team[t].score_avg[period] || 0);});
-  var teamIndex = VIEW.map(function(t){return DATA.team[t].index_avg ? (DATA.team[t].index_avg[period] || 0) : 0;});
-  barChart(document.getElementById('team-score-total-chart'), teamLabels, teamScoreCore.map(function(v){ return Math.round(v*10)/10; }), teamColors, {unit:'점'});
-  barChart(document.getElementById('team-score-avg-chart'), teamLabels, teamIndex.map(function(v){ return Math.round(v*10)/10; }), teamColors, {unit:'', targetLine:100, targetText:'기준'});
 
   barChart(document.getElementById('team-group-chart'), DATA.groups.map(function(g){return DATA.group_label[g];}), groupCaseArr(teamData, period), DATA.groups.map(function(g){return DATA.group_label[g]==='기타' ? '#9FA0A0' : '#005BAC';}), {unit:'건'});
   var BL2 = ['#005BAC','#00B9EF','#5185C5','#84BAE5','#9FA0A0'];
@@ -4267,7 +4254,7 @@ function renderProd(){
 }
 function prodTitle(){
   const el=$('prodTitle'), sec=$('prodSec'); if(!el||!PROD) return;
-  if(sec){ const h={org:['팀별 상세 분석','팀을 고르면 그 팀의 순위·병원별 재방문율을 봅니다'],eqp:['담당 장비 현황','담당기관 관리표 기준 · 현재 시점 · 사람별은 Productivity 「담당 장비」, 1인당 장비는 Organization 비교표'],wl:['근무 시간 · 이동 (사람 기준)','야간 OT·휴일 근무 = CRM 기록·인사 연장근무 기준 — 근무 종료가 WEST·EAST 17시·CENTRAL·SOUTH 18시라 위 방문 시간대(08~18시)와 기준이 다릅니다']}[VIEW]; sec.innerHTML=h?h[0]+' <small>'+h[1]+'</small>':''; sec.hidden=!h; }
+  if(sec){ const h={org:['선택한 팀 · 사무소 상세','위 비교표에서 팀·사무소를 누르거나 아래 버튼으로 고릅니다 · 팀 간 비교는 위 비교표에서'],eqp:['담당 장비 현황','담당기관 관리표 기준 · 현재 시점 · 사람별은 Productivity 「담당 장비」, 1인당 장비는 Organization 비교표'],wl:['근무 시간 · 이동 (사람 기준)','야간 OT·휴일 근무 = CRM 기록·인사 연장근무 기준 — 근무 종료가 WEST·EAST 17시·CENTRAL·SOUTH 18시라 위 방문 시간대(08~18시)와 기준이 다릅니다']}[VIEW]; sec.innerHTML=h?h[0]+' <small>'+h[1]+'</small>':''; sec.hidden=!h; }
   if(VIEW!=='prd'){ el.innerHTML=''; return; }
   const S=prodSelection(), n=Object.keys(PROD.person||{}).length;
   el.innerHTML=`<div><h2>Productivity</h2><p>${esc(S.label)} · 비교 ${esc(S.cmpLabel)} · 직원 ${n}명 · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}${SRC&&SRC.at?' · 마지막 업데이트 '+esc(SRC.at):''}${S.prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div>`;
