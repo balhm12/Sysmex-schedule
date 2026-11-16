@@ -91,3 +91,5 @@ assert(/const OG_CORE=/.test(html) && /id="proHealthFold"/.test(html) && /ovkpi 
 assert(/\['데이터 구분',M\.kind\]/.test(html) && /\['접힌 상세 포함'/.test(html), 'v3.2: 내보내기 정보 시트');
 /* 모든 <script> 블록이 문법 오류 없이 읽혀야 함(2026-11-16 충돌 해소 중 한 줄 중복으로 대시보드가 멈춘 일 재발 방지) */
 { const re=/<script>([\s\S]*?)<\/script>/g; let m, i=0; while((m=re.exec(html))){ i++; try{ new Function(m[1]); }catch(e){ assert(false, 'script 블록 '+i+' 문법 오류: '+e.message); } } }
+/* Overview 운영 장비: 분야 100% 막대 → 누르면 세부 장비 */
+assert(/function eqField\(/.test(html) && /class="oveqseg/.test(html) && /OV_EQF=b\.dataset\.f/.test(html), '운영 장비 분야 막대·세부');

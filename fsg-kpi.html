@@ -815,6 +815,11 @@ body.rpt #ov .ovrfoot{display:block;margin-top:16px;padding-top:8px;border-top:1
 .oveqk{font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.oveqt{height:10px;background:var(--grid);border-radius:2px;overflow:hidden}.oveqt i{display:block;height:100%;background:#005BAC}.oveqt i.etc{background:#9FA0A0}
 .oveqv{text-align:right;font-family:Arial,sans-serif;white-space:nowrap}.oveqv small{color:var(--muted);font-size:11.5px;margin-left:2px}
 @media (max-width:760px){.oveqrs{grid-template-columns:1fr;grid-template-rows:none;grid-auto-flow:row;gap:2px}.oveqr{grid-template-columns:84px 1fr 96px;min-height:22px}}
+.oveqseg{border:0;padding:0;font:inherit;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;cursor:pointer;opacity:.7}.oveqseg.on{opacity:1;box-shadow:inset 0 -3px 0 #003A70}.oveqseg:hover{opacity:.85}.oveqseg:focus-visible{outline:2px solid #003A70;outline-offset:-2px}
+.oveqlgb{border:1px solid transparent;background:none;font:inherit;font-size:12px;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:4px;min-height:28px}.oveqlgb.on{border-color:var(--border);color:var(--text);font-weight:700}.oveqlgb b{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px}
+.oveqdet{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+@media (pointer:coarse){.oveqlgb{min-height:44px}}
+@media (max-width:760px){.oveqst.s{display:none}.oveqbar{height:30px}}
 </style>
 </head>
 <body>
@@ -4451,23 +4456,30 @@ function ovIssues(p,pp){
 }
 function ovGo(it){ if(!it) return; $('fTeam').value=it.team||''; if(it.wl&&typeof WL!=='undefined') WL.tab=it.wl; if(it.v==='sq'&&typeof SQ_DET!=='undefined') SQ_DET='inst'; setView(it.v); window.scrollTo(0,0); }
 /* v3.2: 운영 장비 현황 — 자산대장 기준(관리표 담당 장비와 다름). 등록 = 자산대장 상태 '사용', 유효 운영 = 그중 최근 12개월 서비스 이력(S/N·기관 일치) — 운영 건전성 「가동 장비(모수)」와 같은 기준 */
+/* 분야 — FS Portal 학술 집계와 같은 장비군 → 분야(혈액·응고·면역·뇨화학), 그 밖은 기타. 화면 묶음용이며 KPI 장비군(famOf)은 그대로 */
+const EQ_FLD=[['혈액','#005BAC'],['응고','#00B9EF'],['면역','#5185C5'],['뇨화학','#84BAE5'],['기타','#9FA0A0']];
+function eqField(m){ const u=String(m||'').toUpperCase().replace(/\s+/g,'');
+  if(/^(XN|XR|XS|XE|XT|XP|KX|POCH|SP-?\d|DI-?\d)/.test(u)) return '혈액'; if(/^(CN|CS|CA|CV)/.test(u)) return '응고'; if(/HISCL/.test(u)) return '면역'; if(/^(UF|UC|UD|AX|UX|UN)/.test(u)) return '뇨화학'; return '기타'; }
+let OV_EQF=null;
 function opEquip(){ if(!SERIAL||!D) return null; const end=D.months[D.months.length-1], ms=last12Set(end), touched=new Set();
   D.rows.forEach(o=>{ if(ms.has(o.mk)&&o.sn&&o.acct) touched.add(o.sn+'|'+o.acct); });
   const used=SERIAL.filter(x=>x.state==='사용'&&x.sn&&x.acct), fam={}, famV={}, acc=new Set(), accV=new Set(); let valid=0;
-  const etcM={}; used.forEach(x=>{ const f=famOf(x.model), v=touched.has(x.sn+'|'+x.acct); fam[f]=(fam[f]||0)+1; acc.add(x.acct); if(f==='기타'){ const k=(x.model||'(모델 미기재)').trim()||'(모델 미기재)'; etcM[k]=(etcM[k]||0)+1; } if(v){ valid++; famV[f]=(famV[f]||0)+1; accV.add(x.acct); } });
-  return {reg:used.length, valid, fam, famV, acc:acc.size, accV:accV.size, etcM, end}; }
+  const etcM={}, fld={}; used.forEach(x=>{ const f=famOf(x.model), v=touched.has(x.sn+'|'+x.acct), F=eqField(x.model), d=f==='기타'?((x.model||'').trim().split(/[\s/]/)[0]||'(모델 미기재)'):f, Z=fld[F]||(fld[F]={n:0,v:0,d:{}}); Z.n++; if(v) Z.v++; Z.d[d]=(Z.d[d]||0)+1; fam[f]=(fam[f]||0)+1; acc.add(x.acct); if(f==='기타'){ const k=(x.model||'(모델 미기재)').trim()||'(모델 미기재)'; etcM[k]=(etcM[k]||0)+1; } if(v){ valid++; famV[f]=(famV[f]||0)+1; accV.add(x.acct); } });
+  return {reg:used.length, valid, fam, famV, acc:acc.size, accV:accV.size, etcM, fld, end}; }
 function opEquipLine(){ const o=opEquip(), eq=EQD&&EQD.rows?EQD.rows.reduce((a,r)=>a+(+r[3]||0),0):null;
   return (o?`자산대장 운영 장비 ${fmt(o.reg)}대(최근 12개월 서비스 이력 ${fmt(o.valid)}대)`:'자산대장 미등록')+' · '+(eq!=null?`FSR 관리표 담당 장비 ${fmt(eq)}대`:'관리표 미등록')+' — 두 숫자는 기준이 다릅니다'; }
 function ovEquipCard(){ const o=opEquip();
   if(!o) return `<section class="ovcard ovequip" style="margin:0 0 14px" aria-labelledby="ovh7"><h3 id="ovh7">운영 장비 현황</h3><p class="ovnote">자산대장이 올라와 있지 않아 장비 수를 보여 줄 수 없습니다(관리자 「자산대장」 올리기).</p></section>`;
-  /* 시리즈별 가로 막대(0부터, 많은 순) — 100% 누적 막대는 작은 시리즈가 안 보여 바꿈(2026-11-16 사용자 「메인 장비들이 잘 보이게」). 「기타」 = 장비군 표에 없는 모델·미기재, 맨 아래 */
-  const fk=Object.keys(o.fam).filter(f=>f!=='기타').sort((a,b)=>o.fam[b]-o.fam[a]), mxv=Math.max(1,...Object.values(o.fam));
-  const em=Object.entries(o.etcM).sort((a,b)=>b[1]-a[1]), etip=em.slice(0,8).map(([m,n])=>m+' '+fmt(n)+'대').join(', ')+(em.length>8?` 외 ${em.length-8}종`:'');
-  const row=(f,n,lab,tip)=>`<div class="oveqr"${tip?` title="${esc(tip)}"`:''}><span class="oveqk">${esc(lab)}</span><span class="oveqt"><i style="width:${(n*100/mxv).toFixed(1)}%"${f==='기타'?' class="etc"':''}></i></span><span class="oveqv">${fmt(n)}대 <small>${(n*100/o.reg).toFixed(1)}%</small></span></div>`;
-  const bar=fk.map(f=>row(f,o.fam[f],f.replace(/-Series$/,'').replace(/ Series$/,''),`${f} ${fmt(o.fam[f])}대 · 12개월 이력 ${fmt(o.famV[f]||0)}대`)).join('')+(o.fam['기타']?row('기타',o.fam['기타'],`기타 (${fmt(em.length)}종)`,'장비군 표에 없는 모델·모델 미기재: '+etip):'');
+  /* 분야 100% 막대(누르면 그 분야의 세부 장비 막대) — 2026-11-16 사용자 「분야로 보고 클릭하면 세부로, 막대형 유지」 */
+  const F=EQ_FLD.filter(([k])=>o.fld[k]&&o.fld[k].n), sel=(OV_EQF&&o.fld[OV_EQF])?OV_EQF:(F.slice().sort((a,b)=>o.fld[b[0]].n-o.fld[a[0]].n)[0]||[''])[0];
+  const segs=F.map(([k,c])=>{ const z=o.fld[k], pct=z.n*100/o.reg; return `<button type="button" class="oveqseg${k===sel?' on':''}" data-f="${k}" aria-pressed="${k===sel}" style="width:${pct}%;background:${c}" title="${k} ${fmt(z.n)}대 (${pct.toFixed(1)}%) · 12개월 이력 ${fmt(z.v)}대 — 누르면 세부">${pct>=7?`<span class="oveqst${pct<16?' s':''}">${k} ${Math.round(pct)}%</span>`:''}</button>`; }).join('');
+  const lg=F.map(([k,c])=>`<button type="button" class="oveqlgb${k===sel?' on':''}" data-f="${k}"><b style="background:${c}"></b>${k} ${fmt(o.fld[k].n)}대</button>`).join('');
+  const Z=o.fld[sel]||{n:0,d:{}}, dk=Object.keys(Z.d).sort((a,b)=>Z.d[b]-Z.d[a]), mxv=Math.max(1,...dk.map(k=>Z.d[k])), col=(EQ_FLD.find(x=>x[0]===sel)||['','#005BAC'])[1];
+  const det=dk.slice(0,8).map(k=>`<div class="oveqr"><span class="oveqk" title="${esc(k)}">${esc(k.replace(/-Series$|( Series)$/,''))}</span><span class="oveqt"><i style="width:${(Z.d[k]*100/mxv).toFixed(1)}%;background:${col}"></i></span><span class="oveqv">${fmt(Z.d[k])}대 <small>${(Z.d[k]*100/(Z.n||1)).toFixed(0)}%</small></span></div>`).join('')+(dk.length>8?`<p class="ovnote" style="margin:2px 0 0">그 밖 ${dk.length-8}종 ${fmt(dk.slice(8).reduce((a,k)=>a+Z.d[k],0))}대</p>`:'');
+  const bar=`<div class="oveqbar" role="group" aria-label="분야별 구성 — 누르면 세부">${segs}</div><div class="oveqlg">${lg}</div><div class="oveqdet"><span class="ovl" style="font-size:12.5px">${esc(sel)} 세부 <span class="ovsub">${fmt(Z.n)}대 · 분야 안 비율</span></span><div class="oveqrs" style="--rows:${Math.ceil(Math.min(dk.length,8)/2)}">${det}</div></div>`;
   return `<section class="ovcard ovequip" style="margin:0 0 14px" aria-labelledby="ovh7"><h3 id="ovh7">운영 장비 현황 <span class="ovsub">자산대장 상태 「사용」 기준 · FSG 전체(팀 필터와 무관)</span><span class="ovtools"><button type="button" class="dsbtn" id="ovEqGo">Instrument 상세 ›</button></span></h3>
     <div class="oveq"><div class="oveqn"><div><span class="ovl">등록 장비</span><span class="ovv">${fmt(o.reg)}<small>대</small></span></div><div><span class="ovl">유효 운영</span><span class="ovv">${fmt(o.valid)}<small>대</small></span><span class="ovs">12개월 서비스 이력 · ${o.reg?Math.round(o.valid*100/o.reg):0}%</span></div><div><span class="ovl">거래처</span><span class="ovv">${fmt(o.acc)}<small>곳</small></span><span class="ovs">이력 있는 곳 ${fmt(o.accV)}</span></div></div>
-    <div class="oveqb"><span class="ovl">장비 시리즈 구성 <span class="ovsub">등록 기준 · 많은 순 · 막대는 0부터</span></span><div class="oveqrs" style="--rows:${Math.ceil((fk.length+(o.fam['기타']?1:0))/2)}">${bar}</div></div></div>
+    <div class="oveqb"><span class="ovl">분야별 구성 <span class="ovsub">등록 기준 100% · 분야를 누르면 세부 장비</span></span>${bar}</div></div>
     <p class="ovnote">FSR 담당기관 관리표의 「담당 장비」(Organization)와 기준이 다릅니다 — 관리표는 담당자가 정해진 장비만 셉니다.</p></section>`; }
 function renderOv(){
   const root=$('ov'); if(!D||!root) return;
@@ -4528,6 +4540,7 @@ function renderOv(){
   const scx=$('ovScx'); if(scx) scx.onclick=()=>{ $('fTeam').value=''; renderOv(); };
   root.querySelectorAll('.ovhl button').forEach(b=>b.onclick=()=>ovGo((OV.issAll?al:al.slice(0,5))[+b.dataset.i]));
   const im=$('ovIssMore'); if(im) im.onclick=()=>{ OV.issAll=!OV.issAll; renderOv(); };
+  root.querySelectorAll('.oveqseg,.oveqlgb').forEach(b=>b.onclick=()=>{ OV_EQF=b.dataset.f; renderOv(); });
   const eg=$('ovEqGo'); if(eg) eg.onclick=()=>{ setView('eqp'); setTimeout(()=>{ const t=document.getElementById('prodSec')||document.getElementById('lifeSub'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); },80); };
   const rb=$('ovRptBtn'); if(rb) rb.onclick=()=>setRpt(true);
 }
