@@ -79,6 +79,6 @@ assert(!/id="pmBars"/.test(html) && !/teamRevisitCards/.test(html), 'Productivit
 assert(!/<h2 class="sec" data-scr="sq">업무량 추이/.test(html), 'Service Quality 의 업무량 추이는 Proactive Service 와 중복');
 assert(/function otPersonHtml\(/.test(html) && /function otPersonDraw\(/.test(html), '개인 야간·휴일 블록은 OT 패널 아래로');
 assert(!/html2 \+= '<div class="block"><div class="block-head"><h2>야간·휴일 근무<\/h2>/.test(html), '개인별 상세에서 야간 블록을 뺌');
-assert(/wlNA\('학술 업무 비중'/.test(block),'학술 업무 비중 = 데이터 미확보');
+assert(/function wlAcadCrm\(/.test(html) && /\/학술\/\.test\(o\.ft\)/.test(html) && /ft:r\.ft\|\|''/.test(html),'학술 업무 비중 = CRM 양식 타입 「학술 요청」 비율');
 assert(!/WL_SUG[\s\S]{0,40}wlAgg/.test(block)&&!/wlSug\(/.test(block.slice(block.indexOf('function wlAgg'),block.indexOf('function wlAcadDays'))),'집계에 이름 후보를 쓰지 않음');
 console.log('test_workload ok');
