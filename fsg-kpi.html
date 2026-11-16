@@ -4331,7 +4331,10 @@ function refresh(){
   buildProdPeriods(); PROD_DIRTY=true; if(!$('prod').hidden) renderProdFor(); if(VIEW==='ov') renderOv();
 }
 $('fTeam').innerHTML='<option value="">FSG 전체</option>'+TEAMS.map(t=>`<option>${t}</option>`).join('');
-['fPeriod','fTeam'].forEach(id=>$(id).addEventListener('change',()=>rerender()));
+/* 2026-11-16 수정: 기간을 바꾸면 조직·개인 계산(PROD)을 먼저 다시 하도록 표시한 뒤 그림 — 예전에는 이 처리기가 PROD_DIRTY 를 켜는 처리기보다 먼저 돌아
+   Organization 표·「담당 장비 × 처리 건수」·Overview 업무 집중이 한 번 늦게(직전 기간 값으로) 바뀌었다 */
+$('fPeriod').addEventListener('change',()=>{ PROD_DIRTY=true; rerender(); });
+$('fTeam').addEventListener('change',()=>rerender());
 $('fErrFam').addEventListener('change',()=>drawErr());
 /* 팀 카드 → 팀 필터 */
 const pickTeam=el=>{ const c=el.closest('.tc[data-team]'); if(!c) return; $('fTeam').value=c.dataset.team; render(); };

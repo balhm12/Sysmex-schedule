@@ -136,3 +136,7 @@ assert(/function mPred\(months\)/.test(html) && /전월 동기간\(/.test(html) 
   assert(/body\.rpt #ov \.oveqadm,body\.pdfx \.oveqadm\{display:none!important\}/.test(html), '보고서·PDF 에 기관명 목록 없음');
   const ops=html.slice(html.indexOf('function rptOps('),html.indexOf('function renderOv('));
   assert(/eqBase\(\)/.test(ops)&&!/opEquip\(\)/.test(ops), '보고서 2쪽 장비도 관리표 기준'); }
+
+/* 2026-11-16: 기간을 바꾸면 PROD 를 다시 계산한 뒤 그림(한 번 늦게 바뀌던 것) */
+{ const i=html.indexOf("$('fPeriod').addEventListener('change',()=>{ PROD_DIRTY=true; rerender(); });"); assert(i>0, '기간 변경 → PROD_DIRTY 먼저');
+  assert(!/\['fPeriod','fTeam'\]\.forEach\(id=>\$\(id\)\.addEventListener\('change',\(\)=>rerender\(\)\)\)/.test(html), '예전 처리기 없음'); }
