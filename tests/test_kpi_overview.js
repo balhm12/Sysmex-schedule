@@ -13,13 +13,19 @@ const ovCode = between('/* ===== Overview (2026-11-12 2단계 시안)', 'functio
 assert(/stats\(p\.months,team\)/.test(ovCode) && /PROD\.team\[t\]/.test(ovCode), 'stats()/PROD 를 읽지 않음');
 // 3) 화면 6개 — 전환·주소·섹션 배치 (2026-11-12 재편)
 const screens = new Function(between('const SCREENS=', 'const VIEW_ALIAS') .replace('const SCREENS=', 'var SCREENS=') + '; return SCREENS;')();
-assert.deepStrictEqual(Object.keys(screens).sort(), ['eqp', 'ov', 'org', 'pro', 'prd', 'sq', 'wl'].sort());
-assert.strictEqual(new Set(Object.values(screens).map(s => s.hash)).size, 7, '화면 주소가 겹침');
-assert.strictEqual(screens.prd.hash, '#people', '기존 주소 #people 은 Productivity 로 유지');
+assert.deepStrictEqual(Object.keys(screens).sort(), ['eqp', 'ov', 'org', 'pro', 'sq', 'wl'].sort(), '화면 6개 (2026-11-16 Productivity → Organization 통합)');
+assert.strictEqual(new Set(Object.values(screens).map(s => s.hash)).size, 6, '화면 주소가 겹침');
+assert(/if\(h==='#people'\) return 'org'/.test(html), '예전 주소 #people 은 Organization 으로');
+assert(/VIEW_ALIAS=\{[^}]*prd:'org'/.test(html), '예전 저장값 prd 는 Organization 으로');
+assert(!html.includes('id="vtPrd"'), 'Productivity 탭 버튼이 없어야 함');
+assert(/org:\{[^}]*tabs:\['team','overview','person','equip'\]/.test(html), 'Organization 상세 분석 하위 탭');
+assert(html.includes('id="cOrgSc"') && /type:'bubble'/.test(html), '담당 장비 × 업무량 거품 그림');
+assert(/function orgExt[\s\S]{0,400}eqAgg\(PROD\.eq\.by/.test(html) && /function orgVisits[\s\S]{0,300}wlVisits\(D\.rows\)/.test(html), '조직 장비·특수업무는 기존 함수(eqAgg·wlVisits)를 씀');
+assert(html.includes('과부하 여부를 판정하지 않습니다'), '사분면 해석 주의 문구');
 const sv = between('function setView(v){', 'function showMain');
 assert(sv.includes('rerender()') && sv.includes('scr-off'));
 assert(between('function rerender(){', 'function showMain').includes('renderOv()'));
-['vtOv', 'vtSq', 'vtOrg', 'vtPrd', 'vtEqp', 'vtPro'].forEach(id => assert(html.includes('id="' + id + '"'), id + ' 탭 없음'));
+['vtOv', 'vtSq', 'vtOrg', 'vtWl', 'vtEqp', 'vtPro'].forEach(id => assert(html.includes('id="' + id + '"'), id + ' 탭 없음'));
 assert(html.includes('id="ov"'));
 // 서비스 탭에 있던 모든 섹션 제목(h2.sec)과 패널이 새 화면 어딘가에 배정돼 있어야 한다(기능 삭제·숨김 방지)
 const main = between('<main class="wrap" id="mainArea" hidden>', '</main>');
@@ -46,7 +52,7 @@ assert(!/\bov(?:Rpt)?[^\n]*revisitAvg/.test(ovCode), '보고용 코드에 새 �
 assert(/offOf=/.test(ovCode) && /PROD\.team\[u\]/.test(ovCode) && /PROD\.revisit/.test(ovCode), '사무소 행이 PROD 를 읽지 않음');
 assert(html.includes('id="${pf}Off"') && html.includes('사무소 표시'), '사무소 표시 체크박스 없음');
 // 화면 통일: .dsx 는 Service Quality·Productivity·Organization·Instrument·Proactive 에서 켜고 Overview 는 #ov 규칙을 그대로 쓴다
-['sq','prd','org','eqp','pro'].forEach(k => assert(new RegExp(k + ":\\{hash:'[^']+'[^}]*dsx:1").test(html), k + ' 화면에 dsx 가 꺼져 있음'));
+['sq','org','eqp','pro'].forEach(k => assert(new RegExp(k + ":\\{hash:'[^']+'[^}]*dsx:1").test(html), k + ' 화면에 dsx 가 꺼져 있음'));
 assert(/\.dsx\{--ovp:var\(--primary\)\}/.test(html) && /#ov \.ovkpi,\.dsx \.ovkpi/.test(html), 'Overview CSS 가 .dsx 로 공유되지 않음');
 ['orgKpi','ogBars','ogTbl','proKpi','proRisk','tChr','sqKpiQ','sqKpiW','insKpis','eqpTitle','orgTitle','proTitle','sqTitle','prodTitle'].forEach(id => assert(html.includes('id="' + id + '"'), id + ' 없음'));
 // 최종 개선(사무소 중심·그래프 유형): 사무소 행은 PROD 를 읽기만 하고, 도트 플롯·100% 누적 막대·더 보기 요소가 있다
