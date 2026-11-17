@@ -230,7 +230,24 @@ const byteLen = s => Buffer.byteLength(s, 'utf8');
   if (eastCalls.length !== 1) throw new Error('다른 팀 데이터를 ' + eastCalls.length + '번 읽음');
   console.log('7) 팀 하나·기간 한 토막만 읽고, 같은 팀 두 번째 요청은 캐시로 처리 ✓');
 
-  // 8) 설정이 없으면 안내만
+  // 8) 창 안내 — 주소 두 개와 폰 등록 경로가 보인다
+  window.eval('openCalendarPanel()');
+  await new Promise(r => setTimeout(r, 80));
+  const open = doc.getElementById('panel');
+  const urls = [...open.querySelectorAll('input[readonly]')].map(i => i.value);
+  if (urls.length !== 2) throw new Error('주소 칸이 ' + urls.length + '개 (내 일정·팀 전체 두 개여야 함)');
+  if (urls[0] !== myLink || urls[1] !== teamLink) throw new Error('창에 보이는 주소가 계산값과 다름');
+  const guide = open.textContent;
+  // 아이폰 경로는 실제 화면대로여야 합니다(2026-11-17 사용자 확인: 「기타」가 아니라 「구독 캘린더」)
+  if (guide.indexOf('구독 캘린더') < 0) throw new Error('아이폰 안내에 「구독 캘린더」가 없음');
+  if (/계정 추가 → 기타/.test(guide)) throw new Error('아이폰 안내가 예전 경로(기타)로 되돌아감');
+  if (guide.indexOf('서버') < 0) throw new Error('주소를 어느 칸에 넣는지(서버) 안내가 없음');
+  if (guide.indexOf('URL로 추가') < 0) throw new Error('구글 캘린더 안내가 없음');
+  if (guide.indexOf('주소를 아는 사람은') < 0) throw new Error('주소 공유 주의 문구가 없음');
+  window.closePanel();
+  console.log('8) 창에 주소 2개와 아이폰(구독 캘린더)·구글 안내·주의 문구가 보임 ✓');
+
+  // 9) 설정이 없으면 안내만
   window.eval("scheduleData.calendar = null;");
   if (window.eval('calSettings()')) throw new Error('설정이 없는데 있다고 함');
   window.eval('openCalendarPanel()');
@@ -244,7 +261,7 @@ const byteLen = s => Buffer.byteLength(s, 'utf8');
   if (noKey.getMime() === 'ICAL') throw new Error('열쇠 없는 요청에 캘린더 형식으로 답함');
   const badKey = sb.doGet({ parameter: { k: '0'.repeat(24) } });
   if (badKey.getMime() === 'ICAL') throw new Error('틀린 열쇠에 캘린더 형식으로 답함');
-  console.log('8) 설정·열쇠가 없으면 안내만 하고 빈 캘린더를 주지 않음 ✓');
+  console.log('9) 설정·열쇠가 없으면 안내만 하고 빈 캘린더를 주지 않음 ✓');
 
   console.log('\n✅ 캘린더 구독: 화면과 Apps Script 가 같은 열쇠를 쓰고, 개인·팀 주소가 규격대로 나옴');
   process.exit(0);
