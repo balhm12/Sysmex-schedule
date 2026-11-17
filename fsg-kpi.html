@@ -152,6 +152,17 @@ tr.tot td{font-weight:700;background:var(--tint)}
 .glg b{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:3px;vertical-align:0}
 .tc .rg{font-size:11.5px;color:var(--muted);margin-top:8px;border-top:1px solid var(--border);padding-top:6px}
 .tc .act{font-size:12px;margin-top:4px}
+/* 2026-11-17 Organization 맨 위 팀 선택(팀장이 가장 많이 보는 곳): 카드를 낮게 — 담당 지역·직급 범례는 마우스 설명으로 */
+#mainArea.orgtop #orgTeamsBox{margin:4px 0 6px}
+#mainArea.orgtop .teams{margin-bottom:8px}
+#mainArea.orgtop .tc{padding:10px 14px}
+#mainArea.orgtop .tc .hc2{font-size:24px}
+#mainArea.orgtop .tc .glg,#mainArea.orgtop .tc .rg{display:none}
+#mainArea.orgtop .tc .gbar{margin-top:6px}
+#mainArea.orgtop>#prod{max-width:none;padding:0;margin:0 0 18px}
+#mainArea.orgtop #orgTeamsBox>summary{white-space:nowrap}#mainArea.orgtop #orgTeamsBox>summary small{white-space:normal}
+#mainArea.orgtop>#prod #prodSec{margin-top:6px}
+@media(max-width:700px){#mainArea.orgtop .teams{display:flex;overflow-x:auto;gap:8px;scroll-snap-type:x mandatory;padding-bottom:4px}#mainArea.orgtop .tc{flex:0 0 132px;padding:8px 10px;scroll-snap-align:start}#mainArea.orgtop .tc .hc2{font-size:20px}#mainArea.orgtop .tc .gbar{display:none}#mainArea.orgtop .tc .ld,#mainArea.orgtop .tc .act{font-size:11.5px}}
 @media (max-width:1100px){.teams{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:700px){.teams{grid-template-columns:1fr 1fr}}
 .health{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
@@ -1065,7 +1076,7 @@ body.rpt #ov .rptiss{font-size:13px}body.rpt #ov .rptiss td:last-child{color:#3F
 
   <details class="dsfold" data-scr="org"><summary>전기 대비 증감 표 <small id="tpSub"></small></summary>
   <section class="panel tp" id="tpBox"></section></details>
-  <details class="dsfold" data-scr="org"><summary>팀 구성 <small id="orgSub"></small></summary>
+  <details class="dsfold" data-scr="org" id="orgTeamsBox" open><summary>팀 구성 <small id="orgSub"></small></summary>
   <section class="teams" id="teams" data-scr="org"></section></details>
 
   <h2 class="sec" data-scr="sq">서비스 품질 추이 <small id="trendSub"></small></h2>
@@ -3424,7 +3435,7 @@ function renderOrg(p, team){
   const gbar=list=>{const n=list.length;return `<div class="gbar">${GRADES.map(g=>{const c=list.filter(r=>r[2]===g).length;return c?`<i style="width:${c/n*100}%;background:${GCOL[g]}" title="${g} ${c}명"></i>`:'';}).join('')}</div>
     <div class="glg">${GRADES.map(g=>{const c=list.filter(r=>r[2]===g).length;return c?`<span><b style="background:${GCOL[g]}"></b>${g} ${c}</span>`:'';}).join('')}</div>`;};
   const cards=TEAMS.map(t=>{const m=ROSTER.filter(r=>r[1]===t); const lead=m.find(r=>r[2]==='팀장'); const act=active[t]?active[t].size:0;
-    return `<div class="tc${team===t?' sel':''}" role="button" tabindex="0" data-team="${t}" aria-pressed="${team===t}" title="${t} 데이터 보기"><div class="n">${t}</div><div class="hc2">${m.length}<small>명</small></div><div class="ld">팀장 ${lead?lead[0]:'-'}</div>
+    return `<div class="tc${team===t?' sel':''}" role="button" tabindex="0" data-team="${t}" aria-pressed="${team===t}" title="${t} 데이터 보기 · 담당 지역 ${REGION[t]}"><div class="n">${t}</div><div class="hc2">${m.length}<small>명</small></div><div class="ld">팀장 ${lead?lead[0]:'-'}</div>
       ${gbar(m)}<div class="act">활동 인원 <b>${act}명</b></div><div class="rg">${REGION[t]}</div></div>`;});
   const allAct=Object.values(active).reduce((a,s)=>a+s.size,0);
   cards.push(`<div class="tc${team?'':' sel'}" role="button" tabindex="0" data-team="" aria-pressed="${!team}" title="FSG 전체 데이터 보기"><div class="n">FSG 전체</div><div class="hc2">${ROSTER.length}<small>명</small></div><div class="ld">4개 팀</div>${gbar(ROSTER)}
@@ -4334,10 +4345,14 @@ $('fTeam').innerHTML='<option value="">FSG 전체</option>'+TEAMS.map(t=>`<optio
 /* 2026-11-16 수정: 기간을 바꾸면 조직·개인 계산(PROD)을 먼저 다시 하도록 표시한 뒤 그림 — 예전에는 이 처리기가 PROD_DIRTY 를 켜는 처리기보다 먼저 돌아
    Organization 표·「담당 장비 × 처리 건수」·Overview 업무 집중이 한 번 늦게(직전 기간 값으로) 바뀌었다 */
 $('fPeriod').addEventListener('change',()=>{ PROD_DIRTY=true; rerender(); });
+const TEAM_LS='fsg-kpi-team';
+(()=>{ let t=''; try{ t=localStorage.getItem(TEAM_LS)||''; }catch(e){} if(t&&TEAMS.includes(t)){ $('fTeam').value=t; window.__prodPendingTeam=t; } })();
 $('fTeam').addEventListener('change',()=>rerender());
 $('fErrFam').addEventListener('change',()=>drawErr());
 /* 팀 카드 → 팀 필터 */
-const pickTeam=el=>{ const c=el.closest('.tc[data-team]'); if(!c) return; $('fTeam').value=c.dataset.team; render(); };
+const pickTeam=el=>{ const c=el.closest('.tc[data-team]'); if(!c) return; const t=c.dataset.team; $('fTeam').value=t;
+  if(typeof ORG!=='undefined'){ ORG.sel=t; const st=window.__prodState; if(st&&t) st.team=t; }   /* 2026-11-17: 카드 = 조직 트리와 같은 선택 — 아래 상세 분석도 그 팀으로 */
+  rerender(); };
 $('teams').addEventListener('click',e=>pickTeam(e.target));
 $('teams').addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pickTeam(e.target); } });
 ['fFtFam','fFtUnit','fFtMet'].forEach(id=>$(id).addEventListener('change',()=>renderFamTrend(curPeriod(), $('fTeam').value||null)));
@@ -4421,7 +4436,7 @@ function renderProd(){
   prodTitle();
 }
 const ORG_DET_LS='fsg-kpi-orgdet';
-function orgDetOpen(v){ const k=ORG_DET_LS+(VIEW==='org'?'':'-'+VIEW); try{ if(v!==undefined){ localStorage.setItem(k,v?'1':'0'); return v; } return localStorage.getItem(k)==='1'; }catch(e){ return !!v; } }   /* 화면마다 따로 기억(Organization·Workload) */
+function orgDetOpen(v){ const k=ORG_DET_LS+(VIEW==='org'?'':'-'+VIEW); try{ if(v!==undefined){ localStorage.setItem(k,v?'1':'0'); return v; } const x=localStorage.getItem(k); return x==null?VIEW==='org':x==='1'; }catch(e){ return VIEW==='org'; } }   /* 2026-11-17: Organization 상세 분석은 처음엔 펼침(팀장이 가장 많이 봄) */   /* 화면마다 따로 기억(Organization·Workload) */
 function prodTitle(){
   const el=$('prodTitle'), sec=$('prodSec'); if(!el||!PROD) return;
   if(sec){ const h={org:['상세 분석 — 팀 · 개인','선택한 팀·사무소 상세, 개인 순위·개인별 상세·개인별 담당 장비 · 개인 값은 맡은 업무의 양과 종류이며 성과 평가가 아님'],eqp:['담당 장비 현황','담당기관 관리표 기준 · 현재 시점 · 사람별·1인당 장비는 Organization'],wl:['근무 시간 · 이동 (사람 기준)','야간 OT·휴일 근무 = CRM 기록·인사 연장근무 기준 — 근무 종료가 WEST·EAST 17시·CENTRAL·SOUTH 18시라 위 방문 시간대(08~18시)와 기준이 다릅니다']}[VIEW]; sec.innerHTML=h?h[0]+' <small>'+h[1]+(VIEW==='eqp'?' · '+esc(opEquipLine()):'')+'</small>':''; sec.hidden=!h;
@@ -5348,6 +5363,15 @@ function parseAcad(txt, name){
   const cur=JSON.parse(JSON.stringify(ACAD||{})); cur[o.src]={made:o.made||'',from:o.from||'',to:o.to||'',days,file:name}; return cur;
 }
 
+/* 2026-11-17 Organization: 팀 구성 → 상세 분석(팀·개인)을 화면 맨 위로 — 팀장이 가장 많이 보는 곳. 다른 화면에서는 원래 자리로 */
+const ORG_HOME={};
+function orgPlace(on){
+  const ma=$('mainArea'), pr=$('prod'), tb=$('orgTeamsBox'), ti=$('orgTitle'); if(!ma||!pr||!tb||!ti) return;
+  if(!ORG_HOME.pr){ ORG_HOME.pr=document.createComment('prod'); pr.after(ORG_HOME.pr); ORG_HOME.tb=document.createComment('teams'); tb.after(ORG_HOME.tb); }
+  ma.classList.toggle('orgtop',on);
+  if(on){ ti.after(tb); tb.after(pr); pr.classList.remove('wrap'); }
+  else { ORG_HOME.pr.before(pr); ORG_HOME.tb.before(tb); pr.classList.add('wrap'); }
+}
 function setView(v){
   if(!SCREENS[v]) v='ov'; VIEW=v; document.body.dataset.view=v; try{localStorage.setItem(VIEW_LS,v);}catch(e){}
   const c=SCREENS[v];
@@ -5356,18 +5380,21 @@ function setView(v){
   $('ov').hidden=v!=='ov'; $('wl').hidden=v!=='wl'; $('mainArea').hidden=!c.scr; $('prod').hidden=!c.prod; $('mainArea').classList.toggle('dsx',!!(c.scr&&c.dsx)); $('prod').classList.toggle('dsx',!!(c.prod&&c.dsx));
   $('mainArea').querySelectorAll('[data-scr]').forEach(el=>el.classList.toggle('scr-off',!el.dataset.scr.split(' ').includes(c.scr)));
   $('mainArea').querySelectorAll('.grid').forEach(g=>{ const k=[...g.children].filter(x=>!x.classList.contains('scr-off')).length; g.classList.toggle('one',k<=1); });
+  orgPlace(v==='org');
   if(history.replaceState) history.replaceState(null,'',location.pathname+location.search+c.hash);
   const on=document.querySelector('#vtabs .vt[aria-selected=true]'); if(on&&on.scrollIntoView) on.scrollIntoView({inline:'center',block:'nearest'});
   rerender();
 }
 /* 현재 화면을 다시 그린다 — 서비스 데이터(render)와 부서원 계산(renderProd)을 화면이 쓰는 만큼만 */
 function renderProdFor(){
-  const c=SCREENS[VIEW]; if(!c||!c.prod) return; renderProd();
+  const c=SCREENS[VIEW]; if(!c||!c.prod) return;
+  const pend=window.__prodPendingTeam; if(pend&&VIEW==='org'){ window.__prodPendingTeam=null; if(!ORG.sel) ORG.sel=pend; renderProd(); const st=window.__prodState; if(st){ st.team=pend; renderProd(); } } else renderProd();
   const act=document.querySelector('#prodTabs button.active'); if(c.tabs&&act&&c.tabs.includes(act.dataset.tab)) return;   /* 화면 안 하위 탭(Workload 야간 OT·이동거리, Productivity 개요·개인)은 고른 것을 유지 */
   const b=document.querySelector('#prodTabs [data-tab="'+c.prod+'"]'); if(b&&!b.classList.contains('active')) b.click();
 }
 function rerender(){
   const c=SCREENS[VIEW]; if(!c) return;
+  try{ localStorage.setItem(TEAM_LS,$('fTeam').value||''); }catch(e){}   /* 2026-11-17: 마지막에 고른 팀을 기억 — 팀장은 다음에 열 때 자기 팀으로 */
   if(VIEW==='ov'){ renderOv(); return; }
   if(VIEW==='wl'){ try{ renderWl(); }catch(e){ console.error('Workload',e); $('wl').innerHTML='<p class="empty-note">Workload 화면을 그리지 못했습니다: '+esc(e.message||e)+'</p>'; } try{ renderProdFor(); }catch(e){ console.error('Workload OT',e); } return; }
   if(c.scr) render();
