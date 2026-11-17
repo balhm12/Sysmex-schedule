@@ -949,7 +949,7 @@ html[data-theme=dark] .ogcaution{background:#3a1f1f;border-color:#E7413E88}html[
 
 <dialog id="wgtDlg" class="wdlg" aria-labelledby="wgtTitle"><div class="wd-in">
   <div class="wd-head"><h2 id="wgtTitle">가중치 설정 · 비밀번호</h2><button type="button" class="wd-x" id="wgtClose" aria-label="닫기">×</button></div>
-  <p class="wd-note">KPI 종합 점수의 업무·직급 가중치를 바꿉니다. 바꾼 값은 「적용 시작월」부터의 활동에만 쓰이고, 그 전 달 점수는 그대로입니다.</p>
+  <p class="wd-note">가중 업무량의 업무·직급 가중치를 바꿉니다. 바꾼 값은 「적용 시작월」부터의 활동에만 쓰이고, 그 전 달 점수는 그대로입니다.</p>
   <div id="wgtLogin">
     <div class="wd-row"><input type="text" id="wgtEmail" placeholder="이메일" autocomplete="username" aria-label="관리자 이메일" style="flex:1;min-width:170px">
       <input type="password" id="wgtPw" placeholder="비밀번호" autocomplete="current-password" aria-label="비밀번호" style="flex:1;min-width:130px">
@@ -1074,11 +1074,12 @@ html[data-theme=dark] .ogcaution{background:#3a1f1f;border-color:#E7413E88}html[
     <div class="dspair dseven"><div id="ogBars"></div><div><h4 class="dsh4">업무 유형 구성비 (100% 누적)</h4><div id="ogMix"></div></div></div></section>
   <div class="ovtitle dstitle" data-scr="pro" id="proTitle"></div>
   <h2 class="sec" data-scr="pro">예방 서비스 핵심 지표 <small id="proSub"></small></h2>
-  <section class="ovkpi c4" id="proKpi" data-scr="pro" aria-label="예방 서비스 지표: PM, 예방정비 지수, 고장 수리, 반복 고장 장비"></section>
+  <section class="ovkpi c4" id="proKpi" data-scr="pro" aria-label="예방 서비스 지표: PM, PM 비중, 고장 수리, 반복 고장 장비"></section>
   <h2 class="sec" data-scr="sq">서비스 품질 <small id="kpiSub"></small></h2>
   <section class="ovkpi c3" id="sqKpiQ" data-scr="sq" aria-label="서비스 품질 지표: FTFR, 재방문율, MTTR"></section>
+  <section class="ovkpi c2 sub" id="sqKpiR" data-scr="sq" aria-label="재방문율 보조 지표: 수리 후 재수리율, PM 후 고장률"></section>
   <h2 class="sec" data-scr="sq" hidden>업무량 <small>목표가 없는 지표 · 전월 대비는 방향만 표시</small></h2>
-  <section class="ovkpi c4" id="sqKpiW" data-scr="sq" hidden style="display:none" aria-hidden="true" aria-label="업무량 지표: 처리 건수, 고장 수리, PM, 예방정비 지수"></section>
+  <section class="ovkpi c4" id="sqKpiW" data-scr="sq" hidden style="display:none" aria-hidden="true" aria-label="업무량 지표: 처리 건수, 고장 수리, PM, PM 비중"></section>
   <section class="kpis" id="kpis" data-scr="sq" style="display:none" aria-hidden="true"></section>
   <div class="na" id="na" data-scr="sq pro"></div>
 
@@ -1100,19 +1101,19 @@ html[data-theme=dark] .ogcaution{background:#3a1f1f;border-color:#E7413E88}html[
       <div class="cv"><canvas id="cRev"></canvas></div>
     </section>
     <section class="panel">
-      <h3>MTTR</h3>
+      <h3>평균 수리 작업 시간 (MTTR)</h3>
       <p class="d">점선 = 목표 (MTTR 120분 이하) · 점 색 <span class="ptk"><i style="background:var(--good)"></i>달성</span> <span class="ptk"><i style="background:var(--bad)"></i>미달</span></p>
       <div class="cv"><canvas id="cMttr"></canvas></div>
     </section>
   </div>
-  <h2 class="sec" data-scr="pro">PM · 고장 수리 추이 <small>건수와 예방정비 지수 · 최근 12개월 · 업무량 비교이며, PM 이 고장을 줄였다는 인과(예방 효과)를 뜻하지 않습니다</small></h2>
+  <h2 class="sec" data-scr="pro">PM · 고장 수리 추이 <small>건수와 PM 비중 · 최근 12개월 · 업무량 비교이며, PM 이 고장을 줄였다는 인과(예방 효과)를 뜻하지 않습니다</small></h2>
   <div class="grid">
     <section class="panel" data-scr="pro">
       <h3>고장 수리·PM 건수</h3>
       <div class="cv"><canvas id="cVol"></canvas></div>
     </section>
     <section class="panel" data-scr="pro">
-      <h3>예방정비 지수</h3>
+      <h3>PM 비중</h3>
       <p class="d">PM ÷ (PM + 고장 수리) · 목표 없음</p>
       <div class="cv"><canvas id="cIdx"></canvas></div>
     </section>
@@ -1135,7 +1136,7 @@ html[data-theme=dark] .ogcaution{background:#3a1f1f;border-color:#E7413E88}html[
 
   <h2 class="sec" data-scr="pro">팀 · 사무소별 예방 서비스 <small id="proOgSub"></small><span class="ovtools"><button type="button" class="dsbtn" id="proAllBtn"></button></span></h2>
   <section class="ovcard" data-scr="pro"><div class="dspair"><div id="proOgBars"></div><div><div class="ovtw" id="proOgTbl"></div><p class="ovnote dshint">표는 옆으로 밀어서 모든 열을 볼 수 있습니다.</p></div></div>
-    <p class="ovnote">PM·고장 수리는 그 사무소 직원이 수행한 건수(담당자·필수 참석자 각 1건)입니다. 예방정비 지수 = PM ÷ (PM + 고장 수리). PM 커버리지(장비 기준)와는 다른 지표입니다. 사무소별 PM 월별 편차와 반복 고장 장비의 담당 사무소는 아직 집계하지 않습니다(추가 개발 대상).</p></section>
+    <p class="ovnote">PM·고장 수리는 그 사무소 직원이 수행한 건수(담당자·필수 참석자 각 1건)입니다. PM 비중 = PM ÷ (PM + 고장 수리). PM 커버리지(장비 기준)와는 다른 지표입니다. 사무소별 PM 월별 편차와 반복 고장 장비의 담당 사무소는 아직 집계하지 않습니다(추가 개발 대상).</p></section>
   <h2 class="sec" data-scr="pro">반복 고장·위험 장비 <small id="chrSub"></small></h2>
   <section class="ovpro c2" id="proRisk" data-scr="pro" aria-label="반복 고장 장비, 위험 장비, 표준 사전점검"></section>
   <section class="panel" style="margin-top:14px" data-scr="pro">
@@ -1329,7 +1330,7 @@ function kpiCore(RAW, ROSTER, opt){
     revisitAvg:revisitAvg, acctRates:acctRates, rates:rates, pct:pct, avg:avg, rnd:rnd, purposeOf:purposeOf};
 }
 
-/* ===== 부서원 KPI (개인별 KPI 점수) 집계 =====
+/* ===== 부서원 KPI (개인별 가중 업무량) 집계 =====
    김성민 FSG KPI 대시보드(scripts/extract.py + finalize.py)의 계산을 브라우저로 옮긴 것.
    입력: RAW 행 {st,t,e,own,err,acct,sn,prod,purp,subj,ft}  (t/e = 벽시계 시각을 UTC ms로 둔 값)
    출력: 부서원 탭 렌더러(initProdDashboard)가 쓰는 DATA 객체 — finalize.py 출력과 같은 모양 */
@@ -1781,7 +1782,7 @@ var GROUP_COLOR = { 'CBC':'#005BAC', 'COA':'#005BAC', 'HISCL':'#005BAC', 'Urine'
 var BUCKET_COLOR = { '고장수리':'#005BAC', 'PM':'#00B9EF', '설치이전':'#5185C5', 'Cal평가':'#84BAE5', '기타':'#9FA0A0' };
 var OT_BUCKET_COLOR = { '고장수리':'#005BAC', 'PM':'#00B9EF', '설치':'#5185C5', '이전철수':'#2F7FC1', 'Cal평가':'#84BAE5', '기타':'#9FA0A0' };
 var MONTH_LABEL = {}; if (DATA.trend_labels) DATA.trend_labels.forEach(function(l,i){ MONTH_LABEL[i+1] = l; }); else for (var _m=1;_m<=12;_m++) MONTH_LABEL[_m] = _m+'월';
-/* KPI 종합 점수 안내문의 가중치 문구 — 설정(DATA.weights)에서 만든다. 값이 같은 항목은 한데 묶는다 */
+/* 가중 업무량 안내문의 가중치 문구 — 설정(DATA.weights)에서 만든다. 값이 같은 항목은 한데 묶는다 */
 function weightLine(W){
   if (!W) return '';
   var cur = W.base, ym = new Date().toISOString().slice(0,7), later = [];
@@ -2171,19 +2172,19 @@ function renderOverview(){
   html += '<section class="ovkpi c4" aria-label="생산성 핵심 지표">'+
     cell('처리 건수', fmt(cases), '건', '전사 · '+PL(period), dd(cases, casesP, 0, '건'), '담당자·필수 참석자 각각 1건으로 센 합계')+
     cell('1인당 처리 건수', per == null ? '-' : fmt1(per), '건', '팀장·신입을 뺀 인원 평균', dd(per, perP, 1, '건'), '인원이 다른 조직을 견주는 값')+
-    cell('1인당 KPI 점수', sc == null ? '-' : fmt1(sc), '점', '가중치 업무량 · 팀장·신입 제외', dd(sc, scP, 1, '점'), '업무·직급 가중치를 더한 값')+
+    cell('1인당 가중 업무량', sc == null ? '-' : fmt1(sc), '점', '업무·직급 가중치 합계 · 팀장·신입 제외', dd(sc, scP, 1, '점'), '업무·직급 가중치를 더한 값')+
     cell('비교 인원', fmt(nCore), '명', '전체 '+nAll+'명 중 팀장·신입 제외', '순위표는 전체 인원 기준', '1인당 값의 분모')+
     '</section>';
   html += '<p class="ovnote dsnav" style="margin:8px 0 0"><b>처리 건수</b> = 담당자·필수 참석자 각 1건(KPI 기준). 팀·사무소 비교는 <a href="#organization" data-go="org">Organization</a>, 현장 출동 횟수(방문)·야간·이동은 <a href="#workload" data-go="wl">Workload</a>, 품질(FTFR·재방문율·MTTR)은 <a href="#service-quality" data-go="sq">Service Quality</a>에서 봅니다.</p>';
 
 
   var cavHtml = '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'+
-    '<div><b>KPI 종합 점수</b> = 건마다 (업무 가중치 + 직급 가중치)의 합계. '+weightLine(DATA.weights)+'(진급자는 시행일부터 새 직급 적용). 그 밖의 목적(원격 Calibration·GMCS·부품 등)은 기타(0.2)로 계산하고, 온라인 정기점검은 건수·점수에서 뺍니다. 장비 그룹을 알 수 없는 건(모델 없음·미분류·RF-500)은 「기타」 그룹입니다. 담당자·필수 참석자 기준, 취소 건 제외. 재방문율·FTFR은 거래처별 비율의 팀 평균입니다.'+
+    '<div><b>가중 업무량</b> = 건마다 (업무 가중치 + 직급 가중치)의 합계. '+weightLine(DATA.weights)+'(진급자는 시행일부터 새 직급 적용). 그 밖의 목적(원격 Calibration·GMCS·부품 등)은 기타(0.2)로 계산하고, 온라인 정기점검은 건수·점수에서 뺍니다. 장비 그룹을 알 수 없는 건(모델 없음·미분류·RF-500)은 「기타」 그룹입니다. 담당자·필수 참석자 기준, 취소 건 제외. 재방문율·FTFR은 거래처별 비율의 팀 평균입니다.'+
     ' MTTR은 일정표 예약 시간 기준(참고용)입니다.'+(DATA.provisional ? ' <b>최근 14일은 FTFR 확인 기간이 끝나지 않아 잠정치</b>입니다.' : '')+(DATA.ex_lead ? ' 순위에서 팀장·신입을 뺐습니다.' : '')+' 팀 비교의 <b>1인당 점수·직급 보정 지수</b>(개인 점수 ÷ FSG 같은 직급 중앙값 × 100)는 팀장·신입을 뺀 값입니다. CENTRAL·SOUTH의 사무소(대전·광주, 부산·대구)는 팀별 분석에서 참고로 봅니다.'+
     ' <b>필수 참석자</b>도 담당자와 같은 가중치로 점수·건수에 들어갑니다(팀 합계는 동행 건이 사람 수만큼 반영).'+
     (DATA.no_att ? ' 지금 데이터에는 필수 참석자 열이 없어 담당자만 반영됐습니다. <b>CRM 파일을 다시 올리면 반영</b>됩니다.' : '')+(DATA.admin_weights ? ' <button type="button" class="lbtn" onclick="openWgt()">가중치 설정</button>' : '')+'</div></div>';
 
-  html += '<section class="ovcard" style="margin-top:14px" aria-labelledby="lbh"><h3 id="lbh">개인 순위 <span class="ovsub">KPI 종합 점수 · '+PL(period)+' · 열 제목을 누르면 정렬, 행을 누르면 개인별 상세</span></h3>'+
+  html += '<section class="ovcard" style="margin-top:14px" aria-labelledby="lbh"><h3 id="lbh">개인 순위 <span class="ovsub">가중 업무량 · '+PL(period)+' · 열 제목을 누르면 정렬, 행을 누르면 개인별 상세</span></h3>'+
     '<p class="ovnote" style="margin:0 0 10px">순위와 점수는 <b>맡은 업무의 양과 종류</b>(가중치 업무량)를 나타냅니다. 거래처 수·담당 장비·직급·근무 형태에 따라 달라지므로 <b>개인의 종합적인 성과를 뜻하지 않으며</b> 평가 점수로 쓰지 않습니다.</p>'+cavHtml+
     '<label class="chk lbex"><input type="checkbox" id="lbExLead"'+($('pExLead').checked?' checked':'')+'> 순위에서 팀장·신입 제외</label><div class="lbf" id="lbFilters"></div><div class="ovtw"><table class="ovtab dsfull" id="lbTable"></table></div><button type="button" class="dsmore" id="lbMore" hidden></button></section>';
 
@@ -2279,7 +2280,7 @@ function renderLeaderboardTable(period){
     {k:'name', label:'이름'},
     {k:'team', label:'사무소'},
     {k:'grade', label:'직급'},
-    {k:'score', label:'KPI 점수', num:true},
+    {k:'score', label:'가중 업무량', num:true},
     {k:'delta', label:(DATA.cmp_short||'증감'), num:true},
     {k:'total', label:'처리 건수', num:true},
   ].concat(DATA.eq ? [{k:'inst', label:'담당 기관', num:true, cls:'lbeq'},{k:'eq', label:'담당 장비', num:true, cls:'lbeq'}] : []);
@@ -2333,14 +2334,14 @@ function renderTeam(){
   var html = '<div class="controls" style="margin-bottom:18px;">'+
     '<div class="control-group" style="flex-wrap:wrap;row-gap:6px;min-width:0;"><span class="control-label">팀</span><div class="segmented" id="teamSeg"></div></div></div>';
 
-  /* 2026-11-16: 팀끼리 비교(1인당 KPI 점수·직급 보정 지수·사무소 비교)는 위 Organization 비교표와 같은 숫자라 빼고, 고른 팀(사무소)만 본다 */
+  /* 2026-11-16: 팀끼리 비교(1인당 가중 업무량·직급 보정 지수·사무소 비교)는 위 Organization 비교표와 같은 숫자라 빼고, 고른 팀(사무소)만 본다 */
   var mttr = mttrRepairAvg(teamData, period);
   var rv = teamRevisit(team, period);
   var reliable = DATA.revisit[team].reliable;
 
   html += '<div class="block grid grid-4">'+
     statTile('처리 건수', fmt(teamData.total_case[period]), '건', null, team+' · '+PL(period))+
-    statTile('MTTR (고장 수리)', fmt1(mttr), '분', targetPill(mttr, DATA.benchmarks.mttr_target,'lower-better'), '목표 '+DATA.benchmarks.mttr_target+'분 이내')+
+    statTile('평균 수리 작업 시간 (MTTR)', fmt1(mttr), '분', targetPill(mttr, DATA.benchmarks.mttr_target,'lower-better'), '목표 '+DATA.benchmarks.mttr_target+'분 이내')+
     statTile('재방문율', pctStr(rv.revisit), '', reliable?targetPill(rv.revisit, DATA.benchmarks.revisit_target,'lower-better'):'<span class="pill warn">확인필요</span>', reliable?('목표 '+DATA.benchmarks.revisit_target+'% 이하'):'원본 시트 수식 오류 — 참고용')+
     statTile('FTFR', pctStr(rv.ftfr), '', reliable?targetPill(rv.ftfr, DATA.benchmarks.ftfr_target,'higher-better'):'', reliable?('목표 '+DATA.benchmarks.ftfr_target+'% 이상'):'&nbsp;')+
     '</div>';
@@ -2385,7 +2386,7 @@ function renderOfficeCmp(g, period){
       '<td class="num">'+(d.index_avg[period]==null?'—':fmt1(d.index_avg[period]))+'</td>'+
       '<td class="num">'+fmt1(d.case_avg_core[period])+'</td>'+
       '<td class="num">'+pctStr(rv.revisit)+'</td><td class="num">'+pctStr(rv.ftfr)+'</td></tr>'; }).join('');
-  document.getElementById('officeTable').innerHTML = '<thead><tr><th>구분</th><th class="num">인원 (비교 인원)</th><th class="num">1인당 KPI 점수</th><th class="num">직급 보정 지수</th><th class="num">1인당 처리 건수</th><th class="num">재방문율</th><th class="num">FTFR</th></tr></thead><tbody>'+rows+'</tbody>';
+  document.getElementById('officeTable').innerHTML = '<thead><tr><th>구분</th><th class="num">인원 (비교 인원)</th><th class="num">1인당 가중 업무량</th><th class="num">직급 보정 지수</th><th class="num">1인당 처리 건수</th><th class="num">재방문율</th><th class="num">FTFR</th></tr></thead><tbody>'+rows+'</tbody>';
 }
 function renderRankTable(team, period){
   var members = DATA.team[team].members;
@@ -2402,7 +2403,7 @@ function renderRankTable(team, period){
   var cols = [
     {k:'rank', label:'#', num:false},
     {k:'name', label:'이름', num:false},
-    {k:'score', label:'KPI 점수', num:true},
+    {k:'score', label:'가중 업무량', num:true},
     {k:'total', label:'처리 건수', num:true},
     {k:'repair', label:'고장수리', num:true},
     {k:'pm', label:'PM', num:true},
@@ -2548,15 +2549,15 @@ function renderPerson(){
     '</div>';
 
   html2 += '<div class="block grid grid-5">'+
-    statTile('KPI 종합 점수', fmt1(score), '점', deltaBadge(score, scorePrevYoY, true), (gi!=null?'직급 보정 지수 <b>'+fmt1(gi)+'</b> (100 = FSG 같은 직급 중앙값) · ':'')+PL(period))+
+    statTile('가중 업무량', fmt1(score), '점', deltaBadge(score, scorePrevYoY, true), (gi!=null?'직급 보정 지수 <b>'+fmt1(gi)+'</b> (100 = FSG 같은 직급 중앙값) · ':'')+PL(period))+
     statTile('처리 건수', fmt(total), '건', deltaBadge(total, totalPrevYoY, null), PL(period))+
-    statTile('MTTR (고장 수리)', fmt1(mttr), '분', deltaBadge(mttr, mttrPrevYoY, false)+' '+targetPill(mttr, DATA.benchmarks.mttr_target,'lower-better'), '목표 '+DATA.benchmarks.mttr_target+'분 이내')+
+    statTile('평균 수리 작업 시간 (MTTR)', fmt1(mttr), '분', deltaBadge(mttr, mttrPrevYoY, false)+' '+targetPill(mttr, DATA.benchmarks.mttr_target,'lower-better'), '목표 '+DATA.benchmarks.mttr_target+'분 이내')+
     statTile('소속팀 재방문율', pctStr(rv.revisit), '', reliable?targetPill(rv.revisit, DATA.benchmarks.revisit_target,'lower-better'):'<span class="pill warn">확인필요</span>', '팀 평균 참고치 (개인별 데이터 아님)')+
     statTile('소속팀 FTFR', pctStr(rv.ftfr), '', reliable?targetPill(rv.ftfr, DATA.benchmarks.ftfr_target,'higher-better'):'', '팀 평균 참고치 (개인별 데이터 아님)')+
     '</div>';
 
   html2 += '<div class="block grid grid-2">'+
-    chartCard('p-score-chart', '비즈니스(장비 그룹)별 KPI 점수 · FSG 내 위치', PL(period)+' · 그룹마다 FSG 최고점 = 오른쪽 끝')+
+    chartCard('p-score-chart', '비즈니스(장비 그룹)별 가중 업무량 · FSG 내 위치', PL(period)+' · 그룹마다 FSG 최고점 = 오른쪽 끝')+
     chartCard('p-group-chart', '비즈니스(장비 그룹)별 처리 건수', PL(period))+
     '</div>';
   html2 += '<div class="block grid grid-2">'+
@@ -3015,6 +3016,7 @@ const INTERNAL = new Set(['시스멕스코리아주식회사','시스멕스코�
 const TARGET_FTFR = 90;    // FTFR 90% 이상
 const TARGET_REV  = 15;    // 재방문율 15% 이하
 const TARGET_MTTR = 120;   // MTTR 120분 이하
+const TARGET_PMCOV = 80;   // PM 커버리지 80% 이상 (2026-11-17 제안값 — 분모는 지금 그대로: 12개월 활동 있는 '사용' 장비, 계약 구분 없음)
 const MTTR_MAX    = 500;   // 500분 초과는 이상치로 제외
 const DAY = 86400000, WIN = 14*DAY;
 const EMBED = null;   // GitHub 공개 배포본에는 데이터를 넣지 않습니다
@@ -3131,7 +3133,7 @@ function prepare(){
     const ek=errKey(r.err);
     if(ek!=='미기재'&&ek!=='others'){const disp=r.err.trim().replace(/^\*+/,'');(errDisp[ek]=errDisp[ek]||{})[disp]=((errDisp[ek]||{})[disp]||0)+1;}
     const ct=x.credits.map(n=>CORE.memberTeam[n]);
-    const o={t:r.t, dur:x.dur, ok:true, done:r.st==='완료됨', purp:x.purpose||'미기재',
+    const o={t:r.t, e:r.e, dur:x.dur, ok:true, done:r.st==='완료됨', purp:x.purpose||'미기재',
       own:r.own, credits:x.credits, cteams:ct, team:CORE.memberTeam[r.own]||ct[0]||null, atm:CORE.acctTeam(r.acct),
       acct:r.acct, sn:r.sn, model, fam:famOf(model), ser:seriesOf(r.prod),
       ek, err:(r.err||'').trim(), ft:r.ft||'', mk:mkey(r.t), fail:x.AE===1?1:0, rv:x.AD===1?1:0, rec:x.inRec, internal};
@@ -3242,6 +3244,24 @@ function stats(months, team){
   s.hasData = months.some(m=>D.months.includes(m));
   return s;
 }
+/* 재방문율 보조 지표(2026-11-17 사용자 결정 — 재방문율 전체는 그대로 두고 아래에 둘을 나눠 봄).
+   기준 방문(고장 수리 또는 PM)마다 같은 S/N 에서 그 방문 종료 뒤 14일 안에 끝난 고장 수리가 있으면 1건(kpiCore 재방문 판정 AD 를 앞쪽 방문 기준으로 나눈 것).
+   수리 후 재수리율 = 그런 고장 수리 ÷ 고장 수리, PM 후 고장률 = 그런 PM ÷ PM.
+   재방문율 전체와 같은 방식 — 거래처별 비율(소수 1자리)의 평균, 대상 = kpiCore eligible(전체 기간 기록 3건 이상), 팀 = 거래처 팀(o.atm).
+   (행 합계 비율로 내면 큰 거래처 비중 때문에 실데이터 상반기 28.5%·10.9% 로 전체 8.9% 와 크기가 맞지 않아 쓰지 않음) */
+function revSub(months, team){
+  const inP=mPred(months), by={}, A={}, C=D.core, el=new Set(C.eligible), TM=C.teams;
+  for(const o of D.rows){ if(!o.rec||!o.sn||o.e==null) continue; if(o.purp!=='고장 수리'&&o.purp!=='PM') continue; (by[o.sn]=by[o.sn]||[]).push(o); }
+  let open=0, nR=0, nP=0;
+  for(const sn in by){ const L=by[sn], reps=L.filter(o=>o.purp==='고장 수리');
+    for(const b of L){ if(!inP(b.mk,b.t)||!el.has(b.acct)) continue; if(team?b.atm!==team:TM.indexOf(b.atm)<0) continue;
+      const hit=reps.some(x=>x!==b&&x.e>b.e&&x.e<=b.e+WIN); if(b.e+WIN>D.maxT) open++;
+      const a=A[b.acct]=A[b.acct]||[0,0,0,0];
+      if(b.purp==='고장 수리'){ a[1]++; if(hit){a[0]++;nR++;} } else { a[3]++; if(hit){a[2]++;nP++;} } } }
+  const rr=[], pf=[]; let dR=0, dP=0;
+  for(const k in A){ const a=A[k]; if(a[1]){ rr.push(C.pct(a[0]/a[1])); dR++; } if(a[3]){ pf.push(C.pct(a[2]/a[3])); dP++; } }
+  return {rrP:C.avg(rr), pfP:C.avg(pf), rr:nR, rrD:rr.length, pf:nP, pfD:pf.length, open};
+}
 function isProvisional(months){ return monthEnd(months[months.length-1]) + WIN > D.maxT; }
 
 /* ===== KPI 카드 ===== */
@@ -3297,7 +3317,7 @@ function drawTeamProd(){
   $('tpSub').textContent=`${P.period_label?P.period_label[PR]||'':''}${P.cmp_short?' · ▲▼ '+P.cmp_short:''} · 팀장·신입 제외 1인당`;
   box.innerHTML=`<div class="tpseg"><button data-m="office"${mode==='office'?' class="on"':''}>사무소별</button><button data-m="team"${mode==='team'?' class="on"':''}>팀별</button></div>
     <div class="tpw"><table class="tpt"><thead><tr><th>${mode==='team'?'팀':'사무소'}</th><th title="전체 인원 (비교 인원 = 팀장·신입 제외)">인원</th>
-    <th>1인당 처리 건수</th><th>1인당 KPI 점수</th><th title="개인 점수 ÷ FSG 같은 직급 중앙값 × 100 의 팀 평균 — 직급 구성 차이를 보정">직급 보정 지수</th><th>재방문율</th><th>FTFR</th><th>MTTR</th></tr></thead><tbody>${
+    <th>1인당 처리 건수</th><th>1인당 가중 업무량</th><th title="개인 점수 ÷ FSG 같은 직급 중앙값 × 100 의 팀 평균 — 직급 구성 차이를 보정">직급 보정 지수</th><th>재방문율</th><th>FTFR</th><th>MTTR</th></tr></thead><tbody>${
     R.map(r=>`<tr class="${sel&&r.k.toUpperCase().startsWith(sel)?'on':''}"><th>${esc(r.name)}</th>
       <td class="num">${r.n}${r.nc!=null&&r.nc!==r.n?` <span class="tpm">(${r.nc})</span>`:''}</td>
       <td>${bar(r.cs,mx.cs,fsg.cs,r.cs===bC,d(r.cs,r.csP))}</td>
@@ -3322,10 +3342,10 @@ function render(){
     card('서비스 활동', fmt(cur.total), '건', delta(cur.total,prv.total,'건',0,pp.label), `Calibration ${fmt(cur.cal)} · 기타 ${fmt(cur.total-cur.rep-cur.pm-cur.cal)}`),
     card('고장 수리', fmt(cur.rep), '건', delta(cur.rep,prv.rep,'건',-1,pp.label), '목표 없음', dirSt(cur.rep,prv.rep,-1,'건')),
     card('PM', fmt(cur.pm), '건', delta(cur.pm,prv.pm,'건',1,pp.label), '목표 없음', dirSt(cur.pm,prv.pm,1,'건')),
-    card('예방정비 지수', f1(cur.idx), '%', delta(cur.idx,prv.idx,'%p',1,pp.label), 'PM ÷ (PM + 고장 수리) · 목표 없음', dirSt(cur.idx,prv.idx,1,'%p')),
+    card('PM 비중', f1(cur.idx), '%', delta(cur.idx,prv.idx,'%p',1,pp.label), 'PM ÷ (PM + 고장 수리) · 목표 없음', dirSt(cur.idx,prv.idx,1,'%p')),
     card('FTFR', f1(cur.ftfr), '%', delta(cur.ftfr,prv.ftfr,'%p',1,pp.label), `목표 ${TARGET_FTFR}% 이상`, Object.assign({prov}, tgSt(cur.ftfr,TARGET_FTFR,true))),
     card('재방문율', f1(cur.rev), '%', delta(cur.rev,prv.rev,'%p',-1,pp.label), `목표 ${TARGET_REV}% 이하`, tgSt(cur.rev,TARGET_REV,false)),
-    card('MTTR', f1(cur.mttr), '분', delta(cur.mttr,prv.mttr,'분',-1,pp.label), `목표 ${TARGET_MTTR}분 이하`, tgSt(cur.mttr,TARGET_MTTR,false)),
+    card('평균 수리 작업 시간 (MTTR)', f1(cur.mttr), '분', delta(cur.mttr,prv.mttr,'분',-1,pp.label), `목표 ${TARGET_MTTR}분 이하`, tgSt(cur.mttr,TARGET_MTTR,false)),
   ].join('');
   /* 화면 통일 시안: Overview 와 같은 통합 KPI 패널(품질 3칸 + 업무량 4칸) — 같은 stats() 값, 새 계산식 없음 */
   { const lab2=pp.label, cmpN=lab2;
@@ -3333,10 +3353,16 @@ function render(){
     const q=OV_K.slice(0,3).map(o=>{ const v=cur[o.k], st=ovSt(o,v);
       return `<div class="ovkc st"><span class="ovl">${o.n}${st.chip?`<span class="ovchip ${st.st}">${st.chip}${o.k==='ftfr'&&prov?' · 잠정':''}</span>`:''}</span><span class="ovv">${ovF(o,v)}<small>${o.u}</small></span><span class="ovt">목표 ${o.tl()} · ${ovGap(o,v)}</span><span class="ovd">${ovDelta(o,v,prv[o.k],lab2)}</span><span class="ovh">${o.h}</span></div>`; }).join('');
     $('sqKpiQ').innerHTML=q;
+    { const a=revSub(p.months,team), b=revSub(pp.months,team);
+      const sub=(nm,v,vP,n,d,base,why)=>dsCell(nm,v==null?'-':f1(v),v==null?'':'%',
+        `${base} 받은 거래처 ${fmt(d)}곳 평균 · 해당 ${fmt(n)}건 · 목표 없음(참고)`, v==null||vP==null?lab2+' 비교 자료 없음':Math.abs(v-vP)<0.05?lab2+'과 같음':lab2+' 대비 '+(v>vP?'▲ ':'▼ ')+Math.abs(v-vP).toFixed(1)+'%p', why,
+        a.open?'<span class="ovchip">잠정</span>':'');
+      $('sqKpiR').innerHTML=sub('재방문율 중 · 수리 후 재수리율',a.rrP,b.rrP,a.rr,a.rrD,'고장 수리','고장 수리 뒤 14일 안에 같은 장비를 다시 고장 수리한 비율 — 수리 품질')
+        +sub('재방문율 중 · PM 후 고장률',a.pfP,b.pfP,a.pf,a.pfD,'PM','PM 뒤 14일 안에 같은 장비에 고장 수리가 생긴 비율 — PM 품질·PM 중 발견 고장 포함'); }
     const w=[['처리 건수',fmt(cur.total),'건',dN(cur.total,prv.total,'건',0),`Calibration ${fmt(cur.cal)} · 기타 ${fmt(cur.total-cur.rep-cur.pm-cur.cal)}`],
       ['고장 수리',fmt(cur.rep),'건',dN(cur.rep,prv.rep,'건',0),'목표 없음'],
       ['PM',fmt(cur.pm),'건',dN(cur.pm,prv.pm,'건',0),'목표 없음'],
-      ['예방정비 지수',f1(cur.idx),'%',dN(cur.idx,prv.idx,'%p',1),'PM ÷ (PM + 고장 수리) · 목표 없음']];
+      ['PM 비중',f1(cur.idx),'%',dN(cur.idx,prv.idx,'%p',1),'PM ÷ (PM + 고장 수리) · 목표 없음']];
     $('sqKpiW').innerHTML=w.map(x=>`<div class="ovkc st"><span class="ovl">${x[0]}</span><span class="ovv">${x[1]}<small>${x[2]}</small></span><span class="ovt">${x[4]}</span><span class="ovd">${x[3]}</span></div>`).join('');
     $('sqTitle').innerHTML=`<div><h2>Service Quality</h2><p>${esc(p.label)} · ${esc(scope)} · 비교 ${esc(lab2)} · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}${SRC&&SRC.at?' · 마지막 업데이트 '+esc(SRC.at):''}${prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div>`; }
   try{ if(VIEW==='org') renderOrgTop(p,team,pp,prov,scope); }catch(e){ console.error('화면 통일', e); }
@@ -3355,7 +3381,7 @@ function render(){
       plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}}},
       scales:{x:axis({grid:{display:false}}),y:axis({beginAtZero:true})}}});
   upsert('cIdx',{type:'line',data:{labels:lab,datasets:[
-    {label:'예방정비 지수(%)',data:ts.map(s=>s.hasData&&s.idx!=null?+s.idx.toFixed(1):null),borderColor:'#005BAC',backgroundColor:'#005BAC',pointRadius:3.5,tension:.25}]},
+    {label:'PM 비중(%)',data:ts.map(s=>s.hasData&&s.idx!=null?+s.idx.toFixed(1):null),borderColor:'#005BAC',backgroundColor:'#005BAC',pointRadius:3.5,tension:.25}]},
     options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:false}},
       scales:{x:axis({grid:{display:false}}),y:axis({min:0,max:100,ticks:{color:css('--text'),callback:v=>v+'%'}})}}});
@@ -3428,12 +3454,12 @@ function render(){
   renderDQ(p);
 }
 
-function calNote(p,team){   // Calibration 집중 달 월과 다음 달은 예방정비 지수 변동 주석 (확정 규칙)
+function calNote(p,team){   // Calibration 집중 달 월과 다음 달은 PM 비중 변동 주석 (확정 규칙)
   const chk=mk=>{const c=stats([mk],team).cal; const ref=[];for(let i=1;i<=12;i++){const m=shiftMonth(mk,-i);if(D.months.includes(m))ref.push(stats([m],team).cal);}
     const avg=ref.length?ref.reduce((a,b)=>a+b,0)/ref.length:0; return avg&&c>=avg*1.5;};
   for(const mk of p.months){
-    if(chk(mk)) return `<span style="color:var(--warn);border-color:var(--warn)">Calibration 집중 달(${mk}): 예방정비 지수 일시 상승</span>`;
-    const pm=shiftMonth(mk,-1); if(D.months.includes(pm)&&chk(pm)) return `<span style="color:var(--warn);border-color:var(--warn)">전월 Calibration 집중 달 영향: 예방정비 지수 하락 가능</span>`;
+    if(chk(mk)) return `<span style="color:var(--warn);border-color:var(--warn)">Calibration 집중 달(${mk}): PM 비중 일시 상승</span>`;
+    const pm=shiftMonth(mk,-1); if(D.months.includes(pm)&&chk(pm)) return `<span style="color:var(--warn);border-color:var(--warn)">전월 Calibration 집중 달 영향: PM 비중 하락 가능</span>`;
   }
   return '';
 }
@@ -3520,7 +3546,8 @@ function renderHealth(end, p){
     const snUsed=new Set([...used].map(k=>k.split('|')[0])), snTouched=new Set([...touched].map(k=>k.split('|')[0]));
     let snOnly=0; for(const x of snTouched) if(snUsed.has(x)) snOnly++;
     h.push(hc('가동 장비(모수)', fmt(A)+'대', `자산대장 ${fmt(used.size)}대 중 일치 ${fmt(A)}대 · S/N만 일치 ${fmt(snOnly)}대 · 이력 장비 ${fmt(touched.size)}대`));
-    h.push(hc('PM 커버리지율', f1(cov)+'%', ''));
+    { const st=tgSt(cov,TARGET_PMCOV,true); /* 근접 = 목표의 92%(73.6%) 이상 — 다른 목표와 같은 규칙 */
+      h.push(hc('PM 커버리지율', f1(cov)+'%', `목표 ${TARGET_PMCOV}% 이상${st.chip?' · '+st.chip:''} · 12개월 서비스 이력 장비 중 PM 받은 비율`, st.st==='good'?true:st.st==='bad'?false:undefined)); }
     /* MTBF (100대당 월 고장) — 한 카드. 100대당 월 고장 = 월평균 고장 수리 ÷ 가동 장비 × 100, 평균 고장 간격(일) = 30.44일 × 가동 장비 ÷ 월평균 고장 수리 (2026-10-28 사용자 결정, 월간보고 엔진 health.mtbfDays 와 같은 식).
        서비스 방문 기록 기준이라 같은 고장의 재방문도 건수에 들어간다 */
     const mtbf=(A&&curRep)?Math.round(30.44*A/curRep):null;
@@ -4448,7 +4475,7 @@ function orgDetOpen(v){ const k=ORG_DET_LS+(VIEW==='org'?'':'-'+VIEW); try{ if(v
 function prodTitle(){
   const el=$('prodTitle'), sec=$('prodSec'); if(!el||!PROD) return;
   if(sec){ const h={org:['상세 분석 — 팀 · 개인','선택한 팀·사무소 상세, 개인 순위·개인별 상세·개인별 담당 장비 · 개인 값은 맡은 업무의 양과 종류이며 성과 평가가 아님'],eqp:['담당 장비 현황','담당기관 관리표 기준 · 현재 시점 · 사람별·1인당 장비는 Organization'],wl:['근무 시간 · 이동 (사람 기준)','야간 OT·휴일 근무 = CRM 기록·인사 연장근무 기준 — 근무 종료가 WEST·EAST 17시·CENTRAL·SOUTH 18시라 위 방문 시간대(08~18시)와 기준이 다릅니다']}[VIEW]; sec.innerHTML=h?h[0]+' <small>'+h[1]+(VIEW==='eqp'?' · '+esc(opEquipLine()):'')+'</small>':''; sec.hidden=!h;
-    /* v3.1(2026-11-16): Organization 상세 분석(개인 순위·KPI 점수·직급 보정·개인별 담당 장비)은 기본 접힘, 펼침 상태는 기기에 기억 */
+    /* v3.1(2026-11-16): Organization 상세 분석(개인 순위·가중 업무량·직급 보정·개인별 담당 장비)은 기본 접힘, 펼침 상태는 기기에 기억 */
     const FV=VIEW==='org'||VIEW==='wl'||VIEW==='eqp', pr=$('prod'), fold=FV&&!orgDetOpen(); if(pr) pr.classList.toggle('pfold',fold);   /* v3.1 PR4: Workload 사람 기준(야간 OT·휴일·이동거리·개인 목록)도 기본 접힘 */
     if(h&&FV){ sec.insertAdjacentHTML('beforeend',`<span class="ovtools"><button type="button" class="dsbtn" id="prodFoldBtn" aria-expanded="${!fold}" aria-controls="prod">${fold?(VIEW==='wl'?'사람 기준 펼치기':VIEW==='eqp'?'담당 장비 상세 펼치기':'상세 분석 펼치기'):'접기'}</button></span>`);
       $('prodFoldBtn').onclick=()=>{ orgDetOpen(!orgDetOpen()); prodTitle(); }; } }
@@ -4489,8 +4516,8 @@ $('pExLead').addEventListener('change',()=>{ if(PROD){ PROD.ex_lead=$('pExLead')
 const OV={metric:'ftfr',range:12,om:'cnt',omOg:'per',sortK:null,sortDir:-1,hov:null,off:true};
 const OV_K=[{k:'ftfr',n:'FTFR',u:'%',d:1,t:()=>TARGET_FTFR,hi:true,tl:()=>TARGET_FTFR+'% 이상',h:'한 번에 고친 비율'},
  {k:'rev',n:'재방문율',u:'%',d:1,t:()=>TARGET_REV,hi:false,tl:()=>TARGET_REV+'% 이하',h:'고친 뒤 14일 안에 다시 방문한 비율'},
- {k:'mttr',n:'MTTR',u:'분',d:1,t:()=>TARGET_MTTR,hi:false,tl:()=>TARGET_MTTR+'분 이하',h:'고장 수리 평균 소요 시간'},
- {k:'idx',n:'예방정비 지수',u:'%',d:1,t:()=>null,hi:true,tl:()=>'목표 없음',h:'PM ÷ (PM + 고장 수리)'}];
+ {k:'mttr',n:'평균 수리 작업 시간 (MTTR)',u:'분',d:1,t:()=>TARGET_MTTR,hi:false,tl:()=>TARGET_MTTR+'분 이하',h:'고장 수리의 CRM 작업 시작~종료 시간 평균(예약 시간 기준)'},
+ {k:'idx',n:'PM 비중',u:'%',d:1,t:()=>null,hi:true,tl:()=>'목표 없음',h:'PM ÷ (PM + 고장 수리)'}];
 const OV_ACT=[['고장수리','고장 수리','#005BAC'],['PM','PM','#00B9EF'],['설치이전','설치·이전','#5185C5'],['Cal평가','Calibration·평가','#84BAE5'],['기타','기타','#9FA0A0']];
 const OV_BUCKET={'고장 수리':'고장수리','PM':'PM','온라인 정기점검':'PM'};
 ['장비 설치','장비 이전 설치','설치/데모 평가','설치','장비 철수','철수 및 폐기'].forEach(p=>{OV_BUCKET[p]='설치이전';});
@@ -4790,7 +4817,7 @@ function dsTitle(id,name,p,scope,lab,prov){ const el=$(id); if(!el) return;
   el.innerHTML=`<div><h2>${name}</h2><p>${esc(p.label)} · ${esc(scope)} · 비교 ${esc(lab)} · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}${SRC&&SRC.at?' · 마지막 업데이트 '+esc(SRC.at):''}${prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div>`; }
 /* ===== 최종 개선 (2026-11-12 지시서): 사무소 중심 분석·그래프 유형 — PROD(부서원 계산)·stats() 값을 읽기만 한다 ===== */
 const UNIT_SHORT=u=>u.replace(/^FS\s*/,'').replace(/^(CENTRAL|SOUTH)\s+/,'');
-/* 사무소(6)·팀(4) 행. 1인당 값은 팀장·신입 제외(n_core), 재방문율·FTFR 은 그 단위에 배정된 거래처 평균, 예방정비 지수 = PM ÷ (PM + 고장 수리)(인정 건수) */
+/* 사무소(6)·팀(4) 행. 1인당 값은 팀장·신입 제외(n_core), 재방문율·FTFR 은 그 단위에 배정된 거래처 평균, PM 비중 = PM ÷ (PM + 고장 수리)(인정 건수) */
 function orgRows(mode){
   if(PROD_DIRTY||!PROD) ensureProd();
   const PR='이번 년도', PV='직전 년도', g=(o,k,q)=>o&&o[k]&&o[k][q||PR]!=null?o[k][q||PR]:null;
@@ -4840,7 +4867,7 @@ const orgName=r=>(r.off?'':`<b class="dstw" aria-hidden="true">${r.kids?(r.open?
 function orgWire(root){ if(!root) return; root.querySelectorAll('[data-k]').forEach(el=>{ el.onclick=()=>orgPick(el.dataset.k); if(el.tagName==='TR'){ el.tabIndex=0; el.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); orgPick(el.dataset.k); } }; } }); }
 function orgAllBtn(id){ const b=$(id); if(!b) return; const all=TEAMS.filter(t=>orgKids(t).length), on=all.length&&all.every(t=>ORG.open.has(t)); b.textContent=on?'사무소 모두 접기':'사무소 모두 펼치기'; b.setAttribute('aria-pressed',on?'true':'false'); b.onclick=()=>orgAll(!on); }
 const ORG_M=[{k:'all',n:'인원',u:'명',d:0,type:'bar'},{k:'eq',n:'담당 장비',u:'대',d:0,type:'bar',eq:1},{k:'cnt',n:'처리 건수',u:'건',d:0,type:'bar'},{k:'per',n:'1인당 처리 건수',u:'건',d:1,type:'bar',avg:'per'},
-  {k:'eqh',n:'1인당 담당 장비',u:'대',d:1,type:'bar',eq:1},{k:'e100',n:'장비 100대당 처리 건수',u:'건',d:1,type:'bar',eq:1},{k:'w',n:'1인당 KPI 점수',u:'점',d:1,type:'dot',avg:'w'},
+  {k:'eqh',n:'1인당 담당 장비',u:'대',d:1,type:'bar',eq:1},{k:'e100',n:'장비 100대당 처리 건수',u:'건',d:1,type:'bar',eq:1},{k:'w',n:'1인당 가중 업무량',u:'점',d:1,type:'dot',avg:'w'},
   {k:'ftfr',n:'FTFR',u:'%',d:1,type:'dot',t:'ftfr'},{k:'rev',n:'재방문율',u:'%',d:1,type:'dot',t:'rev'},{k:'mttr',n:'MTTR',u:'분',d:1,type:'dot',t:'mttr'}];
 /* FSG 합계 — 팀 행을 더함(장비·건수), 1인당은 팀장 제외 인원 기준. 장비 100대당 = 처리 건수 ÷ 담당 장비 × 100 (eqAgg.per100 과 같은 식) */
 function orgFsg(T){ const sum=f=>T.reduce((a,r)=>a+(r[f]||0),0), eq=PROD.eq?sum('eq'):null, np=sum('nPeople'), cas=T.reduce((a,r)=>a+(r.cnt||0),0);
@@ -4848,7 +4875,7 @@ function orgFsg(T){ const sum=f=>T.reduce((a,r)=>a+(r[f]||0),0), eq=PROD.eq?sum(
 const ORGSC={u:'office',y:'per',c:'ftfr',q:'on'};   /* u: office 사무소 6 / team 팀 4 — 한 그림에 섞지 않음(작업지시서 v2) */
 function renderOrgTop(p,team,pp,prov,scope){
   dsTitle('orgTitle','Organization',p,scope,pp.label,prov);
-  /* 2026-11-16 사용자 「가중치 설정하는 부분이 잘 안 보임」 — 관리자 모드면 Organization 제목 줄에 바로(개인 순위의 KPI 점수가 이 가중치로 계산됨) */
+  /* 2026-11-16 사용자 「가중치 설정하는 부분이 잘 안 보임」 — 관리자 모드면 Organization 제목 줄에 바로(개인 순위의 가중 업무량가 이 가중치로 계산됨) */
   if(ADMIN){ const t=$('orgTitle'), wk=Object.keys(WGT_ITEMS||{}).sort(), wNow=wk.filter(k=>k<=mkey(Date.now())).pop();
     if(t) t.insertAdjacentHTML('beforeend',`<div class="wgtcta"><span><b>KPI 가중치</b>${wNow?esc(wNow)+'부터 적용 중인 설정':'코드 기본값 사용 중'}${wk.length&&wk[wk.length-1]>(wNow||'')?' · '+esc(wk[wk.length-1])+'부터 예정':''}</span><button type="button" class="wgtctab" onclick="openWgt()">가중치 설정</button></div>`); }
   orgSync(); const rows=orgTree(), avg=orgAvg(), T=rows.filter(r=>!r.off), F=orgFsg(orgRows('team'));
@@ -4865,7 +4892,7 @@ function renderOrgTop(p,team,pp,prov,scope){
     `<div class="ovkc st${nd}"><span class="ovl">장비 100대당 처리 건수${PROD.eq?'':noEq}</span><span class="ovv">${PROD.eq?f1(X.e100):'-'}<small>${PROD.eq?'건':''}</small></span><span class="ovt">선택 기간 처리 건수 ÷ 담당 장비(현재 관리표) × 100</span><span class="ovd">${PROD.eq&&S&&F.e100!=null&&X.e100!=null?'FSG '+f1(F.e100)+'건 대비 '+(X.e100>=F.e100?'+':'−')+Math.abs(X.e100-F.e100).toFixed(1):'팀장 방문·담당 기관 포함'}</span></div>`;
   /* ② 조직별 운영 현황 표 */
   const cell=(v,k)=>{ const o=K(k), s=v==null?null:ovSt(o,v); return `<td class="${s?'st-'+s.st:''}">${v==null?'-':v.toFixed(1)}${s&&s.chip?`<span class="ovtag">${s.chip}</span>`:''}</td>`; };
-  const H=['팀 · 사무소','인원 (비교)'].concat(PROD.eq?['담당 장비','1인당 장비']:[],['처리 건수','1인당 처리 건수','평균 대비'],PROD.eq?['장비 100대당 처리 건수']:[],['1인당 KPI 점수','직급 보정 지수','FTFR (%)','재방문율 (%)','MTTR (분)','고장 수리 (표본)']);
+  const H=['팀 · 사무소','인원 (비교)'].concat(PROD.eq?['담당 장비','1인당 장비']:[],['처리 건수','1인당 처리 건수','평균 대비'],PROD.eq?['장비 100대당 처리 건수']:[],['1인당 가중 업무량','직급 보정 지수','FTFR (%)','재방문율 (%)','MTTR (분)','고장 수리 (표본)']);
   const dv=r=>r.per==null||avg.per==null?'-':(Math.abs(r.per-avg.per)<0.05?'0.0':(r.per>avg.per?'+':'−')+Math.abs(r.per-avg.per).toFixed(1));
   $('ogTbl').innerHTML=`<table class="ovtab dsfull ogtab"><thead><tr>${H.map(h=>`<th><span class="dsth">${h}</span></th>`).join('')}</tr></thead><tbody>
     <tr class="tgt"><td>목표</td><td>-</td>${PROD.eq?'<td>-</td><td>-</td>':''}<td>-</td><td>-</td><td>-</td>${PROD.eq?'<td>-</td>':''}<td>-</td><td>100 기준</td><td>${TARGET_FTFR} 이상</td><td>${TARGET_REV} 이하</td><td>${TARGET_MTTR} 이하</td><td>-</td></tr>
@@ -4901,7 +4928,7 @@ function ogCols(){ const t=document.querySelector('#ogTbl table'); if(!t) return
   const hs=[...t.tHead.rows[0].cells], ex=hs.map(h=>!OG_CORE.includes(h.textContent.trim()));
   [...t.rows].forEach(r=>[...r.cells].forEach((c,i)=>{ if(ex[i]) c.classList.toggle('ogx',!all); }));
   let b=$('ogColBtn'); if(!b){ b=document.createElement('button'); b.type='button'; b.id='ogColBtn'; b.className='dsmore'; $('ogTbl').after(b); }
-  const nx=ex.filter(Boolean).length; b.hidden=!nx; b.textContent=all?'핵심 열만 보기':`모든 열 보기 (+${nx}개: 1인당 장비·장비 100대당·KPI 점수·직급 보정 등)`; b.setAttribute('aria-expanded',all);
+  const nx=ex.filter(Boolean).length; b.hidden=!nx; b.textContent=all?'핵심 열만 보기':`모든 열 보기 (+${nx}개: 1인당 장비·장비 100대당·가중 업무량·직급 보정 등)`; b.setAttribute('aria-expanded',all);
   b.onclick=()=>{ try{ localStorage.setItem('fsg-kpi-ogcols',all?'0':'1'); }catch(e){} ogCols(); }; }
 /* 담당 장비 × 업무량(2026-11-17 재설계 — 조직개편·채용 검토용으로 쓰일 수 있어 기준을 바로잡음)
    ① 두 축 모두 1인당, 같은 인원(비교 인원 = 팀장·신입 제외)으로 — 예전에는 가로 = 팀 전체 장비, 세로 = 1인당이 섞였음
@@ -4914,9 +4941,9 @@ function orgCoreOf(u){ const ex=n=>(PROD.grade||{})[n]==='팀장'||NEWBIE.includ
 function orgScatter(){
   const box=$('ogScBox'), seg=(id,list,cur,key)=>{ $(id).innerHTML=list.map(([k,n])=>`<button type="button" data-v="${k}" aria-pressed="${k===cur}">${n}</button>`).join(''); $(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{ ORGSC[key]=b.dataset.v; orgScatter(); }); };
   if(ORGSC.y==='cnt') ORGSC.y='per';
-  seg('ogScU',[['office','사무소 6'],['team','팀 4']],ORGSC.u,'u'); $('ogScQ').innerHTML=''; seg('ogScY',[['per','1인당 처리 건수'],['w','1인당 KPI 점수(가중)']],ORGSC.y,'y'); seg('ogScC',[['ftfr','FTFR'],['rev','재방문율'],['mttr','MTTR']],ORGSC.c,'c');
+  seg('ogScU',[['office','사무소 6'],['team','팀 4']],ORGSC.u,'u'); $('ogScQ').innerHTML=''; seg('ogScY',[['per','1인당 처리 건수'],['w','1인당 가중 업무량']],ORGSC.y,'y'); seg('ogScC',[['ftfr','FTFR'],['rev','재방문율'],['mttr','MTTR']],ORGSC.c,'c');
   if(!PROD.eq){ box.innerHTML='<p class="empty-note">담당 장비 수가 없어 그릴 수 없습니다. 관리자가 「담당기관 관리표」를 올리면 표시됩니다.</p>'; return; }
-  const UW=ORGSC.u==='team'?'팀':'사무소', yk=ORGSC.y, yN=yk==='w'?'1인당 KPI 점수':'1인당 처리 건수', yU=yk==='w'?'점':'건';
+  const UW=ORGSC.u==='team'?'팀':'사무소', yk=ORGSC.y, yN=yk==='w'?'1인당 가중 업무량':'1인당 처리 건수', yU=yk==='w'?'점':'건';
   const R=orgRows(ORGSC.u).map(r=>{ const core=orgCoreOf(r.k), A=eqAgg(PROD.eq.by,core,()=>0,()=>false); return Object.assign({},r,{hc:core.length,eqc:core.length?A.eq/core.length:null}); }).filter(r=>r.hc&&r.eqc&&r[yk]!=null);
   if(R.length<2){ box.innerHTML='<p class="empty-note">점이 2개 미만이라 그리지 않습니다.</p>'; return; }
   let sy=0,sx=0; R.forEach(r=>{ sy+=r[yk]*r.hc; sx+=r.eqc*r.hc; }); const base=sx?sy/sx:null;   /* FSG(표시 단위 합) 장비 1대당 업무량 = 비교 인원 업무량 합 ÷ 그 인원 담당 장비 합 */
@@ -4931,7 +4958,7 @@ function orgScatter(){
     <div class="dsleg ogscleg"><span><i class="ln"></i>FSG 평균 비율 (장비 100대당 ${base?fmt(Math.round(base*100)):'-'}${yU})</span><span><i class="bd"></i>평균 ±10% (평균 수준)</span><span><i style="background:${ORGSC_C.good}"></i>${esc(ko.n)} 달성</span><span><i style="background:${ORGSC_C.warn}"></i>근접</span><span><i style="background:${ORGSC_C.bad}"></i>미달</span><span>점 크기 = 비교 인원</span><span>두 축은 0에서 시작하지 않음 — 위치는 점선(평균 비율)과의 관계로 읽습니다</span></div>
     <div class="ogguide"><b>읽는 법</b> 점이 <em>선 위</em>면 FSG 평균보다 장비 1대당 업무가 많고, <em>선 아래</em>면 적습니다. 띠 안(±10%)은 평균 수준입니다. 오른쪽으로 갈수록 1인당 맡은 장비가 많고, 위로 갈수록 1인당 업무가 많습니다.</div>
     <div class="ogcaution"><b>부하 판정용이 아닙니다.</b> 이 그림은 장비 수와 CRM 처리 건수만 봅니다. <span>이동 거리·이동 시간, 연장근무(OT)·야간·당직, 근무일(휴가·교육), 작업 시간은 들어 있지 않고, 장비는 모듈 단위(XN-3000 = 3대)라 대형 라인이 많은 지역은 장비가 많게 잡힙니다. 인원 조정·채용 판단은 이 요소를 모두 넣은 「업무 부하도 분석」(12개월 마감 기준)으로 합니다.</span></div>
-    <p class="ovnote">1인당 = 비교 인원(팀장·신입 제외) 기준 — 담당 장비도 그 인원이 맡은 장비만 셉니다. 담당 장비: 현재 관리표 기준 / ${yN}: 선택 기간 기준(시점이 다름). 처리 건수는 담당자·필수 참석자 각 1건(동행은 2건), KPI 점수는 업무 종류·직급 가중치를 더한 값. 다른 팀 지원·담당자 없는 기관 방문도 한 사람의 건수에 들어갑니다. 완료 처리를 하지 않은 활동도 취소가 아니면 셉니다. 팀 값은 현재 명단 기준이라 2026-04 개편 이전 기간을 고르면 그때 소속과 다를 수 있습니다. ${UW}가 5~6명이면 한 명의 휴가·교육으로 값이 15~20% 움직이므로 월보다 분기·12개월로 봅니다. 점·표 줄을 누르면 그 ${UW}가 선택됩니다.</p>`;
+    <p class="ovnote">1인당 = 비교 인원(팀장·신입 제외) 기준 — 담당 장비도 그 인원이 맡은 장비만 셉니다. 담당 장비: 현재 관리표 기준 / ${yN}: 선택 기간 기준(시점이 다름). 처리 건수는 담당자·필수 참석자 각 1건(동행은 2건), 가중 업무량는 업무 종류·직급 가중치를 더한 값. 다른 팀 지원·담당자 없는 기관 방문도 한 사람의 건수에 들어갑니다. 완료 처리를 하지 않은 활동도 취소가 아니면 셉니다. 팀 값은 현재 명단 기준이라 2026-04 개편 이전 기간을 고르면 그때 소속과 다를 수 있습니다. ${UW}가 5~6명이면 한 명의 휴가·교육으로 값이 15~20% 움직이므로 월보다 분기·12개월로 봅니다. 점·표 줄을 누르면 그 ${UW}가 선택됩니다.</p>`;
   box.querySelectorAll('.ogsct tr[data-k]').forEach(t=>{ t.onclick=()=>orgPick(t.dataset.k); t.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); orgPick(t.dataset.k); } }; });
   const xs=R.map(r=>r.eqc), ys=R.map(r=>r[yk]), xlo=Math.max(0,Math.min(...xs)*0.85), xmax=Math.max(...xs)*1.12, ylo=Math.max(0,Math.min(...ys)*0.85), ymax=Math.max(...ys)*1.12;   /* 점이 몰려 겹치지 않게 자료 범위로 확대 — 0에서 시작하지 않으므로 그림 아래에 적음 */
   const ref={id:'orgref',beforeDatasetsDraw(c){ if(!base) return; const {ctx,chartArea:a,scales:{x,y}}=c, xa=x.min, xb=x.max, X0=x.getPixelForValue(xa), X1=x.getPixelForValue(xb), f=(k,v)=>y.getPixelForValue(base*(1+k)*v);
@@ -4989,7 +5016,7 @@ function renderProTop(p,team,pp,prov,scope,cur,prv){
   $('proSub').textContent=`${p.label}, ${scope} (${lab} 대비)`;
   const cv=window.__pmcv;
   $('proKpi').innerHTML=dsCell('PM 실적',fmt(cur.pm),'건','PM 월별 편차는 아래 「상세」',dsDelta(cur.pm,prv.pm,'건',0,lab),'')+
-    dsCell('예방정비 지수',f1(cur.idx),'%','PM ÷ (PM + 고장 수리) · 목표 없음',dsDelta(cur.idx,prv.idx,'%p',1,lab),'')+
+    dsCell('PM 비중',f1(cur.idx),'%','PM ÷ (PM + 고장 수리) · 목표 없음',dsDelta(cur.idx,prv.idx,'%p',1,lab),'')+
     dsCell('고장 수리',fmt(cur.rep),'건','목표 없음',dsDelta(cur.rep,prv.rep,'건',0,lab),'')+
     dsCell('반복 고장 장비',fmt(ch.chronic),'대','12개월 내 3회 이상 고장',SERIAL?'자산대장 사용 장비 기준':'자산대장 미등록 · CRM 이력 기준','목록은 Service Quality 「기관 · 장비 상세」');
   /* PM 월별 건수와 평균선 (renderHealth 가 센 PM — 취소 제외, 전사 12개월) */
@@ -4999,11 +5026,11 @@ function renderProTop(p,team,pp,prov,scope,cur,prv){
         {label:`12개월 평균 ${Math.round(mean)}건`,data:P.v.map(()=>+mean.toFixed(1)),borderColor:'#9FA0A0',borderDash:[6,4],borderWidth:1.5,pointRadius:0}]},
         options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:12,color:css('--text')}}},
           scales:{x:axis({grid:{display:false},ticks:{color:css('--text'),maxRotation:0,autoSkip:false,callback:function(v,i,a){return (a.length-1-i)%2===0?this.getLabelForValue(v):'';}}}),y:axis({beginAtZero:true,ticks:{precision:0,color:css('--text')}})}}}); } }
-  /* 사무소별 예방 서비스 — PROD 사무소 건수(인정 건수). 예방정비 지수는 FSG 값 대비 도트 플롯 */
+  /* 사무소별 예방 서비스 — PROD 사무소 건수(인정 건수). PM 비중는 FSG 값 대비 도트 플롯 */
   { orgSync(); const R=orgTree(), TT=R.filter(r=>!r.off), tp=TT.reduce((a,r)=>a+r.pm,0), tr=TT.reduce((a,r)=>a+r.rep,0), fsg=(tp+tr)?tp/(tp+tr)*100:null;
     $('proOgSub').textContent=`${p.label} · 수행한 조직 기준 · 팀을 누르면 사무소로 나뉩니다`; orgAllBtn('proAllBtn');
-    $('proOgBars').innerHTML=dsBars(R.map(r=>({n:r.n,html:orgName(r),k:r.k,off:r.off,sel:r.sel,kids:r.kids,open:r.open,sub:r.all+'명',v:r.pidx,title:`PM ${fmt(r.pm)}건 ÷ (PM ${fmt(r.pm)} + 고장 수리 ${fmt(r.rep)})`})),{pick:true,unit:'%',dec:1,type:'dot',ref:fsg,refLab:'FSG 전체',extra:'예방정비 지수(목표 없음)'});
-    $('proOgTbl').innerHTML=`<table class="ovtab dsfull"><thead><tr>${['팀 · 사무소','인원','PM (건)','고장 수리 (건)','예방정비 지수 (%)','FSG 대비'].map(h=>`<th><span class="dsth">${h}</span></th>`).join('')}</tr></thead><tbody>${R.map(r=>`<tr class="row${r.off?' ovoff':''}${r.sel?' sel':''}" data-k="${esc(r.k)}"${r.kids?` aria-expanded="${r.open}"`:''}><td>${orgName(r)}</td><td>${r.all}</td><td>${fmt(r.pm)}</td><td>${fmt(r.rep)}</td><td>${r.pidx==null?'-':r.pidx.toFixed(1)}</td><td>${r.pidx==null||fsg==null?'-':(Math.abs(r.pidx-fsg)<0.05?'0.0':(r.pidx>fsg?'+':'−')+Math.abs(r.pidx-fsg).toFixed(1))+'%p'}</td></tr>`).join('')}
+    $('proOgBars').innerHTML=dsBars(R.map(r=>({n:r.n,html:orgName(r),k:r.k,off:r.off,sel:r.sel,kids:r.kids,open:r.open,sub:r.all+'명',v:r.pidx,title:`PM ${fmt(r.pm)}건 ÷ (PM ${fmt(r.pm)} + 고장 수리 ${fmt(r.rep)})`})),{pick:true,unit:'%',dec:1,type:'dot',ref:fsg,refLab:'FSG 전체',extra:'PM 비중(목표 없음)'});
+    $('proOgTbl').innerHTML=`<table class="ovtab dsfull"><thead><tr>${['팀 · 사무소','인원','PM (건)','고장 수리 (건)','PM 비중 (%)','FSG 대비'].map(h=>`<th><span class="dsth">${h}</span></th>`).join('')}</tr></thead><tbody>${R.map(r=>`<tr class="row${r.off?' ovoff':''}${r.sel?' sel':''}" data-k="${esc(r.k)}"${r.kids?` aria-expanded="${r.open}"`:''}><td>${orgName(r)}</td><td>${r.all}</td><td>${fmt(r.pm)}</td><td>${fmt(r.rep)}</td><td>${r.pidx==null?'-':r.pidx.toFixed(1)}</td><td>${r.pidx==null||fsg==null?'-':(Math.abs(r.pidx-fsg)<0.05?'0.0':(r.pidx>fsg?'+':'−')+Math.abs(r.pidx-fsg).toFixed(1))+'%p'}</td></tr>`).join('')}
       <tr class="tgt"><td>FSG 전체</td><td>${TT.reduce((a,r)=>a+r.all,0)}</td><td>${fmt(tp)}</td><td>${fmt(tr)}</td><td>${fsg==null?'-':fsg.toFixed(1)}</td><td>기준</td></tr></tbody></table>`;
     orgWire($('proOgBars')); orgWire($('proOgTbl')); }
   $('chrSub').textContent='최근 12개월 · '+scope;
@@ -5149,7 +5176,7 @@ function wlAcadAgg(months){ const A=wlAcadDays(); if(!A) return null; const inP=
 /* 집계 대기 문구(0 으로 보이지 않게) */
 function acadGapTxt(g){ if(!g||!g.wait) return ''; const w=g.wait==='talk'?'Sysmex Talk':g.wait==='slack'?'Slack':'Talk·Slack';
   return g.none?`${w} 데이터 미연동 — 집계 대기`:`${w} 자료는 ${g.upto?g.upto.slice(5).replace('-','/'):'-'}까지만 반영(이후 집계 대기)`; }
-/* CRM 학술 업무 비중(2026-11-16, 사용자 지적 「양식 타입에 학술 요청, Error 1 에 학술 내용」) — 처리 건수(담당자·필수 참석자 인정) 중 양식 타입 「학술 요청」 비율.
+/* CRM 학술 요청 비중(2026-11-16, 사용자 지적 「양식 타입에 학술 요청, Error 1 에 학술 내용」) — 처리 건수(담당자·필수 참석자 인정) 중 양식 타입 「학술 요청」 비율.
    대부분 Calibration·Data 비교라 FS 가 현장에서 한 학술 지원 작업이다. 전화 학술 응대(위 칸, FS Portal 집계)와는 다른 자료 */
 function wlAcadCrm(months, team){ const inP=mPred(months); let n=0,tot=0,cal=0,has=false;
   D.rows.forEach(o=>{ if(o.ft) has=true; if(!inP(o.mk,o.t)||!o.credits.length) return; const k=team?o.cteams.filter(t=>t===team).length:o.credits.length; if(!k) return;
@@ -5208,7 +5235,7 @@ function renderWl(){
   h+=`<h2 class="sec">업무부하 요약 <span class="ovchip none">단위: 방문(현장 출동 횟수)</span> <small>같은 병원·같은 날 이어진 활동 = 1건 · Productivity 처리 건수와 다름 · 학술 = FS Portal 집계 · 많다고 좋은 실적이 아님</small></h2><section class="ovkpi c3 wlk" aria-label="업무부하 핵심 지표">`;
   h+= !ac? wlNA('학술 응대','학술 자료를 아직 올리지 않음') : acNone? wlNA('학술 응대',acadGapTxt(ac.gap)) : dsCell('학술 응대',wlF(ac.n),'건',two(srcTxt,'주간 '+wlF(ac.day)+' · 야간 '+wlF(ac.night)+' · 주말 '+wlF(ac.hol)),acWait?acadGapTxt(ac.gap):two(wlD(ac.n,acOk(acp)?acp.n:null,'건',pp.label),wlD(ac.n,acOk(acy)?acy.n:null,'건',yoy.label.replace('전년 같은 기간','전년'))),'문의 응대 건수 기준 — Talk 글 수(~'+ACAD_MD(ACAD_TALK_END)+')·Slack 접수 건('+ACAD_MD(ACAD_CUT)+'~) · CRM 학술 요청(처리 건수)과 합산하지 않음',acChip);
   const cr=wlAcadCrm(p.months,team), crp=wlAcadCrm(pp.months,team), cry=wlAcadCrm(yoy.months,team), r1=v=>v==null?null:Math.round(v*10)/10;
-  h+= !cr.has? wlNA('학술 업무 비중','CRM 자료에 양식 타입이 없음 — CRM 을 다시 올리면 계산') : dsCell('학술 업무 비중',cr.share==null?'-':cr.share.toFixed(1),'%',`CRM 학술 요청 ${wlF(cr.n)} / ${wlF(cr.tot)}건 · Calibration·Data 비교 ${wlP(cr.cal,cr.n)||'-'}%`,two(wlD(r1(cr.share),r1(crp.share),'%p',pp.label),wlD(r1(cr.share),r1(cry.share),'%p',yoy.label.replace('전년 같은 기간','전년'))),'처리 건수 기준 · CRM 양식 타입 「학술 요청」 · 전화 응대(왼쪽)와 다른 자료');
+  h+= !cr.has? wlNA('CRM 학술 요청 비중','CRM 자료에 양식 타입이 없음 — CRM 을 다시 올리면 계산') : dsCell('CRM 학술 요청 비중',cr.share==null?'-':cr.share.toFixed(1),'%',`CRM 학술 요청 ${wlF(cr.n)} / ${wlF(cr.tot)}건 · Calibration·Data 비교 ${wlP(cr.cal,cr.n)||'-'}%`,two(wlD(r1(cr.share),r1(crp.share),'%p',pp.label),wlD(r1(cr.share),r1(cry.share),'%p',yoy.label.replace('전년 같은 기간','전년'))),'처리 건수 기준 · CRM 양식 타입 「학술 요청」 · 전화 응대(왼쪽)와 다른 자료');
   h+= !ac? wlNA('야간·주말 학술 응대','학술 자료 미확보') : acNone? wlNA('야간·주말 학술 응대',acadGapTxt(ac.gap)) : dsCell('야간·주말 학술 응대',wlF(ac.night+ac.hol),'건','전체의 '+(wlP(ac.night+ac.hol,ac.n)||'-')+'%',acWait?acadGapTxt(ac.gap):two(wlD(ac.night+ac.hol,acOk(acp)?(acp.night+acp.hol):null,'건',pp.label),wlD(ac.night+ac.hol,acOk(acy)?(acy.night+acy.hol):null,'건',yoy.label.replace('전년 같은 기간','전년'))),'평일 18~08시·주말·공휴일',acChip);
   h+= wlOn()? dsCell('수탁기관 방문 비중',labShare==null?'-':labShare,'%',`${wlF(lab.n)} / ${wlF(cls)}건 · 미분류 ${wlF(A.type[''].n)}건 제외`,two(wlD(labShare&&+labShare,labShareP&&+labShareP,'%p',pp.label),wlD(labShare&&+labShare,labShareY&&+labShareY,'%p',yoy.label.replace('전년 같은 기간','전년'))),'기관 유형 = 관리자 지정') : wlNA('수탁기관 방문 비중','기관 분류를 아직 지정하지 않음');
   h+= wlOn()? dsCell('수탁기관 야간 방문',wlF(lab.night),'건',`주말 ${wlF(lab.hol)}건 · 야간 ${wlP(lab.night,lab.n)||'-'}%`,two(wlD(lab.night,Ap.type.lab.night,'건',pp.label),wlD(lab.night,Ay.type.lab.night,'건',yoy.label.replace('전년 같은 기간','전년'))),'평일 18~08시에 걸친 방문') : wlNA('수탁기관 야간 방문','기관 분류 미지정');
