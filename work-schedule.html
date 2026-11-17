@@ -554,6 +554,7 @@
     </div>
     <div class="right-controls">
       <button class="add-btn" id="meBtn" title="이 브라우저가 기억할 내 이름 — 내 팀이 먼저 열리고 등록자가 자동으로 채워집니다">내 이름</button>
+      <button class="add-btn" id="calBtn" title="내 근무일정을 휴대폰 캘린더에 구독합니다 (읽기 전용)">캘린더 연동</button>
       <button class="add-btn" id="orderBtn" title="팀원을 추가·삭제하거나 표시 순서를 변경합니다">팀원 관리</button>
       <button class="add-btn" id="dutyViewBtn" title="석/야간·석간·주말당직·전화당직만 표시">당직만 보기</button>
       <button class="add-btn" id="testConnBtn" title="공유 저장소 연결 상태를 진단합니다">연결 테스트</button>
@@ -914,7 +915,7 @@ const INSTITUTION_LIST = ["(사)부산의료선교회세계로병원", "(사)한
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 45; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
+const BUILD_VERSION = 46; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -1129,6 +1130,7 @@ async function loadStorage(){
       TEAM_ORDER.forEach(tk=>{ scheduleData[tk] = data[tk] || {}; });
       scheduleData.memberOrder = data.memberOrder || {};
       scheduleData.teamRoster = data.teamRoster || {};
+      scheduleData.calendar = data.calendar || null; // 캘린더 구독 설정 {url, salt} — 「캘린더 연동」에서만 씁니다
       notesData = data.notes || {};   // 특이사항 — 일정(entry)과 별도 경로라 서로 영향 없음
       _notesLoadedOnce = true;
       _dataLoadedOnce = true;
@@ -2039,6 +2041,170 @@ function openNotePanel(opts){
 }
 
 // 내 이름 설정 — 로그인이 아니라 이 브라우저가 기억하는 값입니다.
+// ============================================================
+// 휴대폰 캘린더 구독 (.ics)
+// ------------------------------------------------------------
+// 사람·팀마다 추측할 수 없는 주소를 하나 만들어, 캘린더 앱이 그 주소를 구독합니다.
+// 주소의 열쇠는 Firebase 에 둔 소금(salt) + 이름을 해시한 값입니다. 소금을 저장소(공개)에
+// 두지 않으므로, 저장소만 본 사람은 다른 사람의 주소를 만들 수 없습니다.
+// 같은 계산이 Apps Script(apps-script-calendar/calendar_ics.gs)에도 있어야 하며,
+// tests/test_cal_sub.js 가 두 쪽이 같은 값을 내는지 확인합니다.
+//
+// 브라우저의 crypto.subtle 은 비동기이고 보안 문맥에서만 동작해서(파일로 열면 없음),
+// 짧은 문자열 하나만 해시하면 되는 이 용도에는 직접 구현을 씁니다.
+// ============================================================
+const SHA256_K = [
+  0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+  0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+  0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+  0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+  0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+  0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+  0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+  0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+];
+function utf8Bytes(str){
+  const out = [];
+  for(let i=0;i<str.length;i++){
+    const c = str.charCodeAt(i);
+    if(c < 0x80) out.push(c);
+    else if(c < 0x800) out.push(0xc0|(c>>6), 0x80|(c&63));
+    else if(c >= 0xd800 && c < 0xdc00 && i+1 < str.length){
+      const cp = 0x10000 + ((c-0xd800)<<10) + (str.charCodeAt(i+1)-0xdc00);
+      i++;
+      out.push(0xf0|(cp>>18), 0x80|((cp>>12)&63), 0x80|((cp>>6)&63), 0x80|(cp&63));
+    } else out.push(0xe0|(c>>12), 0x80|((c>>6)&63), 0x80|(c&63));
+  }
+  return out;
+}
+function sha256Hex(str){
+  const rotr = (x,n)=> (x>>>n)|(x<<(32-n));
+  let H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const b = utf8Bytes(str);
+  const bitLen = b.length * 8;
+  b.push(0x80);
+  while(b.length % 64 !== 56) b.push(0);
+  b.push(0,0,0,0,(bitLen>>>24)&255,(bitLen>>>16)&255,(bitLen>>>8)&255,bitLen&255);
+  const w = new Array(64);
+  for(let off=0; off<b.length; off+=64){
+    for(let i=0;i<16;i++) w[i] = (b[off+i*4]<<24)|(b[off+i*4+1]<<16)|(b[off+i*4+2]<<8)|b[off+i*4+3];
+    for(let i=16;i<64;i++){
+      const s0 = rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]>>>3);
+      const s1 = rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]>>>10);
+      w[i] = (w[i-16]+s0+w[i-7]+s1)|0;
+    }
+    let a=H[0],bb=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+    for(let i=0;i<64;i++){
+      const S1 = rotr(e,6)^rotr(e,11)^rotr(e,25);
+      const ch = (e&f)^((~e)&g);
+      const t1 = (h+S1+ch+SHA256_K[i]+w[i])|0;
+      const S0 = rotr(a,2)^rotr(a,13)^rotr(a,22);
+      const mj = (a&bb)^(a&c)^(bb&c);
+      const t2 = (S0+mj)|0;
+      h=g; g=f; f=e; e=(d+t1)|0; d=c; c=bb; bb=a; a=(t1+t2)|0;
+    }
+    H = [(H[0]+a)|0,(H[1]+bb)|0,(H[2]+c)|0,(H[3]+d)|0,(H[4]+e)|0,(H[5]+f)|0,(H[6]+g)|0,(H[7]+h)|0];
+  }
+  return H.map(x=>('00000000'+(x>>>0).toString(16)).slice(-8)).join('');
+}
+
+const CAL_TOKEN_LEN = 24;
+// 설정은 Firebase work-schedule/calendar = {url, salt} 에 둡니다(저장소에 두지 않습니다).
+function calSettings(){
+  const c = scheduleData.calendar;
+  return (c && c.url && c.salt) ? c : null;
+}
+function calToken(salt, kind, value){
+  return sha256Hex(salt + '|' + kind + '|' + value).slice(0, CAL_TOKEN_LEN);
+}
+function calLink(cfg, kind, value){
+  return cfg.url + (cfg.url.indexOf('?') >= 0 ? '&' : '?') + 'k=' + calToken(cfg.salt, kind, value);
+}
+// 명단에 있는 이름만 주소를 만들 수 있습니다 — Apps Script 가 Firebase 의 teamRoster 로
+// 열쇠를 되찾기 때문에, 명단에 없는 이름은 주소를 열어도 아무것도 나오지 않습니다.
+function calNameListed(name){
+  return !!name && TEAM_ORDER.some(tk => (TEAMS[tk].members || []).some(m => m.name === name));
+}
+
+function openCalendarPanel(){
+  _panelDismissable = true; _panelAllowsSync = true; // 읽기용 — 바깥을 눌러 닫아도 잃을 입력이 없습니다
+  const panel = document.getElementById('panel');
+  const cfg = calSettings();
+  const me = getMe();
+  const myName = (me && me.name) || '';
+  const myTeam = teamOfName(myName) || (me && me.team) || '';
+
+  let body;
+  if(!cfg){
+    body =
+      '<div class="sub">아직 켜지지 않은 기능입니다. 관리자가 중계 주소와 열쇠를 한 번 등록하면 바로 쓸 수 있습니다.' +
+      '<br>설정 방법은 저장소의 <b>apps-script-calendar/README.md</b> 에 있습니다.</div>';
+  } else if(!myName){
+    body =
+      '<div class="sub">먼저 <b>내 이름</b>을 지정해 주세요. 그 이름으로 내 일정만 담은 주소를 만듭니다.</div>' +
+      '<div class="form-actions"><button class="btn-save" id="cal-go-me">내 이름 지정하기</button></div>';
+  } else if(!calNameListed(myName)){
+    body =
+      '<div class="sub"><b>' + escapeHtml(myName) + '</b> 님은 팀원 명단에 없어 개인 주소를 만들 수 없습니다. ' +
+      '<b>팀원 관리</b>에서 이름을 추가한 뒤 다시 열어 주세요.</div>';
+  } else {
+    const rows = [
+      {h:'내 일정', d:'내 근무만 들어갑니다. ON 인 날도 함께 보입니다.', url:calLink(cfg, 'me', myName), id:'cal-u-me'}
+    ];
+    if(TEAMS[myTeam]){
+      rows.push({
+        h: TEAMS[myTeam].label + ' 팀 전체',
+        d: '팀원 이름과 함께 들어갑니다. 평일 ON 만 있는 날은 넣지 않습니다(매일 전원이 떠서 가려집니다).',
+        url: calLink(cfg, 'team', myTeam), id:'cal-u-team'
+      });
+    }
+    body =
+      '<div class="sub">아래 주소를 휴대폰 캘린더에 <b>구독</b>으로 등록하면, 근무일정이 자동으로 들어옵니다. ' +
+      '<b>읽기 전용</b>이라 캘린더에서 고친 내용은 일정표에 반영되지 않습니다.' +
+      '<br>지난 ' + 30 + '일 ~ 앞으로 ' + 120 + '일치가 담기고, 갱신 시점은 캘린더 앱이 정합니다(보통 몇 시간).</div>' +
+      rows.map(r =>
+        '<div class="form-row">' +
+          '<label>' + escapeHtml(r.h) + '</label>' +
+          '<div style="display:flex;gap:6px;align-items:stretch;">' +
+            '<input type="text" id="' + r.id + '" readonly value="' + escapeHtml(r.url) + '" style="flex:1;min-width:0;font-size:16px;">' +
+            '<button class="add-btn" data-copy="' + r.id + '" style="white-space:nowrap;min-height:44px;">복사</button>' +
+          '</div>' +
+          '<div class="sub" style="margin-top:4px;">' + escapeHtml(r.d) + '</div>' +
+        '</div>').join('') +
+      '<div class="sub" style="margin-top:10px;">' +
+        '<b>아이폰</b> — 설정 → 캘린더 → 계정 → 계정 추가 → 기타 → <b>구독 캘린더 추가</b> → 주소 붙여넣기' +
+        '<br><b>안드로이드·구글 캘린더</b> — PC 브라우저에서 calendar.google.com → 왼쪽 「다른 캘린더」 <b>＋</b> → <b>URL로 추가</b> → 주소 붙여넣기 (폰 앱에는 추가 메뉴가 없습니다)' +
+        '<br><b>주소를 아는 사람은 그 일정을 볼 수 있습니다</b> — 단체 대화방에 올리지 말고 본인만 쓰세요.' +
+      '</div>';
+  }
+
+  panel.innerHTML =
+    '<button class="close" onclick="closePanel()">×</button>' +
+    '<h3>캘린더 연동</h3>' + body;
+  document.getElementById('overlay').classList.add('show');
+
+  const goMe = panel.querySelector('#cal-go-me');
+  if(goMe) goMe.onclick = ()=>{ closePanel(); openMePanel(false); };
+
+  panel.querySelectorAll('[data-copy]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const input = panel.querySelector('#' + btn.dataset.copy);
+      if(!input) return;
+      input.select();
+      const done = ()=> showToast('주소를 복사했습니다');
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(input.value).then(done, ()=>{
+          // 권한이 없거나 오래된 브라우저 — 선택은 되어 있으니 직접 복사하면 됩니다
+          showToast('주소를 선택했습니다 — 직접 복사해 주세요');
+        });
+      } else {
+        try{ document.execCommand('copy'); done(); }
+        catch(e){ showToast('주소를 선택했습니다 — 직접 복사해 주세요'); }
+      }
+    };
+  });
+}
+
 function openMePanel(firstTime){
   // 이름만 고르는 창이라 뒤쪽 자동 갱신을 막을 이유가 없다 (첫 방문 때 떠 있어도 최신 데이터가 들어온다)
   _panelDismissable = false; _panelAllowsSync = true;
@@ -3580,6 +3746,7 @@ document.getElementById('viewWeekBtn').onclick = ()=>{
   render();
 };
 document.getElementById('meBtn').onclick = ()=> openMePanel(false);
+document.getElementById('calBtn').onclick = ()=> openCalendarPanel();
 document.getElementById('orderBtn').onclick = openMemberOrderPanel;
 document.getElementById('dutyViewBtn').onclick = ()=>{
   dutyOnlyView = !dutyOnlyView;
