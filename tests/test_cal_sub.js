@@ -262,7 +262,28 @@ const byteLen = s => Buffer.byteLength(s, 'utf8');
   if (sb2.icsFor_(whoTeam).indexOf('가팀원 당직') >= 0) throw new Error('팀 주소에 삭제한 일정이 남음');
   console.log('9) 일정을 지우거나 비우면 캘린더에서도 사라짐 ✓ (3건 → 1건)');
 
-  // 10) 설정이 없으면 안내만
+  // 10) 요금 설정 — 캐시 1시간 이상, 야간(22~07시)에는 아침까지 들고 있는다
+  //     (2026-11-17 사용자 결정. 이 값을 줄이면 다운로드가 그대로 늘어납니다)
+  const cacheSec = sb.DATA_CACHE_SEC;
+  if (cacheSec !== 1800) throw new Error('근무 시간 캐시가 ' + cacheSec + '초 — 30분(1800)이어야 함');
+  if (sb.QUIET_FROM !== 17 || sb.QUIET_TO !== 8) {
+    throw new Error('쉬는 시간대가 ' + sb.QUIET_FROM + '~' + sb.QUIET_TO + '시 — 17~8시여야 함');
+  }
+  const at = (h, m) => Date.UTC(2026, 10, 17, h - 9, m || 0); // 한국 시간 h시
+  [[8, 1], [12, 0], [14, 0], [16, 59]].forEach(([h, m]) => {
+    const v = sb.cacheSecFor_(at(h, m));
+    if (v !== cacheSec) throw new Error('근무 시간 ' + h + ':' + m + ' 캐시가 ' + v + '초');
+  });
+  [[17, 0], [21, 0], [3, 0]].forEach(([h, m]) => {
+    const v = sb.cacheSecFor_(at(h, m));
+    if (!(v > cacheSec)) throw new Error('쉬는 시간 ' + h + ':' + m + ' 인데 캐시가 근무 시간과 같음(' + v + '초)');
+    if (v > 21600) throw new Error('캐시가 Apps Script 상한(6시간)을 넘음: ' + v);
+  });
+  // 아침 8시가 코앞이면 남은 시간이 30분보다 짧으므로, 근무 시간 값(30분) 밑으로는 내려가지 않습니다
+  if (sb.cacheSecFor_(at(7, 59)) < cacheSec) throw new Error('7:59 캐시가 근무 시간 값보다 짧음');
+  console.log('10) 근무 시간 캐시 ' + (cacheSec / 60) + '분 · 17~08시는 길게(최대 6시간) ✓');
+
+  // 11) 설정이 없으면 안내만
   window.eval("scheduleData.calendar = null;");
   if (window.eval('calSettings()')) throw new Error('설정이 없는데 있다고 함');
   window.eval('openCalendarPanel()');
@@ -276,7 +297,7 @@ const byteLen = s => Buffer.byteLength(s, 'utf8');
   if (noKey.getMime() === 'ICAL') throw new Error('열쇠 없는 요청에 캘린더 형식으로 답함');
   const badKey = sb.doGet({ parameter: { k: '0'.repeat(24) } });
   if (badKey.getMime() === 'ICAL') throw new Error('틀린 열쇠에 캘린더 형식으로 답함');
-  console.log('10) 설정·열쇠가 없으면 안내만 하고 빈 캘린더를 주지 않음 ✓');
+  console.log('11) 설정·열쇠가 없으면 안내만 하고 빈 캘린더를 주지 않음 ✓');
 
   console.log('\n✅ 캘린더 구독: 화면과 Apps Script 가 같은 열쇠를 쓰고, 개인·팀 주소가 규격대로 나옴');
   process.exit(0);

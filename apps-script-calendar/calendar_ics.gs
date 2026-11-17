@@ -20,7 +20,17 @@ var FB_URL = 'https://sysmex-system-schedule-default-rtdb.firebaseio.com';
 
 var DAYS_BACK = 30;        // 과거 며칠까지 넣을지 (지난 일정은 캘린더에서 쓸모가 적다)
 var DAYS_AHEAD = 120;      // 미래 며칠까지
-var DATA_CACHE_SEC = 1800; // 받은 일정 데이터를 캐시하는 시간 (30분)
+// 받은 일정 데이터를 캐시하는 시간(근무 시간대). 캘린더 앱이 아무리 자주 받아 가도
+// Firebase 는 팀당 이 간격에 한 번만 읽힙니다. 30분이면 낮에 바뀐 일정이 비교적 빨리 갑니다.
+var DATA_CACHE_SEC = 1800;
+
+// 근무 시간 밖에는 중계를 쉽니다(2026-11-17 사용자 요청 「17시부터 08시까지는 안 받고」).
+// 그 시간대(한국 시간)에는 캐시를 아침까지 길게 잡아 Firebase 를 거의 읽지 않습니다.
+// 캘린더 앱이 밤에 받아 가도 받아 둔 내용을 그대로 주므로 일정이 비거나 지워지지 않습니다.
+// Apps Script 캐시는 최대 6시간이라 밤 사이 두세 번은 읽힙니다(30회 → 3회 정도).
+var QUIET_FROM = 17; // 17시부터
+var QUIET_TO = 8;    // 다음 날 8시까지
+var CACHE_MAX_SEC = 21600; // Apps Script 캐시 상한 (6시간)
 var SALT_CACHE_SEC = 21600;
 var ROSTER_CACHE_SEC = 3600;
 var TOKEN_LEN = 24;        // 열쇠 길이(16진수 글자 수)
@@ -193,8 +203,23 @@ function teamData_(tk) {
     '&startAt=' + encodeURIComponent('"' + isoShift_(-DAYS_BACK) + '"') +
     '&endAt=' + encodeURIComponent('"' + isoShift_(DAYS_AHEAD) + '"');
   var obj = fbGet_('work-schedule/' + tk, q) || {};
-  cachePut_(ck, JSON.stringify(obj), DATA_CACHE_SEC);
+  cachePut_(ck, JSON.stringify(obj), cacheSecFor_(Date.now()));
   return obj;
+}
+
+/**
+ * 지금 받은 자료를 얼마나 오래 들고 있을지 정합니다.
+ * 근무 시간(08~17시)에는 DATA_CACHE_SEC, 그 밖에는 아침까지(캐시 상한 6시간).
+ * 시각을 인자로 받는 이유는 시험에서 시간을 고정해 확인하기 위해서입니다.
+ */
+function cacheSecFor_(nowMs) {
+  var k = new Date(nowMs + 9 * 3600000); // 한국 시간
+  var h = k.getUTCHours(), m = k.getUTCMinutes();
+  var night = (h >= QUIET_FROM) || (h < QUIET_TO);
+  if (!night) return DATA_CACHE_SEC;
+  var hoursLeft = (h >= QUIET_FROM) ? (24 - h + QUIET_TO) : (QUIET_TO - h);
+  var sec = hoursLeft * 3600 - m * 60;
+  return Math.max(DATA_CACHE_SEC, Math.min(CACHE_MAX_SEC, sec));
 }
 
 // 캐시는 한 칸에 100KB 까지라, 긴 값은 토막으로 나눠 담습니다.
