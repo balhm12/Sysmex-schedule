@@ -21,8 +21,11 @@ assert(!html.includes('id="vtPrd"'), 'Productivity 탭 버튼이 없어야 함')
 assert(/org:\{[^}]*tabs:\['team','overview','person','equip'\]/.test(html), 'Organization 상세 분석 하위 탭');
 assert(html.includes('id="cOrgSc"') && /type:'bubble'/.test(html), '담당 장비 × 업무량 거품 그림');
 assert(/function orgExt[\s\S]{0,400}eqAgg\(PROD\.eq\.by/.test(html), '조직 담당 장비는 기존 함수(eqAgg)를 씀');
-assert(html.includes('담당 장비: 현재 관리표 기준 / 처리 건수: 선택 기간 기준. 시점이 다른 데이터의 참고 비교입니다.'), '산점도 주석 (작업지시서 v2)');
-assert(/const ORGSC=\{u:'office'/.test(html) && /orgRows\(ORGSC\.u\)\.filter\(r=>r\.eq&&/.test(html) && html.includes('${UW} 중앙값'), '산점도 = 기본 사무소, 팀은 전환(섞지 않음), 기준선 = 보이는 단위의 중앙값');
+assert(html.includes('담당 장비: 현재 관리표 기준 /'), '산점도 주석(시점이 다름)');
+assert(/const ORGSC=\{u:'office',y:'per'/.test(html) && /function orgCoreOf\(/.test(html) && /eqc:core\.length\?A\.eq\/core\.length/.test(html), '산점도(2026-11-17) = 기본 사무소, 두 축 모두 비교 인원 1인당');
+assert(/const ORG_BAND=0\.10/.test(html) && /function orgRel\(/.test(html) && !/function orgQuad\(/.test(html), '위치 = FSG 평균 비율선 ±10%(중앙값 십자선 아님)');
+assert(html.includes('부하 판정용이 아닙니다.') && html.includes('진행 중인 달</b>이 들어 있습니다'), '부하 판정 아님·진행 중인 달 경고');
+assert(/if\(o\.purp==='PM'\) pmM\[o\.mk\]/.test(html), 'PM 월별 편차 = 취소만 제외(완료 처리 전 포함)');
 assert(html.includes('장비 100대당 처리 건수') && !html.includes('장비 100대당 서비스 발생'), '지표 이름 = 장비 100대당 처리 건수');
 const sv = between('function setView(v){', 'function showMain');
 assert(sv.includes('rerender()') && sv.includes('scr-off'));
@@ -84,7 +87,7 @@ assert(/const FV=VIEW==='org'\|\|VIEW==='wl'/.test(html), 'v3.1: Organization·W
 /* 내보내기: 지금 화면 Excel(ExcelJS, 누를 때만)·PDF(인쇄) */
 assert(/id="xXlsx"/.test(html) && /id="xPdf"/.test(html) && /function exportXlsx\(/.test(html) && /exceljs\/4\.4\.0/.test(html) && html.indexOf('function exportXlsx(')<html.indexOf('function showMain(){'), '내보내기 버튼·코드');
 /* 산점도 읽는 법: 중앙값 기준 네 칸 의미와 이상적인 모습 */
-assert(/function orgQuad\(/.test(html) && /class="ogguide"/.test(html) && /균형 · 큰 규모/.test(html), '산점도 네 칸 의미·읽는 법');
+assert(/class="ogguide"/.test(html) && html.includes('FSG 평균보다 장비 1대당 업무가 많고'), '산점도 읽는 법');
 /* v3.2: Overview 운영 장비 현황, 조직 표 핵심 열, PM 편차 상세, 내보내기 메타 */
 assert(/function ovEquipCard\(/.test(html) && /\$\{ovEquipCard\(\)\}/.test(html) && /function opEquip\(/.test(html), 'v3.2: Overview 운영 장비 현황(자산대장)');
 assert(/const OG_CORE=/.test(html) && /id="proHealthFold"/.test(html) && /ovkpi c4" id="proKpi"/.test(html), 'v3.2: 조직 표 핵심 열·PM 편차 상세');
