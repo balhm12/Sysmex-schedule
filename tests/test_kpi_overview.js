@@ -143,3 +143,13 @@ assert(/function mPred\(months\)/.test(html) && /전월 동기간\(/.test(html) 
 /* 2026-11-16: 기간을 바꾸면 PROD 를 다시 계산한 뒤 그림(한 번 늦게 바뀌던 것) */
 { const i=html.indexOf("$('fPeriod').addEventListener('change',()=>{ PROD_DIRTY=true; rerender(); });"); assert(i>0, '기간 변경 → PROD_DIRTY 먼저');
   assert(!/\['fPeriod','fTeam'\]\.forEach\(id=>\$\(id\)\.addEventListener\('change',\(\)=>rerender\(\)\)\)/.test(html), '예전 처리기 없음'); }
+
+/* 2026-11-17 KPI 재검토: 이름 정리 · 재방문율 보조 지표 · PM 커버리지 목표 */
+{ const h=require('fs').readFileSync(require('path').join(__dirname,'..','fsg-kpi.html'),'utf8');
+  const a=require('assert');
+  a(!/예방정비 지수|KPI 종합 점수|KPI 점수|학술 업무 비중/.test(h),'옛 지표 이름이 남아 있음');
+  a(/n:'평균 수리 작업 시간 \(MTTR\)'/.test(h),'MTTR 표시 이름');
+  a(/function revSub\(/.test(h)&&/id="sqKpiR"/.test(h)&&/x\.e>b\.e&&x\.e<=b\.e\+WIN/.test(h),'재방문율 보조 지표(앞 방문 종료 뒤 14일)');
+  a(/C\.eligible/.test(h)&&/C\.avg\(rr\)/.test(h),'보조 지표는 재방문율과 같은 거래처 평균');
+  a(/const TARGET_PMCOV = 80;/.test(h)&&/tgSt\(cov,TARGET_PMCOV,true\)/.test(h),'PM 커버리지 목표 80%');
+  console.log('kpi review 2026-11-17 ok'); }
