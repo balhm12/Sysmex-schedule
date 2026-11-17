@@ -247,7 +247,22 @@ const byteLen = s => Buffer.byteLength(s, 'utf8');
   window.closePanel();
   console.log('8) 창에 주소 2개와 아이폰(구독 캘린더)·구글 안내·주의 문구가 보임 ✓');
 
-  // 9) 설정이 없으면 안내만
+  // 9) 일정을 지우거나 비우면 캘린더에서도 사라진다 (구독은 받을 때마다 전체를 다시 그립니다)
+  const before9 = sb.icsFor_(who).split('BEGIN:VEVENT').length - 1;
+  delete DATA.west[D3]['가팀원'];                 // 한 건 삭제 (주말·휴일 당직)
+  DATA.west[D2]['가팀원'] = { am1: '', am2: '', pm1: '', pm2: '', night: '', weekend: '' }; // 한 건 비우기
+  const sb2 = makeSandbox();                      // 캐시가 비워진 상태로 다시 받음
+  const after = sb2.icsFor_(who);
+  const after9 = after.split('BEGIN:VEVENT').length - 1;
+  if (before9 !== 3) throw new Error('지우기 전 일정이 ' + before9 + '건');
+  if (after9 !== 1) throw new Error('지운 뒤 일정이 ' + after9 + '건 (1건이어야 함)');
+  if (after.indexOf('당직') >= 0) throw new Error('삭제한 일정이 아직 캘린더에 남음');
+  if (after.replace(/\r\n /g, '').indexOf('오전 휴가') >= 0) throw new Error('비운 일정이 아직 캘린더에 남음');
+  // 팀 주소에서도 같이 사라져야 합니다
+  if (sb2.icsFor_(whoTeam).indexOf('가팀원 당직') >= 0) throw new Error('팀 주소에 삭제한 일정이 남음');
+  console.log('9) 일정을 지우거나 비우면 캘린더에서도 사라짐 ✓ (3건 → 1건)');
+
+  // 10) 설정이 없으면 안내만
   window.eval("scheduleData.calendar = null;");
   if (window.eval('calSettings()')) throw new Error('설정이 없는데 있다고 함');
   window.eval('openCalendarPanel()');
@@ -261,7 +276,7 @@ const byteLen = s => Buffer.byteLength(s, 'utf8');
   if (noKey.getMime() === 'ICAL') throw new Error('열쇠 없는 요청에 캘린더 형식으로 답함');
   const badKey = sb.doGet({ parameter: { k: '0'.repeat(24) } });
   if (badKey.getMime() === 'ICAL') throw new Error('틀린 열쇠에 캘린더 형식으로 답함');
-  console.log('9) 설정·열쇠가 없으면 안내만 하고 빈 캘린더를 주지 않음 ✓');
+  console.log('10) 설정·열쇠가 없으면 안내만 하고 빈 캘린더를 주지 않음 ✓');
 
   console.log('\n✅ 캘린더 구독: 화면과 Apps Script 가 같은 열쇠를 쓰고, 개인·팀 주소가 규격대로 나옴');
   process.exit(0);
