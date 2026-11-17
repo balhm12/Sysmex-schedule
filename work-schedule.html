@@ -915,7 +915,7 @@ const INSTITUTION_LIST = ["(사)부산의료선교회세계로병원", "(사)한
 // 백엔드 설정 — 기존 휴가·회의 공유 캘린더와 같은 Firebase 프로젝트를
 // 사용하되, 데이터가 섞이지 않도록 다른 경로(work-schedule)에 저장합니다.
 // ============================================================
-const BUILD_VERSION = 46; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
+const BUILD_VERSION = 47; // 화면 파일 버전 — 고칠 때마다 올립니다 (캐시 확인용)
 const FIREBASE_URL = "https://sysmex-system-schedule-default-rtdb.firebaseio.com";
 const STORAGE_ENDPOINT = FIREBASE_URL.startsWith('http')
   ? FIREBASE_URL.replace(/\/$/,'') + '/work-schedule.json'
@@ -2172,7 +2172,7 @@ function openCalendarPanel(){
           '<div class="sub" style="margin-top:4px;">' + escapeHtml(r.d) + '</div>' +
         '</div>').join('') +
       '<div class="sub" style="margin-top:10px;">' +
-        '<b>아이폰</b> — 설정 → 캘린더 → 계정 → 계정 추가 → 기타 → <b>구독 캘린더 추가</b> → 주소 붙여넣기' +
+        '<b>아이폰</b> — 설정 → 캘린더 → 계정 → 계정 추가 → <b>구독 캘린더</b> → 「서버」 칸에 주소 붙여넣기 → 다음 → <b>저장</b>(사용자 이름·암호는 비워 둡니다)' +
         '<br><b>안드로이드·구글 캘린더</b> — PC 브라우저에서 calendar.google.com → 왼쪽 「다른 캘린더」 <b>＋</b> → <b>URL로 추가</b> → 주소 붙여넣기 (폰 앱에는 추가 메뉴가 없습니다)' +
         '<br><b>주소를 아는 사람은 그 일정을 볼 수 있습니다</b> — 단체 대화방에 올리지 말고 본인만 쓰세요.' +
       '</div>';
