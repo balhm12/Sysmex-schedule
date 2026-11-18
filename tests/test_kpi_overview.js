@@ -153,3 +153,10 @@ assert(/function mPred\(months\)/.test(html) && /전월 동기간\(/.test(html) 
   a(/C\.eligible/.test(h)&&/C\.avg\(rr\)/.test(h),'보조 지표는 재방문율과 같은 거래처 평균');
   a(/const TARGET_PMCOV = 80;/.test(h)&&/tgSt\(cov,TARGET_PMCOV,true\)/.test(h),'PM 커버리지 목표 80%');
   console.log('kpi review 2026-11-17 ok'); }
+
+/* 2026-11-18 초기 고장 → 해당 장비 목록 */
+{ const h=require('fs').readFileSync(require('path').join(__dirname,'..','fsg-kpi.html'),'utf8'), a=require('assert');
+  a(/function insGoEF\(/.test(h)&&/if\(it\.ef\) return insGoEF\(\)/.test(h)&&/vl:'Instrument',ef:1/.test(h),'초기 고장 이슈 → 초기 고장 목록');
+  a(/x\.f90L=/.test(h)&&/x\.f90=x\.sn\?x\.f90L\.length/.test(h),'90일 고장 수는 목록 길이와 같음');
+  a(/function goTo\(/.test(h)&&/function goSqChr\(/.test(h)&&/sk:o\.k/.test(h)&&/id="insEF"/.test(h)&&/class="ovkc st inslink"/.test(h),'전체/초기 고장만 전환·KPI 칸 누르기');
+  console.log('early fail ok'); }
