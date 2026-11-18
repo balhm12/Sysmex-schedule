@@ -79,6 +79,14 @@ const dash = { open_: ctx.open_, decodeEmbed: ctx.decodeEmbed, decodeSer: ctx.de
   assert(store.meta.updatedAt === store.meta.actAt && store.meta.serAt === store.meta.actAt); assert(await dash.codeOk('test-code', store.meta));
   const got = JSON.parse(JSON.stringify(dash.decodeEmbed(await dash.open_(store.act, 'test-code')))); assert.strictEqual(got.length, 12); assert.strictEqual(got[11].purp, 'PM');
   assert(!Object.keys(store).some(k => /^backups\//.test(k)), '처음엔 백업 없음');
+  // 직원용 자료(2026-11-18): 올릴 때 이름 없는 사본도 같이 — 직원용 코드로만 열리고 담당자 이름이 없다(자세한 검사는 tests/test_staff.js)
+  { const SC = require('../fsg-report/staff-core'), sc = await SC.staffCodeOf('test-code', require('crypto').webcrypto.subtle);
+    assert(store['staff/data'] && store['staff/meta'], '직원용 자료가 올라가지 않음: ' + r1.stdout + r1.stderr); assert(/직원용 자료도 갱신/.test(r1.stdout));
+    assert(await P.codeOk(sc, store['staff/meta']) && !(await P.codeOk('test-code', store['staff/meta'])), '직원용 meta 는 직원용 코드로만');
+    const B = await P.open_(store['staff/data'], sc), owners = new Set(got.map(r => r.own).filter(Boolean));
+    assert.strictEqual(B.kind, 'fsg-kpi-staff'); assert.strictEqual(B.act.n, 12); assert(B.ser && B.ser.used.length === store.meta.serUsed, '자산대장도 사본에');
+    assert(B.act.d.own.every(v => !owners.has(v)) && B.act.d.own.every(v => !v || /^~/.test(v)), '사본에 담당자 이름이 남음');
+    assert.strictEqual(store['staff/meta'].updatedAt, store.meta.updatedAt, '직원용 자료 시각 = 올린 시각'); }
   // 두 번째 올리기: 기존 act/ser 를 backups/오늘/ 로, 오래된 백업은 삭제, 기존 meta 의 다른 필드(hrSrc)는 유지
   store.meta.hrSrc = '연장근무.xlsx'; store['backups/2020-01-01/act'] = { old: 1 };
   const r2 = await run(); assert.strictEqual(r2.status, 0, r2.stderr + r2.stdout);
