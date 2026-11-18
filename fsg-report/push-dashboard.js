@@ -2,18 +2,21 @@
 /* FSG KPI 대시보드(fsg-kpi.html)에 CRM 데이터 올리기 — 브라우저 「CRM 데이터 올리기」(?admin)와 같은 포맷·같은 암호화.
  * 활동 → act(열 사전 압축 encodeAct) · 자산대장 '사용' 장비 → ser(encodeSer) · meta(actSrc·actRows·serSrc·updatedAt·check)
  * gzip → PBKDF2(200,000회)+AES-GCM(접근 코드) → Firebase RTDB <FIREBASE_URL>/kpi-dashboard/{act,ser,meta}. 올리기 전 기존 데이터를 backups/날짜/ 에 복사(30일 보관).
+ * 올린 뒤 「직원용 자료」(이름 없는 사본, kpi-dashboard/staff/{data,meta})도 같이 갱신한다 — 일반 직원 화면이 쓰는 자료(staff-core.js, 대시보드와 같은 방법).
  *
  *   node fsg-report/push-dashboard.js --dir "CRM_원본"            (활동 필수 · Serial 있으면 함께)
  *   환경변수  FSG_KPI_CODE(접근 코드)  FSG_ADMIN_EMAIL / FSG_ADMIN_PW(관리자 계정)  — 어디에도 기록하지 않는다
  *   --activity / --serial 파일 직접 지정 · --token 관리자 idToken 직접(로그인 생략) · --dry-run 올리지 않고 포맷만 만들어 --out 에 저장
  *   --firebase-url / --api-key / --data-path  기본값은 fsg-kpi.html 안의 상수(대시보드와 항상 같게)
  *   --force-code  기존 데이터의 접근 코드와 달라도 올린다(팀장들이 새 코드를 입력해야 함)
+ *   --no-staff    직원용 자료를 갱신하지 않는다(기본은 갱신)
  *   --allow-older 대시보드에 이미 올라간 활동 파일보다 오래된 파일도 올린다(기본은 막는다 — 여러 PC를 번갈아 쓸 때 예전 다운로드 파일로 덮어쓰는 사고 방지).
  *                 자산대장(Serial)이 대시보드의 것보다 오래되면 활동만 올리고 자산대장은 건너뛴다(--allow-older 면 함께 올림)
  *   회사 보안 프로그램이 HTTPS를 검사하는 PC: Windows 인증서 저장소의 회사 인증서를 자동으로 믿는다(Node 22.19 이상) */
 'use strict';
 const fs = require('fs'), path = require('path');
 const R = require('./lib/read-crm');
+const SC = require('./staff-core');   // 직원용 자료 만들기 — fsg-kpi.html 에서 글자 그대로 떼어 낸 사본
 /* 회사 보안 프로그램(HTTPS 검사)이 쓰는 인증서는 Windows 저장소에만 있고 Node 기본 목록에는 없다 → 시스템 인증서를 더해 준다. 지원 안 하는 Node 면 false. */
 function trustSystemCerts() {
   try { const tls = require('tls'); if (typeof tls.getCACertificates !== 'function' || typeof tls.setDefaultCACertificates !== 'function') return false;
@@ -66,6 +69,28 @@ async function open_(rec, code) {
 }
 async function codeOk(code, meta) { if (!meta || !meta.check) return true; try { return (await open_(meta.check, code)) === 'FSG-KPI'; } catch (e) { return false; } }
 const nowStr = () => { const d = new Date(Date.now() + 9 * 3600000); return d.toISOString().slice(0, 16).replace('T', ' '); };   // 한국 시각(대시보드는 관리자 PC 시각)
+
+/* --- 직원용 자료(이름 없는 사본) — 대시보드 staffSync 와 같은 일 ---
+   명단·사무소·신입은 fsg-kpi.html 의 상수를 그대로 읽는다(report-data.js 와 같은 방식). */
+function dashRoster() {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'fsg-kpi.html'), 'utf8'), grab = re => { const m = src.match(re); return m ? m[1] : null; };
+  const ro = grab(/const ROSTER = (\[[\s\S]*?\]\]);/), office = grab(/const OFFICE = (\{[\s\S]*?\});/), nb = grab(/const NEWBIE=(\[[^\]]*\]);/);
+  if (!ro) throw new Error('fsg-kpi.html 에서 ROSTER 상수를 찾지 못했습니다');
+  return { roster: JSON.parse(ro), office: office ? eval('(' + office + ')') : {}, newbie: nb ? eval(nb) : [] };
+}
+/* 올린 포맷(encodeAct)을 다시 행으로 — 대시보드 decodeEmbed 와 같은 값(S/N 정리 snOf 는 대시보드가 읽을 때 한다) */
+function rowsOfAct(E) {
+  const out = new Array(E.n), c = E.c, d = E.d, g = (k, i) => (d[k] && c[k] ? d[k][c[k][i]] : '') || '';
+  for (let i = 0; i < E.n; i++) out[i] = { st: g('st', i), t: E.t[i] < 0 ? null : E.t[i] * 60000, e: E.e[i] < 0 ? null : E.e[i] * 60000, own: g('own', i), err: g('err', i), acct: g('acct', i), sn: g('sn', i), prod: g('prod', i), purp: g('purp', i), subj: g('subj', i), ft: g('ft', i), att: g('att', i), c: E.cr && E.cr[i] >= 0 ? E.cr[i] * 60000 : null };
+  return out;
+}
+async function buildStaff(o) {
+  const raw = SC.fixTz(rowsOfAct(o.actPayload));
+  const B = SC.staffBundle({ raw, roster: o.roster, office: o.office, newbie: o.newbie, encodeAct, rnd: o.rnd || rnd, ser: o.serPayload || null, eq: o.eq || null, inst: o.inst || null, acad: o.acad || null,
+    src: { act: o.actPayload.src || '', ser: o.serSrc || '' }, tzN: raw.tzFixed || 0, made: o.made });
+  const sc = await SC.staffCodeOf(o.code, subtle);
+  return { bundle: B, data: await seal(B, sc), meta: { v: 1, updatedAt: o.made, actRows: o.actPayload.n, check: await seal('FSG-KPI', sc) } };
+}
 
 /* --- Firebase REST --- */
 async function adminLogin(email, pw, apiKey) {
@@ -147,6 +172,15 @@ async function main() {
   if (serPayload) { await fb('ser', { method: 'PUT', body: JSON.stringify(await seal(serPayload, code)) }); meta.serSrc = serSrc; meta.serAt = now; meta.serUsed = serPayload.used.length; }
   await fb('meta', { method: 'PUT', body: JSON.stringify(meta) });
   console.log(`올리기 완료 ${now} — 대시보드는 새로고침하거나 5분 안에 자동 반영됩니다` + (serPayload ? '' : ' (자산대장은 올리지 않음 — 기존 자료 유지)'));
+  /* 직원용 자료(이름 없는 사본) — 자산대장·관리표·기관 분류·학술 파일은 대시보드에 올라가 있는 것을 받아 같이 넣는다. 실패해도 위 올리기는 끝난 것이다 */
+  if (!o['no-staff']) try {
+    const got = async k => { try { const r = await fb(k); return r ? await open_(r, code) : null; } catch (e) { console.warn(`  (${k} 는 직원용 자료에 넣지 못함: ${e.message})`); return null; } };
+    const S = await buildStaff(Object.assign({ code, actPayload, serPayload: serPayload || (meta.serSrc ? await got('ser') : null), serSrc: meta.serSrc || '',
+      eq: meta.eqSrc ? await got('eq') : null, inst: meta.instAt ? await got('inst') : null, acad: meta.acadAt ? await got('acad') : null, made: now }, dashRoster()));
+    await fb('staff/data', { method: 'PUT', body: JSON.stringify(S.data) });
+    await fb('staff/meta', { method: 'PUT', body: JSON.stringify(S.meta) });
+    console.log('직원용 자료도 갱신했습니다(이름 없는 사본 — 일반 직원 화면)');
+  } catch (e) { console.warn('⚠ 직원용 자료는 갱신하지 못했습니다(대시보드 올리기는 끝났습니다): ' + explainError(e)); }
 }
 if (require.main === module) main().catch(e => { console.error('오류: ' + explainError(e)); process.exit(1); });
-module.exports = { serialLooksPartial, encodeAct, encodeSer, seal, open_, codeOk, nowStr, explainError, trustSystemCerts };
+module.exports = { serialLooksPartial, encodeAct, encodeSer, seal, open_, codeOk, nowStr, explainError, trustSystemCerts, buildStaff, rowsOfAct, dashRoster };

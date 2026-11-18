@@ -122,6 +122,9 @@ ok(!w3(WADM, '/kpi-dashboard/meta', { updatedAt: 'x' }), '가중치 관리자는
 ok(!w3(WADM, '/kpi-dashboard/act', { v: 1 }), '가중치 관리자는 CRM 데이터 쓰기 거부');
 ok(!w3(WADM, '/kpi-dashboard/backups/2026-11-09', { a: 1 }), '가중치 관리자는 KPI 백업 쓰기 거부');
 ok(!w3(WADM, '/kpi-dashboard', null), '가중치 관리자는 KPI 전체 삭제 거부');
+/* 직원용 자료(2026-11-18, kpi-dashboard/staff — 이름 없는 사본): 올리는 것은 기존 관리자만, 규칙 변경 없이 되는지 */
+ok(w3(ADMIN, '/kpi-dashboard/staff/data', { v: 1, data: 'x' }) && w3(ADMIN, '/kpi-dashboard/staff/meta', { v: 1, updatedAt: 'x' }), '관리자는 직원용 자료 저장');
+ok(!w3(anon, '/kpi-dashboard/staff/data', { v: 1 }) && !w3(WADM, '/kpi-dashboard/staff/meta', { v: 1 }) && !w3(null, '/kpi-dashboard/staff/data', { v: 1 }), '익명·가중치 관리자·비로그인은 직원용 자료 쓰기 거부');
 ok(!w3(WADM, '/kpi-dashboard/weights', { rev: 'x' }), '가중치 전체 덮어쓰기 거부(한 묶음 단위로만)');
 ok(!w3(WADM, '/kpi-dashboard/weights/items', null), '묶음 전체 삭제 거부');
 ok(!w3(anon, '/kpi-dashboard/weights/items/2026-12', wItem()), '익명은 가중치 쓰기 거부');
