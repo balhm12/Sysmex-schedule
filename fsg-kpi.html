@@ -49,8 +49,8 @@ header.top .vinfo .lbtn{white-space:nowrap;background:transparent;color:#fff;bor
 header.top .vinfo .lbtn:hover{background:rgba(255,255,255,.12)}
 header.top .vinfo .lbtn:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .embed .appbar{display:none}
-/* 직원용 화면(2026-11-18): 일반 직원은 이름 없는 사본으로 연다 — 사람 단위 화면(#prod: 개인 순위·개인별 상세·야간·휴일 근무·이동거리)·내보내기·관리자 버튼은 없다. Instrument 의 담당 장비 현황(합계)만 #prod 를 쓴다 */
-.staff body:not([data-view=eqp]) #prod,.staff #prodBar,.staff .xbtns,.staff #ovRptBtn,.staff #adminToggle,.staff #wgtHdr,.staff #openUpl,.staff #upl,.staff .stf-x{display:none!important}
+/* 직원용 화면(2026-11-18): 일반 직원은 이름 없는 사본으로 연다 — 사람 단위 화면(#prod: 개인 순위·개인별 상세·야간·휴일 근무·이동거리)·보고용 보기·관리자 버튼은 없다(Excel·PDF 는 2026-11-19 부터 있음 — 보이는 화면만 내보낸다). Instrument 의 담당 장비 현황(합계)만 #prod 를 쓴다 */
+.staff body:not([data-view=eqp]) #prod,.staff #prodBar,.staff #ovRptBtn,.staff #adminToggle,.staff #wgtHdr,.staff #openUpl,.staff #upl,.staff .stf-x{display:none!important}
 header.top .stfchip{font-size:12px;line-height:1;padding:5px 8px;border:1px solid rgba(255,255,255,.75);border-radius:4px;color:#fff;white-space:nowrap}
 header.top .stfchip[hidden]{display:none}
 @media (max-width:700px){.staff header.top .vinfo{flex-direction:row;align-items:center;gap:8px}.staff header.top .vinfo .vbtns{width:auto;flex:1}}
@@ -3130,12 +3130,7 @@ function shiftMonth(mk,n){let [y,m]=mk.split('-').map(Number);m+=n;while(m<1){m+
 
 /* CRM에는 앞으로 잡힌 약속(예정)도 들어 있다 → CRM 추출일(파일명) 끝까지만 쓴다.
    파일명에서 날짜를 못 찾으면 올린 날, 그것도 없으면 오늘(한국 시간). t는 벽시계 시각을 UTC ms로 둔 값 */
-function dataCutoff(){
-  let m=String(SRC.act||'').match(/(20\d\d)[_\-.](\d{1,2})[_\-.](\d{1,2})/);
-  if(!m&&SRC.at) m=String(SRC.at).match(/(20\d\d)-(\d\d)-(\d\d)/);
-  if(m) return {t:Date.UTC(+m[1],+m[2]-1,+m[3]+1), d:`${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`};
-  const k=new Date(Date.now()+9*3600000); return {t:Date.UTC(k.getUTCFullYear(),k.getUTCMonth(),k.getUTCDate()+1), d:k.toISOString().slice(0,10)};
-}
+function dataCutoff(){ return staffCutOf(SRC.act, SRC.at); }   /* 계산은 staffCutOf 한 곳(PC 올리기 프로그램도 같은 함수를 쓴다) */
 function prepare(){
   const CUT=dataCutoff(); const RAWC=RAW.filter(r=>r.t==null||r.t<CUT.t);
   const assetAcct = SERIAL? new Set(SERIAL.filter(s=>s.state==='사용').map(s=>s.acct)) : null;
@@ -4174,7 +4169,9 @@ async function pushShared(kind, payload, meta){
    · 명단: 실제 사람 대신 「가짜 사람」을 단위(팀·사무소)마다 같은 수·같은 직급 구성으로 만든다(팀장·신입·그 밖 세 묶음을 지킨다).
    · 활동: 담당자·필수 참석자를 같은 단위·같은 묶음의 가짜 사람으로 바꾸되, 건마다 무작위로 고른다(같은 거래처·같은 날 안에서만 같은 사람은 같은 번호).
      그래서 단위 합계(처리 건수·1인당 건수·MTTR·재방문율·FTFR·업무 유형·담당 장비)는 그대로이고, 한 사람의 실적은 남지 않는다.
-   · 사람 단위로만 뜻이 있는 값(가중 업무량, 직급 보정 지수, 활동 인원, 야간·휴일 근무, 이동거리)은 직원 화면에서 뺀다.
+   · 사람 단위로만 뜻이 있는 값(직급 보정 지수, 활동 인원, 야간·휴일 근무, 이동거리)은 직원 화면에서 뺀다.
+   · 가중 업무량은 사람을 섞으면 직급 가중치가 달라지므로, 원본으로 계산한 「단위별 월 합계」(staffScore — 사람별 값 없음)를 사본에 같이 넣어 팀·사무소 값만 보여 준다(2026-11-19).
+     가중치 설정이 그 뒤에 바뀌었으면(rev 가 다르면) 다음 올리기 전까지 가중 업무량을 비운다.
    · 시각 보정(fixTz)은 미리 적용하고, 연장근무(hr)·이동거리 좌표(geo)·관리자 이메일은 넣지 않는다. 주제(subj)에 적힌 이름은 가린다.
    직원용 코드 = 접근 코드에서 한쪽 방향으로만 만든 값이라, 직원용 코드로 원본(이름 있는 자료)은 열 수 없다. */
 /* STAFF-CORE-BEGIN — PC 올리기 프로그램이 이 구간을 글자 그대로 떼어 쓴다(fsg-report/staff-core.js ← tools/extract-staff-core.js, tests/test_staff.js 가 일치 검사) */
@@ -4186,7 +4183,30 @@ async function staffCodeOf(code, subtle){
   let b=''; for(const x of bits) b+=String.fromCharCode(x);
   return btoa(b).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
-/* o = {raw(시각 보정까지 끝난 행), roster[[이름,팀,직급]], office{이름:사무소}, newbie[이름], encodeAct, rnd(n)→난수 바이트, ser, eq{rows,src,made}, inst{map,at}, acad, src{act,ser,eq}, tzN, made} */
+/* CRM 추출일(파일명의 날짜, 없으면 올린 날, 그것도 없으면 오늘) 다음 날 0시 — 그 뒤로 잡힌 예정 약속은 쓰지 않는다(dataCutoff 가 이 함수를 쓴다) */
+function staffCutOf(act, at){
+  let m=String(act||'').match(/(20\d\d)[_\-.](\d{1,2})[_\-.](\d{1,2})/);
+  if(!m&&at) m=String(at).match(/(20\d\d)-(\d\d)-(\d\d)/);
+  if(m) return {t:Date.UTC(+m[1],+m[2]-1,+m[3]+1), d:`${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`};
+  const k=new Date(Date.now()+9*3600000); return {t:Date.UTC(k.getUTCFullYear(),k.getUTCMonth(),k.getUTCDate()+1), d:k.toISOString().slice(0,10)};
+}
+/* 단위(팀·사무소)별 월 점수 합 — 원본으로 buildProdData 를 달마다 돌려(한 번에 두 달) 사람 점수를 단위로 더한다. 결과에 사람은 없다.
+   o = {raw(추출일까지 자른 행), roster[[이름,단위,직급]](PROD_ROSTER 모양), units, groups, exclAvg[이름], gradeHist, weights, buildProdData, rev, pause} → {months, u:{단위:{c:[비교 인원 합], a:[전체 합]}}, rev} */
+async function staffScore(o){
+  const mk=t=>{ const d=new Date(t); return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'); };
+  const months=[...new Set(o.raw.filter(r=>r.t!=null).map(r=>mk(r.t)))].sort(), ex=new Set(o.exclAvg||[]), unit={}, r2=x=>Math.round(x*100)/100;
+  o.roster.forEach(r=>{ unit[r[0]]=r[1]; });
+  const out={months,u:{},rev:o.rev||''}; o.units.forEach(u=>{ out.u[u]={c:months.map(()=>0),a:months.map(()=>0)}; });
+  const gradeNow={}; o.roster.forEach(r=>{ gradeNow[r[0]]=r[2]; });
+  for(let i=0;i<months.length;i+=2){
+    const P=o.buildProdData(o.raw,o.roster,{teams:o.units,teamGroups:o.groups||{},gradeNow,exclAvg:o.exclAvg||[],gradeHist:o.gradeHist||[],weights:o.weights,sel:[months[i]],cmp:i+1<months.length?[months[i+1]]:[],trend:[],labels:{}});
+    Object.keys(P.person).forEach(n=>{ const e=out.u[unit[n]]; if(!e) return; [[i,'이번 년도'],[i+1,'직전 년도']].forEach(([k,pr])=>{ if(k>=months.length) return; const v=(P.person[n].score||{})[pr]||0; e.a[k]+=v; if(!ex.has(n)) e.c[k]+=v; }); });
+    if(o.pause) await o.pause();
+  }
+  Object.keys(out.u).forEach(u=>{ out.u[u].c=out.u[u].c.map(r2); out.u[u].a=out.u[u].a.map(r2); });
+  return out;
+}
+/* o = {raw(시각 보정까지 끝난 행), roster[[이름,팀,직급]], office{이름:사무소}, newbie[이름], encodeAct, rnd(n)→난수 바이트, ser, eq{rows,src,made}, inst{map,at}, acad, score(staffScore 결과), src{act,ser,eq}, tzN, made} */
 function staffBundle(o){
   const AL='abcdefghijkmnpqrstuvwxyz23456789', OUT='~other';
   const ri=n=>{ const b=o.rnd(4); return (((b[0]<<24)|(b[1]<<16)|(b[2]<<8)|b[3])>>>0)%n; };
@@ -4214,7 +4234,7 @@ function staffBundle(o){
   const reL=long.length?new RegExp(long.map(esc).join('|'),'g'):null, reS=short.length?new RegExp('(?<![가-힣A-Za-z0-9])(?:'+short.map(esc).join('|')+')(?![가-힣A-Za-z0-9])','g'):null;
   const scrub=v=>{ v=String(v||''); if(reL) v=v.replace(reL,'○○○'); if(reS) v=v.replace(reS,'○○'); return v; };
   const E=o.encodeAct(recs,(o.src&&o.src.act)||''); E.d.subj=E.d.subj.map(scrub);
-  return {v:1,kind:'fsg-kpi-staff',made:o.made||'',act:E,tzN:o.tzN||0,ros,ser:o.ser||null,eq,inst:o.inst?{map:o.inst.map||{},at:o.inst.at||''}:null,acad:o.acad||null,src:{act:(o.src&&o.src.act)||'',ser:(o.src&&o.src.ser)||'',eq:(eq&&eq.src)||''}};
+  return {v:1,kind:'fsg-kpi-staff',made:o.made||'',act:E,tzN:o.tzN||0,ros,ser:o.ser||null,eq,inst:o.inst?{map:o.inst.map||{},at:o.inst.at||''}:null,acad:o.acad||null,sw:o.score||null,src:{act:(o.src&&o.src.act)||'',ser:(o.src&&o.src.ser)||'',eq:(eq&&eq.src)||''}};
 }
 /* STAFF-CORE-END */
 /* 올리기(관리자): 지금 화면에 올라와 있는 원본으로 직원용 사본을 다시 만든다 — CRM·자산대장·관리표·기관 분류·학술 파일을 올릴 때마다 자동으로 */
@@ -4222,7 +4242,10 @@ async function staffSync(){
   if(STAFF||!RAW||!CODE) return false;
   if(!ADMIN_TOKEN||Date.now()>=ADMIN_EXP) throw new Error('관리자 로그인이 필요합니다(1시간 지나면 다시 로그인).');
   const sc=await staffCodeOf(CODE), at=nowStr();
-  const B=staffBundle({raw:RAW,roster:ROSTER,office:OFFICE,newbie:NEWBIE,encodeAct,rnd:n=>crypto.getRandomValues(new Uint8Array(n)),ser:SERIAL?encodeSer(SERIAL):null,eq:EQD,inst:INST,acad:ACAD_FILE,
+  let score=null;   /* 팀·사무소별 가중 업무량 합계 — 못 만들면 직원 화면에서 그 열만 빠진다 */
+  try{ const cut=staffCutOf(SRC.act,SRC.at).t; score=await staffScore({raw:RAW.filter(r=>r.t==null||r.t<cut),roster:PROD_ROSTER,units:PROD_UNITS,groups:PROD_GROUPS,exclAvg:ROSTER.filter(r=>r[2]==='팀장'||NEWBIE.includes(r[0])).map(r=>r[0]),gradeHist:GRADE_HIST,weights:WGT_LIST(),buildProdData,rev:WGT_REV,pause:()=>new Promise(r=>setTimeout(r,0))}); }
+  catch(e){ console.warn('직원용 가중 업무량 합계',e); }
+  const B=staffBundle({raw:RAW,roster:ROSTER,office:OFFICE,newbie:NEWBIE,encodeAct,rnd:n=>crypto.getRandomValues(new Uint8Array(n)),ser:SERIAL?encodeSer(SERIAL):null,eq:EQD,inst:INST,acad:ACAD_FILE,score,
     src:{act:SRC.act||'',ser:SRC.ser||''},tzN:RAW.tzFixed||0,made:at});
   await fb('staff/data',{method:'PUT',body:JSON.stringify(await seal(B,sc))},180000);
   await fb('staff/meta',{method:'PUT',body:JSON.stringify({v:1,updatedAt:at,actRows:RAW.length,check:await seal('FSG-KPI',sc)})});
@@ -4246,10 +4269,22 @@ function applyStaffRoster(R){
 function staffScrub(P){
   const wipe=o=>{ if(!o) return; ['score','score_avg','score_avg_core','index_avg'].forEach(k=>{ if(o[k]) Object.keys(o[k]).forEach(pr=>{ o[k][pr]=null; }); }); if(o.score_group) Object.keys(o.score_group).forEach(pr=>{ o.score_group[pr]={}; }); };
   Object.keys(P.team||{}).forEach(t=>wipe(P.team[t])); wipe(P.company);
+  if(!staffHasScore()) return;
+  /* 가중 업무량 = 사본에 든 단위별 월 합계(원본으로 계산)를 선택 기간의 달만큼 더한 값. 사람별 값은 없다 */
+  const W=STAFF_SW, ix={}; W.months.forEach((m,i)=>{ ix[m]=i; });
+  const sum=(units,key,ms)=>{ let v=0; units.forEach(u=>{ const e=W.u[u]; if(e) ms.forEach(m=>{ if(ix[m]!=null) v+=e[key][ix[m]]||0; }); }); return v; };
+  const MS={'이번 년도':P.sel_months||[],'직전 년도':P.cmp_months||[],'전체 누적':W.months}, r2=x=>Math.round(x*100)/100;
+  const fill=(o,units)=>{ if(!o) return; Object.keys(MS).forEach(pr=>{ const a=sum(units,'a',MS[pr]), c=sum(units,'c',MS[pr]), n=(o.members||[]).length;
+    if(o.score) o.score[pr]=r2(a); if(o.score_avg) o.score_avg[pr]=n?r2(a/n):0; if(o.score_avg_core) o.score_avg_core[pr]=o.n_core?r2(c/o.n_core):0; }); };
+  Object.keys(P.team||{}).forEach(t=>fill(P.team[t],P.team[t].units||[t]));
+  if(P.company){ const all=PROD_UNITS, n=ROSTER.length; Object.keys(MS).forEach(pr=>{ const a=sum(all,'a',MS[pr]); if(P.company.score) P.company.score[pr]=r2(a); if(P.company.score_avg) P.company.score_avg[pr]=n?r2(a/n):0; }); }
 }
+/* 직원 화면에서 가중 업무량을 보여 줄 수 있는가 — 사본에 합계가 있고, 그 합계를 만든 가중치 설정이 지금 설정과 같을 때만 */
+let STAFF_SW=null;
+function staffHasScore(){ return !!(STAFF_SW&&STAFF_SW.months&&STAFF_SW.u&&(STAFF_SW.rev||'')===(WGT_REV||'')); }
 /* 사람 단위 열(가중 업무량·직급 보정 지수)을 표에서 뺀다 */
 function staffCols(root){ if(!STAFF||!root) return; root.querySelectorAll('table').forEach(t=>{ if(!t.tHead||!t.tHead.rows[0]) return;
-  const drop=[...t.tHead.rows[0].cells].map(h=>/가중 업무량|직급 보정/.test(h.textContent)); if(!drop.some(Boolean)) return;
+  const re=staffHasScore()?/직급 보정/:/가중 업무량|직급 보정/, drop=[...t.tHead.rows[0].cells].map(h=>re.test(h.textContent)); if(!drop.some(Boolean)) return;
   [...t.rows].forEach(r=>{ if(r.cells.length!==drop.length) return; [...r.cells].forEach((c,i)=>{ if(drop[i]) c.remove(); }); }); }); }
 
 /* --- 받은 암호문 캐시 ---
@@ -4301,7 +4336,7 @@ async function loadStaff(){
   const B=await open_(await fbCached('staff/data',meta.updatedAt),STAFF_CODE);
   applyStaffRoster(B.ros||{});
   RAW=decodeEmbed(B.act); RAW.tzFixed=B.tzN||0; SERIAL=B.ser?decodeSer(B.ser):null; HRDATA=null; GEO=null;
-  EQD=B.eq||null; INST=B.inst||null; ACAD=B.acad||null;
+  EQD=B.eq||null; INST=B.inst||null; ACAD=B.acad||null; STAFF_SW=B.sw||null;
   try{ ACAD=acadMergeAuto(ACAD,await fb('acadAuto')); }catch(e){ console.warn('acadAuto',e); }
   await loadWeights();
   META=meta; SRC={act:(B.src&&B.src.act)||'',ser:SERIAL?((B.src&&B.src.ser)||'자산대장'):null,hr:null,at:meta.updatedAt,embedded:false};
@@ -4410,7 +4445,7 @@ async function wgtSave(){
     await fb('weights/items/'+f,{method:'PUT',body:JSON.stringify(item)});
     await fb('weights/rev',{method:'PUT',body:JSON.stringify(now)});
     WGT_ITEMS[f]=item; WGT_REV=now; wgtHist(); wgtMark(); fillWgt(f);
-    wgtMsg(`저장했습니다. ${f.replace('-','년 ')}월부터 적용됩니다.`,'good'); applyWeights();
+    wgtMsg(`저장했습니다. ${f.replace('-','년 ')}월부터 적용됩니다.`,'good'); applyWeights(); if(!ADMIN_UID||ADMIN_UID===KPI_MAIN_ADMIN_UID) staffSync().catch(()=>{});   /* 직원 화면의 가중 업무량 합계도 새 가중치로(자료를 올릴 수 있는 관리자만 — 아니면 다음 올리기 때) */
   }catch(e){ wgtMsg(e.message||'저장하지 못했습니다.','bad'); }
   finally{ $('wgtSave').disabled=false; }
 }
@@ -4418,7 +4453,7 @@ async function wgtDelete(f){
   if(!confirm(`${f.replace('-','년 ')}월부터의 가중치 변경을 지울까요?`)) return;
   try{ const now=new Date().toISOString();
     await fb('weights/items/'+f,{method:'PUT',body:'null'}); await fb('weights/rev',{method:'PUT',body:JSON.stringify(now)});
-    delete WGT_ITEMS[f]; WGT_REV=now; wgtHist(); fillWgt($('wgtFrom').value||wgtMonth()); wgtMsg('지웠습니다.','good'); applyWeights();
+    delete WGT_ITEMS[f]; WGT_REV=now; wgtHist(); fillWgt($('wgtFrom').value||wgtMonth()); wgtMsg('지웠습니다.','good'); applyWeights(); if(!ADMIN_UID||ADMIN_UID===KPI_MAIN_ADMIN_UID) staffSync().catch(()=>{});   /* 직원 화면의 가중 업무량 합계도 새 가중치로(자료를 올릴 수 있는 관리자만 — 아니면 다음 올리기 때) */
   }catch(e){ wgtMsg(e.message||'지우지 못했습니다.','bad'); }
 }
 function showWgtLogin(){ $('wgtLogin').hidden=false; $('wgtBody').hidden=true; }
@@ -5076,7 +5111,7 @@ function renderOrgTop(p,team,pp,prov,scope){
   /* ③ 담당 장비 × 업무량 산점도 */
   try{ orgScatter(); }catch(e){ console.error('조직 산점도',e); $('ogScBox').innerHTML='<p class="empty-note">그래프를 그리지 못했습니다: '+esc(e.message||e)+'</p>'; }
   /* ④ 인원 대비 업무량 — 지표에 따라 막대(0 기준) 또는 도트 플롯(목표·평균 대비) */
-  const MS=ORG_M.filter(x=>(!x.eq||PROD.eq)&&!(STAFF&&x.k==='w')), m=MS.find(x=>x.k===ORG.m)||MS.find(x=>x.k==='per'), ko=m.t&&K(m.t);
+  const MS=ORG_M.filter(x=>(!x.eq||PROD.eq)&&!(STAFF&&x.k==='w'&&!staffHasScore())), m=MS.find(x=>x.k===ORG.m)||MS.find(x=>x.k==='per'), ko=m.t&&K(m.t);
   $('ogMseg').innerHTML=MS.map(x=>`<button type="button" data-m="${x.k}" aria-pressed="${x.k===m.k}">${x.n}</button>`).join('');
   $('ogMseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{ ORG.m=b.dataset.m; rerender(); });
   const ref=ko?ko.t():(m.avg?avg[m.avg]:(m.k==='eqh'?F.eqh:m.k==='e100'?F.e100:null));
@@ -5101,7 +5136,7 @@ function ogCols(){ const t=document.querySelector('#ogTbl table'); if(!t) return
   const hs=[...t.tHead.rows[0].cells], ex=hs.map(h=>!OG_CORE.includes(h.textContent.trim()));
   [...t.rows].forEach(r=>[...r.cells].forEach((c,i)=>{ if(ex[i]) c.classList.toggle('ogx',!all); }));
   let b=$('ogColBtn'); if(!b){ b=document.createElement('button'); b.type='button'; b.id='ogColBtn'; b.className='dsmore'; $('ogTbl').after(b); }
-  const nx=ex.filter(Boolean).length; b.hidden=!nx; b.textContent=all?'핵심 열만 보기':`모든 열 보기 (+${nx}개: 1인당 장비·장비 100대당${STAFF?'':'·가중 업무량·직급 보정'} 등)`; b.setAttribute('aria-expanded',all);
+  const nx=ex.filter(Boolean).length; b.hidden=!nx; b.textContent=all?'핵심 열만 보기':`모든 열 보기 (+${nx}개: 1인당 장비·장비 100대당${STAFF?(staffHasScore()?'·가중 업무량':''):'·가중 업무량·직급 보정'} 등)`; b.setAttribute('aria-expanded',all);
   b.onclick=()=>{ try{ localStorage.setItem('fsg-kpi-ogcols',all?'0':'1'); }catch(e){} ogCols(); }; }
 /* 담당 장비 × 업무량(2026-11-17 재설계 — 조직개편·채용 검토용으로 쓰일 수 있어 기준을 바로잡음)
    ① 두 축 모두 1인당, 같은 인원(비교 인원 = 팀장·신입 제외)으로 — 예전에는 가로 = 팀 전체 장비, 세로 = 1인당이 섞였음
@@ -5113,8 +5148,8 @@ function orgRel(rel){ if(rel==null) return {k:'none',s:'-'}; const p=Math.round(
 function orgCoreOf(u){ const ex=n=>(PROD.grade||{})[n]==='팀장'||NEWBIE.includes(n); return ((PROD.team[u]||{}).members||[]).filter(n=>!ex(n)); }
 function orgScatter(){
   const box=$('ogScBox'), seg=(id,list,cur,key)=>{ $(id).innerHTML=list.map(([k,n])=>`<button type="button" data-v="${k}" aria-pressed="${k===cur}">${n}</button>`).join(''); $(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{ ORGSC[key]=b.dataset.v; orgScatter(); }); };
-  if(ORGSC.y==='cnt'||STAFF) ORGSC.y='per';
-  seg('ogScU',[['office','사무소 6'],['team','팀 4']],ORGSC.u,'u'); $('ogScQ').innerHTML=''; seg('ogScY',STAFF?[['per','1인당 처리 건수']]:[['per','1인당 처리 건수'],['w','1인당 가중 업무량']],ORGSC.y,'y'); seg('ogScC',[['ftfr','FTFR'],['rev','재방문율'],['mttr','MTTR']],ORGSC.c,'c');
+  if(ORGSC.y==='cnt'||(STAFF&&!staffHasScore())) ORGSC.y='per';
+  seg('ogScU',[['office','사무소 6'],['team','팀 4']],ORGSC.u,'u'); $('ogScQ').innerHTML=''; seg('ogScY',STAFF&&!staffHasScore()?[['per','1인당 처리 건수']]:[['per','1인당 처리 건수'],['w','1인당 가중 업무량']],ORGSC.y,'y'); seg('ogScC',[['ftfr','FTFR'],['rev','재방문율'],['mttr','MTTR']],ORGSC.c,'c');
   if(!PROD.eq){ box.innerHTML='<p class="empty-note">담당 장비 수가 없어 그릴 수 없습니다. 관리자가 「담당기관 관리표」를 올리면 표시됩니다.</p>'; return; }
   const UW=ORGSC.u==='team'?'팀':'사무소', yk=ORGSC.y, yN=yk==='w'?'1인당 가중 업무량':'1인당 처리 건수', yU=yk==='w'?'점':'건';
   const R=orgRows(ORGSC.u).map(r=>{ const core=orgCoreOf(r.k), A=eqAgg(PROD.eq.by,core,()=>0,()=>false); return Object.assign({},r,{hc:core.length,eqc:core.length?A.eq/core.length:null}); }).filter(r=>r.hc&&r.eqc&&r[yk]!=null);

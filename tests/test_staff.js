@@ -86,10 +86,35 @@ let pass = 0; const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); pass
   ok(JSON.stringify(mk().ros.roster) !== JSON.stringify(B.ros.roster), '만들 때마다 번호가 같음');
   ok(sRaw.filter(r => r.own === '~other').length === R0.filter(r => /외부인/.test(r.own)).length, '명단 밖 담당자 표시');
 
+  /* ④-2 가중 업무량: 단위별 월 합계(staffScore)를 기간의 달만큼 더하면 원본의 팀·사무소 값과 같다 — 가중치 설정·진급 이력이 있어도 */
+  { const W = [{ from: '2026-10', score: { '고장 수리': 4, 'PM': 1 }, grade: { T3: 0.5 } }], GH = [[names[3], '2026-09-01', 'T2'], [names[10], '2026-10-01', 'T1']];
+    const exA = roster.filter(r => r[2] === '팀장' || newbie.includes(r[0])).map(r => r[0]);
+    const SW = await SC.staffScore({ raw: R0, roster: pro(roster, office), units: UNITS, groups: GROUPS, exclAvg: exA, gradeHist: GH, weights: W, buildProdData, rev: 'rev-1' });
+    ok(SW.rev === 'rev-1' && SW.months.join() === [...new Set(R0.map(r => new Date(r.t).toISOString().slice(0, 7)))].sort().join() && !/가명|외부인/.test(JSON.stringify(SW)), '월 목록·이름 없음');
+    ok(Object.keys(SW.u).sort().join() === UNITS.slice().sort().join() && Object.keys(SW.u).every(u => Object.keys(SW.u[u]).sort().join() === 'a,c'), '합계에는 단위별 두 줄(비교 인원·전체)만 — 사람별 값 없음');
+    const r2 = x => Math.round(x * 100) / 100, ix = Object.fromEntries(SW.months.map((m, i) => [m, i]));
+    [['2026-09', '2026-10'], ['2026-06'], ['2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11']].forEach(sel => {
+      const PW = buildProdData(R0, pro(roster, office), Object.assign(opt(roster, newbie), { gradeHist: GH, weights: W, sel, cmp: [] }));
+      UNITS.concat(Object.keys(GROUPS)).forEach(u => { const us = GROUPS[u] || [u], t = PW.team[u]; let a = 0, c = 0; us.forEach(x => sel.forEach(m => { a += SW.u[x].a[ix[m]]; c += SW.u[x].c[ix[m]]; }));
+        ok(r2(a) === t.score['이번 년도'], u + ' 가중 업무량 합 ' + sel.join('~') + ': ' + r2(a) + ' / ' + t.score['이번 년도']);
+        /* 평균은 원본이 사람별 값을 더하는 순서에 따라 소수 둘째 자리 반올림 경계(…5)에서 0.01 다를 수 있다 — 화면은 소수 첫째 자리 */
+        ok(Math.abs(r2(c / t.n_core) - t.score_avg_core['이번 년도']) < 0.011, u + ' 1인당 가중 업무량(팀장·신입 제외) ' + sel.join('~') + ': ' + r2(c / t.n_core) + ' / ' + t.score_avg_core['이번 년도']); }); });
+    ok(JSON.stringify((await SC.staffScore({ raw: R0, roster: pro(roster, office), units: UNITS, groups: GROUPS, exclAvg: exA, gradeHist: [], weights: [], buildProdData })).u) !== JSON.stringify(SW.u), '가중치·진급 이력이 합계에 반영되지 않음');
+    const B2 = SC.staffBundle({ raw, roster, office, newbie, encodeAct: PD.encodeAct, rnd, score: SW, src: {}, made: 'x' });
+    ok(B2.sw === SW && mk().sw === null, '사본에 합계가 들어가지 않음'); }
+  /* 추출일 기준: 대시보드 dataCutoff 와 PC 올리기가 같은 함수(staffCutOf)를 쓴다 */
+  ok(/function dataCutoff\(\)\{ return staffCutOf\(SRC\.act, SRC\.at\); \}/.test(html), 'dataCutoff 가 staffCutOf 를 쓰지 않음');
+  ok(SC.staffCutOf('2. 모든 약속_활동_2026_11_16.xlsx', '2026-11-19 08:00').d === '2026-11-16' && SC.staffCutOf('act.xlsx', '2026-11-19 08:00').t === Date.UTC(2026, 10, 20) && SC.staffCutOf('활동 2026-1-5.xlsx').d === '2026-01-05', '추출일 읽기');
+
   /* ⑥ PC 올리기: 같은 사본을 만들고, 직원용 코드로만 열리며 접근 코드를 알 수 없다 */
   const S = await PD.buildStaff({ code: 'TESTCODE', actPayload: PD.encodeAct(raw, 'act_2026_11_16.xlsx'), serPayload: null, eq: { rows: eqRows, src: '관리표.xlsx', made: '' }, roster, office, newbie, made: '2026-11-17 08:30' });
   const opened = await PD.open_(S.data, sc);
   ok(opened.kind === 'fsg-kpi-staff' && opened.act.n === raw.length && !/가명\d\d|외부인[갑을]/.test(JSON.stringify(opened)), 'PC 올리기 사본');
+  ok(opened.sw === null, '단위 목록이 없으면 합계 없이도 사본은 만들어져야 함');
+  { const wts = { rev: 'rv', items: { '2026-10': { score: { PM: 1 }, grade: {} } } };
+    const S2 = await PD.buildStaff({ code: 'TESTCODE', actPayload: PD.encodeAct(raw, 'act_2026_11_16.xlsx'), roster, office, newbie, units: UNITS, groups: GROUPS, gradeHist: [], weights: wts, made: '2026-11-17 08:30' });
+    const cut = SC.staffCutOf('act_2026_11_16.xlsx').t, want = await SC.staffScore({ raw: R0.filter(r => r.t < cut), roster: pro(roster, office), units: UNITS, groups: GROUPS, exclAvg: roster.filter(r => r[2] === '팀장' || newbie.includes(r[0])).map(r => r[0]), gradeHist: [], weights: PD.weightList(wts), buildProdData, rev: 'rv' });
+    ok(JSON.stringify(S2.bundle.sw) === JSON.stringify(want) && S2.bundle.sw.rev === 'rv' && JSON.stringify(PD.weightList(wts)) === JSON.stringify([{ from: '2026-10', score: { PM: 1 }, grade: {} }]), 'PC 올리기의 가중 업무량 합계가 대시보드 계산과 다름'); }
   ok(await PD.codeOk(sc, S.meta) && !(await PD.codeOk('TESTCODE', S.meta)), '직원용 meta 는 직원용 코드로만 확인돼야 함');
   let leadOpens = true; try { await PD.open_(await PD.seal({ x: 1 }, 'TESTCODE'), sc); } catch (e) { leadOpens = false; } ok(!leadOpens, '직원용 코드로 원본(접근 코드로 잠근 자료)이 열림');
   /* rowsOfAct = 대시보드 decodeEmbed (S/N 정리 제외) */
@@ -104,10 +129,14 @@ let pass = 0; const ok = (c, m) => { if (!c) throw new Error('FAIL: ' + m); pass
   ok(/\.staff body:not\(\[data-view=eqp\]\) #prod[^{]*\{display:none!important\}/.test(html), '직원 화면에서 사람 단위 화면(#prod)을 숨기는 규칙이 없음');
   ok(/if\(STAFF&&VIEW!=='eqp'\)\{ ensureProd\(\); return; \}/.test(html), '직원 화면이 사람 단위 화면을 그림');
   ok(/if\(STAFF\) staffScrub\(PROD\);/.test(html) && /function staffScrub/.test(html), '직원 화면에서 점수·지수를 비우지 않음');
+  const scrub = sliceFunction(html, 'staffScrub');
+  ok(/wipe\(P\.team\[t\]\)\); wipe\(P\.company\);\s*\n\s*if\(!staffHasScore\(\)\) return;/.test(scrub) && !/index_avg\[pr\]\s*=/.test(scrub.split('staffHasScore')[1] || ''), '합계가 없거나 가중치가 바뀌었을 때 점수를 비우지 않음 / 직급 보정 지수를 채움');
+  ok(/function staffHasScore\(\)\{ return !!\(STAFF_SW&&STAFF_SW\.months&&STAFF_SW\.u&&\(STAFF_SW\.rev\|\|''\)===\(WGT_REV\|\|''\)\); \}/.test(html), '가중치 설정이 달라졌는데 옛 합계를 보여 줌');
+  ok(!/\.staff [^{]*\.xbtns[^{]*\{display:none/.test(html) && /\.staff #ovRptBtn/.test(html), '직원 화면 Excel·PDF 는 열고 보고용 보기는 닫는다');
   ok(/if\(STAFF\)\{ await loadStaff\(\); return; \}/.test(html) && /fbCached\('staff\/data'/.test(html), '직원 화면이 원본 경로를 읽음');
   ok(/const sm = ok && kind!=='hr' && kind!=='geo' \? await staffSyncMsg\(\) : ''/.test(html), '올린 뒤 직원용 자료를 갱신하지 않음');
   ok(/if\(STAFF\|\|!RAW\|\|!CODE\) return false;/.test(html), '직원 화면에서 직원용 자료를 다시 만들 수 있음(섞인 자료로 덮어씀)');
   const loadStaff = sliceFunction(html, 'loadStaff');
   ok(!/'hr'|'geo'|loadShifts/.test(loadStaff) && /HRDATA=null; GEO=null/.test(loadStaff), '직원 화면이 연장근무·좌표·근무일정표를 읽음');
-  console.log('test_staff: OK ' + pass + '항목 (staff-core == fsg-kpi.html · 이름 없음 · 단위 합계 같음 · 개인 실적 섞임 · PC 올리기 같은 사본 · 화면 규칙)');
+  console.log('test_staff: OK ' + pass + '항목 (staff-core == fsg-kpi.html · 이름 없음 · 단위 합계 같음 · 가중 업무량 합계 같음 · 개인 실적 섞임 · PC 올리기 같은 사본 · 화면 규칙)');
 })().catch(e => { console.error(e.message || e); process.exit(1); });

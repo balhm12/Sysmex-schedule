@@ -75,8 +75,10 @@ const nowStr = () => { const d = new Date(Date.now() + 9 * 3600000); return d.to
 function dashRoster() {
   const src = fs.readFileSync(path.join(__dirname, '..', 'fsg-kpi.html'), 'utf8'), grab = re => { const m = src.match(re); return m ? m[1] : null; };
   const ro = grab(/const ROSTER = (\[[\s\S]*?\]\]);/), office = grab(/const OFFICE = (\{[\s\S]*?\});/), nb = grab(/const NEWBIE=(\[[^\]]*\]);/);
+  const units = grab(/const PROD_UNITS = (\[[^\]]*\]);/), groups = grab(/const PROD_GROUPS = (\{[^;]*\});/), gh = grab(/const GRADE_HIST=(\[[\s\S]*?\]\]);/);
   if (!ro) throw new Error('fsg-kpi.html 에서 ROSTER 상수를 찾지 못했습니다');
-  return { roster: JSON.parse(ro), office: office ? eval('(' + office + ')') : {}, newbie: nb ? eval(nb) : [] };
+  return { roster: JSON.parse(ro), office: office ? eval('(' + office + ')') : {}, newbie: nb ? eval(nb) : [],
+    units: units ? eval(units) : null, groups: groups ? eval('(' + groups + ')') : {}, gradeHist: gh ? eval('(' + gh + ')') : [] };
 }
 /* 올린 포맷(encodeAct)을 다시 행으로 — 대시보드 decodeEmbed 와 같은 값(S/N 정리 snOf 는 대시보드가 읽을 때 한다) */
 function rowsOfAct(E) {
@@ -84,9 +86,17 @@ function rowsOfAct(E) {
   for (let i = 0; i < E.n; i++) out[i] = { st: g('st', i), t: E.t[i] < 0 ? null : E.t[i] * 60000, e: E.e[i] < 0 ? null : E.e[i] * 60000, own: g('own', i), err: g('err', i), acct: g('acct', i), sn: g('sn', i), prod: g('prod', i), purp: g('purp', i), subj: g('subj', i), ft: g('ft', i), att: g('att', i), c: E.cr && E.cr[i] >= 0 ? E.cr[i] * 60000 : null };
   return out;
 }
+/* 대시보드가 저장한 가중치(kpi-dashboard/weights) → buildProdData 의 opt.weights 모양(시작월 순) — 대시보드 WGT_LIST 와 같다 */
+function weightList(w) { const it = (w && w.items) || {}; return Object.keys(it).sort().map(k => ({ from: k, score: it[k].score || {}, grade: it[k].grade || {} })); }
 async function buildStaff(o) {
   const raw = SC.fixTz(rowsOfAct(o.actPayload));
-  const B = SC.staffBundle({ raw, roster: o.roster, office: o.office, newbie: o.newbie, encodeAct, rnd: o.rnd || rnd, ser: o.serPayload || null, eq: o.eq || null, inst: o.inst || null, acad: o.acad || null,
+  /* 팀·사무소별 가중 업무량 합계(사람별 값 없음) — 대시보드와 같은 buildProdData·같은 가중치·같은 추출일 기준. 못 만들면 직원 화면에서 그 열만 빠진다 */
+  let score = null;
+  if (o.units) try { const cut = SC.staffCutOf(o.actPayload.src || '', o.made).t, off = o.office || {};
+    score = await SC.staffScore({ raw: raw.filter(r => r.t == null || r.t < cut), roster: o.roster.map(r => [r[0], off[r[0]] ? r[1] + ' ' + off[r[0]] : r[1], r[2]]), units: o.units, groups: o.groups || {},
+      exclAvg: o.roster.filter(r => r[2] === '팀장' || (o.newbie || []).includes(r[0])).map(r => r[0]), gradeHist: o.gradeHist || [], weights: weightList(o.weights), buildProdData: require('./kpi-core').buildProdData, rev: (o.weights && o.weights.rev) || '' });
+  } catch (e) { console.warn('  (가중 업무량 합계는 직원용 자료에 넣지 못함: ' + e.message + ')'); }
+  const B = SC.staffBundle({ raw, roster: o.roster, office: o.office, newbie: o.newbie, encodeAct, rnd: o.rnd || rnd, ser: o.serPayload || null, eq: o.eq || null, inst: o.inst || null, acad: o.acad || null, score,
     src: { act: o.actPayload.src || '', ser: o.serSrc || '' }, tzN: raw.tzFixed || 0, made: o.made });
   const sc = await SC.staffCodeOf(o.code, subtle);
   return { bundle: B, data: await seal(B, sc), meta: { v: 1, updatedAt: o.made, actRows: o.actPayload.n, check: await seal('FSG-KPI', sc) } };
@@ -176,11 +186,11 @@ async function main() {
   if (!o['no-staff']) try {
     const got = async k => { try { const r = await fb(k); return r ? await open_(r, code) : null; } catch (e) { console.warn(`  (${k} 는 직원용 자료에 넣지 못함: ${e.message})`); return null; } };
     const S = await buildStaff(Object.assign({ code, actPayload, serPayload: serPayload || (meta.serSrc ? await got('ser') : null), serSrc: meta.serSrc || '',
-      eq: meta.eqSrc ? await got('eq') : null, inst: meta.instAt ? await got('inst') : null, acad: meta.acadAt ? await got('acad') : null, made: now }, dashRoster()));
+      eq: meta.eqSrc ? await got('eq') : null, inst: meta.instAt ? await got('inst') : null, acad: meta.acadAt ? await got('acad') : null, weights: await fb('weights').catch(() => null), made: now }, dashRoster()));
     await fb('staff/data', { method: 'PUT', body: JSON.stringify(S.data) });
     await fb('staff/meta', { method: 'PUT', body: JSON.stringify(S.meta) });
     console.log('직원용 자료도 갱신했습니다(이름 없는 사본 — 일반 직원 화면)');
   } catch (e) { console.warn('⚠ 직원용 자료는 갱신하지 못했습니다(대시보드 올리기는 끝났습니다): ' + explainError(e)); }
 }
 if (require.main === module) main().catch(e => { console.error('오류: ' + explainError(e)); process.exit(1); });
-module.exports = { serialLooksPartial, encodeAct, encodeSer, seal, open_, codeOk, nowStr, explainError, trustSystemCerts, buildStaff, rowsOfAct, dashRoster };
+module.exports = { serialLooksPartial, encodeAct, encodeSer, seal, open_, codeOk, nowStr, explainError, trustSystemCerts, buildStaff, rowsOfAct, dashRoster, weightList };
