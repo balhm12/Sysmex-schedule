@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* fsg-kpi.html 의 「직원용 자료」 만들기(STAFF_SALT·staffCodeOf·staffBundle)와 시각 보정(TZ_FIX·fixTz)을 글자 그대로 떼어 fsg-report/staff-core.js 를 만든다.
+/* fsg-kpi.html 의 「직원용 자료」 만들기(STAFF_SALT·staffCodeOf·staffCutOf·staffScore·staffBundle)와 시각 보정(TZ_FIX·fixTz)을 글자 그대로 떼어 fsg-report/staff-core.js 를 만든다.
  * 브라우저 「CRM 데이터 올리기」와 PC 올리기 프로그램(push-dashboard.js)이 같은 방법으로 이름 없는 사본을 만들게 하는 장치다(kpi-core.js·equip-core.js 와 같은 방식).
  * 규칙을 바꿀 때는 fsg-kpi.html 을 고치고 이 스크립트를 다시 돌린다. tests/test_staff.js 가 두 파일이 어긋나면 실패한다.
  *   node fsg-report/tools/extract-staff-core.js            # staff-core.js 다시 생성
@@ -26,13 +26,13 @@ function build(html) {
   new Function(block + '\n' + tz + '\n' + fix);                           // 떼어 낸 본문이 문법적으로 완전한지
   return [
     '/* 생성 파일 — 손으로 고치지 말 것.',
-    ' * fsg-kpi.html의 직원용 자료 만들기(STAFF_SALT·staffCodeOf·staffBundle)와 시각 보정(TZ_FIX·fixTz)을 tools/extract-staff-core.js 가 글자 그대로 떼어 낸 사본이다.',
+    ' * fsg-kpi.html의 직원용 자료 만들기(STAFF_SALT·staffCodeOf·staffCutOf·staffScore·staffBundle)와 시각 보정(TZ_FIX·fixTz)을 tools/extract-staff-core.js 가 글자 그대로 떼어 낸 사본이다.',
     ' * 규칙을 바꾸려면 fsg-kpi.html을 고친 뒤 `node fsg-report/tools/extract-staff-core.js`를 다시 돌린다.',
     ' * (브라우저 올리기와 PC 올리기가 같은 사본을 만들도록 tests/test_staff.js 가 두 파일의 일치를 검사한다) */',
     block, '',
     tz,
     fix, '',
-    'module.exports = { STAFF_SALT: STAFF_SALT, staffCodeOf: staffCodeOf, staffBundle: staffBundle, TZ_FIX: TZ_FIX, fixTz: fixTz };',
+    'module.exports = { STAFF_SALT: STAFF_SALT, staffCodeOf: staffCodeOf, staffCutOf: staffCutOf, staffScore: staffScore, staffBundle: staffBundle, TZ_FIX: TZ_FIX, fixTz: fixTz };',
     '',
   ].join('\n');
 }

@@ -1,5 +1,5 @@
 /* 생성 파일 — 손으로 고치지 말 것.
- * fsg-kpi.html의 직원용 자료 만들기(STAFF_SALT·staffCodeOf·staffBundle)와 시각 보정(TZ_FIX·fixTz)을 tools/extract-staff-core.js 가 글자 그대로 떼어 낸 사본이다.
+ * fsg-kpi.html의 직원용 자료 만들기(STAFF_SALT·staffCodeOf·staffCutOf·staffScore·staffBundle)와 시각 보정(TZ_FIX·fixTz)을 tools/extract-staff-core.js 가 글자 그대로 떼어 낸 사본이다.
  * 규칙을 바꾸려면 fsg-kpi.html을 고친 뒤 `node fsg-report/tools/extract-staff-core.js`를 다시 돌린다.
  * (브라우저 올리기와 PC 올리기가 같은 사본을 만들도록 tests/test_staff.js 가 두 파일의 일치를 검사한다) */
 const STAFF_SALT='fsg-kpi-staff-v1';
@@ -10,7 +10,30 @@ async function staffCodeOf(code, subtle){
   let b=''; for(const x of bits) b+=String.fromCharCode(x);
   return btoa(b).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
-/* o = {raw(시각 보정까지 끝난 행), roster[[이름,팀,직급]], office{이름:사무소}, newbie[이름], encodeAct, rnd(n)→난수 바이트, ser, eq{rows,src,made}, inst{map,at}, acad, src{act,ser,eq}, tzN, made} */
+/* CRM 추출일(파일명의 날짜, 없으면 올린 날, 그것도 없으면 오늘) 다음 날 0시 — 그 뒤로 잡힌 예정 약속은 쓰지 않는다(dataCutoff 가 이 함수를 쓴다) */
+function staffCutOf(act, at){
+  let m=String(act||'').match(/(20\d\d)[_\-.](\d{1,2})[_\-.](\d{1,2})/);
+  if(!m&&at) m=String(at).match(/(20\d\d)-(\d\d)-(\d\d)/);
+  if(m) return {t:Date.UTC(+m[1],+m[2]-1,+m[3]+1), d:`${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`};
+  const k=new Date(Date.now()+9*3600000); return {t:Date.UTC(k.getUTCFullYear(),k.getUTCMonth(),k.getUTCDate()+1), d:k.toISOString().slice(0,10)};
+}
+/* 단위(팀·사무소)별 월 점수 합 — 원본으로 buildProdData 를 달마다 돌려(한 번에 두 달) 사람 점수를 단위로 더한다. 결과에 사람은 없다.
+   o = {raw(추출일까지 자른 행), roster[[이름,단위,직급]](PROD_ROSTER 모양), units, groups, exclAvg[이름], gradeHist, weights, buildProdData, rev, pause} → {months, u:{단위:{c:[비교 인원 합], a:[전체 합]}}, rev} */
+async function staffScore(o){
+  const mk=t=>{ const d=new Date(t); return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'); };
+  const months=[...new Set(o.raw.filter(r=>r.t!=null).map(r=>mk(r.t)))].sort(), ex=new Set(o.exclAvg||[]), unit={}, r2=x=>Math.round(x*100)/100;
+  o.roster.forEach(r=>{ unit[r[0]]=r[1]; });
+  const out={months,u:{},rev:o.rev||''}; o.units.forEach(u=>{ out.u[u]={c:months.map(()=>0),a:months.map(()=>0)}; });
+  const gradeNow={}; o.roster.forEach(r=>{ gradeNow[r[0]]=r[2]; });
+  for(let i=0;i<months.length;i+=2){
+    const P=o.buildProdData(o.raw,o.roster,{teams:o.units,teamGroups:o.groups||{},gradeNow,exclAvg:o.exclAvg||[],gradeHist:o.gradeHist||[],weights:o.weights,sel:[months[i]],cmp:i+1<months.length?[months[i+1]]:[],trend:[],labels:{}});
+    Object.keys(P.person).forEach(n=>{ const e=out.u[unit[n]]; if(!e) return; [[i,'이번 년도'],[i+1,'직전 년도']].forEach(([k,pr])=>{ if(k>=months.length) return; const v=(P.person[n].score||{})[pr]||0; e.a[k]+=v; if(!ex.has(n)) e.c[k]+=v; }); });
+    if(o.pause) await o.pause();
+  }
+  Object.keys(out.u).forEach(u=>{ out.u[u].c=out.u[u].c.map(r2); out.u[u].a=out.u[u].a.map(r2); });
+  return out;
+}
+/* o = {raw(시각 보정까지 끝난 행), roster[[이름,팀,직급]], office{이름:사무소}, newbie[이름], encodeAct, rnd(n)→난수 바이트, ser, eq{rows,src,made}, inst{map,at}, acad, score(staffScore 결과), src{act,ser,eq}, tzN, made} */
 function staffBundle(o){
   const AL='abcdefghijkmnpqrstuvwxyz23456789', OUT='~other';
   const ri=n=>{ const b=o.rnd(4); return (((b[0]<<24)|(b[1]<<16)|(b[2]<<8)|b[3])>>>0)%n; };
@@ -38,7 +61,7 @@ function staffBundle(o){
   const reL=long.length?new RegExp(long.map(esc).join('|'),'g'):null, reS=short.length?new RegExp('(?<![가-힣A-Za-z0-9])(?:'+short.map(esc).join('|')+')(?![가-힣A-Za-z0-9])','g'):null;
   const scrub=v=>{ v=String(v||''); if(reL) v=v.replace(reL,'○○○'); if(reS) v=v.replace(reS,'○○'); return v; };
   const E=o.encodeAct(recs,(o.src&&o.src.act)||''); E.d.subj=E.d.subj.map(scrub);
-  return {v:1,kind:'fsg-kpi-staff',made:o.made||'',act:E,tzN:o.tzN||0,ros,ser:o.ser||null,eq,inst:o.inst?{map:o.inst.map||{},at:o.inst.at||''}:null,acad:o.acad||null,src:{act:(o.src&&o.src.act)||'',ser:(o.src&&o.src.ser)||'',eq:(eq&&eq.src)||''}};
+  return {v:1,kind:'fsg-kpi-staff',made:o.made||'',act:E,tzN:o.tzN||0,ros,ser:o.ser||null,eq,inst:o.inst?{map:o.inst.map||{},at:o.inst.at||''}:null,acad:o.acad||null,sw:o.score||null,src:{act:(o.src&&o.src.act)||'',ser:(o.src&&o.src.ser)||'',eq:(eq&&eq.src)||''}};
 }
 
 const TZ_FIX = {cut:{'김동찬':'2026-05-22','백원욱':'2026-05-22'}, def:'2026-05-23',
@@ -56,4 +79,4 @@ function fixTz(recs){
   recs.tzFixed=n; return recs;
 }
 
-module.exports = { STAFF_SALT: STAFF_SALT, staffCodeOf: staffCodeOf, staffBundle: staffBundle, TZ_FIX: TZ_FIX, fixTz: fixTz };
+module.exports = { STAFF_SALT: STAFF_SALT, staffCodeOf: staffCodeOf, staffCutOf: staffCutOf, staffScore: staffScore, staffBundle: staffBundle, TZ_FIX: TZ_FIX, fixTz: fixTz };
