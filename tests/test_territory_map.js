@@ -63,3 +63,11 @@ assert.ok(/orgMap\(\{host:'ovMap'/.test(html) && /OV\.metric=b\.dataset\.k; OV\.
 assert.ok(/body\.rpt #ovMapCard\{display:none\}/.test(html), '보고용 보기·PDF 에는 지도를 넣지 않는다');
 assert.ok(/spanK=hi>lo\?Math\.min\(1,/.test(html), '값 차이가 작으면 색 차이도 작게');
 console.log('test_territory_map: Organization·Overview 지도 확인 통과');
+
+/* 지도 팀별 확대 (2026-11-19 「지도는 각 팀별로 확대해서」) — 전국·팀 단추, 그 팀이 맡은 시군구로 그림 범위를 줄인다 */
+assert.ok(/const zoomBox=\(\)=>\{/.test(html) && /class="'\+\(cfg\.segClass\|\|'segmented'\)\+' tmzseg"/.test(html), '확대 범위 계산과 단추 줄');
+assert.ok(/g\.sd==='제주'\|\|teamOf\(D\.unit\[gi\]\)!==Z/.test(html), '확대 범위에서 제주는 뺀다');
+assert.ok(/function mapZoomOf\(st,cur\)\{ return st&&st\.f===cur\?st\.z:cur; \}/.test(html), '화면에서 고른 팀을 따라가고, 지도에서 고르면 팀 선택이 바뀔 때까지 유지');
+assert.ok(/zoom:mapZoomOf\(ORG\.mapZ,/.test(html) && /zoom:mapZoomOf\(OV\.mapZ,team\|\|''\)/.test(html) && /zoom:window\.mapZoomOf\(state\.tmZ\[tab\], cur\)/.test(html), '세 화면 모두');
+assert.ok(/\(zoomed\?'':zoom\)\+top/.test(html), '확대했을 때 수도권 확대 그림은 뺀다');
+console.log('test_territory_map: 팀별 확대 확인 통과');
