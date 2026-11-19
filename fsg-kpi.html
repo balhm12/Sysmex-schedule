@@ -538,7 +538,8 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 #prod .empty-note{text-align:left;border:1px dashed var(--border);background:var(--surface-2);border-radius:6px;padding:14px 16px;font-size:13px;color:var(--text-secondary)}
 #prod .empty-note b{color:var(--text-primary)}
 #prod td.dpos span,#prod td.dneg span{background:none !important;color:var(--text-secondary) !important;padding:0 !important}
-@media (max-width:600px){#prod #lbTable .lbeq{display:none}}
+@media (max-width:600px){#prod #lbTable .lbeq,#prod #lbTable .lbav{display:none}}
+#prod #lbTable td.lbav small{font-size:11px;color:var(--muted);margin-left:2px;font-weight:500}#prod #lbTable .lbnw{white-space:nowrap}
 @media (max-width:600px){#prod #lbTable th:nth-child(4),#prod #lbTable td:nth-child(4),#prod #lbTable th:nth-child(7),#prod #lbTable td:nth-child(7),#prod #lbTable .score-bar-track{display:none}#prod #lbTable .score-cell{min-width:0}}
 /* ===== Overview (2026-11-12 시안) — 본사 보고서 방식: 파랑 큰 숫자 + 작은 단위 + 회색 증감 + 연한 파랑 머리글 표. 색은 페이지 변수(다크 모드 포함)를 따른다 ===== */
 #ov{--ovp:var(--primary);padding-top:14px;padding-bottom:40px}
@@ -2316,9 +2317,12 @@ function chartCard(id, title, hint){
 /* ---- company-wide KPI score leaderboard (all employees at a glance) ---- */
 function renderLeaderboardTable(period){
   var allMembers = DATA.teams.reduce(function(acc,t){ return acc.concat(DATA.team[t].members.map(function(m){return {name:m, team:t};})); }, []);
+  /* 건당 평균 시간(2026-11-19 「개인 순위표에도 건당 평균시간」) = 작업 시간 ÷ 시간이 기록된 건수 — 개인 종합 요약·Organization 과 같은 식(workTimeSum) */
+  var lbWm = acwMonths(period), lbAvg = function(n){ if (!window.workTimeSum) return null; var A = workTimeSum([n], lbWm), c = Object.keys(A.n).reduce(function(s,b){ return s + A.n[b]; }, 0); return c ? A.tot / c : null; };
   var rows = allMembers.map(function(x){
     var pe = DATA.person[x.name];
     return {
+      avg: lbAvg(x.name),
       name: x.name, team: x.team, grade: (DATA.grade||{})[x.name] || '',
       isNew: (DATA.newbie||[]).indexOf(x.name) >= 0,
       delta: (pe.score[period]||0) - (pe.score['직전 년도']||0),
@@ -2374,6 +2378,7 @@ function renderLeaderboardTable(period){
     {k:'score', label:'가중 업무량', num:true},
     {k:'delta', label:(DATA.cmp_short||'증감'), num:true},
     {k:'total', label:'처리 건수', num:true},
+    {k:'avg', label:'건당 평균 시간', num:true, cls:'lbav'},
   ].concat(DATA.eq ? [{k:'inst', label:'담당 기관', num:true, cls:'lbeq'},{k:'eq', label:'담당 장비', num:true, cls:'lbeq'}] : []);
   var thead = '<thead><tr>'+cols.map(function(c){
     var on = state.lbSortKey===c.k, srt = on ? (state.lbSortDir==='desc'?'descending':'ascending') : 'none';
@@ -2386,15 +2391,16 @@ function renderLeaderboardTable(period){
     var dTxt = r.delta>0.05 ? '▲ '+fmt1(r.delta) : (r.delta<-0.05 ? '▼ '+fmt1(Math.abs(r.delta)) : '-');
     return '<tr class="row'+(isSelf?' sel':'')+'" data-person="'+esc(r.name)+'" tabindex="0">'+
       '<td class="num">'+r.rank+'</td>'+
-      '<td>'+esc(r.name)+(r.grade==='팀장'?'<span class="lbtag">팀장</span>':'')+(r.isNew?'<span class="lbtag">신입</span>':'')+'<span class="lbsm">'+esc(DATA.team_short[r.team]||r.team)+' · '+esc(r.grade)+'</span></td>'+
+      '<td>'+esc(r.name)+(r.grade==='팀장'?'<span class="lbtag">팀장</span>':'')+(r.isNew?'<span class="lbtag">신입</span>':'')+'<span class="lbsm">'+esc(DATA.team_short[r.team]||r.team)+' · '+esc(r.grade)+' · <span class="lbnw">'+fmt(r.total)+'건'+(r.avg == null ? '' : ' · 건당 '+fmt(Math.round(r.avg))+'분')+'</span></span></td>'+
       '<td class="lbteam">'+esc(DATA.team_short[r.team]||r.team)+'</td>'+
       '<td class="lbgr">'+esc(r.grade)+((DATA.promoted||{})[r.name]?'<span class="lbtag" title="'+esc(DATA.promoted[r.name])+' 진급">진급</span>':'')+'</td>'+
       '<td class="num"><div class="lbsc"><span class="lbtrack"><i style="width:'+pct+'%"></i></span><b>'+fmt1(r.score)+'</b></div></td>'+
       '<td class="num lbdl">'+dTxt+'</td>'+
       '<td class="num">'+fmt(r.total)+'</td>'+
+      '<td class="num lbav">'+(r.avg == null ? '-' : fmt(Math.round(r.avg))+'<small>분</small>')+'</td>'+
       (DATA.eq ? '<td class="num lbeq">'+(r.inst ? fmt(r.inst) : '-')+'</td><td class="num lbeq">'+(r.eq ? fmt(r.eq) : '-')+'</td>' : '')+
       '</tr>';
-  }).join('') : '<tr><td colspan="7" class="lbempty">조건에 맞는 직원이 없습니다. 조건 지우기를 눌러 다시 확인해 주세요.</td></tr>')+'</tbody>';
+  }).join('') : '<tr><td colspan="8" class="lbempty">조건에 맞는 직원이 없습니다. 조건 지우기를 눌러 다시 확인해 주세요.</td></tr>')+'</tbody>';
   var table = document.getElementById('lbTable');
   table.innerHTML = thead+tbody;
   var more = document.getElementById('lbMore');
