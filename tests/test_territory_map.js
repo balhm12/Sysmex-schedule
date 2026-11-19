@@ -29,3 +29,13 @@ assert.ok(/const MAP_URL='fsg-kpi-map\.json'/.test(code));
 assert.ok(/terrMapFill\('load', 'idx'\)/.test(html) && /terrMapFill\('move', 'move'\)/.test(html));
 assert.ok(/function terrMapFill\(tab, defK\)\{[\s\S]{0,200}loadIndex\(state\.period\)/.test(html));
 console.log('test_territory_map: 통과');
+
+/* 건당 평균 시간 (2026-11-19 「건수에 평균시간」) — 건수가 나오는 곳에 같은 식으로: 작업 시간 ÷ 시간이 기록된 건수 */
+assert.ok(/\{k:'avgm',n:'건당 평균 시간',u:'분',d:0,type:'bar'\}/.test(html), 'Organization 비교 지표에 건당 평균 시간');
+assert.ok(/out\.avgm=out\.tnAll\?A\.tot\/out\.tnAll:null/.test(html), '건당 평균 = 작업 시간 ÷ 시간이 기록된 건수');
+assert.ok(/const OG_CORE=\[[^\]]*'건당 평균 시간 \(분\)'/.test(html), '조직 표의 핵심 열(기본으로 보임)');
+assert.ok(/'처리 건수','건당 평균 시간 \(분\)','1인당 처리 건수'/.test(html));
+assert.ok(/row\('건당 평균 작업 시간'/.test(html), '개인 종합 요약');
+assert.ok(/\['건당 평균\(분\)','avg'\]/.test(html) && /평가 건당\(분\)/.test(html), '평가·Calibration 탭');
+assert.ok(/if\(mins>0&&mins<=500\)\{ c\[1\]\+=mins; c\[2\]\+\+; \}/.test(code), '지도의 지역 방문 평균도 작업 시간과 같은 범위(0~500분)');
+console.log('test_territory_map: 건당 평균 시간 확인 통과');
