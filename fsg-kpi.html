@@ -687,7 +687,7 @@ body[data-view=prd] #prodTabs [data-tab=team]{display:none}
 #prod.dsx nav.tabs button.active{background:none;color:var(--ovp);border-bottom-color:var(--primary)}
 #mainArea.dsx .dstitle{padding-top:14px}
 .dsx .ovpro.c3{grid-template-columns:repeat(3,1fr)}
-.dsx .ovpro.c2{grid-template-columns:repeat(2,1fr)}.dsx .ovkpi.c5{grid-template-columns:repeat(5,1fr)}
+.dsx .ovpro.c2{grid-template-columns:repeat(2,1fr)}.dsx .ovkpi.c5,#ov .ovkpi.c5{grid-template-columns:repeat(5,1fr)}
 .dsx .ovpro.c3 .ovpc.ovnd .ovv{margin-top:6px}
 .dsx .ovl .ovchip{margin-left:6px;font-weight:700}
 #prod .block-head{}
@@ -719,7 +719,7 @@ body[data-view=prd] #prodTabs [data-tab=team]{display:none}
 .dsx .teams .team,.dsx .teams>*{border-radius:0;box-shadow:none}
 .dsx #lifeNote:not(:empty){border:1px dashed var(--muted);background:var(--card);padding:10px 12px;color:var(--muted);font-size:13px}
 .dsx .lifeGuide{border-radius:0}
-@media (max-width:1000px){.dsx .ovkpi.c5{grid-template-columns:repeat(2,1fr)}.dsx .ovkpi.c5 .ovkc:nth-child(5){grid-column:1/-1}.dsx .ovpro.c2{grid-template-columns:1fr}.dsx .ovpro.c2 .ovpc{border-left:0!important;border-top:1px solid var(--border)}.dsx .ovpro.c2 .ovpc:first-child{border-top:0}.dsx .ovpro.c3{grid-template-columns:1fr}.dsx .ovpro.c3 .ovpc{border-left:0!important;border-top:1px solid var(--border)}.dsx .ovpro.c3 .ovpc:first-child{border-top:0}#prod.dsx .block.grid-4{grid-template-columns:repeat(2,1fr)}#prod.dsx .block.grid-4>.card.stat:nth-child(3){border-left:0}#prod.dsx .block.grid-4>.card.stat:nth-child(n+3){border-top:1px solid var(--border)!important}}
+@media (max-width:1000px){.dsx .ovkpi.c5,#ov .ovkpi.c5{grid-template-columns:repeat(2,1fr)}.dsx .ovkpi.c5 .ovkc:nth-child(5),#ov .ovkpi.c5 .ovkc:nth-child(5){grid-column:1/-1;border-left:0}.dsx .ovpro.c2{grid-template-columns:1fr}.dsx .ovpro.c2 .ovpc{border-left:0!important;border-top:1px solid var(--border)}.dsx .ovpro.c2 .ovpc:first-child{border-top:0}.dsx .ovpro.c3{grid-template-columns:1fr}.dsx .ovpro.c3 .ovpc{border-left:0!important;border-top:1px solid var(--border)}.dsx .ovpro.c3 .ovpc:first-child{border-top:0}#prod.dsx .block.grid-4{grid-template-columns:repeat(2,1fr)}#prod.dsx .block.grid-4>.card.stat:nth-child(3){border-left:0}#prod.dsx .block.grid-4>.card.stat:nth-child(n+3){border-top:1px solid var(--border)!important}}
 @media (max-width:600px){#prod.dsx .stat .stat-value{font-size:30px}.dsx .hc{border-left:0;border-top:1px solid var(--border)}.dsx .hc:first-child{border-top:0}}
 /* 팀·사무소 트리 (2026-11-12): 팀을 누르면 사무소로 나뉜다 */
 .dsx .dsbtn,#ov .dsbtn{height:32px;border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:0 12px;font:inherit;font-size:12.5px;font-weight:700;color:var(--ovp);cursor:pointer;white-space:nowrap}
@@ -831,7 +831,7 @@ body.rpt #ov .ovkc{text-align:center;align-items:center;border-left:1px solid #0
 body.rpt #ov .ovkc:first-child{border-left:0}body.rpt #ov .ovkc::after{display:none}
 body.rpt #ov .ovl{justify-content:center;flex-direction:column;gap:2px}
 body.rpt #ov .ovv{font-size:34px}
-body.rpt #ov .ovkpi{grid-template-columns:repeat(4,1fr)}
+body.rpt #ov .ovkpi{grid-template-columns:repeat(4,1fr)}body.rpt #ov #ovKpi .ovkc:nth-child(5){display:none}
 body.rpt #ov .ovkc{border-left:1px solid #005BAC;border-top:0;padding:12px 8px 10px}body.rpt #ov .ovkc:first-child{border-left:0}
 body.rpt #ov .ovpro{grid-template-columns:repeat(5,1fr)}
 body.rpt #ov .ovpc{border-left:1px solid #D9E3EA;border-top:0}body.rpt #ov .ovpc:first-child{border-left:0}body.rpt #ov .ovpc.ovnd{border-left:1px dashed #B5B6B6}
@@ -5220,6 +5220,9 @@ const OV_K=[{k:'ftfr',n:'FTFR',u:'%',d:1,t:()=>TARGET_FTFR,hi:true,tl:()=>TARGET
  {k:'rev',n:'재방문율',u:'%',d:1,t:()=>TARGET_REV,hi:false,tl:()=>TARGET_REV+'% 이하',h:'고친 뒤 14일 안에 다시 방문한 비율'},
  {k:'mttr',n:'평균 수리 작업 시간 (MTTR)',u:'분',d:1,t:()=>TARGET_MTTR,hi:false,tl:()=>TARGET_MTTR+'분 이하',h:'고장 수리의 CRM 작업 시작~종료 시간 평균(예약 시간 기준)'},
  {k:'idx',n:'PM 비중',u:'%',d:1,t:()=>null,hi:true,tl:()=>'목표 없음',h:'PM ÷ (PM + 고장 수리)'}];
+/* 건당 평균 작업 시간(2026-11-19 사용자 요청 「overview에도 건당 평균 시간」) — Overview 핵심 지표의 다섯째 칸. 값은 renderOv 가 workTimeSum 으로 덧붙인다(stats·kpiCore 는 그대로).
+   OV_K 에 넣지 않는 이유: OV_K 는 목표 판정·확인이 필요한 곳·보고용 보기가 같이 쓴다. 보고용 보기(PDF)는 네 칸 그대로 */
+const OV_AVG={k:'avgm',n:'건당 평균 작업 시간',u:'분',d:0,t:()=>null,hi:false,tl:()=>'목표 없음',h:'작업 시간 ÷ 시간이 기록된 건수 — 전체 업무 유형, CRM 시작~종료 0~500분, 이동 시간 제외'};
 const OV_ACT=[['고장수리','고장 수리','#005BAC'],['PM','PM','#00B9EF'],['설치이전','설치·이전','#5185C5'],['Cal평가','Calibration·평가','#84BAE5'],['기타','기타','#9FA0A0']];
 const OV_BUCKET={'고장 수리':'고장수리','PM':'PM','온라인 정기점검':'PM'};
 ['장비 설치','장비 이전 설치','설치/데모 평가','설치','장비 철수','철수 및 폐기'].forEach(p=>{OV_BUCKET[p]='설치이전';});
@@ -5426,6 +5429,10 @@ function renderOv(){
   // 12개월 추이
   const _l=D.months[D.months.length-1], end=p.months.filter(m=>m<=_l).pop()||_l, tm=[]; for(let i=11;i>=0;i--) tm.push(shiftMonth(end,-i));
   const ts=tm.map(m=>stats([m],team)), tl=tm.map(m=>m.slice(2).replace('-','.'));
+  /* 건당 평균 작업 시간 — 명단(고른 팀이면 그 팀)의 작업 시간 ÷ 시간이 기록된 건수. Organization 표와 같은 식. 자료가 없으면 칸을 만들지 않는다 */
+  const ovNm=ROSTER.filter(r=>!team||r[1]===team).map(r=>r[0]), ovAvg=mm=>{ try{ const A=workTimeSum(ovNm,[].concat(mm)), c=Object.keys(A.n).reduce((a,b)=>a+A.n[b],0); return c?A.tot/c:null; }catch(e){ return null; } };
+  cur.avgm=ovAvg(p.months); prv.avgm=ovAvg(pp.months); ts.forEach((x,i)=>{ x.avgm=ovAvg([tm[i]]); });
+  const KS=(cur.avgm!=null||ts.some(x=>x.avgm!=null))?OV_K.concat([OV_AVG]):OV_K; if(!KS.some(x=>x.k===OV.metric)) OV.metric=KS[0].k;
   // 업무 유형
   const ms=new Set(p.months), pmP=mPred(pp.months), act={},actP={}; OV_ACT.forEach(a=>{act[a[0]]=0;actP[a[0]]=0;});
   for(const o of D.rows){ const inC=ms.has(o.mk), inP=pmP(o.mk,o.t); if(!inC&&!inP) continue; const n=team?o.cteams.filter(t=>t===team).length:o.credits.length; if(!n) continue; const b=ovBucket(o.purp); if(inC) act[b]+=n; if(inP) actP[b]+=n; }
@@ -5444,7 +5451,7 @@ function renderOv(){
   <div class="ovtitle"><div><h2>Overview ${SB}${team?'<button type="button" class="ovscx" id="ovScx">FSG 전체로 보기</button>':''}</h2><p>${esc(p.label)} · ${esc(scope)} · 비교 ${esc(lab)} · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}${SRC&&SRC.at?' · 마지막 업데이트 '+esc(SRC.at):''}${prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div><div class="ovtb2"><button type="button" id="ovRptBtn">보고용 보기</button></div></div>
   <div class="rptHead"><div class="rl"><img alt="Sysmex" src="${logoSrc}"><small>FSG Service Performance</small><b>Overview</b></div><div class="rr"><h1>${esc(XM.months)} 서비스 운영 현황${prov||p.partial?' <em class="rptprov">잠정 실적</em>':''}</h1><p>${esc(rptSum)}</p><span>${esc(scope)} · 집계 ${esc(XM.months)} · 데이터 기준일 ${esc(XM.cut)}${window.__SYNTH?' · <b class="rptsyn">합성 데이터(테스트)</b>':''}</span></div></div>
   <h3 class="ovrh"><i>SECTION 01</i>Key Service Performance ${SB}</h3>
-  <section class="ovkpi" id="ovKpi" role="tablist" aria-label="핵심 지표 4개. 선택하면 아래 추이 그래프가 바뀝니다">${OV_K.map(o=>{ const v=cur[o.k], st=ovSt(o,v);
+  <section class="ovkpi${KS.length===5?' c5':''}" id="ovKpi" role="tablist" aria-label="핵심 지표 ${KS.length}개. 선택하면 아래 추이 그래프가 바뀝니다">${KS.map(o=>{ const v=cur[o.k], st=ovSt(o,v);
     const tip=o.n+' = '+o.h+(o.t()==null?' · 목표 없음':' · 목표 '+o.tl()+' · '+ovGap(o,v));   /* v3.8: 설명·산식·목표 차이는 마우스 설명으로 */
     return `<button class="ovkc" role="tab" aria-selected="${o.k===OV.metric}" data-k="${o.k}" title="${esc(tip)}"><span class="ovl">${o.n}<span class="wlinfo" aria-hidden="true">ⓘ</span>${st.chip?`<span class="ovchip ${st.st}">${st.chip}</span>`:''}</span>
       <span class="ovv">${ovF(o,v)}<small>${o.u}</small></span><span class="ovt">${o.t()==null?'목표 없음':'목표 '+o.tl()}</span><span class="ovd">${ovDelta(o,v,prv[o.k],lab)}</span><span class="ovh" hidden>${esc(o.h)}</span></button>`; }).join('')}</section>
@@ -5464,7 +5471,7 @@ function renderOv(){
   <div class="rptfoot">${esc(rptFoot)} · 2 / 2</div>
   <div class="ovrfoot">자료: CRM 「모든 약속/활동」 · FTFR = 한 번에 고친 비율, 재방문율 = 14일 안 재방문 비율, MTTR = 고장 수리 평균 소요 시간 · 근접 기준: 목표의 92%(높을수록 좋은 지표) / 115%(낮을수록 좋은 지표) · 업무 유형은 취소·온라인 정기점검 제외, 담당자·필수 참석자 각각 1건 · 최근 14일의 FTFR·재방문율은 잠정치 · 작성: FSS Team</div>`;
   // 추이
-  const o=OV_K.find(x=>x.k===OV.metric), n=OV.range, arr=ts.map(s=>s[o.k]).slice(-n), lb=tl.slice(-n), tg=o.t();
+  const o=KS.find(x=>x.k===OV.metric), n=OV.range, arr=ts.map(s=>s[o.k]).slice(-n), lb=tl.slice(-n), tg=o.t();
   const nn=arr.filter(v=>v!=null), avg=nn.length?nn.reduce((a,b)=>a+b,0)/nn.length:null;
   $('ovTrT').textContent=o.n+' 추이';
   $('ovSum').innerHTML=`<span>현재<b>${ovF(o,cur[o.k])}${o.u}</b></span><span>${ovDelta(o,cur[o.k],prv[o.k],lab)}</span><span>목표<b>${tg==null?'없음':o.tl()}</b></span><span>${n}개월 평균<b>${ovF(o,avg)}${o.u}</b></span>`;

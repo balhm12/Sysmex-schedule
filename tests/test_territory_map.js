@@ -45,3 +45,11 @@ assert.ok(/\{k:'avg', label:'건당 평균 시간', num:true, cls:'lbav'\}/.test
 assert.ok(/lbAvg = function\(n\)\{[^\n]*workTimeSum\(\[n\], lbWm\)/.test(html), '개인 순위표도 workTimeSum 으로 계산');
 assert.ok(/#prod #lbTable \.lbeq,#prod #lbTable \.lbav\{display:none\}/.test(html) && /' · 건당 '\+fmt\(Math\.round\(r\.avg\)\)\+'분'/.test(html), '휴대폰: 열은 숨기고 이름 아래 줄에 표시');
 console.log('test_territory_map: 개인 순위표 건당 평균 확인 통과');
+
+/* Overview 의 건당 평균 작업 시간 (2026-11-19) — 다섯째 칸. OV_K(목표 판정·보고용 보기가 같이 씀)에는 넣지 않고, 보고용 보기는 네 칸 그대로 */
+assert.ok(/const OV_AVG=\{k:'avgm',n:'건당 평균 작업 시간',u:'분'/.test(html), 'Overview 칸 정의');
+{ const a=html.indexOf('const OV_K=['), b=html.indexOf('}];',a); assert.ok(a>0&&b>a&&!/avgm/.test(html.slice(a,b)), 'OV_K 에는 넣지 않는다'); }
+assert.ok(/cur\.avgm=ovAvg\(p\.months\); prv\.avgm=ovAvg\(pp\.months\)/.test(html) && /ovAvg=mm=>\{ try\{ const A=workTimeSum\(ovNm,/.test(html), 'Overview 도 workTimeSum 으로 계산');
+assert.ok(/body\.rpt #ov #ovKpi \.ovkc:nth-child\(5\)\{display:none\}/.test(html), '보고용 보기는 네 칸');
+assert.ok(/#ov \.ovkpi\.c5 \.ovkc:nth-child\(5\)\{grid-column:1\/-1;border-left:0\}/.test(html), '좁은 화면에서 다섯째 칸은 한 줄 전체');
+console.log('test_territory_map: Overview 건당 평균 확인 통과');
