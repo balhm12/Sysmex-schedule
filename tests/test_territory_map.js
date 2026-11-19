@@ -39,3 +39,9 @@ assert.ok(/row\('건당 평균 작업 시간'/.test(html), '개인 종합 요약
 assert.ok(/\['건당 평균\(분\)','avg'\]/.test(html) && /평가 건당\(분\)/.test(html), '평가·Calibration 탭');
 assert.ok(/if\(mins>0&&mins<=500\)\{ c\[1\]\+=mins; c\[2\]\+\+; \}/.test(code), '지도의 지역 방문 평균도 작업 시간과 같은 범위(0~500분)');
 console.log('test_territory_map: 건당 평균 시간 확인 통과');
+
+/* 개인 순위표의 건당 평균 시간 (2026-11-19) — 같은 식(workTimeSum), 휴대폰에서는 이름 아래 줄에 */
+assert.ok(/\{k:'avg', label:'건당 평균 시간', num:true, cls:'lbav'\}/.test(html), '개인 순위표 열');
+assert.ok(/lbAvg = function\(n\)\{[^\n]*workTimeSum\(\[n\], lbWm\)/.test(html), '개인 순위표도 workTimeSum 으로 계산');
+assert.ok(/#prod #lbTable \.lbeq,#prod #lbTable \.lbav\{display:none\}/.test(html) && /' · 건당 '\+fmt\(Math\.round\(r\.avg\)\)\+'분'/.test(html), '휴대폰: 열은 숨기고 이름 아래 줄에 표시');
+console.log('test_territory_map: 개인 순위표 건당 평균 확인 통과');
