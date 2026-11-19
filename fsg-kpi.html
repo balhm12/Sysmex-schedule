@@ -302,6 +302,26 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
     text-transform:uppercase; padding:8px 10px; border-bottom:1px solid var(--border); cursor:pointer; white-space:nowrap;
     position:sticky; top:0; background:var(--surface);}
 #prod table.data-table th.num, #prod table.data-table td.num{text-align:right; font-family:'IBM Plex Mono',monospace;}
+#prod table.pstab td small{font-family:inherit;font-weight:500;color:var(--text-muted);margin-left:2px}
+#prod table.pstab tr.psg th{background:var(--surface-2);color:var(--text-secondary);font-size:12px;letter-spacing:0;text-transform:none;padding:8px 10px}
+#prod table.pstab tr.psg th span{font-weight:500;color:var(--text-muted);margin-left:8px;font-size:11.5px}
+#prod table.pstab .psn{display:block;font-size:11.5px;color:var(--text-muted);margin-top:1px}
+#prod table.pstab td.psd{color:var(--text-muted);font-size:12px;white-space:nowrap}
+#prod table.pstab td.psx{color:var(--text-muted);font-size:12.5px}
+#prod table.pstab td:first-child{min-width:112px}
+#prod .pswrap,#prod.dsx .pswrap{width:0;min-width:100%;box-sizing:border-box;max-height:none}
+#prod table.pstab td:first-child,#prod table.pstab tr.psg th{white-space:normal}#prod table.pstab tr.psg th span{display:inline-block;margin-left:0;margin-right:0;padding-left:8px}   /* 표의 최소 폭이 휴대폰에서 개인별 상세 전체를 넓히지 않게 — 넘치면 표 안에서만 가로로 민다 */
+@media (max-width:700px){#prod table.pstab td,#prod table.pstab th{padding-left:7px;padding-right:7px}}
+#prod .psnote{margin:8px 2px 0;font-size:12px;line-height:1.6;color:var(--text-muted)}
+#prod .ldf{padding:16px 18px}#prod .ldfh{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}#prod .ldfh h2{margin:0;font-size:15px;color:var(--accent)}
+#prod .ldeq{margin:6px 0 8px;font-size:15px;line-height:1.6;color:var(--text)}#prod .ldeq b{color:var(--accent)}
+#prod .ldst{margin:0 0 12px;padding-left:20px;font-size:13px;line-height:1.7;color:var(--text-secondary)}
+#prod table.ldax{margin-bottom:10px}#prod table.ldax td small,#prod #ldTable td small{font-family:inherit;font-weight:500;color:var(--text-muted);margin-left:3px}#prod table.ldax tr.ldoff td{color:var(--text-muted)}
+#prod #ldTable td small.ldz{display:block;margin:1px 0 0;font-size:11px}
+#prod .ldnote{margin:0;font-size:12.5px;line-height:1.65;color:var(--text-muted)}#prod .ldnote b{color:var(--text-secondary)}
+#prod .ldb{display:inline-block;font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 8px;border:1px solid var(--border);color:var(--text-secondary);background:var(--surface);white-space:nowrap}
+#prod .ldb.ldh{border-color:var(--text-secondary);color:var(--text)}#prod .ldb.ldl{color:var(--text-muted)}
+#prod table.acwtab tr.acwtot td{background:var(--surface-2);font-weight:700}
 #prod table.data-table th span.arrow{font-size:11px; margin-left:3px; color:var(--accent);}
 #prod table.data-table td{padding:9px 10px; border-bottom:1px solid var(--border-soft);}
 #prod table.data-table tbody tr:hover{background:var(--surface-2); cursor:pointer;}
@@ -457,6 +477,13 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 .wd-act{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}
 .wd-save{font:inherit;font-size:13px;font-weight:700;padding:0 18px;height:36px;border:1px solid var(--primary);border-radius:4px;background:var(--primary);color:#fff;cursor:pointer}
 .wdlg .lbtn{height:36px}
+.ldwt{margin:0 28px 6px 0;font-size:16px;color:var(--primary)}.ldwp{margin:0 0 12px;font-size:13px;line-height:1.6;color:var(--muted)}
+.ldwg{display:grid;gap:8px}.ldwg label{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid var(--border);border-radius:6px}
+.ldwg label b{font-size:14px}.ldwg label small{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.ldwi{display:flex;align-items:center;gap:6px;flex:0 0 auto}.ldwi input{width:84px;height:40px;font:inherit;font-size:15px;text-align:right;padding:0 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)}.ldwi i{font-style:normal;color:var(--muted)}
+.ldws{margin:10px 0 0;font-size:13px;min-height:1.2em}.ldws.bad{color:var(--bad,#C8312E)}.ldws.good{color:var(--good,#26782D)}
+.ldwb{display:flex;align-items:center;gap:8px;margin-top:12px}
+@media (max-width:520px){.ldwi input{height:44px}}
 .wd-msg{min-height:20px;font-size:13px;margin:0 0 10px}.wd-msg.bad{color:var(--bad-t)}.wd-msg.good{color:var(--good-t)}
 .wd-prev{margin:0 0 12px;font-size:13px}
 .wd-prev table{margin-top:6px}
@@ -577,10 +604,10 @@ body[data-view=eqp] #prodTabs{display:none}
 @media (max-width:1000px){.dsx .dspair.dseven{grid-template-columns:1fr !important}}   /* 휴대폰에서 두 칸이 나란히 남아 막대가 눌리던 것 — .dseven 이 1000px 이하 1칸 규칙보다 우선했음 */
 .lbex{display:inline-flex;align-items:center;gap:6px;margin:0 0 8px;font-size:13px;min-height:40px}.lbex input{width:18px;height:18px}
 .ogtab td:first-child,.ogtab th:first-child{position:sticky;left:0;background:var(--surface,#fff);z-index:1}
-body[data-view=org] #prodTabs [data-tab=ot],body[data-view=org] #prodTabs [data-tab=move]{display:none}
+body[data-view=org] #prodTabs [data-tab=ot],body[data-view=org] #prodTabs [data-tab=move],body[data-view=org] #prodTabs [data-tab=acad],body[data-view=org] #prodTabs [data-tab=load]{display:none}
 body[data-view=org] #panel-overview>.ovkpi,body[data-view=org] #panel-overview>.dsnav{display:none}
-body[data-view=wl] #prodTabs [data-tab]:not([data-tab=ot]):not([data-tab=move]){display:none}
-body[data-view=prd] #prodTabs [data-tab=move]{display:none}
+body[data-view=wl] #prodTabs [data-tab]:not([data-tab=ot]):not([data-tab=move]):not([data-tab=acad]):not([data-tab=load]){display:none}
+body[data-view=prd] #prodTabs [data-tab=move],body[data-view=prd] #prodTabs [data-tab=acad],body[data-view=prd] #prodTabs [data-tab=load]{display:none}
 body[data-view=org] .pfoot,body[data-view=eqp] .pfoot,body[data-view=wl] .pfoot{display:none}
 body[data-view=prd] #prodTabs [data-tab=ot]{display:none}
 body[data-view=org] #mainArea,body[data-view=eqp] #mainArea{padding-bottom:0}body[data-view=org] #prod,body[data-view=eqp] #prod{padding-top:0}body[data-view=org] #mainArea #foot:empty,body[data-view=eqp] #mainArea #foot:empty{display:none}
@@ -2574,6 +2601,7 @@ function renderPerson(){
     statTile('소속팀 FTFR', pctStr(rv.ftfr), '', reliable?targetPill(rv.ftfr, DATA.benchmarks.ftfr_target,'higher-better'):'', '팀 평균 참고치 (개인별 데이터 아님)')+
     '</div>';
 
+  html2 += personSummaryHtml(state.person, period);   /* 2026-11-19: 종합 요약 */
   html2 += '<div class="block grid grid-2">'+
     chartCard('p-score-chart', '비즈니스(장비 그룹)별 가중 업무량 · FSG 내 위치', PL(period)+' · 그룹마다 FSG 최고점 = 오른쪽 끝')+
     chartCard('p-group-chart', '비즈니스(장비 그룹)별 처리 건수', PL(period))+
@@ -2893,6 +2921,182 @@ function renderMove(){
   T.querySelectorAll('th[data-k]').forEach(function(th){ th.addEventListener('click', function(){ var k = th.getAttribute('data-k'); if (state.mvSort === k) state.mvDir = -(state.mvDir||-1); else { state.mvSort = k; state.mvDir = -1; } renderMove(); }); });
 }
 
+/* ================= RENDER: 학술업무 — 평가·Calibration (2026-11-19) =================
+   팀·사무소별 표 + 개인별 표. 자료 = acadWork()(DATA.acw). 1인당 = 단위 구성원 전체로 나눔. 증감에는 색을 칠하지 않는다 */
+function acwMonths(p){ return p === '직전 년도' ? DATA.cmp_months : p === '전체 누적' ? null : DATA.sel_months; }
+function acwSum(n, months){ var m = (DATA.acw && DATA.acw.per[n]) || {}, o = {ev:0, cal:0, calR:0, evM:0, calM:0};
+  Object.keys(m).forEach(function(mk){ if (!months || months.indexOf(mk) >= 0){ for (var k in o) o[k] += m[mk][k] || 0; } }); o.tot = o.ev + o.cal + o.calR; o.min = o.evM + o.calM; return o; }
+function acwAgg(list, months){ return list.reduce(function(o, n){ var s = acwSum(n, months); for (var k in o) o[k] += s[k]; return o; }, {ev:0, cal:0, calR:0, evM:0, calM:0, tot:0, min:0}); }
+function renderAcad(){
+  var el = document.getElementById('panel-acad');
+  if (!DATA.acw){ el.innerHTML = '<div class="empty-note"><b>CRM 자료가 아직 없습니다.</b></div>'; return; }
+  var period = state.period, scope = state.acScope || 'ALL', cm = acwMonths(period), pm = period === '이번 년도' ? DATA.cmp_months : null;
+  var all = DATA.teams.reduce(function(a,t){ return a.concat(DATA.team[t].members); }, []);
+  var names = scope === 'ALL' ? all : DATA.team[scope].members, cur = acwAgg(names, cm), prv = pm ? acwAgg(names, pm) : null, head = names.length || 1;
+  var dl = function(c, p){ if (p == null) return ''; var d = c - p; return '<span class="stat-delta delta-flat">'+(d>0?'▲ +':d<0?'▼ −':'· ')+fmt(Math.abs(d))+'건 <span style="color:var(--text-muted);font-weight:500;">'+(DATA.cmp_short||'비교 기간')+'</span></span>'; };
+  var html = '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div>'+
+    '<b>학술업무 = CRM 약속/활동의 목적이 평가 또는 Calibration 인 기록</b>입니다. <b>평가</b> = 설치/데모 평가·Evaluation·인증 지원·Accreditation Support·Proficiency Test, <b>Calibration</b> = 목적 Calibration(원격 Calibration 은 따로 셈). '+
+    '담당자와 필수 참석자 각각 1건 · 취소 제외 · 시간은 CRM 에 기록된 시작~종료(12시간을 넘는 기록은 시간에서 뺌). 1인당 = 그 팀·사무소 인원 전체로 나눈 값. '+
+    '위쪽 「학술 응대」(전화 문의 건수)와는 다른 자료입니다. 개인 값은 맡은 업무의 양과 종류이며 성과 평가가 아닙니다.</div></div>';
+  html += '<div class="controls" style="margin-bottom:14px;"><div class="control-group" style="flex-wrap:wrap;min-width:0;"><span class="control-label">범위</span><div class="segmented" id="acSeg" style="flex-wrap:wrap;max-width:100%;"></div></div></div>';
+  html += '<div class="block grid grid-4">'+
+    statTile('평가·인증 지원', fmt(cur.ev), '건', dl(cur.ev, prv && prv.ev), fmtH(cur.evM)+'시간 · '+fmt(names.length)+'명')+
+    statTile('Calibration', fmt(cur.cal), '건', dl(cur.cal, prv && prv.cal), '방문 · 원격 '+fmt(cur.calR)+'건 별도')+
+    statTile('1인당 학술업무', fmt1(cur.tot/head), '건', '', '평가 + Calibration + 원격 · '+PL(period))+
+    statTile('학술업무 시간', fmtH(cur.min), '시간', '', '1인당 '+fmtH(cur.min/head)+'시간 · CRM 기록')+
+    '</div>';
+  var U = DATA.teams.map(function(t){ var L = DATA.team[t].members, a = acwAgg(L, cm), p = pm ? acwAgg(L, pm) : null; return {t:t, n:L.length, a:a, p:p}; });
+  var F = {t:null, n:all.length, a:acwAgg(all, cm), p:pm ? acwAgg(all, pm) : null};
+  var urow = function(u, cls){ var a = u.a; return '<tr'+(cls?' class="'+cls+'"':'')+'><td>'+(u.t ? '<span style="color:'+TEAM_COLOR[u.t]+';font-weight:700">'+esc(DATA.team_short[u.t]||u.t)+'</span>' : '<b>FSG 전체</b>')+'</td><td class="num">'+fmt(u.n)+'</td>'+
+    '<td class="num"><b>'+fmt(a.tot)+'</b></td><td class="num">'+(u.n?fmt1(a.tot/u.n):'-')+'</td><td class="num">'+fmt(a.ev)+'</td><td class="num">'+fmt(a.cal)+'</td><td class="num">'+fmt(a.calR)+'</td><td class="num">'+fmtH(a.min)+'</td>'+
+    (pm?'<td class="num" style="color:var(--text-muted)">'+(function(d){ return d===0?'–':(d>0?'+':'')+fmt(d); })(a.tot-u.p.tot)+'</td>':'')+'</tr>'; };
+  html += '<div class="block"><div class="block-head"><h2>팀 · 사무소별 학술업무</h2><span class="hint">건 · '+PL(period)+'</span></div>'+
+    '<div class="card table-scroll" style="padding:6px;"><table class="data-table acwtab"><thead><tr><th>팀 · 사무소</th><th class="num">인원</th><th class="num">합계</th><th class="num">1인당</th><th class="num">평가</th><th class="num">Calibration</th><th class="num">원격 Cal</th><th class="num">시간</th>'+
+    (pm?'<th class="num">'+esc(DATA.cmp_short||'증감')+'</th>':'')+'</tr></thead><tbody>'+U.map(function(u){ return urow(u); }).join('')+urow(F, 'acwtot')+'</tbody></table></div></div>';
+  html += '<div class="block"><div class="block-head"><h2>개인별 학술업무</h2><span class="hint">열 제목 클릭 시 정렬 · '+PL(period)+'</span></div>'+
+    '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="acTable"></table></div></div>';
+  el.innerHTML = html;
+  teamButtons(document.getElementById('acSeg'), scope, true, function(t){ state.acScope = t; renderAcad(); });
+  var rows = names.map(function(n){ var c = acwSum(n, cm), p = pm ? acwSum(n, pm) : null; return {name:n, team:DATA.person[n].team, grade:(DATA.grade||{})[n]||'', ev:c.ev, cal:c.cal, calR:c.calR, tot:c.tot, min:c.min, d:p?c.tot-p.tot:null}; });
+  var key = state.acSort || 'tot', dir = state.acDir || -1;
+  rows.sort(function(a,b){ var x = a[key], y = b[key]; return (typeof x === 'string' ? x.localeCompare(y,'ko') : (x||0)-(y||0)) * dir || a.name.localeCompare(b.name,'ko'); });
+  var mx = Math.max(1, Math.max.apply(null, rows.map(function(r){ return r.tot; })));
+  var cols = [['#',null],['이름','name'],['팀','team'],['직급','grade'],['합계','tot'],['평가','ev'],['Calibration','cal'],['원격 Cal','calR'],['시간','min']].concat(pm?[[DATA.cmp_short||'증감','d']]:[]);
+  var T = document.getElementById('acTable');
+  T.innerHTML = '<thead><tr>'+cols.map(function(c){ return '<th'+(c[1]?' data-k="'+c[1]+'" style="cursor:pointer"':'')+(['ev','cal','calR','tot','min','d'].indexOf(c[1])>=0?' class="num"':'')+'>'+c[0]+(c[1]===key?(dir<0?' ▼':' ▲'):'')+'</th>'; }).join('')+'</tr></thead><tbody>'+
+    rows.map(function(r,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(r.name)+'</td><td><span style="color:'+TEAM_COLOR[r.team]+';font-weight:700">'+esc(DATA.team_short[r.team]||r.team)+'</span></td><td>'+esc(r.grade)+'</td>'+
+      '<td class="num"><span style="display:inline-block;width:70px;height:6px;border-radius:3px;background:var(--border);margin-right:8px;vertical-align:middle;overflow:hidden"><i style="display:block;height:100%;width:'+(r.tot/mx*100)+'%;background:'+TEAM_COLOR[r.team]+'"></i></span><b>'+fmt(r.tot)+'</b></td>'+
+      '<td class="num">'+fmt(r.ev)+'</td><td class="num">'+fmt(r.cal)+'</td><td class="num">'+fmt(r.calR)+'</td>'+
+      '<td class="num">'+fmtH(r.min)+'</td>'+(pm?'<td class="num" style="color:var(--text-muted)">'+(r.d==null?'-':r.d===0?'–':(r.d>0?'+':'')+fmt(r.d))+'</td>':'')+'</tr>'; }).join('')+'</tbody>';
+  T.querySelectorAll('th[data-k]').forEach(function(th){ th.addEventListener('click', function(){ var k = th.getAttribute('data-k'); if (state.acSort === k) state.acDir = -(state.acDir||-1); else { state.acSort = k; state.acDir = k === 'name' || k === 'team' || k === 'grade' ? 1 : -1; } renderAcad(); }); });
+}
+
+/* ================= RENDER: 부하도 (개선 지수) (2026-11-19) ================= */
+function loadIndex(period){
+  var months = acwMonths(period), O = DATA.ot, M = DATA.move, Q = DATA.eq, V = DATA.veq, W0 = DATA.loadw || LOAD_DEF, nb = DATA.newbie || [];
+  var all = DATA.teams.reduce(function(a,t){ return a.concat(DATA.team[t].members); }, []);
+  var names = all.filter(function(n){ return (DATA.grade||{})[n] !== '팀장' && nb.indexOf(n) < 0; });
+  var hasHr = !!(O && O.hr);
+  var val = {
+    score: function(n){ return ((DATA.person[n]||{}).score||{})[period] || 0; },
+    inst: Q ? function(n){ return (Q.by[n]||{}).inst || 0; } : null,
+    veq: V ? function(n){ var m = V.per[n] || {}, u = {}; Object.keys(m).forEach(function(mk){ if (!months || months.indexOf(mk) >= 0) m[mk].forEach(function(k){ u[k] = 1; }); }); return Object.keys(u).length; } : null,
+    move: M ? function(n){ if (M.homes.indexOf(n) < 0) return null; var m = M.per[n] || {}, km = 0; Object.keys(m).forEach(function(mk){ if (!months || months.indexOf(mk) >= 0) km += m[mk].km; }); return km; } : null,
+    ot: O ? function(n){ var p = O.person[n] ? O.person[n].p[period] : null; if (!p) return 0; return otH(hasHr ? p.rM : (p.nM + p.hM + p.xM)); } : null };
+  var ax = LOAD_AX.map(function(a){ return {k:a[0], label:a[1], name:a[0]==='ot' && !hasHr ? 'CRM 근무 외 활동 시간' : a[2], unit:a[3], w0:+W0[a[0]] || 0, on:!!val[a[0]]}; });
+  var wsum = ax.reduce(function(s,a){ return s + (a.on ? a.w0 : 0); }, 0) || 1;
+  var per = {}; names.forEach(function(n){ per[n] = {v:{}, z:{}, c:{}, raw:0, miss:[]}; });
+  ax.forEach(function(a){ a.w = a.on ? a.w0 / wsum : 0; if (!a.on) return;
+    var xs = []; names.forEach(function(n){ var v = val[a.k](n); per[n].v[a.k] = v; if (v != null) xs.push(v); });
+    var mean = xs.length ? xs.reduce(function(s,x){ return s+x; }, 0) / xs.length : 0, sd = xs.length ? Math.sqrt(xs.reduce(function(s,x){ return s + (x-mean)*(x-mean); }, 0) / xs.length) : 0;
+    var so = xs.slice().sort(function(x,y){ return x-y; }), med = so.length ? (so.length % 2 ? so[(so.length-1)/2] : (so[so.length/2-1] + so[so.length/2]) / 2) : 0;
+    a.mean = mean; a.sd = sd; a.median = med; a.n = xs.length;
+    names.forEach(function(n){ var v = per[n].v[a.k], z = (v == null || !sd) ? 0 : (v - mean) / sd; if (v == null) per[n].miss.push(a.label); per[n].z[a.k] = z; per[n].c[a.k] = a.w * z; per[n].raw += a.w * z; }); });
+  var rs = names.map(function(n){ return per[n].raw; }), rm = rs.length ? rs.reduce(function(s,x){ return s+x; }, 0) / rs.length : 0, rsd = rs.length ? Math.sqrt(rs.reduce(function(s,x){ return s + (x-rm)*(x-rm); }, 0) / rs.length) : 0;
+  names.forEach(function(n){ var p = per[n]; p.idx = rsd ? 100 + 15 * (p.raw - rm) / rsd : 100; p.band = p.idx >= 110 ? '고부하' : p.idx < 90 ? '저부하' : '표준';
+    p.main = ax.filter(function(a){ return a.on && p.z[a.k] >= 1; }).map(function(a){ return a.label; }); });
+  return {names:names, ax:ax, per:per, hasHr:hasHr, custom:!!DATA.loadw_meta};
+}
+function loadFormulaText(L){ return L.ax.filter(function(a){ return a.on; }).map(function(a){ return a.label+' '+fmt(Math.round(a.w*100))+'%'; }).join(' + '); }
+function renderLoad(){
+  var el = document.getElementById('panel-load'), period = state.period, scope = state.ldScope || 'ALL', L = loadIndex(period);
+  var names = scope === 'ALL' ? L.names : L.names.filter(function(n){ return DATA.team[scope].members.indexOf(n) >= 0; });
+  var off = L.ax.filter(function(a){ return !a.on; }), band = function(b){ return names.filter(function(n){ return L.per[n].band === b; }).length; };
+  var mt = DATA.loadw_meta;
+  var html = '<div class="card ldf"><div class="ldfh"><h2>부하도 계산식</h2>'+(DATA.admin_weights ? '<button type="button" class="more-btn" id="ldEdit" style="width:auto;margin:0">부하도 가중치 변경</button>' : '')+'</div>'+
+    '<p class="ldeq"><b>부하도 = 100 + 15 × Z</b>( '+loadFormulaText(L)+' )</p>'+
+    '<ol class="ldst"><li>축마다 대상 인원 '+fmt(L.names.length)+'명의 평균·표준편차로 <b>Z점수</b>를 구합니다. Z = (그 사람 값 − 평균) ÷ 표준편차</li>'+
+    '<li>축별 Z에 <b>가중치</b>를 곱해 더합니다.</li><li>그 합을 다시 Z점수로 바꿔 <b>100 + 15 × Z</b> 로 나타냅니다. 100 = 대상 인원 평균.</li></ol>'+
+    '<table class="data-table ldax"><thead><tr><th>축</th><th>쓰는 값</th><th class="num">가중치</th><th class="num">평균</th><th class="num">중앙값</th></tr></thead><tbody>'+
+    L.ax.map(function(a){ return '<tr'+(a.on?'':' class="ldoff"')+'><td><b>'+a.label+'</b></td><td>'+a.name+(a.on?'':' — 자료 없음(계산에서 뺌)')+'</td><td class="num">'+(a.on ? fmt(Math.round(a.w*100))+'%' : '-')+(a.on && Math.abs(a.w*100 - a.w0) > 0.5 ? '<small>(설정 '+fmt(a.w0)+'%)</small>' : '')+'</td><td class="num">'+(a.on?fmt1(a.mean)+'<small>'+a.unit+'</small>':'-')+'</td><td class="num">'+(a.on?fmt1(a.median)+'<small>'+a.unit+'</small>':'-')+'</td></tr>'; }).join('')+'</tbody></table>'+
+    '<p class="ldnote"><b>구간</b> 110 이상 고부하 · 90~110 표준 · 90 미만 저부하. <b>대상</b> 팀장·신입 제외 '+fmt(L.names.length)+'명 · '+PL(period)+'. '+
+    (off.length ? '자료가 없는 축('+off.map(function(a){ return a.label; }).join('·')+')은 빼고 남은 축의 가중치를 합 100%로 다시 맞췄습니다. ' : '')+
+    (L.hasHr ? '' : 'OT 축은 인사 연장근무 자료가 없어 CRM 근무 외 활동 시간으로 계산했습니다. ')+
+    '가중치는 '+(mt ? '관리자가 바꾼 값입니다('+esc(String(mt.at).slice(0,10))+(mt.by?' · '+esc(mt.by):'')+').' : '기본값(시범 가중치)입니다.')+
+    ' 부하도 보고서(12개월 · 직급 가중치 없는 업무량)와는 기간과 업무량 기준이 달라 값이 다를 수 있습니다. 맡은 업무의 양과 여건을 보는 지표이며 성과 평가가 아닙니다.</p></div>';
+  html += '<div class="controls" style="margin:14px 0;"><div class="control-group" style="flex-wrap:wrap;min-width:0;"><span class="control-label">범위</span><div class="segmented" id="ldSeg" style="flex-wrap:wrap;max-width:100%;"></div></div></div>';
+  var avg = names.length ? names.reduce(function(s,n){ return s + L.per[n].idx; }, 0) / names.length : null;
+  html += '<div class="block grid grid-4">'+
+    statTile('고부하', fmt(band('고부하')), '명', '', '지수 110 이상')+statTile('표준', fmt(band('표준')), '명', '', '지수 90~110')+statTile('저부하', fmt(band('저부하')), '명', '', '지수 90 미만')+
+    statTile('평균 지수', avg == null ? '-' : fmt1(avg), '', '', '대상 '+fmt(names.length)+'명 · '+PL(period))+'</div>';
+  var U = DATA.teams.map(function(t){ var Ln = L.names.filter(function(n){ return DATA.team[t].members.indexOf(n) >= 0; }); return {t:t, L:Ln}; });
+  var cnt = function(Ln, b){ return Ln.filter(function(n){ return L.per[n].band === b; }).length; }, mean = function(Ln){ return Ln.length ? Ln.reduce(function(s,n){ return s + L.per[n].idx; }, 0) / Ln.length : null; };
+  html += '<div class="block"><div class="block-head"><h2>팀 · 사무소별 부하도</h2><span class="hint">대상 인원 평균 · '+PL(period)+'</span></div>'+
+    '<div class="card table-scroll" style="padding:6px;"><table class="data-table acwtab"><thead><tr><th>팀 · 사무소</th><th class="num">대상 인원</th><th class="num">평균 지수</th><th class="num">고부하</th><th class="num">표준</th><th class="num">저부하</th></tr></thead><tbody>'+
+    U.map(function(u){ var m = mean(u.L); return '<tr><td><span style="color:'+TEAM_COLOR[u.t]+';font-weight:700">'+esc(DATA.team_short[u.t]||u.t)+'</span></td><td class="num">'+fmt(u.L.length)+'</td><td class="num"><b>'+(m==null?'-':fmt1(m))+'</b></td><td class="num">'+fmt(cnt(u.L,'고부하'))+'</td><td class="num">'+fmt(cnt(u.L,'표준'))+'</td><td class="num">'+fmt(cnt(u.L,'저부하'))+'</td></tr>'; }).join('')+
+    '<tr class="acwtot"><td>FSG 전체</td><td class="num">'+fmt(L.names.length)+'</td><td class="num">'+fmt1(mean(L.names)||0)+'</td><td class="num">'+fmt(cnt(L.names,'고부하'))+'</td><td class="num">'+fmt(cnt(L.names,'표준'))+'</td><td class="num">'+fmt(cnt(L.names,'저부하'))+'</td></tr></tbody></table></div></div>';
+  html += '<div class="block"><div class="block-head"><h2>개인별 부하도</h2><span class="hint">열 제목 클릭 시 정렬 · 축 값 아래 작은 숫자 = Z점수 · '+PL(period)+'</span></div>'+
+    '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="ldTable"></table></div></div>';
+  el.innerHTML = html;
+  teamButtons(document.getElementById('ldSeg'), scope, true, function(t){ state.ldScope = t; renderLoad(); });
+  var eb = document.getElementById('ldEdit'); if (eb) eb.addEventListener('click', function(){ if (window.openLoadW) window.openLoadW(); });
+  var on = L.ax.filter(function(a){ return a.on; });
+  var rows = names.map(function(n){ var p = L.per[n], r = {name:n, team:DATA.person[n].team, grade:(DATA.grade||{})[n]||'', idx:p.idx, band:p.band, main:p.main.join('·'), p:p}; on.forEach(function(a){ r['z_'+a.k] = p.z[a.k]; }); return r; });
+  var key = state.ldSort || 'idx', dir = state.ldDir || -1;
+  rows.sort(function(a,b){ var x = a[key], y = b[key]; return (typeof x === 'string' ? x.localeCompare(y,'ko') : (x||0)-(y||0)) * dir || a.name.localeCompare(b.name,'ko'); });
+  var cols = [['#',null],['이름','name'],['팀','team'],['직급','grade'],['부하도','idx'],['구간','band']].concat(on.map(function(a){ return [a.label, 'z_'+a.k]; })).concat([['주요 요인','main']]);
+  var fv = function(a, v){ return v == null ? '-' : a.k === 'score' || a.k === 'ot' ? fmt1(v) : fmt(Math.round(v)); };
+  var T = document.getElementById('ldTable');
+  T.innerHTML = '<thead><tr>'+cols.map(function(c){ var num = c[1] === 'idx' || /^z_/.test(c[1]||''); return '<th'+(c[1]?' data-k="'+c[1]+'" style="cursor:pointer"':'')+(num?' class="num"':'')+'>'+c[0]+(c[1]===key?(dir<0?' ▼':' ▲'):'')+'</th>'; }).join('')+'</tr></thead><tbody>'+
+    rows.map(function(r,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(r.name)+'</td><td><span style="color:'+TEAM_COLOR[r.team]+';font-weight:700">'+esc(DATA.team_short[r.team]||r.team)+'</span></td><td>'+esc(r.grade)+'</td>'+
+      '<td class="num"><b>'+fmt1(r.idx)+'</b></td><td><span class="ldb ld'+(r.band==='고부하'?'h':r.band==='저부하'?'l':'m')+'">'+r.band+'</span></td>'+
+      on.map(function(a){ var v = r.p.v[a.k], z = r.p.z[a.k]; return '<td class="num">'+fv(a, v)+'<small class="ldz">'+(v==null?'자료 없음':(z>=0?'+':'−')+Math.abs(z).toFixed(2))+'</small></td>'; }).join('')+
+      '<td style="color:var(--text-muted)">'+(r.main||'-')+'</td></tr>'; }).join('')+'</tbody>';
+  T.querySelectorAll('th[data-k]').forEach(function(th){ th.addEventListener('click', function(){ var k = th.getAttribute('data-k'); if (state.ldSort === k) state.ldDir = -(state.ldDir||-1); else { state.ldSort = k; state.ldDir = k === 'name' || k === 'team' || k === 'grade' || k === 'band' || k === 'main' ? 1 : -1; } renderLoad(); }); });
+}
+
+/* 개인 종합 요약 (2026-11-19 사용자 요청 「종합적인 직원 정보 — KPI·부하·OT 등 전반」) — 여러 탭(개인 순위·야간·휴일 근무·이동거리·담당 장비·평가·Calibration)에
+   흩어진 한 사람의 값을 한 표로 모은다. 새 계산식 없음: 값은 각 탭이 쓰는 것과 같은 자료, 비교 열 = 그 사람이 속한 팀·사무소의 1인 평균.
+   평균: 처리 건수·가중 업무량·직급 보정 = 기존 평균 대상(팀장·신입 제외) 값, 담당 장비 = eqAgg(팀장 제외 인원), 근무 외·학술업무 = 구성원 전체, 이동거리 = 거주지 자료가 있는 사람.
+   차이는 회색 글자로만(색으로 평가하지 않음) */
+function personSummaryHtml(name, period){
+  var pe = DATA.person[name]; if (!pe) return '';
+  var t = pe.team, T = DATA.team[t] || {}, mem = T.members || [], unit = DATA.team_short[t] || t, rows = [];
+  var diff = function(v, a){ if (v == null || a == null || !isFinite(v) || !isFinite(a) || !a) return '-'; var d = (v - a) / a * 100; return Math.abs(d) < 0.5 ? '같음' : (d > 0 ? '▲ ' : '▼ ')+fmt(Math.round(Math.abs(d)))+'%'; };
+  var row = function(label, v, a, f, u, note){ rows.push('<tr><td>'+label+(note?'<span class="psn">'+note+'</span>':'')+'</td><td class="num"><b>'+(v==null?'-':f(v))+'</b>'+(v==null?'':'<small>'+u+'</small>')+'</td><td class="num">'+(a==null||!isFinite(a)?'-':f(a)+'<small>'+u+'</small>')+'</td><td class="num psd">'+diff(v,a)+'</td></tr>'); };
+  var grp = function(title, hint){ rows.push('<tr class="psg"><th colspan="4" scope="colgroup">'+title+(hint?'<span>'+hint+'</span>':'')+'</th></tr>'); };
+  var gi = pe.grade_index ? pe.grade_index[period] : null, n = mem.length || 1, f1 = function(x){ return fmt1(x).replace(/\.0$/,''); };
+  var LD = loadIndex(period), lp = LD.per[name];
+  grp('부하도 (개선 지수)', '100 = 대상 인원 평균 · '+loadFormulaText(LD));
+  if (lp){ var um = mem.filter(function(x){ return LD.per[x]; }), ua0 = um.length ? um.reduce(function(s,x){ return s + LD.per[x].idx; }, 0) / um.length : null;
+    row('부하도', lp.idx, ua0, fmt1, '', lp.band+(lp.main.length ? ' · 주요 요인 '+lp.main.join('·') : '')+(lp.miss.length ? ' · '+lp.miss.join('·')+' 자료 없음(평균으로 봄)' : '')); }
+  else rows.push('<tr><td colspan="4" class="psx">팀장·신입은 부하도 대상이 아닙니다.</td></tr>');
+  grp('업무량 · 품질', '평균 = 팀장·신입 제외');
+  row('처리 건수', pe.total_case[period], T.case_avg_core ? T.case_avg_core[period] : null, function(x){ return fmt1(x).replace(/\.0$/,''); }, '건');
+  row('가중 업무량', pe.score[period] || 0, T.score_avg_core ? T.score_avg_core[period] : null, fmt1, '점');
+  row('직급 보정 지수', gi, T.index_avg ? T.index_avg[period] : null, fmt1, '', '100 = FSG 같은 직급 중앙값');
+  row('평균 수리 작업 시간 (MTTR)', mttrRepairAvg(pe, period), mttrRepairAvg(T, period), fmt1, '분', '고장 수리');
+  if (DATA.eq){ var by = DATA.eq.by[name] || {inst:0,eq:0,sB:0,sU:0,sC:0}, lead = function(x){ return (DATA.grade||{})[x] === '팀장'; }, cs = function(x){ return ((DATA.person[x]||{}).total_case||{})[period] || 0; };
+    var A = eqAgg(DATA.eq.by, mem, cs, lead), np = A.nPeople || 1;
+    grp('담당 장비', '현재 담당기관 관리표'+(DATA.eq.made?' ('+esc(DATA.eq.made)+')':'')+' · 평균 = 팀장 제외');
+    row('담당 기관', by.inst, A.inst/np, function(x){ return fmt1(x).replace(/\.0$/,''); }, '곳');
+    row('담당 장비', by.eq, A.perHead, function(x){ return fmt1(x).replace(/\.0$/,''); }, '대');
+    row('시스템 (혈액·유린·응고)', (by.sB||0)+(by.sU||0)+(by.sC||0), (A.sB+A.sU+A.sC)/np, function(x){ return fmt1(x).replace(/\.0$/,''); }, '개');
+    row('장비 100대당 처리 건수', by.eq ? cs(name)/by.eq*100 : null, A.per100, fmt1, '건'); }
+  else { grp('담당 장비'); rows.push('<tr><td colspan="4" class="psx">담당기관 관리표가 올라오면 표시됩니다.</td></tr>'); }
+  var O = DATA.ot, po = O && O.person[name] ? O.person[name].p[period] : null, to = O && O.team[t] ? O.team[t].p[period] : null;
+  if (po && to){ grp('근무 외', (O.hr ? '시간 = 인사 연장근무 · ' : '')+'건수 = CRM 기록 · 평균 = 구성원 전체');
+    if (O.hr) row('연장근무 시간', po.rM, to.rM/n, fmtH, '시간', '인사 자료');
+    row('야간 OT', po.nN, to.nN/n, f1, '건', fmtH(po.nM)+'시간');
+    row('휴일 근무', po.hN, to.hN/n, f1, '건', fmtH(po.hM)+'시간');
+    row('잔업', po.xN, to.xN/n, f1, '건', fmtH(po.xM)+'시간 · 근무 종료 후');
+    row('근무 외 활동 시간', po.nM+po.hM+po.xM, (to.nM+to.hM+to.xM)/n, fmtH, '시간', 'CRM 기록 · 야간+휴일+잔업'); }
+  if (DATA.acw){ var am = acwMonths(period), a = acwSum(name, am), ua = acwAgg(mem, am);
+    grp('학술업무 (평가 · Calibration)', 'CRM 목적 기준 · 평균 = 구성원 전체');
+    row('평가·인증 지원', a.ev, ua.ev/n, f1, '건', fmtH(a.evM)+'시간');
+    row('Calibration', a.cal, ua.cal/n, f1, '건', '원격 '+fmt(a.calR)+'건 별도'); }
+  var M = DATA.move;
+  if (M && M.homes.indexOf(name) >= 0){ var mm = acwMonths(period), ms = function(x){ var m = M.per[x] || {}, o = {km:0, days:0}; Object.keys(m).forEach(function(mk){ if (!mm || mm.indexOf(mk) >= 0){ o.km += m[mk].km; o.days += m[mk].days; } }); return o; };
+    var hm = mem.filter(function(x){ return M.homes.indexOf(x) >= 0; }), me = ms(name), ua2 = hm.reduce(function(o,x){ var s = ms(x); o.km += s.km; o.days += s.days; return o; }, {km:0, days:0});
+    grp('이동거리', '추정치(직선거리 × 1.3) · 평균 = 거주지 자료가 있는 '+fmt(hm.length)+'명');
+    row('이동거리', me.km, hm.length ? ua2.km/hm.length : null, function(x){ return fmt(Math.round(x)); }, 'km', '방문일 '+fmt(me.days)+'일');
+    row('방문일 1일 평균', me.days ? me.km/me.days : null, ua2.days ? ua2.km/ua2.days : null, fmt1, 'km'); }
+  else if (M){ grp('이동거리'); rows.push('<tr><td colspan="4" class="psx">거주지 자료가 없어 계산하지 않습니다(팀장·신입 등).</td></tr>'); }
+  return '<div class="block"><div class="block-head"><h2>종합 요약</h2><span class="hint" style="white-space:normal;min-width:0">'+PL(period)+' · 비교 = '+esc(unit)+' 1인 평균</span></div>'+
+    '<div class="card table-scroll pswrap" style="padding:6px;"><table class="data-table pstab"><thead><tr><th>지표</th><th class="num">'+esc(name)+'</th><th class="num">'+esc(unit)+' 평균</th><th class="num">평균 대비</th></tr></thead><tbody>'+rows.join('')+'</tbody></table></div>'+
+    '<p class="psnote">여러 화면(개인 순위·야간·휴일 근무·이동거리·담당 장비·평가·Calibration)의 값을 한 사람 기준으로 모은 표입니다. 맡은 업무의 양과 종류를 보여 주며 성과 평가가 아닙니다. 평균 대비는 참고용이라 색으로 구분하지 않습니다.</p></div>';
+}
+
 /* ================= RENDER: 담당 장비 (2026-11-04) ================= */
 function renderEquip(){
   var el = document.getElementById('panel-equip'), Q = DATA.eq;
@@ -2962,6 +3166,8 @@ function render(){
   else if (state.tab === 'person') renderPerson();
   else if (state.tab === 'ot') renderOT();
   else if (state.tab === 'move') renderMove();
+  else if (state.tab === 'acad') renderAcad();
+  else if (state.tab === 'load') renderLoad();
   else if (state.tab === 'equip') renderEquip();
 }
 
@@ -3613,6 +3819,44 @@ function drawErr(rows){
    일자별 거주지 → 그날 방문 기관 → 거주지 최단경로(가까운 순 + 2-opt), 직선거리 × 1.3. 담당자 기준, 장비 설치·이전 설치·고장 수리·PM·Calibration, 취소 제외, 제주 제외, 하루 같은 기관 1번.
    좌표 = 관리자가 올린 이동거리 좌표 파일 {acct:{거래처:[위도,경도,정밀도('동'|'구'),제주?]}, home:{성명:[위도,경도,정밀도]}} — 기관은 자산대장 주소의 행정동 중심(없으면 시군구 중심). */
 const MOVE_PURP=new Set(['장비 설치','장비 이전 설치','고장 수리','PM','Calibration']);
+/* ===== 학술업무(평가·Calibration) (2026-11-19 사용자 요청 「학술업무(평가, Calibration) 정보 — 팀별·개인별」) =====
+   CRM 목적 기준. 평가 = 가중치 묶음 「성능 평가·인증 지원」과 같은 목적(설치/데모 평가·Evaluation·인증 지원·Accreditation Support·Proficiency Test),
+   Calibration = 목적 'Calibration', 원격 = '원격 Calibration'(따로 셈). 처리 건수와 같은 귀속: 담당자 + 필수 참석자 각각 1건, 취소 제외.
+   시간 = CRM 시작~종료(0~12시간인 기록만). 전화 「학술 응대」(Workload 위쪽, Sysmex Talk·Slack 건수)와는 다른 자료다. buildProdData·kpiCore 는 건드리지 않는다.
+   결과 {per:{이름:{'YYYY-MM':{ev,cal,calR,evM,calM}}}} */
+/* ===== 부하도 (개선 지수) (2026-11-19 사용자 요청 「부하도 계산식도 나오게 · 부하도도 가중치처럼 변경할 수 있게」) =====
+   식 = 스킬 fsg-visit-workload-analysis 「개선 지수(시범 가중치)」: 축마다 Z점수(모표준편차) → 가중치로 더함 → 다시 Z → 100 + 15 × Z. 구간 110 이상 고부하 · 90~110 표준 · 90 미만 저부하.
+   축 5개: 업무량(가중 업무량) · 담당기관(관리표 기관 수) · 방문장비(기간에 실제 방문한 기관+S/N 수) · 이동(이동거리 km) · OT(인사 연장근무 시간, 없으면 CRM 근무 외 활동 시간).
+   대상 = 평균 대상(팀장·신입 제외). 자료가 없는 축은 빼고 남은 축의 가중치를 합 100 으로 다시 맞춘다. 이동거리 자료가 없는 사람은 그 축을 평균(Z = 0)으로 둔다.
+   보고서(스킬: 12개월 · 직급 가중치 없는 업무량)와 기간·업무량 기준이 달라 값이 다를 수 있다 — 화면에 적는다.
+   가중치 = kpi-dashboard/loadw {w:{score,inst,veq,move,ot}, at, by}(값 0~100, 합 100, 주 관리자만 저장 — Firebase 규칙 변경 없음). buildProdData·kpiCore 는 건드리지 않는다 */
+const LOAD_AX=[['score','업무량','가중 업무량','점'],['inst','담당기관','담당 기관 수','곳'],['veq','방문장비','방문한 장비 수','대'],['move','이동','이동거리','km'],['ot','OT','연장근무 시간','시간']];
+const LOAD_DEF={score:40,inst:10,veq:10,move:20,ot:20};
+let LOADW=null;
+async function loadLoadW(){ try{ const x=await fb('loadw'); LOADW=(x&&x.w)?x:null; }catch(e){ console.warn('부하도 가중치를 읽지 못해 기본값으로 계산합니다',e); LOADW=null; } }
+function loadWNow(){ const w={}; LOAD_AX.forEach(a=>{ const v=LOADW&&LOADW.w?+LOADW.w[a[0]]:NaN; w[a[0]]=isFinite(v)&&v>=0?v:LOAD_DEF[a[0]]; }); return w; }
+/* 방문장비: 사람별·월별 방문한 (기관|S/N) 집합 — 담당자 + 필수 참석자, 취소 제외 */
+let _veqC=null;
+function visitEq(){
+  if(!RAW) return null; if(_veqC&&_veqC.raw===RAW) return _veqC.r;
+  const per={};
+  for(const r of RAW){ if(r.t==null||r.st==='취소됨'||!r.sn||!r.acct) continue; const mk=ymd(r.t).slice(0,7), k=r.acct+'|'+r.sn, seen={};
+    const add=n=>{ if(!n||seen[n]) return; seen[n]=1; const P=per[n]||(per[n]={}); (P[mk]||(P[mk]=new Set())).add(k); };
+    add(r.own); String(r.att||'').split(/[;,]/).forEach(x=>add(x.trim())); }
+  const r={per}; _veqC={raw:RAW,r}; return r;
+}
+const ACW_EVAL=new Set(['설치/데모 평가','Evaluation','EVALUATION','인증 지원','Accreditation Support','Proficiency Test']);
+let _acwC=null;
+function acadWork(){
+  if(!RAW) return null; if(_acwC&&_acwC.raw===RAW) return _acwC.r;
+  const per={};
+  for(const r of RAW){ if(r.t==null||r.st==='취소됨') continue;
+    const k=ACW_EVAL.has(r.purp)?'ev':r.purp==='Calibration'?'cal':r.purp==='원격 Calibration'?'calR':''; if(!k) continue;
+    const mk=ymd(r.t).slice(0,7), mins=(r.e!=null&&r.e>=r.t&&r.e-r.t<=12*3600e3)?(r.e-r.t)/60000:0, seen={};
+    const add=n=>{ if(!n||seen[n]) return; seen[n]=1; const P=per[n]||(per[n]={}), m=P[mk]||(P[mk]={ev:0,cal:0,calR:0,evM:0,calM:0}); m[k]++; if(k==='ev') m.evM+=mins; else m.calM+=mins; };
+    add(r.own); String(r.att||'').split(/[;,]/).forEach(x=>add(x.trim())); }
+  const r={per}; _acwC={raw:RAW,r}; return r;
+}
 /* ===== 담당 장비 (2026-11-04) =====
    「FSR 담당기관 관리표」 정리본의 「담당기관 마스터」 시트를 읽는다. 장비 수·시스템 수·장비군 수량은 엑셀 수식 계산값(관리표 기준:
    장비 = 자산대장 「사용」 장비 1대씩, 시스템 = 1개씩, XP·XQ·주변기기·기타 제외). 분야 = CBC(XN·XN-L·XR·SP·DI·HLC)·유린(UF·UC·UD)·응고(CA·CS·CN)·면역(HISCL).
@@ -4321,7 +4565,7 @@ async function loadAll(){
     ACAD_FILE=ACAD;   /* 서버 자동 반영(acadAuto)을 합치기 전 — 직원용 사본에는 올린 파일만 넣는다(직원 화면도 acadAuto 를 따로 읽음) */
     /* 2026-11-16: FS Portal 서버가 Slack 학술 건수(날짜·시간별 숫자만)를 3시간마다 kpi-dashboard/acadAuto 에 씀 — 파일보다 새것이면 Slack 자리에 씀 */
     try{ const au=await fb('acadAuto'); ACAD=acadMergeAuto(ACAD,au); }catch(e){ console.warn('acadAuto',e); }
-    await loadWeights();
+    await loadWeights(); await loadLoadW();
     META=meta; SRC={act:meta.actSrc,ser:s?meta.serSrc:null,hr:HRDATA?meta.hrSrc:null,at:meta.updatedAt,embedded:false};
     $('empty').hidden=true; refresh(); showMain();
   }catch(err){ const net=err instanceof TypeError;
@@ -4338,7 +4582,7 @@ async function loadStaff(){
   RAW=decodeEmbed(B.act); RAW.tzFixed=B.tzN||0; SERIAL=B.ser?decodeSer(B.ser):null; HRDATA=null; GEO=null;
   EQD=B.eq||null; INST=B.inst||null; ACAD=B.acad||null; STAFF_SW=B.sw||null;
   try{ ACAD=acadMergeAuto(ACAD,await fb('acadAuto')); }catch(e){ console.warn('acadAuto',e); }
-  await loadWeights();
+  await loadWeights(); await loadLoadW();
   META=meta; SRC={act:(B.src&&B.src.act)||'',ser:SERIAL?((B.src&&B.src.ser)||'자산대장'):null,hr:null,at:meta.updatedAt,embedded:false};
   $('empty').hidden=true; refresh(); showMain();
 }
@@ -4478,6 +4722,30 @@ function openWgt(pw){
   if(pw&&on) setTimeout(gotoPw,30); else setTimeout(()=>{ const f=$(on?'wgtFrom':'wgtEmail'); if(f) f.focus(); },30);
 }
 window.openWgt=openWgt;
+/* 부하도 가중치 변경(관리자, 2026-11-19) — 축 5개 비중(%)의 합이 100 이어야 저장. 저장 = kpi-dashboard/loadw(주 관리자 계정만 쓸 수 있음).
+   로그인이 안 돼 있으면 기존 가중치 설정 창의 관리자 로그인을 쓴다. 저장하면 PROD 를 다시 계산해 화면을 다시 그린다 */
+function openLoadW(){
+  let d=$('ldDlg'); if(!d){ d=document.createElement('dialog'); d.id='ldDlg'; d.className='wdlg'; d.setAttribute('aria-labelledby','ldTitle'); document.body.appendChild(d); }
+  const w=loadWNow();
+  d.innerHTML='<div class="wd-in"><button type="button" class="wd-x" id="ldX" aria-label="닫기">×</button><h2 id="ldTitle" class="ldwt">부하도 가중치</h2>'+
+    '<p class="ldwp">축 5개의 비중(%)입니다. <b>합이 100</b>이어야 저장됩니다. 저장하면 모든 사람의 부하도가 바로 다시 계산됩니다.</p>'+
+    '<div class="ldwg">'+LOAD_AX.map(a=>`<label for="ldw_${a[0]}"><span><b>${a[1]}</b><small>${a[2]}</small></span><span class="ldwi"><input type="number" id="ldw_${a[0]}" data-k="${a[0]}" min="0" max="100" step="5" inputmode="numeric" value="${w[a[0]]}"><i>%</i></span></label>`).join('')+'</div>'+
+    '<p class="ldws" id="ldSum" aria-live="polite"></p><p class="ldws" id="ldMsg" aria-live="polite"></p>'+
+    '<div class="ldwb"><button type="button" class="lbtn" id="ldDef">기본값으로</button><span style="flex:1"></span><button type="button" class="wd-save" id="ldSave">저장</button></div></div>';
+  const ins=[...d.querySelectorAll('input[data-k]')], read=()=>{ const o={}; let sum=0, bad=false; ins.forEach(i=>{ const v=parseFloat(i.value); if(!isFinite(v)||v<0||v>100) bad=true; o[i.dataset.k]=v; sum+=isFinite(v)?v:0; }); return {o,sum,bad}; };
+  const upd=()=>{ const r=read(), ok=!r.bad&&Math.abs(r.sum-100)<0.001; $('ldSum').innerHTML='합계 <b>'+(Math.round(r.sum*10)/10)+'%</b>'+(ok?'':' — 100%가 되게 맞춰 주세요'); $('ldSum').className='ldws'+(ok?'':' bad'); $('ldSave').disabled=!ok; };
+  ins.forEach(i=>i.addEventListener('input',upd)); upd();
+  $('ldX').addEventListener('click',()=>d.close());
+  $('ldDef').addEventListener('click',()=>{ ins.forEach(i=>{ i.value=LOAD_DEF[i.dataset.k]; }); upd(); });
+  $('ldSave').addEventListener('click',async()=>{ const r=read(), msg=$('ldMsg');
+    if(!ADMIN_TOKEN||Date.now()>=ADMIN_EXP){ msg.className='ldws bad'; msg.textContent='관리자 로그인이 필요합니다. 「가중치 설정」 창에서 로그인한 뒤 다시 저장해 주세요.'; return; }
+    $('ldSave').disabled=true; msg.className='ldws'; msg.textContent='저장 중...';
+    try{ const rec={w:r.o,at:new Date().toISOString(),by:(ADMIN_EMAIL||'').split('@')[0]}; await fb('loadw',{method:'PUT',body:JSON.stringify(rec)}); LOADW=rec; msg.className='ldws good'; msg.textContent='저장했습니다. 부하도를 다시 계산했습니다.'; applyWeights(); }
+    catch(e){ msg.className='ldws bad'; msg.textContent=(e&&e.code===401||/401|permission/i.test(String(e&&e.message)))?'이 계정은 부하도 가중치를 저장할 수 없습니다(자료를 올리는 관리자 계정만 저장).':(e.message||'저장하지 못했습니다.'); }
+    finally{ upd(); } });
+  if(!d.open) d.showModal(); setTimeout(()=>{ ins[0]&&ins[0].focus(); },30);
+}
+window.openLoadW=openLoadW;
 $('wgtPwLink').addEventListener('click',gotoPw);
 $('admPwBtn').addEventListener('click',()=>openWgt(true));
 $('wgtClose').addEventListener('click',()=>$('wgtDlg').close());
@@ -4518,7 +4786,7 @@ $('pwBtn').addEventListener('click',doPwChange);
 const FOLD_LS='fsg-kpi-fold:';
 const foldGet=k=>{ try{ return localStorage.getItem(FOLD_LS+k)==='1'; }catch(e){ return false; } };
 const foldSet=(k,v)=>{ try{ localStorage.setItem(FOLD_LS+k,v?'1':'0'); }catch(e){} };
-const FOLD_LABEL={'panel-overview':'점수 계산 기준','panel-team':'팀 비교 기준','panel-person':'개인 상세 기준','panel-ot':'야간·휴일 근무 기준','panel-move':'이동거리 기준','panel-equip':'담당 장비 기준'};
+const FOLD_LABEL={'panel-overview':'점수 계산 기준','panel-team':'팀 비교 기준','panel-person':'개인 상세 기준','panel-ot':'야간·휴일 근무 기준','panel-move':'이동거리 기준','panel-acad':'평가·Calibration 기준','panel-load':'부하도 자료 기준','panel-equip':'담당 장비 기준'};
 function foldCaveats(root){
   root.querySelectorAll('.caveat:not([data-folded])').forEach(cv=>{
     cv.setAttribute('data-folded','1');
@@ -4605,7 +4873,7 @@ $('lockStaff').addEventListener('click',()=>{ $('lock').hidden=true; $('lockIn')
 
 /* ===== 탭: 서비스 운영 KPI | 부서원 KPI — 같은 CRM 데이터(RAW)로 둘 다 계산 ===== */
 const VIEW_LS='fsg-kpi-view';
-const SCREENS={ov:{hash:'#overview'},sq:{hash:'#service-quality',scr:'sq',dsx:1},org:{hash:'#organization',scr:'org',prod:'team',tabs:['team','overview','person','equip'],dsx:1},wl:{hash:'#workload',prod:'ot',tabs:['ot','move'],dsx:1},eqp:{hash:'#instrument',scr:'eqp',prod:'equip',dsx:1},pro:{hash:'#proactive',scr:'pro',dsx:1}};
+const SCREENS={ov:{hash:'#overview'},sq:{hash:'#service-quality',scr:'sq',dsx:1},org:{hash:'#organization',scr:'org',prod:'team',tabs:['team','overview','person','equip'],dsx:1},wl:{hash:'#workload',prod:'ot',tabs:['ot','move','acad','load'],dsx:1},eqp:{hash:'#instrument',scr:'eqp',prod:'equip',dsx:1},pro:{hash:'#proactive',scr:'pro',dsx:1}};
 const VIEW_ALIAS={svc:'sq',prod:'org',prd:'org'};   /* 예전 저장값을 새 화면으로 — Productivity 는 2026-11-16 Organization 「상세 분석」으로 합침 */
 let VIEW=(()=>{ const h=location.hash; if(h==='#people') return 'org'; for(const k in SCREENS) if(SCREENS[k].hash===h) return k; let v=null; try{v=localStorage.getItem(VIEW_LS);}catch(e){} v=VIEW_ALIAS[v]||v; return SCREENS[v]?v:'ov'; })();
 let PROD=null, PROD_DIRTY=true;
@@ -4618,6 +4886,8 @@ const PROD_SKELETON=`<div class="ovtitle dstitle" id="prodTitle"></div>
     <button data-tab="person">개인별 상세</button>
     <button data-tab="ot">야간·휴일 근무</button>
     <button data-tab="move">이동거리</button>
+    <button data-tab="acad">평가·Calibration</button>
+    <button data-tab="load">부하도</button>
     <button data-tab="equip">개인별 담당 장비</button>
   </nav>
   <div class="controls" id="globalControls">
@@ -4628,6 +4898,8 @@ const PROD_SKELETON=`<div class="ovtitle dstitle" id="prodTitle"></div>
   <section class="panel" id="panel-person"></section>
   <section class="panel" id="panel-ot"></section>
   <section class="panel" id="panel-move"></section>
+  <section class="panel" id="panel-acad"></section>
+  <section class="panel" id="panel-load"></section>
   <section class="panel" id="panel-equip"></section>
   <p class="pfoot" id="metaLine"></p>
   <div class="tooltip" id="tooltip"></div>`;
@@ -4689,7 +4961,7 @@ function ensureProd(){
       trend_labels:S.trend.map(m=>m.slice(2,4)+'.'+m.slice(5)), trend_names:['최근 12개월','전년 동월'],
       /* 월별 추이 마지막 달이 CRM 추출일이 속한 달이면 아직 집계 중(진행 중) */
       trend_partial:(()=>{const lm=S.trend[S.trend.length-1], c=D.excl&&D.excl.cut; return c&&lm&&c.slice(0,7)===lm?{idx:S.trend.length, month:+lm.slice(5), cut:c}:null;})(),
-      move:GEO?moveData():null, eq:EQD?{by:eqByPerson(EQD.rows), src:EQD.src||'', made:EQD.made||'', n:EQD.rows.length}:null, sel_months:S.sel, cmp_months:S.cmp, trend_months:S.trend,
+      acw:acadWork(), veq:visitEq(), loadw:loadWNow(), loadw_meta:LOADW?{at:LOADW.at||'',by:LOADW.by||''}:null, move:GEO?moveData():null, eq:EQD?{by:eqByPerson(EQD.rows), src:EQD.src||'', made:EQD.made||'', n:EQD.rows.length}:null, sel_months:S.sel, cmp_months:S.cmp, trend_months:S.trend,
       grade:Object.fromEntries(ROSTER.map(r=>[r[0],r[2]])), promoted:Object.fromEntries(GRADE_HIST.filter(([n,d])=>S.sel.includes(d.slice(0,7))).map(([n,d,prev])=>[n,prev+'→'+rosterMap[n].grade+' ('+d.slice(5).replace('-','/')+')'])), newbie:NEWBIE, ex_lead:$('pExLead').checked, admin_weights:ADMIN});
     $('pCmp').innerHTML=`비교 기간: ${esc(S.cmpLabel)}<br>직급 표시: 현재 · 직급 가중치: 진급자는 시행일부터 새 직급`;
     if(STAFF) staffScrub(PROD);

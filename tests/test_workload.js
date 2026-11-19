@@ -86,7 +86,18 @@ assert(/wl:\{hash:'#workload',prod:'ot'/.test(html));   // 야간·휴일 근무
 assert(!/prd:\{[^}]*tabs:\[[^\]]*'ot'/.test(html), 'Productivity 하위 탭에서 야간·휴일 근무를 뺌');
 assert(/body\[data-view=prd\] #prodTabs \[data-tab=ot\]\{display:none\}/.test(html));
 // 화면 역할 나누기(2026-11-16, A안): 조직 비교 = Organization, 일의 성격(방문·야간·이동) = Workload, 사람 = Productivity
-assert(/wl:\{hash:'#workload',prod:'ot',tabs:\['ot','move'\]/.test(html), 'Workload 아래 = 야간 OT + 이동거리');
+assert(/wl:\{hash:'#workload',prod:'ot',tabs:\['ot','move','acad','load'\]/.test(html), 'Workload 아래 = 야간 OT + 이동거리 + 평가·Calibration + 부하도');
+/* 2026-11-19: 개인 종합 요약 · 학술업무(평가·Calibration) · 부하도(개선 지수) — 화면 쪽 계산만, buildProdData·kpiCore 는 그대로 */
+{ const m=/const LOAD_DEF=(\{[^}]*\});/.exec(html); assert(m, '부하도 기본 가중치'); const d=eval('('+m[1]+')'); assert.strictEqual(Object.values(d).reduce((a,b)=>a+b,0), 100, '부하도 기본 가중치 합 100'); assert.deepStrictEqual(d, {score:40,inst:10,veq:10,move:20,ot:20}, '스킬 개선 지수와 같은 기본 가중치');
+  assert(/p\.idx = rsd \? 100 \+ 15 \* \(p\.raw - rm\) \/ rsd : 100/.test(html), '부하도 = 100 + 15 × Z');
+  assert(/p\.idx >= 110 \? '고부하' : p\.idx < 90 \? '저부하' : '표준'/.test(html), '구간 110·90');
+  assert(/\(DATA\.grade\|\|\{\}\)\[n\] !== '팀장' && nb\.indexOf\(n\) < 0/.test(html), '부하도 대상 = 팀장·신입 제외');
+  assert(/await fb\('loadw',\{method:'PUT'/.test(html) && /Math\.abs\(r\.sum-100\)<0\.001/.test(html), '부하도 가중치 저장 = loadw, 합 100 일 때만');
+  assert(/const ACW_EVAL=new Set\(\['설치\/데모 평가','Evaluation','EVALUATION','인증 지원','Accreditation Support','Proficiency Test'\]\)/.test(html), '평가 목적 = 가중치 묶음 「성능 평가·인증 지원」과 같음');
+  const g=/\['성능 평가·인증 지원',\[([^\]]*)\]\]/.exec(html); assert(g && g[1].replace(/\s/g,'')==="'설치/데모평가','Evaluation','EVALUATION','인증지원','AccreditationSupport','ProficiencyTest'", '가중치 묶음의 목적 목록이 바뀌면 ACW_EVAL 도 같이 바꾼다');
+  assert(/html2 \+= personSummaryHtml\(state\.person, period\)/.test(html) && /function personSummaryHtml\(/.test(html), '개인별 상세에 종합 요약');
+  const fn=html.slice(html.indexOf('function personSummaryHtml('), html.indexOf('/* ================= RENDER: 담당 장비')); assert(!/color:var\(--(good|bad|warn)\)/.test(fn), '종합 요약의 평균 대비에는 상태 색을 쓰지 않는다');
+  assert(/html\.staff #prod|\.staff #prod/.test(html), '직원 화면에서는 사람 단위 화면(#prod)이 숨겨져 새 탭도 보이지 않는다'); }
 assert(!/prd:\{[^}]*tabs:\[[^\]]*'move'/.test(html), 'Productivity 하위 탭에서 이동거리를 뺌');
 assert(!/\['org','조직'\]/.test(html), 'Workload 「조직」 탭은 Organization 으로');
 assert(/function wlOfficeHtml\(/.test(html) && /\['unit','팀·사무소'\]/.test(html) && /T==='unit'\)\{[^\n]*wlOfficeHtml\(team\)/.test(html) && !/id="ogWl"/.test(html), '사무소별 업무부하(방문) = Workload 「팀·사무소」 (작업지시서 v2: Organization 에서는 뺌)');
