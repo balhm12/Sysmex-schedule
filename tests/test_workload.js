@@ -97,6 +97,11 @@ assert(/wl:\{hash:'#workload',prod:'ot',tabs:\['ot','move','acad','load'\]/.test
   const g=/\['성능 평가·인증 지원',\[([^\]]*)\]\]/.exec(html); assert(g && g[1].replace(/\s/g,'')==="'설치/데모평가','Evaluation','EVALUATION','인증지원','AccreditationSupport','ProficiencyTest'", '가중치 묶음의 목적 목록이 바뀌면 ACW_EVAL 도 같이 바꾼다');
   assert(/html2 \+= personSummaryHtml\(state\.person, period\)/.test(html) && /function personSummaryHtml\(/.test(html), '개인별 상세에 종합 요약');
   const fn=html.slice(html.indexOf('function personSummaryHtml('), html.indexOf('/* ================= RENDER: 담당 장비')); assert(!/color:var\(--(good|bad|warn)\)/.test(fn), '종합 요약의 평균 대비에는 상태 색을 쓰지 않는다');
+  /* 작업 시간(건수가 아닌 시간으로도) — 0~500분, 취소·온라인 정기점검 제외, 건수와 같은 업무 유형 묶음 */
+  assert(/function workTime\(\)/.test(html) && /r\.st==='취소됨'\|\|r\.purp==='온라인 정기점검'\) continue; const mins=\(r\.e-r\.t\)\/60000; if\(!\(mins>0&&mins<=500\)\) continue;/.test(html), '작업 시간 = CRM 시작~종료 0~500분, 취소·온라인 정기점검 제외');
+  assert(/b=OV_BUCKET\[r\.purp\]\|\|'기타'/.test(html), '작업 시간의 업무 유형 = 건수와 같은 묶음(OV_BUCKET)');
+  assert(/\{k:'hr',n:'작업 시간',u:'시간',d:0,type:'bar'\},\{k:'hrh',n:'1인당 작업 시간',u:'시간',d:1,type:'bar',avg:'hrh'\}/.test(html), '조직 비교 지표에 작업 시간·1인당 작업 시간');
+  assert(/data-x="cnt"[^>]*>건수<\/button><button type="button" data-x="hr"[^>]*>시간<\/button>/.test(html), '업무 유형 구성비 건수/시간 전환');
   assert(/html\.staff #prod|\.staff #prod/.test(html), '직원 화면에서는 사람 단위 화면(#prod)이 숨겨져 새 탭도 보이지 않는다'); }
 assert(!/prd:\{[^}]*tabs:\[[^\]]*'move'/.test(html), 'Productivity 하위 탭에서 이동거리를 뺌');
 assert(!/\['org','조직'\]/.test(html), 'Workload 「조직」 탭은 Organization 으로');
