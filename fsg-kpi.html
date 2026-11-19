@@ -319,6 +319,47 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 #prod table.ldax{margin-bottom:10px}#prod table.ldax td small,#prod #ldTable td small{font-family:inherit;font-weight:500;color:var(--text-muted);margin-left:3px}#prod table.ldax tr.ldoff td{color:var(--text-muted)}
 #prod #ldTable td small.ldz{display:block;margin:1px 0 0;font-size:11px}
 #prod .ldnote{margin:0;font-size:12.5px;line-height:1.65;color:var(--text-muted)}#prod .ldnote b{color:var(--text-secondary)}
+/* 사무소·팀 지도 (2026-11-19) — 색 = 값의 크기(한 가지 파랑), 사무소 구분은 이름표로. 이름표·풍선말은 HTML 이라 화면 폭이 줄어도 글자 크기가 그대로다 */
+#prod .tmap{padding:14px 16px 16px;--tm0:#D3EDFB;--tm1:#005BAC;--tmline:#FFFFFF;--tmcoast:#B5C4D0;--tmdot:#FFFFFF;--tmring:#1A2433}
+:root[data-theme="dark"] #prod .tmap{--tm0:#1E3550;--tm1:#6CB6F2;--tmline:#151C26;--tmcoast:#3A4656;--tmdot:#151C26;--tmring:#E6E9EE}
+#prod .tmctl{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-bottom:14px}
+#prod .tmctl .segmented{flex-wrap:wrap;max-width:100%}
+#prod .tmchk{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--text);min-height:36px;cursor:pointer}
+#prod .tmchk input{width:16px;height:16px;margin:0;accent-color:var(--primary)}
+#prod .tmbody{display:grid;grid-template-columns:minmax(0,390px) minmax(0,1fr);gap:28px;align-items:start}
+#prod .tmfig{position:relative;width:100%}
+#prod .tmmain{max-width:390px;margin-bottom:16px}
+#prod .tmfig svg{display:block;width:100%;height:auto}
+#prod .tmz svg{border:1px solid var(--border);background:var(--surface)}
+#prod .tmfig path.tma{cursor:pointer;transition:opacity .12s}
+#prod .tmfig.dim path.tma:not(.on){opacity:.3}
+#prod .tmfig circle{pointer-events:none}
+#prod .tmlb{position:absolute;transform:translate(-50%,-50%);pointer-events:none;background:var(--surface);border:1px solid var(--tmcoast);padding:2px 8px 3px;font-size:12px;line-height:1.3;text-align:center;white-space:nowrap;color:var(--text)}
+#prod .tmlb b{display:block;font-weight:700}
+#prod .tmlb i{font-style:normal;font-weight:700;font-size:13.5px;color:var(--primary);font-variant-numeric:tabular-nums}
+#prod .tmlb i small{font-size:11px;font-weight:500;color:var(--muted);margin-left:1px}
+:root[data-theme="dark"] #prod .tmlb i{color:var(--tm1)}
+#prod .tmlb.sm{border:0;background:none;padding:0;font-size:11.5px;color:var(--text-secondary)}
+#prod .tmlb.tmzl{background:var(--surface);border:1px solid var(--tmcoast);padding:1px 6px;font-weight:700;color:var(--text)}
+#prod .tmtip{position:absolute;display:none;transform:translate(-50%,-100%);margin-top:-8px;pointer-events:none;background:var(--surface);border:1px solid var(--primary);padding:5px 9px;font-size:12.5px;line-height:1.45;color:var(--text);white-space:nowrap;z-index:2}
+#prod .tmside{min-width:0}#prod .tmscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+#prod .tmtab{width:100%}#prod table.data-table.tmtab th{white-space:normal;line-height:1.3;vertical-align:bottom;word-break:keep-all}
+#prod .tmtab th.num,#prod .tmtab td.num{text-align:right;font-variant-numeric:tabular-nums}
+#prod .tmtab tbody tr{cursor:pointer}
+#prod .tmtab tr.on td{background:var(--tint)}
+#prod .tmtab tr.tmall td{border-top:1px solid var(--primary);font-weight:700;cursor:default}
+.ogav{display:block;font-size:11px;font-weight:500;color:var(--muted);line-height:1.2}
+#prod .tmtab small{font-size:11px;color:var(--muted);margin-left:2px;font-weight:500}
+#prod .tmsw{display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-1px;border:1px solid rgba(0,0,0,.14)}
+#prod .tmleg{display:flex;flex-wrap:wrap;gap:6px 20px;align-items:center;margin-top:12px;font-size:12px;color:var(--text-secondary)}
+#prod .tmgr{display:inline-block;width:110px;height:10px;margin:0 7px;vertical-align:middle;background:linear-gradient(90deg,var(--tm0),var(--tm1))}
+#prod .tmdot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px;background:var(--tmdot);border:1px solid var(--tmring)}
+#prod .tmsub{display:grid;grid-template-columns:minmax(0,250px) minmax(0,1fr);gap:24px;align-items:start;margin-top:22px}
+#prod .tmsub h3{margin:0 0 8px;font-size:13.5px;font-weight:700;color:var(--text)}
+#prod .tmsub h3 span{font-size:12px;font-weight:500;color:var(--muted);margin-left:6px}
+#prod .tmnote{margin:14px 0 0;font-size:12.5px;line-height:1.65;color:var(--text-muted)}#prod .tmnote b{color:var(--text-secondary)}
+@media (max-width:1100px){#prod .tmsub{grid-template-columns:minmax(0,1fr)}#prod .tmzoom{max-width:300px}}
+@media (max-width:860px){#prod .tmbody{grid-template-columns:minmax(0,1fr);gap:16px}#prod .tmsub{grid-template-columns:minmax(0,1fr)}#prod table.data-table.tmtab th,#prod table.data-table.tmtab td{padding-left:5px;padding-right:5px}#prod .tmsw{margin-right:5px}#prod .tmmain{margin:0 auto}#prod .tmzoom{max-width:none}#prod .tmctl .segmented button{min-height:40px}#prod .tmchk{min-height:44px}}
 #prod .ldb{display:inline-block;font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 8px;border:1px solid var(--border);color:var(--text-secondary);background:var(--surface);white-space:nowrap}
 #prod .ldb.ldh{border-color:var(--text-secondary);color:var(--text)}#prod .ldb.ldl{color:var(--text-muted)}
 #prod table.acwtab tr.acwtot td{background:var(--surface-2);font-weight:700}
@@ -2902,10 +2943,12 @@ function renderMove(){
     '</div>';
   html += '<div class="block grid grid-2">'+chartCard('mv-team-chart', '팀별 1인당 이동거리', PL(period))+
     chartCard('mv-trend-chart', '월별 1인당 이동거리', '최근 12개월 · '+(scope==='ALL'?'FSG 전체':DATA.team_short[scope]))+'</div>';
+  html += terrMapBlock('move');
   html += '<div class="block"><div class="block-head"><h2>개인별 이동거리</h2><span class="hint">열 제목 클릭 시 정렬 · '+PL(period)+'</span></div>'+
     '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="mvTable"></table></div></div>';
   el.innerHTML = html;
   teamButtons(document.getElementById('mvSeg'), scope, true, function(t){ state.mvScope = t; renderMove(); });
+  terrMapFill('move', 'move');
   var tl = VIEW.map(function(t){ return DATA.team_short[t]; });
   barChart(document.getElementById('mv-team-chart'), tl, VIEW.map(function(t){ var L = DATA.team[t].members.filter(hasHome); return L.length ? Math.round(agg(L, cm).km / L.length) : 0; }), VIEW.map(function(t){ return TEAM_COLOR[t]; }), {unit:'km'});
   var TM = DATA.trend_months || [], idx = [], vals = {};
@@ -2938,41 +2981,42 @@ function renderAcad(){
   var period = state.period, scope = state.acScope || 'ALL', cm = acwMonths(period), pm = period === '이번 년도' ? DATA.cmp_months : null;
   var all = DATA.teams.reduce(function(a,t){ return a.concat(DATA.team[t].members); }, []);
   var names = scope === 'ALL' ? all : DATA.team[scope].members, cur = acwAgg(names, cm), prv = pm ? acwAgg(names, pm) : null, head = names.length || 1;
+  var avm = function(min, n){ return n ? fmt(Math.round(min / n)) : '-'; };   /* 건당 평균 시간(분) = 시간 ÷ 건수 */
   var dl = function(c, p){ if (p == null) return ''; var d = c - p; return '<span class="stat-delta delta-flat">'+(d>0?'▲ +':d<0?'▼ −':'· ')+fmt(Math.abs(d))+'건 <span style="color:var(--text-muted);font-weight:500;">'+(DATA.cmp_short||'비교 기간')+'</span></span>'; };
   var html = '<div class="caveat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div>'+
     '<b>학술업무 = CRM 약속/활동의 목적이 평가 또는 Calibration 인 기록</b>입니다. <b>평가</b> = 설치/데모 평가·Evaluation·인증 지원·Accreditation Support·Proficiency Test, <b>Calibration</b> = 목적 Calibration(원격 Calibration 은 따로 셈). '+
-    '담당자와 필수 참석자 각각 1건 · 취소 제외 · 시간은 CRM 에 기록된 시작~종료(12시간을 넘는 기록은 시간에서 뺌). 1인당 = 그 팀·사무소 인원 전체로 나눈 값. '+
+    '담당자와 필수 참석자 각각 1건 · 취소 제외 · 시간은 CRM 에 기록된 시작~종료(12시간을 넘는 기록은 시간에서 뺌) · 건당 평균 = 시간 ÷ 건수. 1인당 = 그 팀·사무소 인원 전체로 나눈 값. '+
     '위쪽 「학술 응대」(전화 문의 건수)와는 다른 자료입니다. 개인 값은 맡은 업무의 양과 종류이며 성과 평가가 아닙니다.</div></div>';
   html += '<div class="controls" style="margin-bottom:14px;"><div class="control-group" style="flex-wrap:wrap;min-width:0;"><span class="control-label">범위</span><div class="segmented" id="acSeg" style="flex-wrap:wrap;max-width:100%;"></div></div></div>';
   html += '<div class="block grid grid-4">'+
-    statTile('평가·인증 지원', fmt(cur.ev), '건', dl(cur.ev, prv && prv.ev), fmtH(cur.evM)+'시간 · '+fmt(names.length)+'명')+
-    statTile('Calibration', fmt(cur.cal), '건', dl(cur.cal, prv && prv.cal), '방문 · 원격 '+fmt(cur.calR)+'건 별도')+
+    statTile('평가·인증 지원', fmt(cur.ev), '건', dl(cur.ev, prv && prv.ev), '건당 평균 '+avm(cur.evM, cur.ev)+'분 · '+fmtH(cur.evM)+'시간')+
+    statTile('Calibration', fmt(cur.cal), '건', dl(cur.cal, prv && prv.cal), '건당 평균 '+avm(cur.calM, cur.cal + cur.calR)+'분(원격 포함) · 원격 '+fmt(cur.calR)+'건 별도')+
     statTile('1인당 학술업무', fmt1(cur.tot/head), '건', '', '평가 + Calibration + 원격 · '+PL(period))+
-    statTile('학술업무 시간', fmtH(cur.min), '시간', '', '1인당 '+fmtH(cur.min/head)+'시간 · CRM 기록')+
+    statTile('학술업무 시간', fmtH(cur.min), '시간', '', '건당 평균 '+avm(cur.min, cur.tot)+'분 · 1인당 '+fmtH(cur.min/head)+'시간')+
     '</div>';
   var U = DATA.teams.map(function(t){ var L = DATA.team[t].members, a = acwAgg(L, cm), p = pm ? acwAgg(L, pm) : null; return {t:t, n:L.length, a:a, p:p}; });
   var F = {t:null, n:all.length, a:acwAgg(all, cm), p:pm ? acwAgg(all, pm) : null};
   var urow = function(u, cls){ var a = u.a; return '<tr'+(cls?' class="'+cls+'"':'')+'><td>'+(u.t ? '<span style="color:'+TEAM_COLOR[u.t]+';font-weight:700">'+esc(DATA.team_short[u.t]||u.t)+'</span>' : '<b>FSG 전체</b>')+'</td><td class="num">'+fmt(u.n)+'</td>'+
-    '<td class="num"><b>'+fmt(a.tot)+'</b></td><td class="num">'+(u.n?fmt1(a.tot/u.n):'-')+'</td><td class="num">'+fmt(a.ev)+'</td><td class="num">'+fmt(a.cal)+'</td><td class="num">'+fmt(a.calR)+'</td><td class="num">'+fmtH(a.min)+'</td>'+
+    '<td class="num"><b>'+fmt(a.tot)+'</b></td><td class="num">'+(u.n?fmt1(a.tot/u.n):'-')+'</td><td class="num">'+fmt(a.ev)+'</td><td class="num">'+fmt(a.cal)+'</td><td class="num">'+fmt(a.calR)+'</td><td class="num">'+fmtH(a.min)+'</td><td class="num">'+avm(a.evM, a.ev)+'</td><td class="num">'+avm(a.calM, a.cal + a.calR)+'</td>'+
     (pm?'<td class="num" style="color:var(--text-muted)">'+(function(d){ return d===0?'–':(d>0?'+':'')+fmt(d); })(a.tot-u.p.tot)+'</td>':'')+'</tr>'; };
-  html += '<div class="block"><div class="block-head"><h2>팀 · 사무소별 학술업무</h2><span class="hint">건 · '+PL(period)+'</span></div>'+
-    '<div class="card table-scroll" style="padding:6px;"><table class="data-table acwtab"><thead><tr><th>팀 · 사무소</th><th class="num">인원</th><th class="num">합계</th><th class="num">1인당</th><th class="num">평가</th><th class="num">Calibration</th><th class="num">원격 Cal</th><th class="num">시간</th>'+
+  html += '<div class="block"><div class="block-head"><h2>팀 · 사무소별 학술업무</h2><span class="hint">건 · 시간 · 건당 평균(분) · '+PL(period)+'</span></div>'+
+    '<div class="card table-scroll" style="padding:6px;"><table class="data-table acwtab"><thead><tr><th>팀 · 사무소</th><th class="num">인원</th><th class="num">합계</th><th class="num">1인당</th><th class="num">평가</th><th class="num">Calibration</th><th class="num">원격 Cal</th><th class="num">시간</th><th class="num">평가 건당(분)</th><th class="num">Cal 건당(분)</th>'+
     (pm?'<th class="num">'+esc(DATA.cmp_short||'증감')+'</th>':'')+'</tr></thead><tbody>'+U.map(function(u){ return urow(u); }).join('')+urow(F, 'acwtot')+'</tbody></table></div></div>';
   html += '<div class="block"><div class="block-head"><h2>개인별 학술업무</h2><span class="hint">열 제목 클릭 시 정렬 · '+PL(period)+'</span></div>'+
     '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="acTable"></table></div></div>';
   el.innerHTML = html;
   teamButtons(document.getElementById('acSeg'), scope, true, function(t){ state.acScope = t; renderAcad(); });
-  var rows = names.map(function(n){ var c = acwSum(n, cm), p = pm ? acwSum(n, pm) : null; return {name:n, team:DATA.person[n].team, grade:(DATA.grade||{})[n]||'', ev:c.ev, cal:c.cal, calR:c.calR, tot:c.tot, min:c.min, d:p?c.tot-p.tot:null}; });
+  var rows = names.map(function(n){ var c = acwSum(n, cm), p = pm ? acwSum(n, pm) : null; return {name:n, team:DATA.person[n].team, grade:(DATA.grade||{})[n]||'', ev:c.ev, cal:c.cal, calR:c.calR, tot:c.tot, min:c.min, avg:c.tot?c.min/c.tot:null, d:p?c.tot-p.tot:null}; });
   var key = state.acSort || 'tot', dir = state.acDir || -1;
   rows.sort(function(a,b){ var x = a[key], y = b[key]; return (typeof x === 'string' ? x.localeCompare(y,'ko') : (x||0)-(y||0)) * dir || a.name.localeCompare(b.name,'ko'); });
   var mx = Math.max(1, Math.max.apply(null, rows.map(function(r){ return r.tot; })));
-  var cols = [['#',null],['이름','name'],['팀','team'],['직급','grade'],['합계','tot'],['평가','ev'],['Calibration','cal'],['원격 Cal','calR'],['시간','min']].concat(pm?[[DATA.cmp_short||'증감','d']]:[]);
+  var cols = [['#',null],['이름','name'],['팀','team'],['직급','grade'],['합계','tot'],['평가','ev'],['Calibration','cal'],['원격 Cal','calR'],['시간','min'],['건당 평균(분)','avg']].concat(pm?[[DATA.cmp_short||'증감','d']]:[]);
   var T = document.getElementById('acTable');
-  T.innerHTML = '<thead><tr>'+cols.map(function(c){ return '<th'+(c[1]?' data-k="'+c[1]+'" style="cursor:pointer"':'')+(['ev','cal','calR','tot','min','d'].indexOf(c[1])>=0?' class="num"':'')+'>'+c[0]+(c[1]===key?(dir<0?' ▼':' ▲'):'')+'</th>'; }).join('')+'</tr></thead><tbody>'+
+  T.innerHTML = '<thead><tr>'+cols.map(function(c){ return '<th'+(c[1]?' data-k="'+c[1]+'" style="cursor:pointer"':'')+(['ev','cal','calR','tot','min','avg','d'].indexOf(c[1])>=0?' class="num"':'')+'>'+c[0]+(c[1]===key?(dir<0?' ▼':' ▲'):'')+'</th>'; }).join('')+'</tr></thead><tbody>'+
     rows.map(function(r,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(r.name)+'</td><td><span style="color:'+TEAM_COLOR[r.team]+';font-weight:700">'+esc(DATA.team_short[r.team]||r.team)+'</span></td><td>'+esc(r.grade)+'</td>'+
       '<td class="num"><span style="display:inline-block;width:70px;height:6px;border-radius:3px;background:var(--border);margin-right:8px;vertical-align:middle;overflow:hidden"><i style="display:block;height:100%;width:'+(r.tot/mx*100)+'%;background:'+TEAM_COLOR[r.team]+'"></i></span><b>'+fmt(r.tot)+'</b></td>'+
       '<td class="num">'+fmt(r.ev)+'</td><td class="num">'+fmt(r.cal)+'</td><td class="num">'+fmt(r.calR)+'</td>'+
-      '<td class="num">'+fmtH(r.min)+'</td>'+(pm?'<td class="num" style="color:var(--text-muted)">'+(r.d==null?'-':r.d===0?'–':(r.d>0?'+':'')+fmt(r.d))+'</td>':'')+'</tr>'; }).join('')+'</tbody>';
+      '<td class="num">'+fmtH(r.min)+'</td><td class="num">'+(r.avg==null?'-':fmt(Math.round(r.avg)))+'</td>'+(pm?'<td class="num" style="color:var(--text-muted)">'+(r.d==null?'-':r.d===0?'–':(r.d>0?'+':'')+fmt(r.d))+'</td>':'')+'</tr>'; }).join('')+'</tbody>';
   T.querySelectorAll('th[data-k]').forEach(function(th){ th.addEventListener('click', function(){ var k = th.getAttribute('data-k'); if (state.acSort === k) state.acDir = -(state.acDir||-1); else { state.acSort = k; state.acDir = k === 'name' || k === 'team' || k === 'grade' ? 1 : -1; } renderAcad(); }); });
 }
 
@@ -3002,6 +3046,25 @@ function loadIndex(period){
     p.main = ax.filter(function(a){ return a.on && p.z[a.k] >= 1; }).map(function(a){ return a.label; }); });
   return {names:names, ax:ax, per:per, hasHr:hasHr, custom:!!DATA.loadw_meta};
 }
+/* 사무소·팀 지도 — 부하도 탭·이동거리 탭이 같이 쓴다. 값 = loadIndex 의 축 값을 사무소 대상 인원으로 평균(자료 없는 사람은 그 축 평균에서 뺌). 그리기는 terrMapDraw */
+function terrMapBlock(tab){ return '<div class="block"><div class="block-head"><h2>사무소 · 팀 지도</h2><span class="hint">색 = 값의 크기 · 사무소 대상 인원 평균 · '+PL(state.period)+'</span></div>'+
+  '<div class="card tmap" id="tm-'+tab+'"><div class="empty-note">지도를 불러오는 중입니다.</div></div></div>'; }
+function terrMapFill(tab, defK){
+  var host = document.getElementById('tm-'+tab); if (!host || !window.terrMapDraw) return;
+  var L = loadIndex(state.period), units = DATA.teams;
+  var mem = function(u){ return L.names.filter(function(n){ return DATA.team[u].members.indexOf(n) >= 0; }); };
+  var mean = function(xs){ xs = xs.filter(function(x){ return x != null && isFinite(x); }); return xs.length ? xs.reduce(function(s,x){ return s+x; }, 0) / xs.length : null; };
+  var hi = function(Ln){ return Ln.filter(function(n){ return L.per[n].band === '고부하'; }).length; };
+  var ms = [{k:'idx', label:'부하도', col:'평균 지수', name:'100 + 15 × Z('+loadFormulaText(L)+')', unit:'', dec:1, val:{}, sub:{}, subLabel:'고부하'}]
+    .concat(L.ax.filter(function(a){ return a.on; }).map(function(a){ return {k:a.k, label:a.k==='move'?'이동거리':a.label, col:'1인당 '+(a.k==='move'?'이동거리':a.label), name:a.name, unit:a.unit, dec:(a.k==='score'||a.k==='ot')?1:0, val:{}}; }));
+  var all = {n:L.names.length, val:{}, sub:hi(L.names)+'명'};
+  ms.forEach(function(m){ var get = m.k === 'idx' ? function(n){ return L.per[n].idx; } : function(n){ return L.per[n].v[m.k]; };
+    units.forEach(function(u){ var Ln = mem(u); m.val[u] = mean(Ln.map(get)); if (m.sub) m.sub[u] = hi(Ln)+'명'; });
+    all.val[m.k] = mean(L.names.map(get)); });
+  state.tmM = state.tmM || {}; var sel = state.tmM[tab] || defK; if (!ms.some(function(m){ return m.k === sel; })) sel = 'idx';
+  window.terrMapDraw(host, {units:units.map(function(u){ return {k:u, short:UNIT_SHORT(u), n:mem(u).length}; }), metrics:ms, all:all, sel:sel, months:acwMonths(state.period), periodLabel:PL(state.period), bub:(state.tmBub = state.tmBub || {})[tab] == null ? tab === 'move' : state.tmBub[tab],
+    onSel:function(k){ state.tmM[tab] = k; terrMapFill(tab, defK); }, onBub:function(v){ state.tmBub[tab] = v; terrMapFill(tab, defK); }});
+}
 function loadFormulaText(L){ return L.ax.filter(function(a){ return a.on; }).map(function(a){ return a.label+' '+fmt(Math.round(a.w*100))+'%'; }).join(' + '); }
 function renderLoad(){
   var el = document.getElementById('panel-load'), period = state.period, scope = state.ldScope || 'ALL', L = loadIndex(period);
@@ -3030,10 +3093,12 @@ function renderLoad(){
     '<div class="card table-scroll" style="padding:6px;"><table class="data-table acwtab"><thead><tr><th>팀 · 사무소</th><th class="num">대상 인원</th><th class="num">평균 지수</th><th class="num">고부하</th><th class="num">표준</th><th class="num">저부하</th></tr></thead><tbody>'+
     U.map(function(u){ var m = mean(u.L); return '<tr><td><span style="color:'+TEAM_COLOR[u.t]+';font-weight:700">'+esc(DATA.team_short[u.t]||u.t)+'</span></td><td class="num">'+fmt(u.L.length)+'</td><td class="num"><b>'+(m==null?'-':fmt1(m))+'</b></td><td class="num">'+fmt(cnt(u.L,'고부하'))+'</td><td class="num">'+fmt(cnt(u.L,'표준'))+'</td><td class="num">'+fmt(cnt(u.L,'저부하'))+'</td></tr>'; }).join('')+
     '<tr class="acwtot"><td>FSG 전체</td><td class="num">'+fmt(L.names.length)+'</td><td class="num">'+fmt1(mean(L.names)||0)+'</td><td class="num">'+fmt(cnt(L.names,'고부하'))+'</td><td class="num">'+fmt(cnt(L.names,'표준'))+'</td><td class="num">'+fmt(cnt(L.names,'저부하'))+'</td></tr></tbody></table></div></div>';
+  html += terrMapBlock('load');
   html += '<div class="block"><div class="block-head"><h2>개인별 부하도</h2><span class="hint">열 제목 클릭 시 정렬 · 축 값 아래 작은 숫자 = Z점수 · '+PL(period)+'</span></div>'+
     '<div class="card table-scroll" style="padding:6px;"><table class="data-table" id="ldTable"></table></div></div>';
   el.innerHTML = html;
   teamButtons(document.getElementById('ldSeg'), scope, true, function(t){ state.ldScope = t; renderLoad(); });
+  terrMapFill('load', 'idx');
   var eb = document.getElementById('ldEdit'); if (eb) eb.addEventListener('click', function(){ if (window.openLoadW) window.openLoadW(); });
   var on = L.ax.filter(function(a){ return a.on; });
   var rows = names.map(function(n){ var p = L.per[n], r = {name:n, team:DATA.person[n].team, grade:(DATA.grade||{})[n]||'', idx:p.idx, band:p.band, main:p.main.join('·'), p:p}; on.forEach(function(a){ r['z_'+a.k] = p.z[a.k]; }); return r; });
@@ -3068,6 +3133,8 @@ function personSummaryHtml(name, period){
   else rows.push('<tr><td colspan="4" class="psx">팀장·신입은 부하도 대상이 아닙니다.</td></tr>');
   grp('업무량 · 품질', '평균 = 팀장·신입 제외');
   row('처리 건수', pe.total_case[period], T.case_avg_core ? T.case_avg_core[period] : null, function(x){ return fmt1(x).replace(/\.0$/,''); }, '건');
+  if (window.workTimeSum){ var wm = acwMonths(period), wt1 = function(L){ var A = workTimeSum(L, wm), n = Object.keys(A.n).reduce(function(s,b){ return s + A.n[b]; }, 0); return n ? A.tot / n : null; };
+    row('건당 평균 작업 시간', wt1([name]), wt1(mem), function(x){ return fmt(Math.round(x)); }, '분', '작업 시간 ÷ 시간이 기록된 건수 · 평균 = 구성원 전체'); }
   row('가중 업무량', pe.score[period] || 0, T.score_avg_core ? T.score_avg_core[period] : null, fmt1, '점');
   row('직급 보정 지수', gi, T.index_avg ? T.index_avg[period] : null, fmt1, '', '100 = FSG 같은 직급 중앙값');
   row('평균 수리 작업 시간 (MTTR)', mttrRepairAvg(pe, period), mttrRepairAvg(T, period), fmt1, '분', '고장 수리');
@@ -3958,6 +4025,147 @@ function moveData(){
     per[n]=m; }
   const r={per, miss, jeju, homes:Object.keys(GEO.home), homeLv:Object.fromEntries(Object.entries(GEO.home).map(([k,v])=>[k,v[2]])), made:GEO.made||'', src:GEO.src||''};
   _moveC={raw:RAW, geo:GEO, r}; return r;
+}
+/* ===== 사무소·팀 지도 (2026-11-19 사용자 요청 「부하도·이동거리를 지도로」) =====
+   · 경계 = fsg-kpi-map.json — 통계청 2018 시군구 경계를 줄인 TopoJSON(울릉군·작은 섬 생략). 지도를 처음 볼 때 한 번 받는다. 외부 지도 서비스는 쓰지 않는다.
+   · 담당 지역 = 스킬 fsg-roster 「거점과 담당 지역」 표(MAP_TERR, 2026-11-04 확정)가 원본. 서울·경기의 WEST·EAST 경계는 그 표에 다 적혀 있지 않아
+     CRM 방문(담당자의 팀) 다수결로 그리고, 표에 적힌 곳(광진·노원·동두천·가평·여주 = EAST, 인천 = WEST)은 표가 우선. 좌표가 없으면 서울·경기는 나누지 않는다.
+   · 개인 위치·기관 위치는 찍지 않는다(territory-map-rules). 방문 분포는 시군구 합계만.
+   · 색 = 값의 크기(파랑 한 가지), 사무소 구분은 이름표. 값 계산은 부르는 쪽(loadIndex)이 한다 — 여기서는 그리기만 */
+const MAP_URL='fsg-kpi-map.json';
+const MAP_SD={'11':'서울','21':'부산','22':'대구','23':'인천','24':'광주','25':'대전','26':'울산','29':'세종','31':'경기','32':'강원','33':'충북','34':'충남','35':'전북','36':'전남','37':'경북','38':'경남','39':'제주'};
+const MAP_TERR={
+  sd:{'강원':'FS EAST','인천':'FS WEST','제주':'FS WEST',
+      '대전':'FS CENTRAL 대전','세종':'FS CENTRAL 대전','충남':'FS CENTRAL 대전','충북':'FS CENTRAL 대전','전북':'FS CENTRAL 대전',
+      '광주':'FS CENTRAL 광주','전남':'FS CENTRAL 광주','부산':'FS SOUTH 부산','울산':'FS SOUTH 부산','경남':'FS SOUTH 부산','대구':'FS SOUTH 대구','경북':'FS SOUTH 대구'},
+  sgg:{'전북 고창군':'FS CENTRAL 광주','전북 정읍시':'FS CENTRAL 광주','전북 부안군':'FS CENTRAL 광주','전북 남원시':'FS CENTRAL 광주','전북 임실군':'FS CENTRAL 광주','전북 김제시':'FS CENTRAL 광주','전북 장수군':'FS CENTRAL 광주','전북 순창군':'FS CENTRAL 광주',
+       '경남 거창군':'FS SOUTH 대구','서울 광진구':'FS EAST','서울 노원구':'FS EAST','경기 동두천시':'FS EAST','경기 가평군':'FS EAST','경기 여주시':'FS EAST'} };
+let KMAP=null, _kmapP=null;
+function loadKMap(){ if(KMAP) return Promise.resolve(KMAP);
+  return _kmapP||(_kmapP=fetch(MAP_URL).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }).then(t=>(KMAP=kmapDecode(t))).catch(e=>{ _kmapP=null; throw e; })); }
+function kmapDecode(t){
+  const tr=t.transform, obj=t.objects[Object.keys(t.objects)[0]];
+  const arcs=t.arcs.map(a=>{ let x=0,y=0; return a.map(p=>{ x+=p[0]; y+=p[1]; return [x*tr.scale[0]+tr.translate[0], y*tr.scale[1]+tr.translate[1]]; }); });
+  /* 그림 범위: 백령·흑산 같은 먼 섬은 범위 밖(왼쪽 여백을 줄여 본토를 크게). 제주는 JEJU_UP 도만큼 위로 옮겨 그린다(좌표 찾기는 원래 위치로) */
+  const LON0=125.72, LON1=129.68, LAT0=33.62, LAT1=38.66, JEJU_UP=0.48, KY=100, KX=KY*Math.cos(36*Math.PI/180);
+  const f1=v=>(Math.round(v*10)/10), pxy=(p,up)=>[(p[0]-LON0)*KX,(LAT1-p[1]-(up?JEJU_UP:0))*KY];
+  const line=(a,up)=>a.map(p=>{ const q=pxy(p,up); return f1(q[0])+' '+f1(q[1]); }).join('L');
+  const use=arcs.map(()=>[]), far=r=>r.every(p=>p[0]<LON0);
+  const G=obj.geometries.map((g,gi)=>{ const polys=g.type==='Polygon'?[g.arcs]:g.type==='MultiPolygon'?g.arcs:[];
+    const code=String((g.properties||{}).code||''), name=String((g.properties||{}).name||''), sd=MAP_SD[code.slice(0,2)]||'', up=sd==='제주';
+    const rings=[]; let d='', best=null, x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+    polys.forEach(poly=>poly.forEach((ids,ri)=>{ const r=[];
+      ids.forEach(i=>{ const k=i<0?~i:i, a=i<0?arcs[k].slice().reverse():arcs[k]; if(use[k].indexOf(gi)<0) use[k].push(gi); a.forEach((p,j)=>{ if(j||!r.length) r.push(p); }); });
+      rings.push(r); if(!far(r)) d+='M'+line(r,up)+'Z';
+      r.forEach(p=>{ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<y0)y0=p[1]; if(p[1]>y1)y1=p[1]; });
+      if(ri===0){ let a=0,cx=0,cy=0; for(let i=0,j=r.length-1;i<r.length;j=i++){ const f=r[j][0]*r[i][1]-r[i][0]*r[j][1]; a+=f; cx+=(r[j][0]+r[i][0])*f; cy+=(r[j][1]+r[i][1])*f; }
+        a/=2; if(a&&(!best||Math.abs(a)>best.a)) best={a:Math.abs(a),c:[cx/(6*a),cy/(6*a)]}; } }));
+    const c=best?best.c:[(x0+x1)/2,(y0+y1)/2];
+    return {code, name, sd, key:sd+' '+name, rings, d, c, p:pxy(c,up), area:best?best.a:0, bb:[x0,y0,x1,y1]}; });
+  const arcD=arcs.map((a,k)=>far(a)?'':'M'+line(a,use[k].some(gi=>G[gi].sd==='제주')));
+  return {G, use, arcD, W:f1((LON1-LON0)*KX), H:f1((LAT1-LAT0)*KY), KX, KY, LON0, LAT1};
+}
+/* 좌표(위도·경도) → 시군구 번호. 경계를 줄였기 때문에 바닷가 점은 어느 칸에도 안 들 수 있어 가까운 시군구로 보낸다 */
+function kmapFind(K, lat, lon){
+  for(let i=0;i<K.G.length;i++){ const g=K.G[i], b=g.bb; if(lon<b[0]||lon>b[2]||lat<b[1]||lat>b[3]) continue; let ins=false;
+    for(const r of g.rings) for(let a=0,c=r.length-1;a<r.length;c=a++){ if((r[a][1]>lat)!==(r[c][1]>lat) && lon<(r[c][0]-r[a][0])*(lat-r[a][1])/(r[c][1]-r[a][1])+r[a][0]) ins=!ins; }
+    if(ins) return i; }
+  let bi=-1, bd=1e9; K.G.forEach((g,i)=>{ const d=(g.c[0]-lon)*(g.c[0]-lon)*0.65+(g.c[1]-lat)*(g.c[1]-lat); if(d<bd){ bd=d; bi=i; } }); return bd<0.06?bi:-1;
+}
+let _mapC=null;
+function mapData(K){
+  if(_mapC&&_mapC.raw===RAW&&_mapC.geo===GEO&&_mapC.K===K) return _mapC.r;
+  const sggOf={}, vis={}, vote={}; let located=0;
+  if(GEO&&RAW){ for(const r of RAW){ if(r.t==null||r.st==='취소됨'||!MOVE_PURP.has(r.purp)) continue; const u=wlUnit(r.own); if(!u) continue; const g=GEO.acct[r.acct]; if(!g) continue;
+      let gi=sggOf[r.acct]; if(gi===undefined) gi=sggOf[r.acct]=kmapFind(K,g[0],g[1]); if(gi<0) continue;
+      const mk=ymd(r.t).slice(0,7), v=vis[gi]||(vis[gi]={}), c=v[mk]||(v[mk]=[0,0,0]); c[0]++; const mins=r.e==null?0:(r.e-r.t)/60000; if(mins>0&&mins<=500){ c[1]+=mins; c[2]++; }   /* [방문, 분, 시간이 기록된 방문] — 작업 시간(workTime)과 같은 범위 */
+      const o=vote[gi]||(vote[gi]={}); o[u]=(o[u]||0)+1; located++; } }
+  const fixed=K.G.map(g=>MAP_TERR.sgg[g.key]||MAP_TERR.sd[g.sd]||null);
+  const unit=fixed.map((u,gi)=>{ if(u) return u; const o=vote[gi]||{}, w=o['FS WEST']||0, e=o['FS EAST']||0; return w>e?'FS WEST':e>w?'FS EAST':null; });
+  const voted=unit.filter((u,gi)=>u&&!fixed[gi]).length; let guess=0;
+  if(voted){ const base=unit.slice(), metro=g=>g.sd==='서울'||g.sd==='경기'||g.sd==='인천';
+    unit.forEach((u,gi)=>{ if(u) return; const g=K.G[gi]; let bd=1e9, bu=null;
+      base.forEach((fu,j)=>{ if(!fu||!metro(K.G[j])) return; const h=K.G[j], d=(h.c[0]-g.c[0])*(h.c[0]-g.c[0])*0.65+(h.c[1]-g.c[1])*(h.c[1]-g.c[1]); if(d<bd){ bd=d; bu=fu; } });
+      unit[gi]=bu; guess++; }); }
+  const r={unit, vis, voted, guess, located, shared:unit.some(u=>!u)};
+  _mapC={raw:RAW, geo:GEO, K, r}; return r;
+}
+function mapMix(c0, c1, t){ const h=c=>{ c=String(c).trim().replace('#',''); if(c.length===3) c=c.replace(/./g,'$&$&'); return [0,2,4].map(i=>parseInt(c.substr(i,2),16)); }, a=h(c0), b=h(c1);
+  return '#'+a.map((x,i)=>Math.round(x+(b[i]-x)*t).toString(16).padStart(2,'0')).join(''); }
+/* host = .tmap 칸. cfg = {units:[{k,short,n}], metrics:[{k,label,name,unit,dec,val:{단위:값},sub:{단위:글}}], all:{n,val:{지표:값}}, sel, months, bub, onSel(k), onBub(bool)} */
+function terrMapDraw(host, cfg){
+  if(!host) return;
+  loadKMap().then(K=>{ if(!host.isConnected) return; try{ terrMapPaint(host, cfg, K); }catch(e){ console.error('map paint',e); host.innerHTML='<div class="empty-note"><b>지도를 그리지 못했습니다.</b> 위 표의 값은 그대로 볼 수 있습니다.</div>'; } },
+    e=>{ console.warn('map load',e); if(host.isConnected) host.innerHTML='<div class="empty-note"><b>지도 경계 자료를 불러오지 못했습니다.</b> 새로 고침 후에도 같으면 관리자에게 알려 주세요. 아래 표의 값은 그대로 볼 수 있습니다.</div>'; });
+}
+function terrMapPaint(host, cfg, K){
+  const D=mapData(K), M=cfg.metrics.find(m=>m.k===cfg.sel)||cfg.metrics[0], cs=getComputedStyle(host);
+  const c0=cs.getPropertyValue('--tm0')||'#D3EDFB', c1=cs.getPropertyValue('--tm1')||'#005BAC', NONE='var(--grid,#E6E6E6)';
+  const f=v=>v==null||!isFinite(v)?'-':(M.dec?(Math.round(v*10)/10).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1}):fmt(Math.round(v))), u1=M.unit?'<small>'+esc(M.unit)+'</small>':'';
+  const vals=cfg.units.map(u=>M.val[u.k]).filter(v=>v!=null&&isFinite(v)), lo=vals.length?Math.min.apply(null,vals):0, hi=vals.length?Math.max.apply(null,vals):0;
+  const colOf=k=>{ const v=M.val[k]; if(v==null||!isFinite(v)) return NONE; return mapMix(c0,c1,hi>lo?(v-lo)/(hi-lo):0.5); };
+  const short={}; cfg.units.forEach(u=>{ short[u.k]=u.short; });
+  /* 시군구별 방문 건수(선택 기간) */
+  const cOf=gi=>{ const v=D.vis[gi], o=[0,0,0]; if(v) for(const mk in v){ if(!cfg.months||cfg.months.indexOf(mk)>=0){ o[0]+=v[mk][0]; o[1]+=v[mk][1]; o[2]+=v[mk][2]; } } return o; };
+  const cs3=K.G.map((g,gi)=>cOf(gi)), av=c=>c&&c[2]?fmt(Math.round(c[1]/c[2])):'-', ns=cs3.map(c=>c[0]), nMax=Math.max.apply(null,ns.concat([0])), hasVis=D.located>0, bub=hasVis&&!!cfg.bub&&nMax>0;
+  const byU={}, byT={}, allT=[0,0,0]; cs3.forEach((c,gi)=>{ const u=D.unit[gi]; for(let i=0;i<3;i++) allT[i]+=c[i]; if(!u) return; byU[u]=(byU[u]||0)+c[0]; const t=byT[u]||(byT[u]=[0,0,0]); for(let i=0;i<3;i++) t[i]+=c[i]; });
+  let coast='', sdl='', ul='';
+  K.use.forEach((gs,k)=>{ if(gs.length===1) coast+=K.arcD[k]; else if(gs.length===2){ const a=gs[0], b=gs[1]; if(D.unit[a]!==D.unit[b]) ul+=K.arcD[k]; else if(K.G[a].sd!==K.G[b].sd) sdl+=K.arcD[k]; } });
+  const order=K.G.map((g,gi)=>[gi,ns[gi]]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+  /* 같은 그림을 전국·수도권 두 번 쓴다. box=[x,y,w,h](그림 좌표), rk = 원 크기 배율. 선 굵기는 화면 기준(non-scaling-stroke) */
+  const draw=(box,rk,label)=>{ let h='<svg viewBox="'+box.map(v=>Math.round(v*10)/10).join(' ')+'" role="img" aria-label="'+esc(label)+'"><g>';
+    K.G.forEach((g,gi)=>{ if(!g.d) return; const u=D.unit[gi], c=u?colOf(u):NONE; h+='<path class="tma" data-g="'+gi+'" data-u="'+esc(u||'')+'" d="'+g.d+'" fill="'+c+'" stroke="'+c+'" stroke-width=".7" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'; });
+    h+='</g><g fill="none" stroke-linejoin="round" stroke-linecap="round" pointer-events="none"><path d="'+coast+'" stroke="var(--tmcoast)" stroke-width=".7" vector-effect="non-scaling-stroke"/>'+
+      '<path d="'+sdl+'" stroke="var(--tmline)" stroke-width=".8" stroke-opacity=".6" vector-effect="non-scaling-stroke"/><path d="'+ul+'" stroke="var(--tmline)" stroke-width="2.2" vector-effect="non-scaling-stroke"/></g>';
+    if(bub){ h+='<g>'; order.forEach(x=>{ const q=K.G[x[0]].p, r=(1.3+Math.sqrt(x[1]/nMax)*7.2)*rk;
+        h+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+r.toFixed(2)+'" fill="var(--tmdot)" fill-opacity=".78" stroke="var(--tmring)" stroke-width=".9" vector-effect="non-scaling-stroke"/>'; }); h+='</g>'; }
+    return h+'</svg>'; };
+  const full=[0,0,K.W,K.H], pos=(q,box)=>'left:'+((q[0]-box[0])/box[2]*100).toFixed(2)+'%;top:'+((q[1]-box[1])/box[3]*100).toFixed(2)+'%';
+  /* 이름표 위치 = 그 단위 시군구 중심의 넓이 가중 평균(제주 제외). inBox 를 주면 그 안에 든 시군구만 */
+  const cenOf=inBox=>{ const cen={}; K.G.forEach((g,gi)=>{ if(g.sd==='제주'||!g.d) return; if(inBox&&(g.p[0]<inBox[0]||g.p[0]>inBox[0]+inBox[2]||g.p[1]<inBox[1]||g.p[1]>inBox[1]+inBox[3])) return;
+      const u=D.unit[gi]||'__shared', o=cen[u]||(cen[u]={a:0,x:0,y:0}); o.a+=g.area; o.x+=g.p[0]*g.area; o.y+=g.p[1]*g.area; }); return cen; };
+  const cen=cenOf(null); let labs='';
+  cfg.units.forEach(u=>{ const o=cen[u.k]; if(!o||!o.a) return; labs+='<span class="tmlb" style="'+pos([o.x/o.a,o.y/o.a],full)+'"><b>'+esc(u.short)+'</b><i>'+f(M.val[u.k])+u1+'</i></span>'; });
+  if(cen.__shared&&cen.__shared.a){ const o=cen.__shared; labs+='<span class="tmlb sm" style="'+pos([o.x/o.a,o.y/o.a],full)+'">서울·경기<br>WEST·EAST</span>'; }
+  const jj=K.G.filter(g=>g.sd==='제주'); if(jj.length){ const ju=D.unit[K.G.indexOf(jj[0])]; let a=0,x=0,y=0; jj.forEach(g=>{ a+=g.area; x+=g.p[0]*g.area; y+=g.p[1]*g.area; });
+    labs+='<span class="tmlb sm" style="'+pos([x/a,y/a+27],full)+'">제주 · '+esc(short[ju]||'')+'</span>'; }
+  /* 수도권 확대 — 서울은 전국 그림에서 너무 작아 WEST·EAST 경계가 안 보인다 */
+  const zb=[(126.52-K.LON0)*K.KX,(K.LAT1-37.86)*K.KY,(127.52-126.52)*K.KX,(37.86-37.18)*K.KY], zc=cenOf(zb); let zl='';
+  ['FS WEST','FS EAST'].forEach(k=>{ const o=zc[k]; if(o&&o.a) zl+='<span class="tmlb sm tmzl" style="'+pos([o.x/o.a,o.y/o.a],zb)+'">'+esc(short[k]||k)+'</span>'; });
+  const zoom='<div class="tmzoom"><h3>수도권 확대 <span>서울 · 인천 · 경기 중심부</span></h3><div class="tmfig tmz">'+draw(zb,zb[2]/K.W*1.25,'수도권 확대 지도')+zl+'<div class="tmtip" role="status"></div></div></div>';
+  /* 표 */
+  const rows=cfg.units.map(u=>'<tr data-u="'+esc(u.k)+'"><td><span class="tmsw" style="background:'+colOf(u.k)+'"></span>'+esc(u.short)+'</td><td class="num">'+fmt(u.n)+'</td><td class="num"><b>'+f(M.val[u.k])+'</b>'+u1+'</td>'+
+    (M.sub?'<td class="num">'+esc(M.sub[u.k]||'-')+'</td>':'')+(hasVis?'<td class="num">'+fmt(byU[u.k]||0)+'</td><td class="num">'+av(byT[u.k])+'</td>':'')+'</tr>').join('');
+  const tab='<div class="tmscroll"><table class="data-table tmtab"><thead><tr><th>팀 · 사무소</th><th class="num">대상 인원</th><th class="num">'+esc(M.col||M.label)+'</th>'+(M.sub?'<th class="num">'+esc(M.subLabel||'')+'</th>':'')+(hasVis?'<th class="num">지역 방문</th><th class="num">건당 평균 (분)</th>':'')+'</tr></thead><tbody>'+rows+
+    '<tr class="tmall"><td>FSG 전체</td><td class="num">'+fmt(cfg.all.n)+'</td><td class="num">'+f(cfg.all.val[M.k])+u1+'</td>'+(M.sub?'<td class="num">'+esc(cfg.all.sub||'-')+'</td>':'')+(hasVis?'<td class="num">'+fmt(allT[0])+'</td><td class="num">'+av(allT)+'</td>':'')+'</tr></tbody></table></div>';
+  const leg='<div class="tmleg"><span>낮음 '+f(lo)+esc(M.unit||'')+'<span class="tmgr"></span>'+f(hi)+esc(M.unit||'')+' 높음</span>'+(bub?'<span><span class="tmdot"></span>원 = 시·군·구별 방문 건수 (가장 큰 원 '+fmt(nMax)+'건)</span>':'')+'</div>';
+  const top=hasVis&&order.length?'<div class="tmtop"><h3>방문이 많은 시 · 군 · 구 <span>'+esc(cfg.periodLabel||'')+'</span></h3><div class="tmscroll"><table class="data-table tmtab tmtt"><thead><tr><th>시 · 군 · 구</th><th>담당</th><th class="num">방문</th><th class="num">건당 평균</th></tr></thead><tbody>'+
+    order.slice(0,6).map(x=>{ const g=K.G[x[0]], u=D.unit[x[0]]; return '<tr data-g="'+x[0]+'"><td>'+esc(g.sd+' '+g.name)+'</td><td>'+esc(u?short[u]||u:'WEST·EAST')+'</td><td class="num">'+fmt(x[1])+'<small>건</small></td><td class="num">'+av(cs3[x[0]])+(cs3[x[0]][2]?'<small>분</small>':'')+'</td></tr>'; }).join('')+'</tbody></table></div></div>':'';
+  const note='<p class="tmnote"><b>값</b> = 사무소 대상 인원(팀장·신입 제외)의 평균'+(M.name&&M.name!==M.label?' · '+esc(M.label)+' = '+esc(M.name):'')+'. <b>담당 지역</b> = 사무소 지역 기준표(2026-11-04 확정). '+
+    (D.shared?'서울·경기는 WEST·EAST가 나눠 맡는데, 경계를 그릴 좌표 자료가 없어 나누지 않고 회색으로 두었습니다. '
+      :'서울·경기의 WEST·EAST 경계는 기준표에 다 적혀 있지 않아 <b>CRM 방문이 더 많은 팀</b>으로 그렸고'+(D.guess?'(방문 기록이 없는 '+fmt(D.guess)+'곳은 가까운 곳과 같은 팀)':'')+', 실제 배정과 다를 수 있습니다. ')+
+    (hasVis?'<b>지역 방문 · 원</b> = 그 시·군·구의 기관을 찾은 건수(설치·이전 설치·고장 수리·PM·Calibration, 취소 제외, 다른 사무소 직원의 방문 포함), <b>건당 평균</b> = 그 방문의 작업 시간 ÷ 시간이 기록된 방문(CRM 시작~종료 0~500분, 이동 시간 제외). ':'')+
+    '개인과 기관의 위치는 표시하지 않습니다. 제주는 위로 옮겨 그렸고 울릉군과 먼 섬은 뺐습니다.</p>';
+  host.innerHTML='<div class="tmctl"><span class="control-label">지도에 볼 값</span><div class="segmented tmseg">'+cfg.metrics.map(m=>'<button type="button" data-k="'+m.k+'"'+(m.k===M.k?' class="active" aria-pressed="true"':' aria-pressed="false"')+'>'+esc(m.label)+'</button>').join('')+'</div>'+
+    (hasVis?'<label class="tmchk"><input type="checkbox"'+(bub?' checked':'')+'>방문 분포 같이 보기</label>':'')+'</div>'+
+    '<div class="tmbody"><div class="tmfig tmmain">'+draw(full,1,'사무소·팀 지도 — '+M.label+'. 값은 옆 표와 같습니다.')+labs+'<div class="tmtip" role="status"></div></div><div class="tmside">'+tab+leg+'<div class="tmsub">'+zoom+top+'</div></div></div>'+note;
+  const figs=[].slice.call(host.querySelectorAll('.tmfig'));
+  const hl=u=>{ figs.forEach(fg=>{ fg.classList.toggle('dim',!!u); fg.querySelectorAll('path.tma').forEach(p=>p.classList.toggle('on',!!u&&p.getAttribute('data-u')===u)); }); host.querySelectorAll('.tmtab tbody tr[data-u]').forEach(r=>r.classList.toggle('on',!!u&&r.getAttribute('data-u')===u)); };
+  let pin=null;
+  const hide=()=>figs.forEach(fg=>{ fg.querySelector('.tmtip').style.display='none'; });
+  const show=(fg,gi)=>{ hide(); const g=K.G[gi], u=D.unit[gi], tip=fg.querySelector('.tmtip'), box=fg.classList.contains('tmz')?zb:full;
+    if(g.p[0]<box[0]||g.p[0]>box[0]+box[2]||g.p[1]<box[1]||g.p[1]>box[1]+box[3]) return;
+    tip.innerHTML='<b>'+esc(g.sd+' '+g.name)+'</b> · '+(u?esc(short[u]||u):'WEST·EAST')+(hasVis?'<br>방문 '+fmt(ns[gi])+'건'+(cs3[gi][2]?' · 건당 평균 '+av(cs3[gi])+'분':''):''); tip.setAttribute('style',pos(g.p,box)+';display:block'); };
+  figs.forEach(fg=>{ fg.querySelectorAll('path.tma').forEach(p=>{ const gi=+p.getAttribute('data-g'), u=p.getAttribute('data-u');
+      p.addEventListener('pointerenter',e=>{ if(e.pointerType==='mouse'){ show(fg,gi); if(!pin) hl(u); } });
+      p.addEventListener('click',()=>{ show(fg,gi); pin=pin===u?null:u; hl(pin||u); }); });
+    fg.addEventListener('pointerleave',e=>{ if(e.pointerType==='mouse'){ hide(); hl(pin); } }); });
+  host.querySelectorAll('.tmtab tbody tr[data-u]').forEach(r=>{ const u=r.getAttribute('data-u');
+    r.addEventListener('pointerenter',e=>{ if(e.pointerType==='mouse'&&!pin) hl(u); }); r.addEventListener('pointerleave',e=>{ if(e.pointerType==='mouse'&&!pin) hl(null); });
+    r.addEventListener('click',()=>{ pin=pin===u?null:u; hl(pin); hide(); }); });
+  host.querySelectorAll('.tmtt tbody tr[data-g]').forEach(r=>r.addEventListener('click',()=>show(figs[0],+r.getAttribute('data-g'))));
+  host.querySelectorAll('.tmseg button').forEach(b=>b.addEventListener('click',()=>{ if(cfg.onSel) cfg.onSel(b.getAttribute('data-k')); }));
+  const cb=host.querySelector('.tmchk input'); if(cb) cb.addEventListener('change',()=>{ if(cfg.onBub) cfg.onBub(cb.checked); });
 }
 /* ===== 장비군별 고장률·재방문율 추이 (2026-10-22) =====
    고장률 = 100대당 월 고장 수리 = 고장 수리 건수 ÷ (자료 있는 달 수) ÷ 가동 대수 × 100. 가동 대수 = 구간 끝 달 기준 최근 12개월 서비스 장비(자산대장이 있으면 그중 '사용' 장비).
@@ -5329,10 +5537,11 @@ function orgRows(mode){
       eqh:PROD.eq?eqAgg(PROD.eq.by,o.members||[],()=>0,n=>(PROD.grade||{})[n]==='팀장').perHead:null, rep, pm, pidx:(rep+pm)?pm/(rep+pm)*100:null, ftfr:rv['이번년도FTFR'], rev:rv['이번년도재방문율'], mttr:c?a/c:null, nRep:c, cs, ...orgExt(u,mode,o.members||[])}; });
 }
 /* Organization 통합(2026-11-16 작업지시서 v2): 담당 장비 = 관리표 eqAgg(담당 장비 화면과 같은 함수, 새 계산식 없음). 야간·휴일·수탁기관(방문)은 Workload 에서만 */
-function orgExt(u,mode,members){ const out={eq:null,eqInst:null,e100:null,nPeople:null,hr:null,hrh:null,ts:{},tn:{}};
+function orgExt(u,mode,members){ const out={eq:null,eqInst:null,e100:null,nPeople:null,hr:null,hrh:null,avgm:null,tnAll:0,ts:{},tn:{}};
   if(PROD.eq){ const A=eqAgg(PROD.eq.by,members,n=>(((PROD.person||{})[n]||{}).total_case||{})['이번 년도']||0,n=>(PROD.grade||{})[n]==='팀장'); out.eq=A.eq; out.eqInst=A.inst; out.e100=A.eq?A.per100:null; out.nPeople=A.nPeople; }
   { const nb=PROD.newbie||[], core=members.filter(n=>(PROD.grade||{})[n]!=='팀장'&&nb.indexOf(n)<0), A=workTimeSum(members,PROD.sel_months), Cc=workTimeSum(core,PROD.sel_months);   /* 작업 시간(2026-11-19): 합계 = 구성원 전체, 1인당 = 팀장·신입 제외(1인당 처리 건수와 같은 대상) */
-    out.hr=A.tot/60; out.ts=A.by; out.tn=A.n; out.hrh=core.length?Cc.tot/60/core.length:null; out.nCoreT=core.length; }
+    out.hr=A.tot/60; out.ts=A.by; out.tn=A.n; out.hrh=core.length?Cc.tot/60/core.length:null; out.nCoreT=core.length;
+    out.tnAll=Object.keys(A.n).reduce((a,b)=>a+A.n[b],0); out.avgm=out.tnAll?A.tot/out.tnAll:null; }   /* 건당 평균 시간(분, 2026-11-19 「건수에 평균시간」) = 작업 시간 ÷ 시간이 기록된 건수 */
   return out; }
 function orgAvg(){ const T=orgRows('team'), W=f=>{let a=0,b=0;T.forEach(r=>{if(r[f]!=null&&r.hc){a+=r[f]*r.hc;b+=r.hc;}});return b?a/b:null;}; return {per:W('per'),w:W('w'),hrh:(()=>{ let a=0,b=0; T.forEach(r=>{ if(r.hrh!=null&&r.nCoreT){ a+=r.hrh*r.nCoreT; b+=r.nCoreT; } }); return b?a/b:null; })(),hc:T.reduce((a,r)=>a+r.hc,0)}; }
 /* 비교 그림 — 0에서 시작해야 하는 건수는 막대(type:'bar'), 목표·평균과의 거리를 볼 값은 도트 플롯(type:'dot'). 도트 플롯은 축 범위와 기준선을 항상 적는다 */
@@ -5370,12 +5579,13 @@ function orgSync(){ const ft=$('fTeam').value||''; if(orgParent(ORG.sel)!==ft) O
 const orgName=r=>(r.off?'':`<b class="dstw" aria-hidden="true">${r.kids?(r.open?'▾':'▸'):''}</b>`)+(r.off?'└ ':'')+esc(r.n);
 function orgWire(root){ if(!root) return; root.querySelectorAll('[data-k]').forEach(el=>{ el.onclick=()=>orgPick(el.dataset.k); if(el.tagName==='TR'){ el.tabIndex=0; el.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); orgPick(el.dataset.k); } }; } }); }
 function orgAllBtn(id){ const b=$(id); if(!b) return; const all=TEAMS.filter(t=>orgKids(t).length), on=all.length&&all.every(t=>ORG.open.has(t)); b.textContent=on?'사무소 모두 접기':'사무소 모두 펼치기'; b.setAttribute('aria-pressed',on?'true':'false'); b.onclick=()=>orgAll(!on); }
-const ORG_M=[{k:'all',n:'인원',u:'명',d:0,type:'bar'},{k:'eq',n:'담당 장비',u:'대',d:0,type:'bar',eq:1},{k:'cnt',n:'처리 건수',u:'건',d:0,type:'bar'},{k:'per',n:'1인당 처리 건수',u:'건',d:1,type:'bar',avg:'per'},{k:'hr',n:'작업 시간',u:'시간',d:0,type:'bar'},{k:'hrh',n:'1인당 작업 시간',u:'시간',d:1,type:'bar',avg:'hrh'},
+const ORG_M=[{k:'all',n:'인원',u:'명',d:0,type:'bar'},{k:'eq',n:'담당 장비',u:'대',d:0,type:'bar',eq:1},{k:'cnt',n:'처리 건수',u:'건',d:0,type:'bar'},{k:'avgm',n:'건당 평균 시간',u:'분',d:0,type:'bar'},{k:'per',n:'1인당 처리 건수',u:'건',d:1,type:'bar',avg:'per'},{k:'hr',n:'작업 시간',u:'시간',d:0,type:'bar'},{k:'hrh',n:'1인당 작업 시간',u:'시간',d:1,type:'bar',avg:'hrh'},
   {k:'eqh',n:'1인당 담당 장비',u:'대',d:1,type:'bar',eq:1},{k:'e100',n:'장비 100대당 처리 건수',u:'건',d:1,type:'bar',eq:1},{k:'w',n:'1인당 가중 업무량',u:'점',d:1,type:'dot',avg:'w'},
   {k:'ftfr',n:'FTFR',u:'%',d:1,type:'dot',t:'ftfr'},{k:'rev',n:'재방문율',u:'%',d:1,type:'dot',t:'rev'},{k:'mttr',n:'MTTR',u:'분',d:1,type:'dot',t:'mttr'}];
 /* FSG 합계 — 팀 행을 더함(장비·건수), 1인당은 팀장 제외 인원 기준. 장비 100대당 = 처리 건수 ÷ 담당 장비 × 100 (eqAgg.per100 과 같은 식) */
 function orgFsg(T){ const sum=f=>T.reduce((a,r)=>a+(r[f]||0),0), eq=PROD.eq?sum('eq'):null, np=sum('nPeople'), cas=T.reduce((a,r)=>a+(r.cnt||0),0);
-  return {eq, eqInst:PROD.eq?sum('eqInst'):null, eqh:eq!=null&&np?eq/np:null, e100:eq?cas/eq*100:null, cnt:cas, per:orgAvg().per, np, all:sum('all'), hc:sum('hc')}; }
+  const tnA=sum('tnAll');
+  return {eq, eqInst:PROD.eq?sum('eqInst'):null, eqh:eq!=null&&np?eq/np:null, e100:eq?cas/eq*100:null, cnt:cas, avgm:tnA?sum('hr')*60/tnA:null, per:orgAvg().per, np, all:sum('all'), hc:sum('hc')}; }
 const ORGSC={u:'office',y:'per',c:'ftfr',q:'on'};   /* u: office 사무소 6 / team 팀 4 — 한 그림에 섞지 않음(작업지시서 v2) */
 function renderOrgTop(p,team,pp,prov,scope){
   dsTitle('orgTitle','Organization',p,scope,pp.label,prov);
@@ -5396,29 +5606,29 @@ function renderOrgTop(p,team,pp,prov,scope){
     `<div class="ovkc st${nd}"><span class="ovl">장비 100대당 처리 건수${PROD.eq?'':noEq}</span><span class="ovv">${PROD.eq?f1(X.e100):'-'}<small>${PROD.eq?'건':''}</small></span><span class="ovt">선택 기간 처리 건수 ÷ 담당 장비(현재 관리표) × 100</span><span class="ovd">${PROD.eq&&S&&F.e100!=null&&X.e100!=null?'FSG '+f1(F.e100)+'건 대비 '+(X.e100>=F.e100?'+':'−')+Math.abs(X.e100-F.e100).toFixed(1):'팀장 방문·담당 기관 포함'}</span></div>`;
   /* ② 조직별 운영 현황 표 */
   const cell=(v,k)=>{ const o=K(k), s=v==null?null:ovSt(o,v); return `<td class="${s?'st-'+s.st:''}">${v==null?'-':v.toFixed(1)}${s&&s.chip?`<span class="ovtag">${s.chip}</span>`:''}</td>`; };
-  const H=['팀 · 사무소','인원 (비교)'].concat(PROD.eq?['담당 장비','1인당 장비']:[],['처리 건수','1인당 처리 건수','평균 대비'],PROD.eq?['장비 100대당 처리 건수']:[],['1인당 가중 업무량','직급 보정 지수','FTFR (%)','재방문율 (%)','MTTR (분)','고장 수리 (표본)']);
+  const H=['팀 · 사무소','인원 (비교)'].concat(PROD.eq?['담당 장비','1인당 장비']:[],['처리 건수','건당 평균 시간 (분)','1인당 처리 건수','평균 대비'],PROD.eq?['장비 100대당 처리 건수']:[],['1인당 가중 업무량','직급 보정 지수','FTFR (%)','재방문율 (%)','MTTR (분)','고장 수리 (표본)']);
   const dv=r=>r.per==null||avg.per==null?'-':(Math.abs(r.per-avg.per)<0.05?'0.0':(r.per>avg.per?'+':'−')+Math.abs(r.per-avg.per).toFixed(1));
   $('ogTbl').innerHTML=`<table class="ovtab dsfull ogtab"><thead><tr>${H.map(h=>`<th><span class="dsth">${h}</span></th>`).join('')}</tr></thead><tbody>
-    <tr class="tgt"><td>목표</td><td>-</td>${PROD.eq?'<td>-</td><td>-</td>':''}<td>-</td><td>-</td><td>-</td>${PROD.eq?'<td>-</td>':''}<td>-</td><td>100 기준</td><td>${TARGET_FTFR} 이상</td><td>${TARGET_REV} 이하</td><td>${TARGET_MTTR} 이하</td><td>-</td></tr>
-    ${rows.map(r=>`<tr class="row${r.off?' ovoff':''}${r.sel?' sel':''}" data-k="${esc(r.k)}"${r.kids?` aria-expanded="${r.open}"`:''}><td>${orgName(r)}</td><td>${r.all} <span class="ovsub">(${r.hc})</span></td>${PROD.eq?`<td>${f0(r.eq)}</td><td>${f1(r.eqh)}</td>`:''}<td>${r.cnt==null?'-':fmt(r.cnt)}</td><td>${f1(r.per)}</td><td>${dv(r)}</td>${PROD.eq?`<td>${f1(r.e100)}</td>`:''}<td>${f1(r.w)}</td><td>${f1(r.gi)}</td>${cell(r.ftfr,'ftfr')}${cell(r.rev,'rev')}${cell(r.mttr,'mttr')}<td>${fmt(r.nRep)}${r.nRep<10?'<span class="ovtag">표본 적음</span>':''}</td></tr>`).join('')}
-    <tr class="tgt"><td>FSG</td><td>${F.all} <span class="ovsub">(${F.hc})</span></td>${PROD.eq?`<td>${f0(F.eq)}</td><td>${f1(F.eqh)}</td>`:''}<td>${fmt(F.cnt)}</td><td>${f1(F.per)}</td><td>기준</td>${PROD.eq?`<td>${f1(F.e100)}</td>`:''}<td>${f1(avg.w)}</td><td>100.0</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody></table>`;
+    <tr class="tgt"><td>목표</td><td>-</td>${PROD.eq?'<td>-</td><td>-</td>':''}<td>-</td><td>-</td><td>-</td><td>-</td>${PROD.eq?'<td>-</td>':''}<td>-</td><td>100 기준</td><td>${TARGET_FTFR} 이상</td><td>${TARGET_REV} 이하</td><td>${TARGET_MTTR} 이하</td><td>-</td></tr>
+    ${rows.map(r=>`<tr class="row${r.off?' ovoff':''}${r.sel?' sel':''}" data-k="${esc(r.k)}"${r.kids?` aria-expanded="${r.open}"`:''}><td>${orgName(r)}</td><td>${r.all} <span class="ovsub">(${r.hc})</span></td>${PROD.eq?`<td>${f0(r.eq)}</td><td>${f1(r.eqh)}</td>`:''}<td>${r.cnt==null?'-':fmt(r.cnt)}</td><td>${f0(r.avgm)}</td><td>${f1(r.per)}</td><td>${dv(r)}</td>${PROD.eq?`<td>${f1(r.e100)}</td>`:''}<td>${f1(r.w)}</td><td>${f1(r.gi)}</td>${cell(r.ftfr,'ftfr')}${cell(r.rev,'rev')}${cell(r.mttr,'mttr')}<td>${fmt(r.nRep)}${r.nRep<10?'<span class="ovtag">표본 적음</span>':''}</td></tr>`).join('')}
+    <tr class="tgt"><td>FSG</td><td>${F.all} <span class="ovsub">(${F.hc})</span></td>${PROD.eq?`<td>${f0(F.eq)}</td><td>${f1(F.eqh)}</td>`:''}<td>${fmt(F.cnt)}</td><td>${f0(F.avgm)}</td><td>${f1(F.per)}</td><td>기준</td>${PROD.eq?`<td>${f1(F.e100)}</td>`:''}<td>${f1(avg.w)}</td><td>100.0</td><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody></table>`;
   staffCols($('ogTbl')); orgWire($('ogTbl')); ogCols();
-  $('ogNote').innerHTML='담당 장비·장비 100대당 건수는 「담당기관 관리표」 현재 시점 기준이라 지난 기간의 장비 수와 다를 수 있고, 장비·건수 합계에는 팀장이 맡은 기관·방문도 들어갑니다(1인당 장비는 팀장 제외). 재방문율·FTFR 은 그 조직에 배정된 거래처의 평균이며, 고장 수리 표본이 10건 미만이면 비율이 크게 흔들립니다. 팀·사무소마다 인원과 맡은 거래처가 달라 순위로 읽지 않습니다.';
+  $('ogNote').innerHTML='담당 장비·장비 100대당 건수는 「담당기관 관리표」 현재 시점 기준이라 지난 기간의 장비 수와 다를 수 있고, 장비·건수 합계에는 팀장이 맡은 기관·방문도 들어갑니다(1인당 장비는 팀장 제외). 재방문율·FTFR 은 그 조직에 배정된 거래처의 평균이며, 고장 수리 표본이 10건 미만이면 비율이 크게 흔들립니다. 건당 평균 시간 = 작업 시간 ÷ 시간이 기록된 건수(CRM 시작~종료 0~500분, 이동 시간 제외)이며 MTTR 은 그중 고장 수리만 본 값입니다. 팀·사무소마다 인원과 맡은 거래처가 달라 순위로 읽지 않습니다.';
   /* ③ 담당 장비 × 업무량 산점도 */
   try{ orgScatter(); }catch(e){ console.error('조직 산점도',e); $('ogScBox').innerHTML='<p class="empty-note">그래프를 그리지 못했습니다: '+esc(e.message||e)+'</p>'; }
   /* ④ 인원 대비 업무량 — 지표에 따라 막대(0 기준) 또는 도트 플롯(목표·평균 대비) */
   const MS=ORG_M.filter(x=>(!x.eq||PROD.eq)&&!(STAFF&&x.k==='w'&&!staffHasScore())), m=MS.find(x=>x.k===ORG.m)||MS.find(x=>x.k==='per'), ko=m.t&&K(m.t);
   $('ogMseg').innerHTML=MS.map(x=>`<button type="button" data-m="${x.k}" aria-pressed="${x.k===m.k}">${x.n}</button>`).join('');
   $('ogMseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{ ORG.m=b.dataset.m; rerender(); });
-  const ref=ko?ko.t():(m.avg?avg[m.avg]:(m.k==='eqh'?F.eqh:m.k==='e100'?F.e100:null));
+  const ref=ko?ko.t():(m.avg?avg[m.avg]:(m.k==='eqh'?F.eqh:m.k==='e100'?F.e100:m.k==='avgm'?F.avgm:null));
   $('ogBars').innerHTML=dsBars(rows.map(r=>({n:r.n,html:orgName(r),k:r.k,off:r.off,sel:r.sel,kids:r.kids,open:r.open,sub:r.hc+'명',v:r[m.k],title:ko?`고장 수리 ${fmt(r.nRep)}건 기준`:''})),{pick:true,unit:m.u,dec:m.d,type:m.type,ref,refLab:ko?'목표':'FSG 평균',state:ko?v=>ovSt(ko,v):null,extra:ko?'점 색: 파랑 달성 · 주황 근접 · 빨강 미달':''});
   orgWire($('ogBars'));
   const BK=PROD.buckets||[], BL=PROD.bucket_label||{}, C=['#005BAC','#00B9EF','#5185C5','#84BAE5','#9FA0A0'];
   const MX=ORG.mix==='hr'?'hr':'cnt', mv=(r,b)=>MX==='hr'?((r.ts||{})[b]||0)/60:(r.cs[b]||0), mu=MX==='hr'?'시간':'건', mf=v=>MX==='hr'?fmt(Math.round(v)):fmt(v);
   $('ogMix').innerHTML=`<div class="ogmxh"><span class="ovseg" role="group" aria-label="구성비 기준"><button type="button" data-x="cnt" aria-pressed="${MX==='cnt'}">건수</button><button type="button" data-x="hr" aria-pressed="${MX==='hr'}">시간</button></span></div><div class="dsleg">${BK.map((b,i)=>`<span><i style="background:${C[i%C.length]}"></i>${esc(BL[b]||b)}</span>`).join('')}</div>`+rows.map(r=>{ const tot=BK.reduce((a,b)=>a+mv(r,b),0);
-    return `<button type="button" class="dsmix pick${r.off?' off':''}${r.sel?' sel':''}" data-k="${esc(r.k)}" aria-pressed="${r.sel}"><span class="ovhn">${orgName(r)}</span><span class="dsmt" role="img" aria-label="${esc(r.n)} 업무 유형 구성비(${MX==='hr'?'시간':'건수'})">${tot?BK.map((b,i)=>{ const v=mv(r,b), w=v/tot*100; return v?`<i style="width:${w.toFixed(1)}%;background:${C[i%C.length]}" title="${esc(BL[b]||b)} ${mf(v)}${mu} (${w.toFixed(1)}%)">${w>=9?Math.round(w)+'%':''}</i>`:''; }).join(''):'<em>자료 없음</em>'}</span><span class="ovhv">${mf(tot)}${mu}</span></button>`; }).join('')+(MX==='hr'
-      ?'<p class="ovnote">막대 길이는 구성비(100%)이고 오른쪽 숫자는 작업 시간입니다. 시간 = CRM 에 기록된 시작~종료(0~500분인 기록만), 담당자·필수 참석자 각각 · 이동 시간은 들어 있지 않습니다. 막대에 마우스를 올리면 시간을 볼 수 있습니다.</p>'
-      :'<p class="ovnote">막대 길이는 구성비(100%)이고 오른쪽 숫자는 처리 건수입니다. 막대에 마우스를 올리면 건수를 볼 수 있습니다.</p>');
+    return `<button type="button" class="dsmix pick${r.off?' off':''}${r.sel?' sel':''}" data-k="${esc(r.k)}" aria-pressed="${r.sel}"><span class="ovhn">${orgName(r)}</span><span class="dsmt" role="img" aria-label="${esc(r.n)} 업무 유형 구성비(${MX==='hr'?'시간':'건수'})">${tot?BK.map((b,i)=>{ const v=mv(r,b), w=v/tot*100; return v?`<i style="width:${w.toFixed(1)}%;background:${C[i%C.length]}" title="${esc(BL[b]||b)} ${mf(v)}${mu} (${w.toFixed(1)}%)${(r.tn||{})[b]?' · 건당 평균 '+fmt(Math.round(r.ts[b]/r.tn[b]))+'분':''}">${w>=9?Math.round(w)+'%':''}</i>`:''; }).join(''):'<em>자료 없음</em>'}</span><span class="ovhv">${mf(tot)}${mu}${r.avgm!=null?`<small class="ogav">건당 ${fmt(Math.round(r.avgm))}분</small>`:''}</span></button>`; }).join('')+(MX==='hr'
+      ?'<p class="ovnote">막대 길이는 구성비(100%)이고 오른쪽 숫자는 작업 시간과 건당 평균 시간입니다. 시간 = CRM 에 기록된 시작~종료(0~500분인 기록만), 담당자·필수 참석자 각각 · 이동 시간은 들어 있지 않습니다. 막대에 마우스를 올리면 시간을 볼 수 있습니다.</p>'
+      :'<p class="ovnote">막대 길이는 구성비(100%)이고 오른쪽 숫자는 처리 건수와 건당 평균 시간입니다. 막대에 마우스를 올리면 유형별 건수와 건당 평균 시간을 볼 수 있습니다.</p>');
   $('ogMix').querySelectorAll('.ogmxh button').forEach(b=>b.onclick=()=>{ ORG.mix=b.dataset.x; try{ localStorage.setItem('fsg-kpi-orgmix',ORG.mix); }catch(e){} rerender(); });
   orgWire($('ogMix'));
   /* 업무 유형별 건수 · 시간(2026-11-19 사용자 요청 「각 항목도 시간으로 — 처리 건수와 시간의 비교, 어느 일이 오래 걸리는지」): 고른 팀·사무소(없으면 FSG).
@@ -5441,7 +5651,7 @@ const orgMed=a=>{ const v=a.slice().sort((x,y)=>x-y), n=v.length; return n?(n%2?
 const ORGSC_C={good:'#005BAC',warn:'#E69E0B',bad:'#E7413E',none:'#9FA0A0'};
 /* 산점도 위치 — 중앙값 기준 네 칸(2026-11-16 사용자 요청 「중앙값 기준과 이상적인 모습 표현」). 균형 = 장비·업무가 같이 많거나 같이 적음 */
 /* v3.2: 조직 운영 현황 표 — 핵심 열만 기본, 「모든 열 보기」로 나머지(기기에 기억) */
-const OG_CORE=['팀 · 사무소','인원 (비교)','담당 장비','처리 건수','1인당 처리 건수','FTFR (%)','재방문율 (%)','MTTR (분)'];
+const OG_CORE=['팀 · 사무소','인원 (비교)','담당 장비','처리 건수','건당 평균 시간 (분)','1인당 처리 건수','FTFR (%)','재방문율 (%)','MTTR (분)'];
 function ogCols(){ const t=document.querySelector('#ogTbl table'); if(!t) return; let all=false; try{ all=localStorage.getItem('fsg-kpi-ogcols')==='1'; }catch(e){}
   const hs=[...t.tHead.rows[0].cells], ex=hs.map(h=>!OG_CORE.includes(h.textContent.trim()));
   [...t.rows].forEach(r=>[...r.cells].forEach((c,i)=>{ if(ex[i]) c.classList.toggle('ogx',!all); }));
