@@ -53,3 +53,13 @@ assert.ok(/cur\.avgm=ovAvg\(p\.months\); prv\.avgm=ovAvg\(pp\.months\)/.test(htm
 assert.ok(/body\.rpt #ov #ovKpi \.ovkc:nth-child\(5\)\{display:none\}/.test(html), '보고용 보기는 네 칸');
 assert.ok(/#ov \.ovkpi\.c5 \.ovkc:nth-child\(5\)\{grid-column:1\/-1;border-left:0\}/.test(html), '좁은 화면에서 다섯째 칸은 한 줄 전체');
 console.log('test_territory_map: Overview 건당 평균 확인 통과');
+
+/* Organization·Overview 의 지도 (2026-11-19 「지도를 조직·사무소 쪽에」「overview에도 지도」) — 팀·사무소별 비교와 같은 값(orgRows), 같은 그리기 함수 */
+assert.ok(/id="ogMapCard"[^>]*data-scr="org"/.test(html) && /id="ogMap"/.test(html), 'Organization 지도 카드');
+assert.ok(/id="ovMapCard"/.test(html) && /id="ovMap"/.test(html), 'Overview 지도 카드');
+assert.ok(/function orgMap\(o\)\{[^\n]*orgRows\('office'\)/.test(html) && /terrMapDraw\(host,\{units:O\.map/.test(html), '값은 orgRows, 그리기는 terrMapDraw');
+assert.ok(/orgMap\(\{host:'ogMap'[^\n]*onSel:k=>\{ ORG\.m=k; rerender\(\); \}/.test(html), 'Organization: 지표를 바꾸면 막대와 지도가 같이');
+assert.ok(/orgMap\(\{host:'ovMap'/.test(html) && /OV\.metric=b\.dataset\.k; OV\.mapM=null;/.test(html), 'Overview: 핵심 지표를 누르면 지도가 따라감');
+assert.ok(/body\.rpt #ovMapCard\{display:none\}/.test(html), '보고용 보기·PDF 에는 지도를 넣지 않는다');
+assert.ok(/spanK=hi>lo\?Math\.min\(1,/.test(html), '값 차이가 작으면 색 차이도 작게');
+console.log('test_territory_map: Organization·Overview 지도 확인 통과');
