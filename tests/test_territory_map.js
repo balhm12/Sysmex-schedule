@@ -45,3 +45,21 @@ assert.ok(/\{k:'avg', label:'건당 평균 시간', num:true, cls:'lbav'\}/.test
 assert.ok(/lbAvg = function\(n\)\{[^\n]*workTimeSum\(\[n\], lbWm\)/.test(html), '개인 순위표도 workTimeSum 으로 계산');
 assert.ok(/#prod #lbTable \.lbeq,#prod #lbTable \.lbav\{display:none\}/.test(html) && /' · 건당 '\+fmt\(Math\.round\(r\.avg\)\)\+'분'/.test(html), '휴대폰: 열은 숨기고 이름 아래 줄에 표시');
 console.log('test_territory_map: 개인 순위표 건당 평균 확인 통과');
+
+/* Overview 의 건당 평균 작업 시간 (2026-11-19) — 다섯째 칸. OV_K(목표 판정·보고용 보기가 같이 씀)에는 넣지 않고, 보고용 보기는 네 칸 그대로 */
+assert.ok(/const OV_AVG=\{k:'avgm',n:'건당 평균 작업 시간',u:'분'/.test(html), 'Overview 칸 정의');
+{ const a=html.indexOf('const OV_K=['), b=html.indexOf('}];',a); assert.ok(a>0&&b>a&&!/avgm/.test(html.slice(a,b)), 'OV_K 에는 넣지 않는다'); }
+assert.ok(/cur\.avgm=ovAvg\(p\.months\); prv\.avgm=ovAvg\(pp\.months\)/.test(html) && /ovAvg=mm=>\{ try\{ const A=workTimeSum\(ovNm,/.test(html), 'Overview 도 workTimeSum 으로 계산');
+assert.ok(/body\.rpt #ov #ovKpi \.ovkc:nth-child\(5\)\{display:none\}/.test(html), '보고용 보기는 네 칸');
+assert.ok(/#ov \.ovkpi\.c5 \.ovkc:nth-child\(5\)\{grid-column:1\/-1;border-left:0\}/.test(html), '좁은 화면에서 다섯째 칸은 한 줄 전체');
+console.log('test_territory_map: Overview 건당 평균 확인 통과');
+
+/* Organization·Overview 의 지도 (2026-11-19 「지도를 조직·사무소 쪽에」「overview에도 지도」) — 팀·사무소별 비교와 같은 값(orgRows), 같은 그리기 함수 */
+assert.ok(/id="ogMapCard"[^>]*data-scr="org"/.test(html) && /id="ogMap"/.test(html), 'Organization 지도 카드');
+assert.ok(/id="ovMapCard"/.test(html) && /id="ovMap"/.test(html), 'Overview 지도 카드');
+assert.ok(/function orgMap\(o\)\{[^\n]*orgRows\('office'\)/.test(html) && /terrMapDraw\(host,\{units:O\.map/.test(html), '값은 orgRows, 그리기는 terrMapDraw');
+assert.ok(/orgMap\(\{host:'ogMap'[^\n]*onSel:k=>\{ ORG\.m=k; rerender\(\); \}/.test(html), 'Organization: 지표를 바꾸면 막대와 지도가 같이');
+assert.ok(/orgMap\(\{host:'ovMap'/.test(html) && /OV\.metric=b\.dataset\.k; OV\.mapM=null;/.test(html), 'Overview: 핵심 지표를 누르면 지도가 따라감');
+assert.ok(/body\.rpt #ovMapCard\{display:none\}/.test(html), '보고용 보기·PDF 에는 지도를 넣지 않는다');
+assert.ok(/spanK=hi>lo\?Math\.min\(1,/.test(html), '값 차이가 작으면 색 차이도 작게');
+console.log('test_territory_map: Organization·Overview 지도 확인 통과');

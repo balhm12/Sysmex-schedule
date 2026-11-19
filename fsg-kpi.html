@@ -320,46 +320,53 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 #prod #ldTable td small.ldz{display:block;margin:1px 0 0;font-size:11px}
 #prod .ldnote{margin:0;font-size:12.5px;line-height:1.65;color:var(--text-muted)}#prod .ldnote b{color:var(--text-secondary)}
 /* 사무소·팀 지도 (2026-11-19) — 색 = 값의 크기(한 가지 파랑), 사무소 구분은 이름표로. 이름표·풍선말은 HTML 이라 화면 폭이 줄어도 글자 크기가 그대로다 */
-#prod .tmap{padding:14px 16px 16px;--tm0:#D3EDFB;--tm1:#005BAC;--tmline:#FFFFFF;--tmcoast:#B5C4D0;--tmdot:#FFFFFF;--tmring:#1A2433}
-:root[data-theme="dark"] #prod .tmap{--tm0:#1E3550;--tm1:#6CB6F2;--tmline:#151C26;--tmcoast:#3A4656;--tmdot:#151C26;--tmring:#E6E9EE}
-#prod .tmctl{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-bottom:14px}
-#prod .tmctl .segmented{flex-wrap:wrap;max-width:100%}
-#prod .tmchk{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--text);min-height:36px;cursor:pointer}
-#prod .tmchk input{width:16px;height:16px;margin:0;accent-color:var(--primary)}
-#prod .tmbody{display:grid;grid-template-columns:minmax(0,390px) minmax(0,1fr);gap:28px;align-items:start}
-#prod .tmfig{position:relative;width:100%}
-#prod .tmmain{max-width:390px;margin-bottom:16px}
-#prod .tmfig svg{display:block;width:100%;height:auto}
-#prod .tmz svg{border:1px solid var(--border);background:var(--surface)}
-#prod .tmfig path.tma{cursor:pointer;transition:opacity .12s}
-#prod .tmfig.dim path.tma:not(.on){opacity:.3}
-#prod .tmfig circle{pointer-events:none}
-#prod .tmlb{position:absolute;transform:translate(-50%,-50%);pointer-events:none;background:var(--surface);border:1px solid var(--tmcoast);padding:2px 8px 3px;font-size:12px;line-height:1.3;text-align:center;white-space:nowrap;color:var(--text)}
-#prod .tmlb b{display:block;font-weight:700}
-#prod .tmlb i{font-style:normal;font-weight:700;font-size:13.5px;color:var(--primary);font-variant-numeric:tabular-nums}
-#prod .tmlb i small{font-size:11px;font-weight:500;color:var(--muted);margin-left:1px}
-:root[data-theme="dark"] #prod .tmlb i{color:var(--tm1)}
-#prod .tmlb.sm{border:0;background:none;padding:0;font-size:11.5px;color:var(--text-secondary)}
-#prod .tmlb.tmzl{background:var(--surface);border:1px solid var(--tmcoast);padding:1px 6px;font-weight:700;color:var(--text)}
-#prod .tmtip{position:absolute;display:none;transform:translate(-50%,-100%);margin-top:-8px;pointer-events:none;background:var(--surface);border:1px solid var(--primary);padding:5px 9px;font-size:12.5px;line-height:1.45;color:var(--text);white-space:nowrap;z-index:2}
-#prod .tmside{min-width:0}#prod .tmscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-#prod .tmtab{width:100%}#prod table.data-table.tmtab th{white-space:normal;line-height:1.3;vertical-align:bottom;word-break:keep-all}
-#prod .tmtab th.num,#prod .tmtab td.num{text-align:right;font-variant-numeric:tabular-nums}
-#prod .tmtab tbody tr{cursor:pointer}
-#prod .tmtab tr.on td{background:var(--tint)}
-#prod .tmtab tr.tmall td{border-top:1px solid var(--primary);font-weight:700;cursor:default}
+:is(#prod,#ogMapCard,#ovMapCard) .tmap{padding:14px 16px 16px;--tm0:#D3EDFB;--tm1:#005BAC;--tmline:#FFFFFF;--tmcoast:#B5C4D0;--tmdot:#FFFFFF;--tmring:#1A2433}
+:root[data-theme="dark"] :is(#prod,#ogMapCard,#ovMapCard) .tmap{--tm0:#1E3550;--tm1:#6CB6F2;--tmline:#151C26;--tmcoast:#3A4656;--tmdot:#151C26;--tmring:#E6E9EE}
+:is(#prod,#ogMapCard,#ovMapCard) .tmctl{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-bottom:14px}
+:is(#prod,#ogMapCard,#ovMapCard) .tmctl .segmented{flex-wrap:wrap;max-width:100%}
+:is(#prod,#ogMapCard,#ovMapCard) .tmchk{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--text);min-height:36px;cursor:pointer}
+:is(#prod,#ogMapCard,#ovMapCard) .tmchk input{width:16px;height:16px;margin:0;accent-color:var(--primary)}
+:is(#prod,#ogMapCard,#ovMapCard) .tmbody{display:grid;grid-template-columns:minmax(0,390px) minmax(0,1fr);gap:28px;align-items:start}
+:is(#prod,#ogMapCard,#ovMapCard) .tmfig{position:relative;width:100%}
+:is(#prod,#ogMapCard,#ovMapCard) .tmmain{max-width:390px;margin-bottom:16px}
+:is(#prod,#ogMapCard,#ovMapCard) .tmfig svg{display:block;width:100%;height:auto}
+:is(#prod,#ogMapCard,#ovMapCard) .tmz svg{border:1px solid var(--border);background:var(--surface)}
+:is(#prod,#ogMapCard,#ovMapCard) .tmfig path.tma{cursor:pointer;transition:opacity .12s}
+:is(#prod,#ogMapCard,#ovMapCard) .tmfig.dim path.tma:not(.on){opacity:.3}
+:is(#prod,#ogMapCard,#ovMapCard) .tmfig circle{pointer-events:none}
+:is(#prod,#ogMapCard,#ovMapCard) .tmlb{position:absolute;transform:translate(-50%,-50%);pointer-events:none;background:var(--surface);border:1px solid var(--tmcoast);padding:2px 8px 3px;font-size:12px;line-height:1.3;text-align:center;white-space:nowrap;color:var(--text)}
+:is(#prod,#ogMapCard,#ovMapCard) .tmlb b{display:block;font-weight:700}
+:is(#prod,#ogMapCard,#ovMapCard) .tmlb i{font-style:normal;font-weight:700;font-size:13.5px;color:var(--primary);font-variant-numeric:tabular-nums}
+:is(#prod,#ogMapCard,#ovMapCard) .tmlb i small{font-size:11px;font-weight:500;color:var(--muted);margin-left:1px}
+:root[data-theme="dark"] :is(#prod,#ogMapCard,#ovMapCard) .tmlb i{color:var(--tm1)}
+:is(#prod,#ogMapCard,#ovMapCard) .tmlb.sm{border:0;background:none;padding:0;font-size:11.5px;color:var(--text-secondary)}
+:is(#prod,#ogMapCard,#ovMapCard) .tmlb.tmzl{background:var(--surface);border:1px solid var(--tmcoast);padding:1px 6px;font-weight:700;color:var(--text)}
+:is(#prod,#ogMapCard,#ovMapCard) .tmtip{position:absolute;display:none;transform:translate(-50%,-100%);margin-top:-8px;pointer-events:none;background:var(--surface);border:1px solid var(--primary);padding:5px 9px;font-size:12.5px;line-height:1.45;color:var(--text);white-space:nowrap;z-index:2}
+:is(#prod,#ogMapCard,#ovMapCard) .tmside{min-width:0}:is(#prod,#ogMapCard,#ovMapCard) .tmscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+:is(#prod,#ogMapCard,#ovMapCard) .tmtab{width:100%}:is(#prod,#ogMapCard,#ovMapCard) table.data-table.tmtab th{white-space:normal;line-height:1.3;vertical-align:bottom;word-break:keep-all}
+:is(#prod,#ogMapCard,#ovMapCard) .tmtab th.num,:is(#prod,#ogMapCard,#ovMapCard) .tmtab td.num{text-align:right;font-variant-numeric:tabular-nums}
+:is(#prod,#ogMapCard,#ovMapCard) .tmtab tbody tr{cursor:pointer}
+:is(#prod,#ogMapCard,#ovMapCard) .tmtab tr.on td{background:var(--tint)}
+:is(#prod,#ogMapCard,#ovMapCard) .tmtab tr.tmall td{border-top:1px solid var(--primary);font-weight:700;cursor:default}
 .ogav{display:block;font-size:11px;font-weight:500;color:var(--muted);line-height:1.2}
-#prod .tmtab small{font-size:11px;color:var(--muted);margin-left:2px;font-weight:500}
-#prod .tmsw{display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-1px;border:1px solid rgba(0,0,0,.14)}
-#prod .tmleg{display:flex;flex-wrap:wrap;gap:6px 20px;align-items:center;margin-top:12px;font-size:12px;color:var(--text-secondary)}
-#prod .tmgr{display:inline-block;width:110px;height:10px;margin:0 7px;vertical-align:middle;background:linear-gradient(90deg,var(--tm0),var(--tm1))}
-#prod .tmdot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px;background:var(--tmdot);border:1px solid var(--tmring)}
-#prod .tmsub{display:grid;grid-template-columns:minmax(0,250px) minmax(0,1fr);gap:24px;align-items:start;margin-top:22px}
-#prod .tmsub h3{margin:0 0 8px;font-size:13.5px;font-weight:700;color:var(--text)}
-#prod .tmsub h3 span{font-size:12px;font-weight:500;color:var(--muted);margin-left:6px}
-#prod .tmnote{margin:14px 0 0;font-size:12.5px;line-height:1.65;color:var(--text-muted)}#prod .tmnote b{color:var(--text-secondary)}
-@media (max-width:1100px){#prod .tmsub{grid-template-columns:minmax(0,1fr)}#prod .tmzoom{max-width:300px}}
-@media (max-width:860px){#prod .tmbody{grid-template-columns:minmax(0,1fr);gap:16px}#prod .tmsub{grid-template-columns:minmax(0,1fr)}#prod table.data-table.tmtab th,#prod table.data-table.tmtab td{padding-left:5px;padding-right:5px}#prod .tmsw{margin-right:5px}#prod .tmmain{margin:0 auto}#prod .tmzoom{max-width:none}#prod .tmctl .segmented button{min-height:40px}#prod .tmchk{min-height:44px}}
+:is(#prod,#ogMapCard,#ovMapCard) .tmtab small{font-size:11px;color:var(--muted);margin-left:2px;font-weight:500}
+:is(#prod,#ogMapCard,#ovMapCard) .tmsw{display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:-1px;border:1px solid rgba(0,0,0,.14)}
+:is(#prod,#ogMapCard,#ovMapCard) .tmleg{display:flex;flex-wrap:wrap;gap:6px 20px;align-items:center;margin-top:12px;font-size:12px;color:var(--text-secondary)}
+:is(#prod,#ogMapCard,#ovMapCard) .tmgr{display:inline-block;width:110px;height:10px;margin:0 7px;vertical-align:middle;background:linear-gradient(90deg,var(--tm0),var(--tm1))}
+:is(#prod,#ogMapCard,#ovMapCard) .tmdot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px;background:var(--tmdot);border:1px solid var(--tmring)}
+:is(#prod,#ogMapCard,#ovMapCard) .tmsub{display:grid;grid-template-columns:minmax(0,250px) minmax(0,1fr);gap:24px;align-items:start;margin-top:22px}
+:is(#prod,#ogMapCard,#ovMapCard) .tmsub h4{margin:0 0 8px;font-size:13.5px;font-weight:700;color:var(--text)}
+:is(#prod,#ogMapCard,#ovMapCard) .tmsub h4 span{font-size:12px;font-weight:500;color:var(--muted);margin-left:6px}
+:is(#prod,#ogMapCard,#ovMapCard) .tmnote{margin:14px 0 0;font-size:12.5px;line-height:1.65;color:var(--text-muted)}:is(#prod,#ogMapCard,#ovMapCard) .tmnote b{color:var(--text-secondary)}
+@media (max-width:1100px){:is(#prod,#ogMapCard,#ovMapCard) .tmsub{grid-template-columns:minmax(0,1fr)}:is(#prod,#ogMapCard,#ovMapCard) .tmzoom{max-width:300px}}
+@media (max-width:860px){:is(#prod,#ogMapCard,#ovMapCard) .tmbody{grid-template-columns:minmax(0,1fr);gap:16px}:is(#prod,#ogMapCard,#ovMapCard) .tmsub{grid-template-columns:minmax(0,1fr)}:is(#prod,#ogMapCard,#ovMapCard) table.data-table.tmtab th,:is(#prod,#ogMapCard,#ovMapCard) table.data-table.tmtab td{padding-left:5px;padding-right:5px}:is(#prod,#ogMapCard,#ovMapCard) .tmsw{margin-right:5px}:is(#prod,#ogMapCard,#ovMapCard) .tmmain{margin:0 auto}:is(#prod,#ogMapCard,#ovMapCard) .tmzoom{max-width:none}:is(#prod,#ogMapCard,#ovMapCard) .tmctl .segmented button{min-height:40px}:is(#prod,#ogMapCard,#ovMapCard) .tmchk{min-height:44px}}
+/* Organization 화면의 지도 카드(#ogMapCard, 2026-11-19 「지도를 조직·사무소 쪽에」) — #prod 밖이라 표·단추 기본 모양을 따로 준다 */
+:is(#ogMapCard,#ovMapCard) .tmap{padding:4px 0 0}:is(#ogMapCard,#ovMapCard) .tmctl .control-label{font-size:12px;color:var(--muted);font-weight:600}
+:is(#ogMapCard,#ovMapCard) .tmtab{border-collapse:collapse;font-size:13px}:is(#ogMapCard,#ovMapCard) .tmtab th{text-align:left;padding:8px 10px;font-size:12.5px;font-weight:700;color:var(--primary);background:var(--tint);border-bottom:1px solid var(--muted)}
+:is(#ogMapCard,#ovMapCard) .tmtab td{padding:9px 10px;border-bottom:1px solid var(--border);white-space:nowrap}:is(#ogMapCard,#ovMapCard) .tmsub h4{margin:0 0 8px;font-size:13.5px;font-weight:700;color:var(--text);border:0;padding:0}
+:is(#ogMapCard,#ovMapCard) .tmsub h4 span{font-size:12px;font-weight:500;color:var(--muted);margin-left:6px}:is(#ogMapCard,#ovMapCard) .tmmsg{margin:0;font-size:13px;color:var(--muted)}
+@media (max-width:860px){:is(#ogMapCard,#ovMapCard) .tmtab th,:is(#ogMapCard,#ovMapCard) .tmtab td{padding-left:5px;padding-right:5px}}
+body.rpt #ovMapCard{display:none}
 #prod .ldb{display:inline-block;font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 8px;border:1px solid var(--border);color:var(--text-secondary);background:var(--surface);white-space:nowrap}
 #prod .ldb.ldh{border-color:var(--text-secondary);color:var(--text)}#prod .ldb.ldl{color:var(--text-muted)}
 #prod table.acwtab tr.acwtot td{background:var(--surface-2);font-weight:700}
@@ -687,7 +694,7 @@ body[data-view=prd] #prodTabs [data-tab=team]{display:none}
 #prod.dsx nav.tabs button.active{background:none;color:var(--ovp);border-bottom-color:var(--primary)}
 #mainArea.dsx .dstitle{padding-top:14px}
 .dsx .ovpro.c3{grid-template-columns:repeat(3,1fr)}
-.dsx .ovpro.c2{grid-template-columns:repeat(2,1fr)}.dsx .ovkpi.c5{grid-template-columns:repeat(5,1fr)}
+.dsx .ovpro.c2{grid-template-columns:repeat(2,1fr)}.dsx .ovkpi.c5,#ov .ovkpi.c5{grid-template-columns:repeat(5,1fr)}
 .dsx .ovpro.c3 .ovpc.ovnd .ovv{margin-top:6px}
 .dsx .ovl .ovchip{margin-left:6px;font-weight:700}
 #prod .block-head{}
@@ -719,7 +726,7 @@ body[data-view=prd] #prodTabs [data-tab=team]{display:none}
 .dsx .teams .team,.dsx .teams>*{border-radius:0;box-shadow:none}
 .dsx #lifeNote:not(:empty){border:1px dashed var(--muted);background:var(--card);padding:10px 12px;color:var(--muted);font-size:13px}
 .dsx .lifeGuide{border-radius:0}
-@media (max-width:1000px){.dsx .ovkpi.c5{grid-template-columns:repeat(2,1fr)}.dsx .ovkpi.c5 .ovkc:nth-child(5){grid-column:1/-1}.dsx .ovpro.c2{grid-template-columns:1fr}.dsx .ovpro.c2 .ovpc{border-left:0!important;border-top:1px solid var(--border)}.dsx .ovpro.c2 .ovpc:first-child{border-top:0}.dsx .ovpro.c3{grid-template-columns:1fr}.dsx .ovpro.c3 .ovpc{border-left:0!important;border-top:1px solid var(--border)}.dsx .ovpro.c3 .ovpc:first-child{border-top:0}#prod.dsx .block.grid-4{grid-template-columns:repeat(2,1fr)}#prod.dsx .block.grid-4>.card.stat:nth-child(3){border-left:0}#prod.dsx .block.grid-4>.card.stat:nth-child(n+3){border-top:1px solid var(--border)!important}}
+@media (max-width:1000px){.dsx .ovkpi.c5,#ov .ovkpi.c5{grid-template-columns:repeat(2,1fr)}.dsx .ovkpi.c5 .ovkc:nth-child(5),#ov .ovkpi.c5 .ovkc:nth-child(5){grid-column:1/-1;border-left:0}.dsx .ovpro.c2{grid-template-columns:1fr}.dsx .ovpro.c2 .ovpc{border-left:0!important;border-top:1px solid var(--border)}.dsx .ovpro.c2 .ovpc:first-child{border-top:0}.dsx .ovpro.c3{grid-template-columns:1fr}.dsx .ovpro.c3 .ovpc{border-left:0!important;border-top:1px solid var(--border)}.dsx .ovpro.c3 .ovpc:first-child{border-top:0}#prod.dsx .block.grid-4{grid-template-columns:repeat(2,1fr)}#prod.dsx .block.grid-4>.card.stat:nth-child(3){border-left:0}#prod.dsx .block.grid-4>.card.stat:nth-child(n+3){border-top:1px solid var(--border)!important}}
 @media (max-width:600px){#prod.dsx .stat .stat-value{font-size:30px}.dsx .hc{border-left:0;border-top:1px solid var(--border)}.dsx .hc:first-child{border-top:0}}
 /* 팀·사무소 트리 (2026-11-12): 팀을 누르면 사무소로 나뉜다 */
 .dsx .dsbtn,#ov .dsbtn{height:32px;border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:0 12px;font:inherit;font-size:12.5px;font-weight:700;color:var(--ovp);cursor:pointer;white-space:nowrap}
@@ -831,7 +838,7 @@ body.rpt #ov .ovkc{text-align:center;align-items:center;border-left:1px solid #0
 body.rpt #ov .ovkc:first-child{border-left:0}body.rpt #ov .ovkc::after{display:none}
 body.rpt #ov .ovl{justify-content:center;flex-direction:column;gap:2px}
 body.rpt #ov .ovv{font-size:34px}
-body.rpt #ov .ovkpi{grid-template-columns:repeat(4,1fr)}
+body.rpt #ov .ovkpi{grid-template-columns:repeat(4,1fr)}body.rpt #ov #ovKpi .ovkc:nth-child(5){display:none}
 body.rpt #ov .ovkc{border-left:1px solid #005BAC;border-top:0;padding:12px 8px 10px}body.rpt #ov .ovkc:first-child{border-left:0}
 body.rpt #ov .ovpro{grid-template-columns:repeat(5,1fr)}
 body.rpt #ov .ovpc{border-left:1px solid #D9E3EA;border-top:0}body.rpt #ov .ovpc:first-child{border-left:0}body.rpt #ov .ovpc.ovnd{border-left:1px dashed #B5B6B6}
@@ -1164,6 +1171,7 @@ html[data-theme=dark] .ogcaution{background:#3a1f1f;border-color:#E7413E88}html[
     <div id="ogScBox"></div></section>
   <section class="ovcard" data-scr="org" style="margin-top:14px" aria-labelledby="ogh"><h3 id="ogh">팀 · 사무소별 인력 · 장비 · 업무량 비교 <span class="ovsub">건수·규모는 막대, 목표·평균 대비는 점 · 이름 옆은 비교 인원</span><span class="ovtools"><span class="ovseg ovscroll" id="ogMseg" role="group" aria-label="비교 지표"></span></span></h3>
     <div class="dspair dseven"><div id="ogBars"></div><div><h4 class="dsh4">업무 유형 구성비 (100% 누적)</h4><div id="ogMix"></div></div></div><div id="ogTime"></div></section>
+  <section class="ovcard" id="ogMapCard" data-scr="org" style="margin-top:14px" aria-labelledby="ogmh"><h3 id="ogmh">사무소 · 팀 지도 <span class="ovsub" id="ogMapSub">색 = 값의 크기 · 위 비교 지표와 같은 값</span></h3><div class="tmap" id="ogMap"><p class="tmmsg">지도를 불러오는 중입니다.</p></div></section>
   <div class="ovtitle dstitle" data-scr="pro" id="proTitle"></div>
   <h2 class="sec" data-scr="pro">예방 서비스 핵심 지표 <small id="proSub"></small></h2>
   <section class="ovkpi c4" id="proKpi" data-scr="pro" aria-label="예방 서비스 지표: PM, PM 비중, 고장 수리, 반복 고장 장비"></section>
@@ -4101,15 +4109,17 @@ function mapMix(c0, c1, t){ const h=c=>{ c=String(c).trim().replace('#',''); if(
 /* host = .tmap 칸. cfg = {units:[{k,short,n}], metrics:[{k,label,name,unit,dec,val:{단위:값},sub:{단위:글}}], all:{n,val:{지표:값}}, sel, months, bub, onSel(k), onBub(bool)} */
 function terrMapDraw(host, cfg){
   if(!host) return;
-  loadKMap().then(K=>{ if(!host.isConnected) return; try{ terrMapPaint(host, cfg, K); }catch(e){ console.error('map paint',e); host.innerHTML='<div class="empty-note"><b>지도를 그리지 못했습니다.</b> 위 표의 값은 그대로 볼 수 있습니다.</div>'; } },
-    e=>{ console.warn('map load',e); if(host.isConnected) host.innerHTML='<div class="empty-note"><b>지도 경계 자료를 불러오지 못했습니다.</b> 새로 고침 후에도 같으면 관리자에게 알려 주세요. 아래 표의 값은 그대로 볼 수 있습니다.</div>'; });
+  loadKMap().then(K=>{ if(!host.isConnected) return; try{ terrMapPaint(host, cfg, K); }catch(e){ console.error('map paint',e); host.innerHTML='<div class="empty-note tmmsg"><b>지도를 그리지 못했습니다.</b> 위 표의 값은 그대로 볼 수 있습니다.</div>'; } },
+    e=>{ console.warn('map load',e); if(host.isConnected) host.innerHTML='<div class="empty-note tmmsg"><b>지도 경계 자료를 불러오지 못했습니다.</b> 새로 고침 후에도 같으면 관리자에게 알려 주세요. 아래 표의 값은 그대로 볼 수 있습니다.</div>'; });
 }
 function terrMapPaint(host, cfg, K){
   const D=mapData(K), M=cfg.metrics.find(m=>m.k===cfg.sel)||cfg.metrics[0], cs=getComputedStyle(host);
   const c0=cs.getPropertyValue('--tm0')||'#D3EDFB', c1=cs.getPropertyValue('--tm1')||'#005BAC', NONE='var(--grid,#E6E6E6)';
-  const f=v=>v==null||!isFinite(v)?'-':(M.dec?(Math.round(v*10)/10).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1}):fmt(Math.round(v))), u1=M.unit?'<small>'+esc(M.unit)+'</small>':'';
+  const f=v=>v==null||!isFinite(v)?'-':(M.dec?(Math.round(v*10)/10).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1}):fmt(Math.round(v))), u0=M.unit?'<small>'+esc(M.unit)+'</small>':'', uv=v=>v==null||!isFinite(v)?'':u0;   /* 값이 없으면 단위도 쓰지 않는다 */
   const vals=cfg.units.map(u=>M.val[u.k]).filter(v=>v!=null&&isFinite(v)), lo=vals.length?Math.min.apply(null,vals):0, hi=vals.length?Math.max.apply(null,vals):0;
-  const colOf=k=>{ const v=M.val[k]; if(v==null||!isFinite(v)) return NONE; return mapMix(c0,c1,hi>lo?(v-lo)/(hi-lo):0.5); };
+  /* 값 차이가 아주 작을 때(가장 큰 값의 10% 미만) 색 차이도 그만큼만 낸다 — 99.1% 와 100% 가 양 끝 색으로 갈리면 차이를 과장하게 된다 */
+  const spanK=hi>lo?Math.min(1,((hi-lo)/Math.max(Math.abs(hi),Math.abs(lo),1e-9))/0.10):0, tOf=v=>hi>lo?0.5+((v-(lo+hi)/2)/(hi-lo))*spanK:0.5;
+  const colOf=k=>{ const v=M.val[k]; if(v==null||!isFinite(v)) return NONE; return mapMix(c0,c1,tOf(v)); };
   const short={}; cfg.units.forEach(u=>{ short[u.k]=u.short; });
   /* 시군구별 방문 건수(선택 기간) */
   const cOf=gi=>{ const v=D.vis[gi], o=[0,0,0]; if(v) for(const mk in v){ if(!cfg.months||cfg.months.indexOf(mk)>=0){ o[0]+=v[mk][0]; o[1]+=v[mk][1]; o[2]+=v[mk][2]; } } return o; };
@@ -4131,28 +4141,28 @@ function terrMapPaint(host, cfg, K){
   const cenOf=inBox=>{ const cen={}; K.G.forEach((g,gi)=>{ if(g.sd==='제주'||!g.d) return; if(inBox&&(g.p[0]<inBox[0]||g.p[0]>inBox[0]+inBox[2]||g.p[1]<inBox[1]||g.p[1]>inBox[1]+inBox[3])) return;
       const u=D.unit[gi]||'__shared', o=cen[u]||(cen[u]={a:0,x:0,y:0}); o.a+=g.area; o.x+=g.p[0]*g.area; o.y+=g.p[1]*g.area; }); return cen; };
   const cen=cenOf(null); let labs='';
-  cfg.units.forEach(u=>{ const o=cen[u.k]; if(!o||!o.a) return; labs+='<span class="tmlb" style="'+pos([o.x/o.a,o.y/o.a],full)+'"><b>'+esc(u.short)+'</b><i>'+f(M.val[u.k])+u1+'</i></span>'; });
+  cfg.units.forEach(u=>{ const o=cen[u.k]; if(!o||!o.a) return; labs+='<span class="tmlb" style="'+pos([o.x/o.a,o.y/o.a],full)+'"><b>'+esc(u.short)+'</b><i>'+f(M.val[u.k])+uv(M.val[u.k])+'</i></span>'; });
   if(cen.__shared&&cen.__shared.a){ const o=cen.__shared; labs+='<span class="tmlb sm" style="'+pos([o.x/o.a,o.y/o.a],full)+'">서울·경기<br>WEST·EAST</span>'; }
   const jj=K.G.filter(g=>g.sd==='제주'); if(jj.length){ const ju=D.unit[K.G.indexOf(jj[0])]; let a=0,x=0,y=0; jj.forEach(g=>{ a+=g.area; x+=g.p[0]*g.area; y+=g.p[1]*g.area; });
     labs+='<span class="tmlb sm" style="'+pos([x/a,y/a+27],full)+'">제주 · '+esc(short[ju]||'')+'</span>'; }
   /* 수도권 확대 — 서울은 전국 그림에서 너무 작아 WEST·EAST 경계가 안 보인다 */
   const zb=[(126.52-K.LON0)*K.KX,(K.LAT1-37.86)*K.KY,(127.52-126.52)*K.KX,(37.86-37.18)*K.KY], zc=cenOf(zb); let zl='';
   ['FS WEST','FS EAST'].forEach(k=>{ const o=zc[k]; if(o&&o.a) zl+='<span class="tmlb sm tmzl" style="'+pos([o.x/o.a,o.y/o.a],zb)+'">'+esc(short[k]||k)+'</span>'; });
-  const zoom='<div class="tmzoom"><h3>수도권 확대 <span>서울 · 인천 · 경기 중심부</span></h3><div class="tmfig tmz">'+draw(zb,zb[2]/K.W*1.25,'수도권 확대 지도')+zl+'<div class="tmtip" role="status"></div></div></div>';
+  const zoom='<div class="tmzoom"><h4>수도권 확대 <span>서울 · 인천 · 경기 중심부</span></h4><div class="tmfig tmz">'+draw(zb,zb[2]/K.W*1.25,'수도권 확대 지도')+zl+'<div class="tmtip" role="status"></div></div></div>';
   /* 표 */
-  const rows=cfg.units.map(u=>'<tr data-u="'+esc(u.k)+'"><td><span class="tmsw" style="background:'+colOf(u.k)+'"></span>'+esc(u.short)+'</td><td class="num">'+fmt(u.n)+'</td><td class="num"><b>'+f(M.val[u.k])+'</b>'+u1+'</td>'+
+  const rows=cfg.units.map(u=>'<tr data-u="'+esc(u.k)+'"><td><span class="tmsw" style="background:'+colOf(u.k)+'"></span>'+esc(u.short)+'</td><td class="num">'+fmt(u.n)+'</td><td class="num"><b>'+f(M.val[u.k])+'</b>'+uv(M.val[u.k])+'</td>'+
     (M.sub?'<td class="num">'+esc(M.sub[u.k]||'-')+'</td>':'')+(hasVis?'<td class="num">'+fmt(byU[u.k]||0)+'</td><td class="num">'+av(byT[u.k])+'</td>':'')+'</tr>').join('');
-  const tab='<div class="tmscroll"><table class="data-table tmtab"><thead><tr><th>팀 · 사무소</th><th class="num">대상 인원</th><th class="num">'+esc(M.col||M.label)+'</th>'+(M.sub?'<th class="num">'+esc(M.subLabel||'')+'</th>':'')+(hasVis?'<th class="num">지역 방문</th><th class="num">건당 평균 (분)</th>':'')+'</tr></thead><tbody>'+rows+
-    '<tr class="tmall"><td>FSG 전체</td><td class="num">'+fmt(cfg.all.n)+'</td><td class="num">'+f(cfg.all.val[M.k])+u1+'</td>'+(M.sub?'<td class="num">'+esc(cfg.all.sub||'-')+'</td>':'')+(hasVis?'<td class="num">'+fmt(allT[0])+'</td><td class="num">'+av(allT)+'</td>':'')+'</tr></tbody></table></div>';
-  const leg='<div class="tmleg"><span>낮음 '+f(lo)+esc(M.unit||'')+'<span class="tmgr"></span>'+f(hi)+esc(M.unit||'')+' 높음</span>'+(bub?'<span><span class="tmdot"></span>원 = 시·군·구별 방문 건수 (가장 큰 원 '+fmt(nMax)+'건)</span>':'')+'</div>';
-  const top=hasVis&&order.length?'<div class="tmtop"><h3>방문이 많은 시 · 군 · 구 <span>'+esc(cfg.periodLabel||'')+'</span></h3><div class="tmscroll"><table class="data-table tmtab tmtt"><thead><tr><th>시 · 군 · 구</th><th>담당</th><th class="num">방문</th><th class="num">건당 평균</th></tr></thead><tbody>'+
+  const tab='<div class="tmscroll"><table class="data-table tmtab"><thead><tr><th>팀 · 사무소</th><th class="num">'+esc(cfg.nLabel||'대상 인원')+'</th><th class="num">'+esc(M.col||M.label)+'</th>'+(M.sub?'<th class="num">'+esc(M.subLabel||'')+'</th>':'')+(hasVis?'<th class="num">지역 방문</th><th class="num">건당 평균 (분)</th>':'')+'</tr></thead><tbody>'+rows+
+    '<tr class="tmall"><td>FSG 전체</td><td class="num">'+fmt(cfg.all.n)+'</td><td class="num">'+f(cfg.all.val[M.k])+uv(cfg.all.val[M.k])+'</td>'+(M.sub?'<td class="num">'+esc(cfg.all.sub||'-')+'</td>':'')+(hasVis?'<td class="num">'+fmt(allT[0])+'</td><td class="num">'+av(allT)+'</td>':'')+'</tr></tbody></table></div>';
+  const leg='<div class="tmleg"><span>낮음 '+f(lo)+esc(M.unit||'')+'<span class="tmgr" style="background:linear-gradient(90deg,'+mapMix(c0,c1,tOf(lo))+','+mapMix(c0,c1,tOf(hi))+')"></span>'+f(hi)+esc(M.unit||'')+' 높음</span>'+(spanK<1&&hi>lo?'<span>값 차이가 작아 색 차이도 작게 표시</span>':'')+(bub?'<span><span class="tmdot"></span>원 = 시·군·구별 방문 건수 (가장 큰 원 '+fmt(nMax)+'건)</span>':'')+'</div>';
+  const top=hasVis&&order.length?'<div class="tmtop"><h4>방문이 많은 시 · 군 · 구 <span>'+esc(cfg.periodLabel||'')+'</span></h4><div class="tmscroll"><table class="data-table tmtab tmtt"><thead><tr><th>시 · 군 · 구</th><th>담당</th><th class="num">방문</th><th class="num">건당 평균</th></tr></thead><tbody>'+
     order.slice(0,6).map(x=>{ const g=K.G[x[0]], u=D.unit[x[0]]; return '<tr data-g="'+x[0]+'"><td>'+esc(g.sd+' '+g.name)+'</td><td>'+esc(u?short[u]||u:'WEST·EAST')+'</td><td class="num">'+fmt(x[1])+'<small>건</small></td><td class="num">'+av(cs3[x[0]])+(cs3[x[0]][2]?'<small>분</small>':'')+'</td></tr>'; }).join('')+'</tbody></table></div></div>':'';
-  const note='<p class="tmnote"><b>값</b> = 사무소 대상 인원(팀장·신입 제외)의 평균'+(M.name&&M.name!==M.label?' · '+esc(M.label)+' = '+esc(M.name):'')+'. <b>담당 지역</b> = 사무소 지역 기준표(2026-11-04 확정). '+
+  const note='<p class="tmnote">'+(cfg.valNote||'<b>값</b> = 사무소 대상 인원(팀장·신입 제외)의 평균'+(M.name&&M.name!==M.label?' · '+esc(M.label)+' = '+esc(M.name):''))+'. <b>담당 지역</b> = 사무소 지역 기준표(2026-11-04 확정). '+
     (D.shared?'서울·경기는 WEST·EAST가 나눠 맡는데, 경계를 그릴 좌표 자료가 없어 나누지 않고 회색으로 두었습니다. '
       :'서울·경기의 WEST·EAST 경계는 기준표에 다 적혀 있지 않아 <b>CRM 방문이 더 많은 팀</b>으로 그렸고'+(D.guess?'(방문 기록이 없는 '+fmt(D.guess)+'곳은 가까운 곳과 같은 팀)':'')+', 실제 배정과 다를 수 있습니다. ')+
     (hasVis?'<b>지역 방문 · 원</b> = 그 시·군·구의 기관을 찾은 건수(설치·이전 설치·고장 수리·PM·Calibration, 취소 제외, 다른 사무소 직원의 방문 포함), <b>건당 평균</b> = 그 방문의 작업 시간 ÷ 시간이 기록된 방문(CRM 시작~종료 0~500분, 이동 시간 제외). ':'')+
     '개인과 기관의 위치는 표시하지 않습니다. 제주는 위로 옮겨 그렸고 울릉군과 먼 섬은 뺐습니다.</p>';
-  host.innerHTML='<div class="tmctl"><span class="control-label">지도에 볼 값</span><div class="segmented tmseg">'+cfg.metrics.map(m=>'<button type="button" data-k="'+m.k+'"'+(m.k===M.k?' class="active" aria-pressed="true"':' aria-pressed="false"')+'>'+esc(m.label)+'</button>').join('')+'</div>'+
+  host.innerHTML='<div class="tmctl"><span class="control-label">지도에 볼 값</span><div class="'+(cfg.segClass||'segmented')+' tmseg">'+cfg.metrics.map(m=>'<button type="button" data-k="'+m.k+'"'+(m.k===M.k?' class="active" aria-pressed="true"':' aria-pressed="false"')+'>'+esc(m.label)+'</button>').join('')+'</div>'+
     (hasVis?'<label class="tmchk"><input type="checkbox"'+(bub?' checked':'')+'>방문 분포 같이 보기</label>':'')+'</div>'+
     '<div class="tmbody"><div class="tmfig tmmain">'+draw(full,1,'사무소·팀 지도 — '+M.label+'. 값은 옆 표와 같습니다.')+labs+'<div class="tmtip" role="status"></div></div><div class="tmside">'+tab+leg+'<div class="tmsub">'+zoom+top+'</div></div></div>'+note;
   const figs=[].slice.call(host.querySelectorAll('.tmfig'));
@@ -4172,6 +4182,8 @@ function terrMapPaint(host, cfg, K){
   host.querySelectorAll('.tmtt tbody tr[data-g]').forEach(r=>r.addEventListener('click',()=>show(figs[0],+r.getAttribute('data-g'))));
   host.querySelectorAll('.tmseg button').forEach(b=>b.addEventListener('click',()=>{ if(cfg.onSel) cfg.onSel(b.getAttribute('data-k')); }));
   const cb=host.querySelector('.tmchk input'); if(cb) cb.addEventListener('change',()=>{ if(cfg.onBub) cfg.onBub(cb.checked); });
+  /* 가로로 넘기는 단추 줄이면 고른 단추가 보이게(화면 전체는 움직이지 않게 줄 안에서만) */
+  const sg=host.querySelector('.tmseg'), ab=sg&&sg.querySelector('button.active'); if(sg&&ab&&sg.scrollWidth>sg.clientWidth) sg.scrollLeft=Math.max(0,ab.offsetLeft-(sg.clientWidth-ab.offsetWidth)/2);
 }
 /* ===== 장비군별 고장률·재방문율 추이 (2026-10-22) =====
    고장률 = 100대당 월 고장 수리 = 고장 수리 건수 ÷ (자료 있는 달 수) ÷ 가동 대수 × 100. 가동 대수 = 구간 끝 달 기준 최근 12개월 서비스 장비(자산대장이 있으면 그중 '사용' 장비).
@@ -5220,6 +5232,9 @@ const OV_K=[{k:'ftfr',n:'FTFR',u:'%',d:1,t:()=>TARGET_FTFR,hi:true,tl:()=>TARGET
  {k:'rev',n:'재방문율',u:'%',d:1,t:()=>TARGET_REV,hi:false,tl:()=>TARGET_REV+'% 이하',h:'고친 뒤 14일 안에 다시 방문한 비율'},
  {k:'mttr',n:'평균 수리 작업 시간 (MTTR)',u:'분',d:1,t:()=>TARGET_MTTR,hi:false,tl:()=>TARGET_MTTR+'분 이하',h:'고장 수리의 CRM 작업 시작~종료 시간 평균(예약 시간 기준)'},
  {k:'idx',n:'PM 비중',u:'%',d:1,t:()=>null,hi:true,tl:()=>'목표 없음',h:'PM ÷ (PM + 고장 수리)'}];
+/* 건당 평균 작업 시간(2026-11-19 사용자 요청 「overview에도 건당 평균 시간」) — Overview 핵심 지표의 다섯째 칸. 값은 renderOv 가 workTimeSum 으로 덧붙인다(stats·kpiCore 는 그대로).
+   OV_K 에 넣지 않는 이유: OV_K 는 목표 판정·확인이 필요한 곳·보고용 보기가 같이 쓴다. 보고용 보기(PDF)는 네 칸 그대로 */
+const OV_AVG={k:'avgm',n:'건당 평균 작업 시간',u:'분',d:0,t:()=>null,hi:false,tl:()=>'목표 없음',h:'작업 시간 ÷ 시간이 기록된 건수 — 전체 업무 유형, CRM 시작~종료 0~500분, 이동 시간 제외'};
 const OV_ACT=[['고장수리','고장 수리','#005BAC'],['PM','PM','#00B9EF'],['설치이전','설치·이전','#5185C5'],['Cal평가','Calibration·평가','#84BAE5'],['기타','기타','#9FA0A0']];
 const OV_BUCKET={'고장 수리':'고장수리','PM':'PM','온라인 정기점검':'PM'};
 ['장비 설치','장비 이전 설치','설치/데모 평가','설치','장비 철수','철수 및 폐기'].forEach(p=>{OV_BUCKET[p]='설치이전';});
@@ -5426,6 +5441,10 @@ function renderOv(){
   // 12개월 추이
   const _l=D.months[D.months.length-1], end=p.months.filter(m=>m<=_l).pop()||_l, tm=[]; for(let i=11;i>=0;i--) tm.push(shiftMonth(end,-i));
   const ts=tm.map(m=>stats([m],team)), tl=tm.map(m=>m.slice(2).replace('-','.'));
+  /* 건당 평균 작업 시간 — 명단(고른 팀이면 그 팀)의 작업 시간 ÷ 시간이 기록된 건수. Organization 표와 같은 식. 자료가 없으면 칸을 만들지 않는다 */
+  const ovNm=ROSTER.filter(r=>!team||r[1]===team).map(r=>r[0]), ovAvg=mm=>{ try{ const A=workTimeSum(ovNm,[].concat(mm)), c=Object.keys(A.n).reduce((a,b)=>a+A.n[b],0); return c?A.tot/c:null; }catch(e){ return null; } };
+  cur.avgm=ovAvg(p.months); prv.avgm=ovAvg(pp.months); ts.forEach((x,i)=>{ x.avgm=ovAvg([tm[i]]); });
+  const KS=(cur.avgm!=null||ts.some(x=>x.avgm!=null))?OV_K.concat([OV_AVG]):OV_K; if(!KS.some(x=>x.k===OV.metric)) OV.metric=KS[0].k;
   // 업무 유형
   const ms=new Set(p.months), pmP=mPred(pp.months), act={},actP={}; OV_ACT.forEach(a=>{act[a[0]]=0;actP[a[0]]=0;});
   for(const o of D.rows){ const inC=ms.has(o.mk), inP=pmP(o.mk,o.t); if(!inC&&!inP) continue; const n=team?o.cteams.filter(t=>t===team).length:o.credits.length; if(!n) continue; const b=ovBucket(o.purp); if(inC) act[b]+=n; if(inP) actP[b]+=n; }
@@ -5444,7 +5463,7 @@ function renderOv(){
   <div class="ovtitle"><div><h2>Overview ${SB}${team?'<button type="button" class="ovscx" id="ovScx">FSG 전체로 보기</button>':''}</h2><p>${esc(p.label)} · ${esc(scope)} · 비교 ${esc(lab)} · 데이터 기준일 ${esc((D.excl&&D.excl.cut)||'-')}${SRC&&SRC.at?' · 마지막 업데이트 '+esc(SRC.at):''}${prov?' · <span class="ovpv">최근 14일 잠정</span>':''}</p></div><div class="ovtb2"><button type="button" id="ovRptBtn">보고용 보기</button></div></div>
   <div class="rptHead"><div class="rl"><img alt="Sysmex" src="${logoSrc}"><small>FSG Service Performance</small><b>Overview</b></div><div class="rr"><h1>${esc(XM.months)} 서비스 운영 현황${prov||p.partial?' <em class="rptprov">잠정 실적</em>':''}</h1><p>${esc(rptSum)}</p><span>${esc(scope)} · 집계 ${esc(XM.months)} · 데이터 기준일 ${esc(XM.cut)}${window.__SYNTH?' · <b class="rptsyn">합성 데이터(테스트)</b>':''}</span></div></div>
   <h3 class="ovrh"><i>SECTION 01</i>Key Service Performance ${SB}</h3>
-  <section class="ovkpi" id="ovKpi" role="tablist" aria-label="핵심 지표 4개. 선택하면 아래 추이 그래프가 바뀝니다">${OV_K.map(o=>{ const v=cur[o.k], st=ovSt(o,v);
+  <section class="ovkpi${KS.length===5?' c5':''}" id="ovKpi" role="tablist" aria-label="핵심 지표 ${KS.length}개. 선택하면 아래 추이 그래프가 바뀝니다">${KS.map(o=>{ const v=cur[o.k], st=ovSt(o,v);
     const tip=o.n+' = '+o.h+(o.t()==null?' · 목표 없음':' · 목표 '+o.tl()+' · '+ovGap(o,v));   /* v3.8: 설명·산식·목표 차이는 마우스 설명으로 */
     return `<button class="ovkc" role="tab" aria-selected="${o.k===OV.metric}" data-k="${o.k}" title="${esc(tip)}"><span class="ovl">${o.n}<span class="wlinfo" aria-hidden="true">ⓘ</span>${st.chip?`<span class="ovchip ${st.st}">${st.chip}</span>`:''}</span>
       <span class="ovv">${ovF(o,v)}<small>${o.u}</small></span><span class="ovt">${o.t()==null?'목표 없음':'목표 '+o.tl()}</span><span class="ovd">${ovDelta(o,v,prv[o.k],lab)}</span><span class="ovh" hidden>${esc(o.h)}</span></button>`; }).join('')}</section>
@@ -5457,14 +5476,19 @@ function renderOv(){
       ${al.length?`<ul class="ovhl">${(OV.issAll?al:al.slice(0,5)).map((a,k)=>`<li><span class="ovchip ${a.cc}">${a.chip}</span><div><span class="ovissl"><span class="ovisst">${esc(a.team||'FSG 전체')}</span> · ${esc(a.nm||a.t)} <span class="ovissv">${esc(a.val||'')}</span></span><span class="ovs">${esc(a.gap||a.s)}</span></div><button type="button" data-i="${k}">${a.vl} ›</button></li>`).join('')}</ul>${al.length>5?`<button type="button" class="dsmore" id="ovIssMore" aria-expanded="${!!OV.issAll}">${OV.issAll?'5개만 보기':'모두 보기 ('+al.length+'건)'}</button>`:''}`:'<p class="ovnote">지금 확인이 필요한 항목이 없습니다.</p>'}
 </section>
   </div>
+  <section class="ovcard" id="ovMapCard" style="margin-top:14px" aria-labelledby="ovmh"><h3 id="ovmh">사무소 · 팀 지도 <span class="ovscope">모든 사무소</span> <span class="ovsub" id="ovMapSub"></span></h3><div class="tmap" id="ovMap"><p class="tmmsg">지도를 불러오는 중입니다.</p></div></section>
   <div class="rptfoot">${esc(rptFoot)} · 1 / 2</div>
   ${ovEquipCard()}
   <div class="rptbrk"></div><div class="rptHead rptHead2"><div class="rl"><img alt="Sysmex" src="${logoSrc}"><small>FSG Service Performance</small><b>Service Operations</b></div><div class="rr"><h1>${esc(XM.months)} 업무 규모 · 조직 운영${prov||p.partial?' <em class="rptprov">잠정 실적</em>':''}</h1><span>${esc(scope)} · 집계 ${esc(XM.months)} · 비교 ${esc(XM.cmp)} · 데이터 기준일 ${esc(XM.cut)}${window.__SYNTH?' · <b class="rptsyn">합성 데이터(테스트)</b>':''}</span></div></div>
   ${rptOps(p,pp,team,cur,prv,act)}
   <div class="rptfoot">${esc(rptFoot)} · 2 / 2</div>
   <div class="ovrfoot">자료: CRM 「모든 약속/활동」 · FTFR = 한 번에 고친 비율, 재방문율 = 14일 안 재방문 비율, MTTR = 고장 수리 평균 소요 시간 · 근접 기준: 목표의 92%(높을수록 좋은 지표) / 115%(낮을수록 좋은 지표) · 업무 유형은 취소·온라인 정기점검 제외, 담당자·필수 참석자 각각 1건 · 최근 14일의 FTFR·재방문율은 잠정치 · 작성: FSS Team</div>`;
+  /* 지도 — 고른 핵심 지표가 지도 지표에 있으면 그것(FTFR·재방문율·MTTR·건당 평균 시간), 아니면 1인당 처리 건수. 지도에서 따로 고르면 그 값을 기억 */
+  try{ const mk={ftfr:'ftfr',rev:'rev',mttr:'mttr',avgm:'avgm'}[OV.metric]||'per';
+    orgMap({host:'ovMap',sub:'ovMapSub',sel:OV.mapM||mk,period:p.label,bub:OV.mapBub,note:'<b>값</b> = Organization 「팀 · 사무소별 비교」와 같은 값(팀 선택과 무관하게 사무소 6곳을 모두 보여 줍니다)',onSel:k=>{ OV.mapM=k; renderOv(); },onBub:v=>{ OV.mapBub=v; renderOv(); }}); }
+  catch(e){ console.error('Overview 지도',e); const h=$('ovMap'); if(h) h.innerHTML='<p class="tmmsg">조직 자료가 준비되면 지도가 표시됩니다.</p>'; }
   // 추이
-  const o=OV_K.find(x=>x.k===OV.metric), n=OV.range, arr=ts.map(s=>s[o.k]).slice(-n), lb=tl.slice(-n), tg=o.t();
+  const o=KS.find(x=>x.k===OV.metric), n=OV.range, arr=ts.map(s=>s[o.k]).slice(-n), lb=tl.slice(-n), tg=o.t();
   const nn=arr.filter(v=>v!=null), avg=nn.length?nn.reduce((a,b)=>a+b,0)/nn.length:null;
   $('ovTrT').textContent=o.n+' 추이';
   $('ovSum').innerHTML=`<span>현재<b>${ovF(o,cur[o.k])}${o.u}</b></span><span>${ovDelta(o,cur[o.k],prv[o.k],lab)}</span><span>목표<b>${tg==null?'없음':o.tl()}</b></span><span>${n}개월 평균<b>${ovF(o,avg)}${o.u}</b></span>`;
@@ -5478,7 +5502,7 @@ function renderOv(){
   draw(); $('ovTrN').textContent=tg==null?'목표가 정해져 있지 않아 목표선이 없습니다.':'점선은 목표입니다. 그래프에 마우스를 올리면 월별 값을 볼 수 있습니다.';
   OV._draw=draw;
   // 이벤트
-  root.querySelectorAll('.ovkc').forEach(b=>b.onclick=()=>{ OV.metric=b.dataset.k; renderOv(); });
+  root.querySelectorAll('.ovkc').forEach(b=>b.onclick=()=>{ OV.metric=b.dataset.k; OV.mapM=null; renderOv(); });   /* 핵심 지표를 누르면 지도도 다시 그 지표를 따라간다 */
   root.querySelectorAll('[data-r]').forEach(b=>{ b.setAttribute('aria-pressed',+b.dataset.r===OV.range); b.onclick=()=>{ OV.range=+b.dataset.r; renderOv(); }; });
   const scx=$('ovScx'); if(scx) scx.onclick=()=>{ $('fTeam').value=''; renderOv(); };
   root.querySelectorAll('.ovhl button').forEach(b=>b.onclick=()=>ovGo((OV.issAll?al:al.slice(0,5))[+b.dataset.i]));
@@ -5629,6 +5653,7 @@ function renderOrgTop(p,team,pp,prov,scope){
   const ref=ko?ko.t():(m.avg?avg[m.avg]:(m.k==='eqh'?F.eqh:m.k==='e100'?F.e100:m.k==='avgm'?F.avgm:null));
   $('ogBars').innerHTML=dsBars(rows.map(r=>({n:r.n,html:orgName(r),k:r.k,off:r.off,sel:r.sel,kids:r.kids,open:r.open,sub:r.hc+'명',v:r[m.k],title:ko?`고장 수리 ${fmt(r.nRep)}건 기준`:''})),{pick:true,unit:m.u,dec:m.d,type:m.type,ref,refLab:ko?'목표':'FSG 평균',state:ko?v=>ovSt(ko,v):null,extra:ko?'점 색: 파랑 달성 · 주황 근접 · 빨강 미달':''});
   orgWire($('ogBars'));
+  try{ orgMap({host:'ogMap',sub:'ogMapSub',sel:m.k,period:p.label,bub:ORG.mapBub,note:'<b>값</b> = 위 「팀 · 사무소별 비교」와 같은 값(지표를 바꾸면 막대와 지도가 같이 바뀝니다)',onSel:k=>{ ORG.m=k; rerender(); },onBub:v=>{ ORG.mapBub=v; rerender(); }}); }catch(e){ console.error('조직 지도',e); }
   const BK=PROD.buckets||[], BL=PROD.bucket_label||{}, C=['#005BAC','#00B9EF','#5185C5','#84BAE5','#9FA0A0'];
   const MX=ORG.mix==='hr'?'hr':'cnt', mv=(r,b)=>MX==='hr'?((r.ts||{})[b]||0)/60:(r.cs[b]||0), mu=MX==='hr'?'시간':'건', mf=v=>MX==='hr'?fmt(Math.round(v)):fmt(v);
   $('ogMix').innerHTML=`<div class="ogmxh"><span class="ovseg" role="group" aria-label="구성비 기준"><button type="button" data-x="cnt" aria-pressed="${MX==='cnt'}">건수</button><button type="button" data-x="hr" aria-pressed="${MX==='hr'}">시간</button></span></div><div class="dsleg">${BK.map((b,i)=>`<span><i style="background:${C[i%C.length]}"></i>${esc(BL[b]||b)}</span>`).join('')}</div>`+rows.map(r=>{ const tot=BK.reduce((a,b)=>a+mv(r,b),0);
@@ -5648,6 +5673,15 @@ function renderOrgTop(p,team,pp,prov,scope){
         <tr class="tgt"><td>합계</td><td>${fmt(cT)}<small>건</small></td><td>${hrs(mT)}<small>시간</small></td><td>${nT?fmt(Math.round(mT/nT)):'-'}<small>${nT?'분':''}</small></td><td>100%</td><td>100%</td><td>${fmt(nT)}<small>건</small></td></tr></tbody></table></div>
       <p class="ovnote">건당 평균 = 작업 시간 ÷ 시간이 기록된 건수. 시간은 CRM 에 기록된 시작~종료(0~500분인 기록만)이고 이동 시간은 들어 있지 않습니다. 시간 비중이 건수 비중보다 크면 한 건에 시간이 많이 드는 일입니다. 위에서 팀·사무소를 고르면 그 조직만 봅니다.</p>`; }
 }
+/* Organization·Overview 의 사무소·팀 지도(2026-11-19 사용자 요청 「지도를 조직·사무소 쪽에」「overview에도 지도」) — 「팀·사무소별 비교」의 지표와 값을 그대로 사무소 6곳에 칠한다(orgRows('office')).
+   Organization 은 위 비교 지표(ORG.m)와 같이 움직이고, Overview 는 고른 핵심 지표를 따라가되 지도에서 따로 고를 수 있다(OV.mapM). 그리기·담당 지역·방문 분포는 Workload 의 지도와 같은 함수(terrMapDraw).
+   사람 단위 값이 없어 직원 화면에도 나온다. o = {host, sub, sel, period, bub, onSel, onBub} */
+function orgMapMetrics(){ return ORG_M.filter(x=>(!x.eq||PROD.eq)&&!(STAFF&&x.k==='w'&&!staffHasScore())); }
+function orgMap(o){ const host=$(o.host); if(!host||typeof terrMapDraw!=='function'||!PROD) return; const MS=orgMapMetrics(), O=orgRows('office'), T=orgRows('team'), F=orgFsg(T), avg=orgAvg(), m=MS.find(x=>x.k===o.sel)||MS.find(x=>x.k==='per')||MS[0];
+  const add={all:1,eq:1,cnt:1,hr:1}, fsg=k=>add[k]?T.reduce((a,r)=>a+(r[k]||0),0):(F[k]!=null?F[k]:(avg[k]!=null?avg[k]:null)), allv={}; MS.forEach(x=>{ allv[x.k]=fsg(x.k); });
+  const sub=$(o.sub); if(sub) sub.textContent='색 = 값의 크기 · '+m.n+' · '+o.period;
+  terrMapDraw(host,{units:O.map(r=>({k:r.k,short:r.n,n:r.all})), metrics:MS.map(x=>({k:x.k,label:x.n,col:x.n,unit:x.u,dec:x.d,val:O.reduce((a,r)=>(a[r.k]=r[x.k],a),{})})), all:{n:T.reduce((a,r)=>a+(r.all||0),0),val:allv},
+    sel:m.k, months:PROD.sel_months, periodLabel:o.period, bub:!!o.bub, nLabel:'인원', segClass:'ovseg ovscroll', valNote:o.note, onSel:o.onSel, onBub:o.onBub}); }
 /* 담당 장비 × 처리 건수 — Chart.js 거품 그림, 점 = 사무소 6개(팀과 섞지 않음, 작업지시서 v2). 사분면 기준선 = 표시된 사무소 값의 중앙값. 비교용 위치 기준이며 과부하를 판정하지 않는다 */
 /* 기준선을 그림 가운데로 — 축 범위를 중앙값 기준 양쪽 같은 거리로(가장 먼 점 + 여유 18%). 0 아래로 내려가야 하면(건수는 음수 없음) 0부터 시작하고 그때는 가운데가 아닐 수 있다. 눈금은 보기 좋은 간격만 남긴다 */
 function orgCenter(vals,m){ const d=Math.max(...vals.map(v=>Math.abs(v-m)),m*0.05||1)*1.18, raw=d*2/6, p=Math.pow(10,Math.floor(Math.log10(raw))), st=[1,2,2.5,5,10].map(k=>k*p).find(k=>k>=raw);
