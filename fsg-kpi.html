@@ -477,7 +477,7 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 .wd-act{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}
 .wd-save{font:inherit;font-size:13px;font-weight:700;padding:0 18px;height:36px;border:1px solid var(--primary);border-radius:4px;background:var(--primary);color:#fff;cursor:pointer}
 .wdlg .lbtn{height:36px}
-.ldwt{margin:0 28px 6px 0;font-size:16px;color:var(--primary)}.ldwp{margin:0 0 12px;font-size:13px;line-height:1.6;color:var(--muted)}
+.ldwp{margin:0 0 12px;font-size:13px;line-height:1.6;color:var(--muted)}
 .ldwg{display:grid;gap:8px}.ldwg label{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid var(--border);border-radius:6px}
 .ldwg label b{font-size:14px}.ldwg label small{display:block;font-size:12px;color:var(--muted);margin-top:1px}
 .ldwi{display:flex;align-items:center;gap:6px;flex:0 0 auto}.ldwi input{width:84px;height:40px;font:inherit;font-size:15px;text-align:right;padding:0 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)}.ldwi i{font-style:normal;color:var(--muted)}
@@ -603,6 +603,10 @@ body[data-view=eqp] #prodTabs{display:none}
 .ogsct{width:100%}.ogsct caption{text-align:left;font-size:12px;color:var(--muted);padding:0 0 6px}.ogsct td:not(:first-child),.ogsct th:not(:first-child){text-align:right}.ogsct th:first-child,.ogsct td:first-child{text-align:left;padding-left:8px}.ogsct tr[data-k]{cursor:pointer}.ogsct tr[data-k]:hover td{background:rgba(0,91,172,.05)}.ogsct tr.sel td{background:rgba(0,91,172,.08);font-weight:700}.ogdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}@media (max-width:600px){.dsx .cv.ogsc{height:320px}}.ogscleg{margin-top:6px}
 @media (max-width:1000px){.dsx .dspair.dseven{grid-template-columns:1fr !important}}   /* 휴대폰에서 두 칸이 나란히 남아 막대가 눌리던 것 — .dseven 이 1000px 이하 1칸 규칙보다 우선했음 */
 .lbex{display:inline-flex;align-items:center;gap:6px;margin:0 0 8px;font-size:13px;min-height:40px}.lbex input{width:18px;height:18px}
+.ogtm{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}.ogtm th{font-size:12px;font-weight:700;color:var(--primary);background:var(--tint,#EAF2FB);padding:8px 10px;text-align:right;white-space:nowrap}.ogtm th:first-child,.ogtm td:first-child{text-align:left}
+.ogtm td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.ogtm td small{color:var(--muted);margin-left:2px}.ogtm td:first-child i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px;vertical-align:middle}
+.ogtm tr.tgt td{font-weight:700;background:var(--card,#F7F9FC)}.ogtmb{display:inline-block;width:56px;height:6px;border-radius:3px;background:var(--border);margin-right:8px;vertical-align:middle;overflow:hidden}.ogtmb b{display:block;height:100%;background:var(--primary)}
+.dsscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .ogmxh{float:right;margin:-6px 0 6px 12px}#ogMix .dsleg{min-height:38px;align-items:center}#ogMix .dsmix{clear:both}@media (pointer:coarse),(max-width:700px){#ogMix .dsleg{min-height:48px}}
 .ogtab td:first-child,.ogtab th:first-child{position:sticky;left:0;background:var(--surface,#fff);z-index:1}
 body[data-view=org] #prodTabs [data-tab=ot],body[data-view=org] #prodTabs [data-tab=move],body[data-view=org] #prodTabs [data-tab=acad],body[data-view=org] #prodTabs [data-tab=load]{display:none}
@@ -1117,7 +1121,7 @@ html[data-theme=dark] .ogcaution{background:#3a1f1f;border-color:#E7413E88}html[
     <div class="ogsctl"><span class="ovseg" id="ogScU" role="group" aria-label="점 단위"></span><span class="ovseg" id="ogScQ" role="group" aria-label="사분면 기준선"></span><span class="ovseg" id="ogScY" role="group" aria-label="세로축"></span><span class="ovseg" id="ogScC" role="group" aria-label="점 색 기준"></span></div>
     <div id="ogScBox"></div></section>
   <section class="ovcard" data-scr="org" style="margin-top:14px" aria-labelledby="ogh"><h3 id="ogh">팀 · 사무소별 인력 · 장비 · 업무량 비교 <span class="ovsub">건수·규모는 막대, 목표·평균 대비는 점 · 이름 옆은 비교 인원</span><span class="ovtools"><span class="ovseg ovscroll" id="ogMseg" role="group" aria-label="비교 지표"></span></span></h3>
-    <div class="dspair dseven"><div id="ogBars"></div><div><h4 class="dsh4">업무 유형 구성비 (100% 누적)</h4><div id="ogMix"></div></div></div></section>
+    <div class="dspair dseven"><div id="ogBars"></div><div><h4 class="dsh4">업무 유형 구성비 (100% 누적)</h4><div id="ogMix"></div></div></div><div id="ogTime"></div></section>
   <div class="ovtitle dstitle" data-scr="pro" id="proTitle"></div>
   <h2 class="sec" data-scr="pro">예방 서비스 핵심 지표 <small id="proSub"></small></h2>
   <section class="ovkpi c4" id="proKpi" data-scr="pro" aria-label="예방 서비스 지표: PM, PM 비중, 고장 수리, 반복 고장 장비"></section>
@@ -3838,20 +3842,20 @@ async function loadLoadW(){ try{ const x=await fb('loadw'); LOADW=(x&&x.w)?x:nul
 function loadWNow(){ const w={}; LOAD_AX.forEach(a=>{ const v=LOADW&&LOADW.w?+LOADW.w[a[0]]:NaN; w[a[0]]=isFinite(v)&&v>=0?v:LOAD_DEF[a[0]]; }); return w; }
 /* ===== 작업 시간 (2026-11-19 사용자 요청 「건수가 아닌 시간으로도 보고싶음」) =====
    CRM 시작~종료 시간. 0분 초과 500분 이하인 기록만(MTTR 과 같은 범위), 담당자 + 필수 참석자 각각, 취소·온라인 정기점검 제외(처리 건수와 같은 대상).
-   업무 유형 = OV_BUCKET(건수와 같은 묶음). 결과 {per:{이름:{'YYYY-MM':{묶음:분}}}} — buildProdData·kpiCore 는 건드리지 않는다 */
+   업무 유형 = OV_BUCKET(건수와 같은 묶음). 결과 {per:{이름:{'YYYY-MM':{묶음:[분, 시간이 기록된 건수]}}}} — buildProdData·kpiCore 는 건드리지 않는다 */
 let _wtC=null;
 function workTime(){
   if(!RAW) return null; if(_wtC&&_wtC.raw===RAW) return _wtC.r;
   const per={};
   for(const r of RAW){ if(r.t==null||r.e==null||r.st==='취소됨'||r.purp==='온라인 정기점검') continue; const mins=(r.e-r.t)/60000; if(!(mins>0&&mins<=500)) continue;
     const mk=ymd(r.t).slice(0,7), b=OV_BUCKET[r.purp]||'기타', seen={};
-    const add=n=>{ if(!n||seen[n]) return; seen[n]=1; const P=per[n]||(per[n]={}), m=P[mk]||(P[mk]={}); m[b]=(m[b]||0)+mins; };
+    const add=n=>{ if(!n||seen[n]) return; seen[n]=1; const P=per[n]||(per[n]={}), m=P[mk]||(P[mk]={}), c=m[b]||(m[b]=[0,0]); c[0]+=mins; c[1]++; };
     add(r.own); String(r.att||'').split(/[;,]/).forEach(x=>add(x.trim())); }
   const r={per}; _wtC={raw:RAW,r}; return r;
 }
-/* 구성원 목록의 작업 시간 합(분) — months 가 없으면 전체 기간. {tot, by:{묶음:분}} */
-function workTimeSum(list, months){ const W=workTime(), o={tot:0,by:{}}; if(!W) return o;
-  for(const n of list){ const m=W.per[n]; if(!m) continue; for(const mk in m){ if(months&&months.indexOf(mk)<0) continue; for(const b in m[mk]){ o.by[b]=(o.by[b]||0)+m[mk][b]; o.tot+=m[mk][b]; } } }
+/* 구성원 목록의 작업 시간 합(분) — months 가 없으면 전체 기간. {tot, by:{묶음:분}, n:{묶음:시간이 기록된 건수}} */
+function workTimeSum(list, months){ const W=workTime(), o={tot:0,by:{},n:{}}; if(!W) return o;
+  for(const n of list){ const m=W.per[n]; if(!m) continue; for(const mk in m){ if(months&&months.indexOf(mk)<0) continue; for(const b in m[mk]){ o.by[b]=(o.by[b]||0)+m[mk][b][0]; o.n[b]=(o.n[b]||0)+m[mk][b][1]; o.tot+=m[mk][b][0]; } } }
   return o; }
 /* 방문장비: 사람별·월별 방문한 (기관|S/N) 집합 — 담당자 + 필수 참석자, 취소 제외 */
 let _veqC=null;
@@ -4745,7 +4749,7 @@ window.openWgt=openWgt;
 function openLoadW(){
   let d=$('ldDlg'); if(!d){ d=document.createElement('dialog'); d.id='ldDlg'; d.className='wdlg'; d.setAttribute('aria-labelledby','ldTitle'); document.body.appendChild(d); }
   const w=loadWNow();
-  d.innerHTML='<div class="wd-in"><button type="button" class="wd-x" id="ldX" aria-label="닫기">×</button><h2 id="ldTitle" class="ldwt">부하도 가중치</h2>'+
+  d.innerHTML='<div class="wd-in"><div class="wd-head"><h2 id="ldTitle">부하도 가중치</h2><button type="button" class="wd-x" id="ldX" aria-label="닫기">×</button></div>'+
     '<p class="ldwp">축 5개의 비중(%)입니다. <b>합이 100</b>이어야 저장됩니다. 저장하면 모든 사람의 부하도가 바로 다시 계산됩니다.</p>'+
     '<div class="ldwg">'+LOAD_AX.map(a=>`<label for="ldw_${a[0]}"><span><b>${a[1]}</b><small>${a[2]}</small></span><span class="ldwi"><input type="number" id="ldw_${a[0]}" data-k="${a[0]}" min="0" max="100" step="5" inputmode="numeric" value="${w[a[0]]}"><i>%</i></span></label>`).join('')+'</div>'+
     '<p class="ldws" id="ldSum" aria-live="polite"></p><p class="ldws" id="ldMsg" aria-live="polite"></p>'+
@@ -5325,10 +5329,10 @@ function orgRows(mode){
       eqh:PROD.eq?eqAgg(PROD.eq.by,o.members||[],()=>0,n=>(PROD.grade||{})[n]==='팀장').perHead:null, rep, pm, pidx:(rep+pm)?pm/(rep+pm)*100:null, ftfr:rv['이번년도FTFR'], rev:rv['이번년도재방문율'], mttr:c?a/c:null, nRep:c, cs, ...orgExt(u,mode,o.members||[])}; });
 }
 /* Organization 통합(2026-11-16 작업지시서 v2): 담당 장비 = 관리표 eqAgg(담당 장비 화면과 같은 함수, 새 계산식 없음). 야간·휴일·수탁기관(방문)은 Workload 에서만 */
-function orgExt(u,mode,members){ const out={eq:null,eqInst:null,e100:null,nPeople:null,hr:null,hrh:null,ts:{}};
+function orgExt(u,mode,members){ const out={eq:null,eqInst:null,e100:null,nPeople:null,hr:null,hrh:null,ts:{},tn:{}};
   if(PROD.eq){ const A=eqAgg(PROD.eq.by,members,n=>(((PROD.person||{})[n]||{}).total_case||{})['이번 년도']||0,n=>(PROD.grade||{})[n]==='팀장'); out.eq=A.eq; out.eqInst=A.inst; out.e100=A.eq?A.per100:null; out.nPeople=A.nPeople; }
   { const nb=PROD.newbie||[], core=members.filter(n=>(PROD.grade||{})[n]!=='팀장'&&nb.indexOf(n)<0), A=workTimeSum(members,PROD.sel_months), Cc=workTimeSum(core,PROD.sel_months);   /* 작업 시간(2026-11-19): 합계 = 구성원 전체, 1인당 = 팀장·신입 제외(1인당 처리 건수와 같은 대상) */
-    out.hr=A.tot/60; out.ts=A.by; out.hrh=core.length?Cc.tot/60/core.length:null; out.nCoreT=core.length; }
+    out.hr=A.tot/60; out.ts=A.by; out.tn=A.n; out.hrh=core.length?Cc.tot/60/core.length:null; out.nCoreT=core.length; }
   return out; }
 function orgAvg(){ const T=orgRows('team'), W=f=>{let a=0,b=0;T.forEach(r=>{if(r[f]!=null&&r.hc){a+=r[f]*r.hc;b+=r.hc;}});return b?a/b:null;}; return {per:W('per'),w:W('w'),hrh:(()=>{ let a=0,b=0; T.forEach(r=>{ if(r.hrh!=null&&r.nCoreT){ a+=r.hrh*r.nCoreT; b+=r.nCoreT; } }); return b?a/b:null; })(),hc:T.reduce((a,r)=>a+r.hc,0)}; }
 /* 비교 그림 — 0에서 시작해야 하는 건수는 막대(type:'bar'), 목표·평균과의 거리를 볼 값은 도트 플롯(type:'dot'). 도트 플롯은 축 범위와 기준선을 항상 적는다 */
@@ -5417,6 +5421,16 @@ function renderOrgTop(p,team,pp,prov,scope){
       :'<p class="ovnote">막대 길이는 구성비(100%)이고 오른쪽 숫자는 처리 건수입니다. 막대에 마우스를 올리면 건수를 볼 수 있습니다.</p>');
   $('ogMix').querySelectorAll('.ogmxh button').forEach(b=>b.onclick=()=>{ ORG.mix=b.dataset.x; try{ localStorage.setItem('fsg-kpi-orgmix',ORG.mix); }catch(e){} rerender(); });
   orgWire($('ogMix'));
+  /* 업무 유형별 건수 · 시간(2026-11-19 사용자 요청 「각 항목도 시간으로 — 처리 건수와 시간의 비교, 어느 일이 오래 걸리는지」): 고른 팀·사무소(없으면 FSG).
+     건당 평균 = 작업 시간 ÷ 시간이 기록된 건수(0~500분인 기록). 처리 건수는 위 구성비와 같은 값이라 시간 기록 건수와 다를 수 있어 따로 적는다 */
+  { const TR=orgRows('team'), src=S||{n:'FSG 전체',cs:BK.reduce((o,b)=>(o[b]=TR.reduce((a,r)=>a+((r.cs||{})[b]||0),0),o),{}),ts:BK.reduce((o,b)=>(o[b]=TR.reduce((a,r)=>a+((r.ts||{})[b]||0),0),o),{}),tn:BK.reduce((o,b)=>(o[b]=TR.reduce((a,r)=>a+((r.tn||{})[b]||0),0),o),{})};
+    const cT=BK.reduce((a,b)=>a+(src.cs[b]||0),0), mT=BK.reduce((a,b)=>a+((src.ts||{})[b]||0),0), nT=BK.reduce((a,b)=>a+((src.tn||{})[b]||0),0), avgOf=b=>(src.tn||{})[b]?src.ts[b]/src.tn[b]:null, mxA=Math.max(1,...BK.map(b=>avgOf(b)||0));
+    const pc=(v,t)=>t?(v/t*100).toFixed(1)+'%':'-', hrs=m=>m==null?'-':(m/60>=100?fmt(Math.round(m/60)):(m/60).toFixed(1));
+    $('ogTime').innerHTML=`<h4 class="dsh4" style="margin-top:18px">업무 유형별 건수 · 시간 <span class="ovsub">${esc(src.n)} · ${esc(p.label)} · 어느 일이 오래 걸리는지 비교</span></h4>
+      <div class="dsscroll"><table class="ogtm"><thead><tr><th>업무 유형</th><th>처리 건수</th><th>작업 시간</th><th>건당 평균</th><th>건수 비중</th><th>시간 비중</th><th>시간 기록 건수</th></tr></thead><tbody>${BK.map((b,i)=>{ const c=src.cs[b]||0, m=(src.ts||{})[b]||0, n=(src.tn||{})[b]||0, a=avgOf(b);
+        return `<tr><td><i style="background:${C[i%C.length]}"></i>${esc(BL[b]||b)}</td><td>${fmt(c)}<small>건</small></td><td>${hrs(m)}<small>시간</small></td><td><span class="ogtmb"><b style="width:${a?(a/mxA*100).toFixed(1):0}%"></b></span>${a==null?'-':fmt(Math.round(a))}<small>${a==null?'':'분'}</small></td><td>${pc(c,cT)}</td><td>${pc(m,mT)}</td><td>${fmt(n)}<small>건</small></td></tr>`; }).join('')}
+        <tr class="tgt"><td>합계</td><td>${fmt(cT)}<small>건</small></td><td>${hrs(mT)}<small>시간</small></td><td>${nT?fmt(Math.round(mT/nT)):'-'}<small>${nT?'분':''}</small></td><td>100%</td><td>100%</td><td>${fmt(nT)}<small>건</small></td></tr></tbody></table></div>
+      <p class="ovnote">건당 평균 = 작업 시간 ÷ 시간이 기록된 건수. 시간은 CRM 에 기록된 시작~종료(0~500분인 기록만)이고 이동 시간은 들어 있지 않습니다. 시간 비중이 건수 비중보다 크면 한 건에 시간이 많이 드는 일입니다. 위에서 팀·사무소를 고르면 그 조직만 봅니다.</p>`; }
 }
 /* 담당 장비 × 처리 건수 — Chart.js 거품 그림, 점 = 사무소 6개(팀과 섞지 않음, 작업지시서 v2). 사분면 기준선 = 표시된 사무소 값의 중앙값. 비교용 위치 기준이며 과부하를 판정하지 않는다 */
 /* 기준선을 그림 가운데로 — 축 범위를 중앙값 기준 양쪽 같은 거리로(가장 먼 점 + 여유 18%). 0 아래로 내려가야 하면(건수는 음수 없음) 0부터 시작하고 그때는 가운데가 아닐 수 있다. 눈금은 보기 좋은 간격만 남긴다 */

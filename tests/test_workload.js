@@ -102,6 +102,7 @@ assert(/wl:\{hash:'#workload',prod:'ot',tabs:\['ot','move','acad','load'\]/.test
   assert(/b=OV_BUCKET\[r\.purp\]\|\|'기타'/.test(html), '작업 시간의 업무 유형 = 건수와 같은 묶음(OV_BUCKET)');
   assert(/\{k:'hr',n:'작업 시간',u:'시간',d:0,type:'bar'\},\{k:'hrh',n:'1인당 작업 시간',u:'시간',d:1,type:'bar',avg:'hrh'\}/.test(html), '조직 비교 지표에 작업 시간·1인당 작업 시간');
   assert(/data-x="cnt"[^>]*>건수<\/button><button type="button" data-x="hr"[^>]*>시간<\/button>/.test(html), '업무 유형 구성비 건수/시간 전환');
+  assert(/id="ogTime"/.test(html) && /avgOf=b=>\(src\.tn\|\|\{\}\)\[b\]\?src\.ts\[b\]\/src\.tn\[b\]:null/.test(html), '업무 유형별 건수·시간 표 — 건당 평균 = 작업 시간 ÷ 시간이 기록된 건수');
   assert(/html\.staff #prod|\.staff #prod/.test(html), '직원 화면에서는 사람 단위 화면(#prod)이 숨겨져 새 탭도 보이지 않는다'); }
 assert(!/prd:\{[^}]*tabs:\[[^\]]*'move'/.test(html), 'Productivity 하위 탭에서 이동거리를 뺌');
 assert(!/\['org','조직'\]/.test(html), 'Workload 「조직」 탭은 Organization 으로');
