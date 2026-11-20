@@ -96,3 +96,7 @@ assert.ok(/slim\.forEach\(el=>el\.classList\.remove\('rp'\)\); drop\.forEach/.te
 assert.ok(/done=\[zbt\.getBoundingClientRect\(\)\]/.test(html), '사무소 이름표는 확대 단추·다른 사무소 이름표와 닿으면 아래로 내린다');
 assert.ok(!/nb=el\.firstChild\.textContent\.length/.test(html), '글자 수로 어림하던 옛 방식이 남아 있으면 안 됨');
 console.log('test_territory_map: 이름표 겹침 확인 통과');
+
+/* 2026-11-20 통합 검증에서 나온 것 — 가장자리 풍선말이 지도 칸 밖으로 나가 잘리지 않게 */
+assert.ok(/if\(tr\.right>fr\.right-2\) dx=fr\.right-2-tr\.right; if\(tr\.left\+dx<fr\.left\+2\) dx=fr\.left\+2-tr\.left;/.test(html), '풍선말을 지도 칸 안으로 당긴다');
+console.log('test_territory_map: 풍선말 위치 확인 통과');

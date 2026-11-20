@@ -4126,8 +4126,8 @@ function mapMix(c0, c1, t){ const h=c=>{ c=String(c).trim().replace('#',''); if(
 /* host = .tmap 칸. cfg = {units:[{k,short,n}], metrics:[{k,label,name,unit,dec,val:{단위:값},sub:{단위:글}}], all:{n,val:{지표:값}}, sel, months, bub, onSel(k), onBub(bool)} */
 function terrMapDraw(host, cfg){
   if(!host) return;
-  loadKMap().then(K=>{ if(!host.isConnected) return; try{ terrMapPaint(host, cfg, K); }catch(e){ console.error('map paint',e); host.innerHTML='<div class="empty-note tmmsg"><b>지도를 그리지 못했습니다.</b> 위 표의 값은 그대로 볼 수 있습니다.</div>'; } },
-    e=>{ console.warn('map load',e); if(host.isConnected) host.innerHTML='<div class="empty-note tmmsg"><b>지도 경계 자료를 불러오지 못했습니다.</b> 새로 고침 후에도 같으면 관리자에게 알려 주세요. 아래 표의 값은 그대로 볼 수 있습니다.</div>'; });
+  loadKMap().then(K=>{ if(!host.isConnected) return; try{ terrMapPaint(host, cfg, K); }catch(e){ console.error('map paint',e); host.innerHTML='<div class="empty-note tmmsg"><b>지도를 그리지 못했습니다.</b> 다른 표와 그래프의 값은 그대로 볼 수 있습니다.</div>'; } },
+    e=>{ console.warn('map load',e); if(host.isConnected) host.innerHTML='<div class="empty-note tmmsg"><b>지도 경계 자료를 불러오지 못했습니다.</b> 새로 고침 후에도 같으면 관리자에게 알려 주세요. 다른 표와 그래프의 값은 그대로 볼 수 있습니다.</div>'; });
 }
 function terrMapPaint(host, cfg, K){
   const D=mapData(K), M=cfg.metrics.find(m=>m.k===cfg.sel)||cfg.metrics[0], cs=getComputedStyle(host);
@@ -4206,7 +4206,9 @@ function terrMapPaint(host, cfg, K){
   const show=(fg,gi)=>{ hide(); const g=K.G[gi], u=D.unit[gi], tip=fg.querySelector('.tmtip'), box=fg.classList.contains('tmz')?zb:view;
     if(g.p[0]<box[0]||g.p[0]>box[0]+box[2]||g.p[1]<box[1]||g.p[1]>box[1]+box[3]) return;
     tip.innerHTML='<b>'+esc(g.sd+' '+g.disp)+'</b> · '+(u?esc(short[u]||u):'WEST·EAST')+(hasVis?'<br>방문 '+fmt(ns[gi])+'건'+(cs3[gi][2]?' · 건당 평균 '+av(cs3[gi])+'분':''):'')+
-      (repOf(gi).length?'<span class="tmrp">방문 많은 기관</span>'+repOf(gi).slice(0,3).map(x=>'<span class="tmrl">'+esc(cut(x[0],18))+' <i>'+fmt(x[1])+'건</i></span>').join(''):''); tip.setAttribute('style',pos(g.p,box)+';display:block'); };
+      (repOf(gi).length?'<span class="tmrp">방문 많은 기관</span>'+repOf(gi).slice(0,3).map(x=>'<span class="tmrl">'+esc(cut(x[0],18))+' <i>'+fmt(x[1])+'건</i></span>').join(''):''); tip.setAttribute('style',pos(g.p,box)+';display:block');
+    /* 가장자리 지역의 풍선말이 지도 칸 밖(휴대폰에서는 화면 밖)으로 나가 글자가 잘리지 않게 좌우로 당긴다(2026-11-20 검증에서 발견) */
+    const tr=tip.getBoundingClientRect(), fr=fg.getBoundingClientRect(); let dx=0; if(tr.right>fr.right-2) dx=fr.right-2-tr.right; if(tr.left+dx<fr.left+2) dx=fr.left+2-tr.left; if(dx) tip.style.marginLeft=Math.round(dx)+'px'; };
   figs.forEach(fg=>{ fg.querySelectorAll('path.tma').forEach(p=>{ const gi=+p.getAttribute('data-g'), u=p.getAttribute('data-u');
       p.addEventListener('pointerenter',e=>{ if(e.pointerType==='mouse'){ show(fg,gi); if(!pin) hl(u); } });
       p.addEventListener('click',()=>{ show(fg,gi); pin=pin===u?null:u; hl(pin||u); }); });
@@ -4227,8 +4229,8 @@ function terrMapPaint(host, cfg, K){
   const apply=()=>{ const s=main[2]/view[2]; msvg.setAttribute('viewBox',view.map(v=>Math.round(v*100)/100).join(' '));
     labEls.forEach(el=>{ const x=+el.getAttribute('data-x'), y=+el.getAttribute('data-y'), zi=s>1.01, inb=zi?(x>=view[0]+view[2]*0.1&&x<=view[0]+view[2]*0.9&&y>=view[1]+view[3]*0.05&&y<=view[1]+view[3]*0.94):(x>=view[0]&&x<=view[0]+view[2]&&y>=view[1]&&y<=view[1]+view[3]+40);   /* 확대했을 때 가장자리에 걸친 이름표는 그림 밖으로 삐져나오므로 감춘다 */ el.style.display=inb?'':'none'; if(inb){ el.style.left=((x-view[0])/view[2]*100).toFixed(2)+'%'; el.style.top=((y-view[1])/view[3]*100).toFixed(2)+'%'; } });
     circ.forEach(c=>c.setAttribute('r',(+c.getAttribute('data-r')/s).toFixed(2)));
-    { const bigL=labEls.filter(el=>el.style.display!=='none'&&!el.classList.contains('sm')); bigL.forEach(el=>{ el.style.marginTop=''; }); const br=bigL.map(el=>el.getBoundingClientRect());   /* 사무소 이름표끼리, 또는 확대 단추와 닿으면 닿지 않을 만큼 아래로 내린다 */
-      const ord=br.map((r,i)=>i).sort((a,b)=>br[a].top-br[b].top), done=[zbt.getBoundingClientRect()]; ord.forEach(i=>{ let r=br[i], dy=0; done.forEach(q=>{ if(r.left<q.right+2&&q.left<r.right+2&&r.top+dy<q.bottom+2&&q.top<r.bottom+dy+2) dy=Math.max(dy,q.bottom+3-r.top); }); if(dy){ bigL[i].style.marginTop=Math.round(dy)+'px'; } done.push({left:r.left,right:r.right,top:r.top+dy,bottom:r.bottom+dy}); }); }
+    { const bigL=labEls.filter(el=>el.style.display!=='none'); bigL.forEach(el=>{ el.style.marginTop=''; }); const br=bigL.map(el=>el.getBoundingClientRect()), sm=bigL.map(el=>el.classList.contains('sm')?1:0);   /* 사무소 이름표끼리, 또는 확대 단추와 닿으면 닿지 않을 만큼 아래로 내린다. 작은 이름표(서울·경기 공동, 제주)는 사무소 이름표 다음에 놓는다 */
+      const ord=br.map((r,i)=>i).sort((a,b)=>sm[a]-sm[b]||br[a].top-br[b].top), done=[zbt.getBoundingClientRect()]; ord.forEach(i=>{ let r=br[i], dy=0; done.forEach(q=>{ if(r.left<q.right+2&&q.left<r.right+2&&r.top+dy<q.bottom+2&&q.top<r.bottom+dy+2) dy=Math.max(dy,q.bottom+3-r.top); }); if(dy){ bigL[i].style.marginTop=Math.round(dy)+'px'; } done.push({left:r.left,right:r.right,top:r.top+dy,bottom:r.bottom+dy}); }); }
     /* 시군구 이름표: 화면에서 52px 넘게 커진 시군구만 이름, 104px 넘으면 대표 기관도. 전국을 확대 없이 볼 때는 보이지 않는다.
        겹침(2026-11-20 사용자 요청 「이름표 겹치는 것 해결」): 어림하지 않고 실제로 그려진 칸을 잰다 — 사무소 이름표·확대 단추가 먼저 자리를 잡고, 시군구 이름표는 큰 시군구부터 놓되
        이미 놓인 칸과 닿으면 대표 기관 줄을 빼 보고 그래도 닿으면 감춘다. 방문 원이 있으면 이름표를 원 아래로 내린다. 읽기(칸 재기)와 쓰기(감추기)를 나눠 화면 계산을 한 번만 하게 한다 */
