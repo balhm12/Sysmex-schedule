@@ -134,6 +134,16 @@ console.log('test_territory_map: 검토 반영 확인 통과');
   /* 표에 없는 점(동 중심이 아닌 실제 위치) → 지도 경계로. 고양 화정동 근처 = 덕양구 */
   assert.strictEqual(name(lib.kmapLocate(K, L, [37.6425, 126.8317, '동'])), '경기 고양시덕양구');
   assert.strictEqual(name(lib.kmapLocate(K, null, [37.6425, 126.8317, '동'])), '경기 고양시덕양구', '표를 못 받으면 지도 경계로');
+  /* 좌표 파일이 시 중심을 다른 방식(구 중심의 평균 등)으로 냈어도 잡는다 — 2026-11-20 실제 화면에서 0곳으로 나와 고침.
+     고양시 세 구 중심의 평균은 표의 시 중심과 1.3 km 떨어져 있고, 예전 방식이면 일산동구로 들어간다 */
+  { const gu = []; for (let i = 0; i < L.g.length; i += 3) if (/^고양시/.test(K.G[L.gi[L.g[i + 2]]].name)) gu.push([L.g[i] / 1e4, L.g[i + 1] / 1e4]);
+    assert.strictEqual(gu.length, 3); const mg = [gu.reduce((a, p) => a + p[0], 0) / 3, gu.reduce((a, p) => a + p[1], 0) / 3];
+    assert.strictEqual(name(lib.kmapFind(K, mg[0], mg[1])), '경기 고양시일산동구', '구 중심 평균도 예전 방식이면 일산동구');
+    const w = {}, r = lib.kmapLocate(K, L, [mg[0], mg[1], '구'], w); assert.ok(r && r.city === '고양시' && w.how === '구중심아님', '시 중심 계산이 달라도 구를 모르는 기관'); }
+  { const w = {}; lib.kmapLocate(K, L, [L.d[0] / 1e4, L.d[1] / 1e4, '동'], w); assert.strictEqual(w.how, '동'); }
+  /* 구가 하나뿐인 시(시흥 등)의 「구」 단위 점은 그대로 그 시 */
+  { const gi = K.G.findIndex(g => g.name === '시흥시'); let p = null; for (let i = 0; i < L.g.length; i += 3) if (L.gi[L.g[i + 2]] === gi) p = [L.g[i] / 1e4 + 0.02, L.g[i + 1] / 1e4]; assert.strictEqual(name(lib.kmapLocate(K, L, [p[0], p[1], '구'])), '경기 시흥시'); }
+  assert.ok(/기관 위치 확인/.test(html) && /class="tmuq"><span>기관 이름<\/span><input type="search"/.test(html), '관리자가 기관 이름으로 어느 시·군·구로 잡혔는지 본다');
   /* 화면: 구를 모르는 기관은 방문 표·원에서 빼고, 담당 팀 다수결에는 그 시의 모든 구에 넣는다 */
   assert.ok(/if\(gi&&gi\.gs\)\{[\s\S]{0,400}?gi\.gs\.forEach\(x=>\{ const o=vote\[x\]/.test(html), '시 중심 기관의 방문은 그 시 모든 구의 다수결에');
   assert.ok(/구를 모르는 기관 '\+fmt\(unkL\.length\)\+'곳/.test(html), '구를 모르는 기관 목록');
