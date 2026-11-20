@@ -4064,6 +4064,8 @@ function moveData(){
    · 색 = 값의 크기(파랑 한 가지), 사무소 구분은 이름표. 값 계산은 부르는 쪽(loadIndex)이 한다 — 여기서는 그리기만 */
 const MAP_URL='fsg-kpi-map.json';
 const MAP_SD={'11':'서울','21':'부산','22':'대구','23':'인천','24':'광주','25':'대전','26':'울산','29':'세종','31':'경기','32':'강원','33':'충북','34':'충남','35':'전북','36':'전남','37':'경북','38':'경남','39':'제주'};
+/* 경계 자료(2018) 뒤에 이름·소속이 바뀐 시군구 — 화면에 쓰는 이름만 바로잡는다. 경계가 바뀐 곳(인천 2026 개편 등)은 여기서 못 고친다 */
+const MAP_ALIAS={'인천 남구':['인천','미추홀구'],'경북 군위군':['대구','군위군']};
 const MAP_TERR={
   sd:{'강원':'FS EAST','인천':'FS WEST','제주':'FS WEST',
       '대전':'FS CENTRAL 대전','세종':'FS CENTRAL 대전','충남':'FS CENTRAL 대전','충북':'FS CENTRAL 대전','전북':'FS CENTRAL 대전',
@@ -4091,7 +4093,8 @@ function kmapDecode(t){
       if(ri===0){ let a=0,cx=0,cy=0; for(let i=0,j=r.length-1;i<r.length;j=i++){ const f=r[j][0]*r[i][1]-r[i][0]*r[j][1]; a+=f; cx+=(r[j][0]+r[i][0])*f; cy+=(r[j][1]+r[i][1])*f; }
         a/=2; if(a&&(!best||Math.abs(a)>best.a)) best={a:Math.abs(a),c:[cx/(6*a),cy/(6*a)]}; } }));
     const c=best?best.c:[(x0+x1)/2,(y0+y1)/2];
-    return {code, name, disp:name.replace(/^(.+?시)(.+[구군])$/,'$1 $2'), sd, key:sd+' '+name, rings, d, c, p:pxy(c,up), area:best?best.a:0, bb:[x0,y0,x1,y1]}; });   /* disp = 화면에 쓰는 이름(「수원시장안구」→「수원시 장안구」). 담당 지역 표(MAP_TERR)는 name 을 쓴다 */
+    const al=MAP_ALIAS[sd+' '+name];
+    return {code, name, disp:al?al[1]:name.replace(/^(.+?시)(.+[구군])$/,'$1 $2'), sdd:al?al[0]:sd, sd, key:sd+' '+name, rings, d, c, p:pxy(c,up), area:best?best.a:0, bb:[x0,y0,x1,y1]}; });   /* disp = 화면에 쓰는 이름(「수원시장안구」→「수원시 장안구」). 담당 지역 표(MAP_TERR)는 name 을 쓴다 */
   const arcD=arcs.map((a,k)=>far(a)?'':'M'+line(a,use[k].some(gi=>G[gi].sd==='제주')));
   return {G, use, arcD, W:f1((LON1-LON0)*KX), H:f1((LAT1-LAT0)*KY), KX, KY, LON0, LAT1};
 }
@@ -4168,7 +4171,7 @@ function terrMapPaint(host, cfg, K){
   const _rep={}, repOf=gi=>{ if(_rep[gi]) return _rep[gi]; const A=D.acc[gi]||{}, L=[]; for(const a in A){ let n=0; for(const mk in A[a]){ if(!cfg.months||cfg.months.indexOf(mk)>=0) n+=A[a][mk]; } if(n) L.push([a,n]); } L.sort((x,y)=>y[1]-x[1]||(x[0]<y[0]?-1:1)); return (_rep[gi]=L); };
   const cut=(t,n)=>{ t=String(t||''); return t.length>n?t.slice(0,n-1)+'…':t; };
   /* 시군구 이름표 — 확대해서 그 시군구가 화면에서 충분히 커졌을 때만 보인다(apply 가 정함). 더 커지면 대표 기관 한 곳도 같이 */
-  let sgLabs=''; K.G.forEach((g,gi)=>{ if(!g.d||!g.area||!inTeam(gi)) return; const R=repOf(gi)[0];   /* 팀을 확대했을 때 옆 팀(흐린 곳)에는 이름을 달지 않는다 */ sgLabs+='<span class="tmlb sm tmsg" data-g="'+gi+'" data-x="'+g.p[0].toFixed(2)+'" data-y="'+g.p[1].toFixed(2)+'" data-s="'+(Math.sqrt(g.area)*K.KY).toFixed(1)+'" style="display:none"><b>'+esc((/구$/.test(g.name)&&g.name.indexOf('시')<0?g.sd+' ':'')+g.disp)+'</b>'+(R?'<em>'+esc(cut(R[0],11))+'</em>':'')+'</span>'; });
+  let sgLabs=''; K.G.forEach((g,gi)=>{ if(!g.d||!g.area||!inTeam(gi)) return; const R=repOf(gi)[0];   /* 팀을 확대했을 때 옆 팀(흐린 곳)에는 이름을 달지 않는다 */ sgLabs+='<span class="tmlb sm tmsg" data-g="'+gi+'" data-x="'+g.p[0].toFixed(2)+'" data-y="'+g.p[1].toFixed(2)+'" data-s="'+(Math.sqrt(g.area)*K.KY).toFixed(1)+'" style="display:none"><b>'+esc((/구$/.test(g.disp)&&g.disp.indexOf('시')<0?g.sdd+' ':'')+g.disp)+'</b>'+(R?'<em>'+esc(cut(R[0],11))+'</em>':'')+'</span>'; });
   const lab=(q,cls,html)=>'<span class="tmlb'+cls+'" data-x="'+q[0].toFixed(2)+'" data-y="'+q[1].toFixed(2)+'" style="'+pos(q,main)+'">'+html+'</span>';
   const cen=cenOf(zoomed?main:null); let labs='';
   cfg.units.forEach(u=>{ const o=cen[u.k]; if(!o||!o.a) return; const mine=!zoomed||teamOf(u.k)===Z;   /* 확대했을 때 옆 팀(흐리게 칠한 곳)에는 이름표를 달지 않는다 — 원·이름표와 겹친다 */
@@ -4183,15 +4186,15 @@ function terrMapPaint(host, cfg, K){
   /* 표 */
   const rows=cfg.units.map(u=>'<tr data-u="'+esc(u.k)+'"><td><span class="tmsw" style="background:'+colOf(u.k)+'"></span>'+esc(u.short)+'</td><td class="num">'+fmt(u.n)+'</td><td class="num"><b>'+f(M.val[u.k])+'</b>'+uv(M.val[u.k])+'</td>'+
     (M.sub?'<td class="num">'+esc(M.sub[u.k]||'-')+'</td>':'')+(hasVis?'<td class="num">'+fmt(byU[u.k]||0)+'</td><td class="num">'+av(byT[u.k])+'</td>':'')+'</tr>').join('');
-  const tab='<div class="tmscroll"><table class="data-table tmtab"><thead><tr><th>팀 · 사무소</th><th class="num">'+esc(cfg.nLabel||'대상 인원')+'</th><th class="num">'+esc(M.col||M.label)+'</th>'+(M.sub?'<th class="num">'+esc(M.subLabel||'')+'</th>':'')+(hasVis?'<th class="num">지역 방문</th><th class="num">건당 평균 (분)</th>':'')+'</tr></thead><tbody>'+rows+
+  const tab='<div class="tmscroll"><table class="data-table tmtab"><thead><tr><th>팀 · 사무소</th><th class="num">'+esc(cfg.nLabel||'대상 인원')+'</th><th class="num">'+esc(M.col||M.label)+'</th>'+(M.sub?'<th class="num">'+esc(M.subLabel||'')+'</th>':'')+(hasVis?'<th class="num">지역 방문</th><th class="num">방문당 평균 (분)</th>':'')+'</tr></thead><tbody>'+rows+
     '<tr class="tmall"><td>FSG 전체</td><td class="num">'+fmt(cfg.all.n)+'</td><td class="num">'+f(cfg.all.val[M.k])+uv(cfg.all.val[M.k])+'</td>'+(M.sub?'<td class="num">'+esc(cfg.all.sub||'-')+'</td>':'')+(hasVis?'<td class="num">'+fmt(allT[0])+'</td><td class="num">'+av(allT)+'</td>':'')+'</tr></tbody></table></div>';
   const leg='<div class="tmleg"><span>낮음 '+f(lo)+esc(M.unit||'')+'<span class="tmgr" style="background:linear-gradient(90deg,'+mapMix(c0,c1,tOf(lo))+','+mapMix(c0,c1,tOf(hi))+')"></span>'+f(hi)+esc(M.unit||'')+' 높음</span>'+(spanK<1&&hi>lo?'<span>값 차이가 작아 색 차이도 작게 표시</span>':'')+(bub?'<span><span class="tmdot"></span>원 = 시·군·구별 방문 건수 (가장 큰 원 '+fmt(nMax)+'건)</span>':'')+'</div>';
-  const top=hasVis&&order.length?'<div class="tmtop"><h4>방문이 많은 시 · 군 · 구 <span>'+(Z?esc(Z.replace(/^FS\s*/,''))+' · ':'')+esc(cfg.periodLabel||'')+'</span></h4><div class="tmscroll"><table class="data-table tmtab tmtt"><thead><tr><th>시 · 군 · 구 <small>대표 기관</small></th><th>담당</th><th class="num">방문</th><th class="num">건당 평균</th></tr></thead><tbody>'+
-    order.filter(x=>inTeam(x[0])).slice(0,6).map(x=>{ const g=K.G[x[0]], u=D.unit[x[0]]; const R=repOf(x[0])[0]; return '<tr data-g="'+x[0]+'"><td>'+esc(g.sd+' '+g.disp)+(R?'<small class="tmrep">'+esc(cut(R[0],16))+' · '+fmt(R[1])+'건</small>':'')+'</td><td>'+esc(u?short[u]||u:'WEST·EAST')+'</td><td class="num">'+fmt(x[1])+'<small>건</small></td><td class="num">'+av(cs3[x[0]])+(cs3[x[0]][2]?'<small>분</small>':'')+'</td></tr>'; }).join('')+'</tbody></table></div></div>':'';
+  const top=hasVis&&order.length?'<div class="tmtop"><h4>방문이 많은 시 · 군 · 구 <span>'+(Z?esc(Z.replace(/^FS\s*/,''))+' · ':'')+esc(cfg.periodLabel||'')+'</span></h4><div class="tmscroll"><table class="data-table tmtab tmtt"><thead><tr><th>시 · 군 · 구 <small>대표 기관</small></th><th>담당</th><th class="num">방문</th><th class="num">방문당 평균</th></tr></thead><tbody>'+
+    order.filter(x=>inTeam(x[0])).slice(0,6).map(x=>{ const g=K.G[x[0]], u=D.unit[x[0]]; const R=repOf(x[0])[0]; return '<tr data-g="'+x[0]+'"><td>'+esc(g.sdd+' '+g.disp)+(R?'<small class="tmrep">'+esc(cut(R[0],16))+' · '+fmt(R[1])+'건</small>':'')+'</td><td>'+esc(u?short[u]||u:'WEST·EAST')+'</td><td class="num">'+fmt(x[1])+'<small>건</small></td><td class="num">'+av(cs3[x[0]])+(cs3[x[0]][2]?'<small>분</small>':'')+'</td></tr>'; }).join('')+'</tbody></table></div></div>':'';
   const note='<p class="tmnote">'+(cfg.valNote||'<b>값</b> = 사무소 대상 인원(팀장·신입 제외)의 평균'+(M.name&&M.name!==M.label?' · '+esc(M.label)+' = '+esc(M.name):''))+'. <b>담당 지역</b> = 사무소 지역 기준표(2026-11-04 확정). '+
     (D.shared?'서울·경기는 WEST·EAST가 나눠 맡는데, 경계를 그릴 좌표 자료가 없어 나누지 않고 회색으로 두었습니다. '
       :'서울·경기의 WEST·EAST 경계는 기준표에 다 적혀 있지 않아 <b>CRM 방문이 더 많은 팀</b>으로 그렸고'+(D.guess?'(방문 기록이 없는 '+fmt(D.guess)+'곳은 가까운 곳과 같은 팀)':'')+', 실제 배정과 다를 수 있습니다. ')+
-    (hasVis?'<b>지역 방문 · 원</b> = 그 시·군·구의 기관을 찾은 건수(설치·이전 설치·고장 수리·PM·Calibration, 취소 제외, 다른 사무소 직원의 방문 포함), <b>건당 평균</b> = 그 방문의 작업 시간 ÷ 시간이 기록된 방문(CRM 시작~종료 0~500분, 이동 시간 제외). ':'')+
+    (hasVis?'<b>지역 방문 · 원</b> = 그 시·군·구의 기관을 찾은 건수(설치·이전 설치·고장 수리·PM·Calibration, 취소 제외, 다른 사무소 직원의 방문 포함), <b>방문당 평균</b> = 그 방문의 작업 시간 ÷ 시간이 기록된 방문(CRM 시작~종료 0~500분, 이동 시간 제외) — 담당자 기준이라 비교 지표 「건당 평균 시간」(모든 업무·참석자 포함)과 값이 다릅니다. ':'')+
     (hasVis?'<b>대표 기관</b> = 그 시·군·구에서 방문이 가장 많은 기관 — 이름만 보이고 위치는 찍지 않습니다. ':'')+'개인 위치는 표시하지 않습니다. 제주는 위로 옮겨 그렸고 울릉군과 먼 섬은 뺐습니다'+(zoomed?'(확대했을 때는 제주가 보이지 않습니다 — 전국에서 확인)':'')+'.</p>';
   host.innerHTML='<div class="tmctl"><span class="control-label">지도에 볼 값</span><div class="'+(cfg.segClass||'segmented')+' tmseg">'+cfg.metrics.map(m=>'<button type="button" data-k="'+m.k+'"'+(m.k===M.k?' class="active" aria-pressed="true"':' aria-pressed="false"')+'>'+esc(m.label)+'</button>').join('')+'</div>'+
     (teams.length>1?'<span class="tmzg"><span class="control-label">보기 범위</span><div class="'+(cfg.segClass||'segmented')+' tmzseg">'+[''].concat(teams).map(t=>'<button type="button" data-z="'+esc(t)+'"'+(t===Z?' class="active" aria-pressed="true"':' aria-pressed="false"')+'>'+(t?esc(t.replace(/^FS\s*/,'')):'전국')+'</button>').join('')+'</div></span>':'')+
@@ -4205,7 +4208,7 @@ function terrMapPaint(host, cfg, K){
   const hide=()=>figs.forEach(fg=>{ fg.querySelector('.tmtip').style.display='none'; });
   const show=(fg,gi)=>{ hide(); const g=K.G[gi], u=D.unit[gi], tip=fg.querySelector('.tmtip'), box=fg.classList.contains('tmz')?zb:view;
     if(g.p[0]<box[0]||g.p[0]>box[0]+box[2]||g.p[1]<box[1]||g.p[1]>box[1]+box[3]) return;
-    tip.innerHTML='<b>'+esc(g.sd+' '+g.disp)+'</b> · '+(u?esc(short[u]||u):'WEST·EAST')+(hasVis?'<br>방문 '+fmt(ns[gi])+'건'+(cs3[gi][2]?' · 건당 평균 '+av(cs3[gi])+'분':''):'')+
+    tip.innerHTML='<b>'+esc(g.sdd+' '+g.disp)+'</b> · '+(u?esc(short[u]||u):'WEST·EAST')+(hasVis?'<br>방문 '+fmt(ns[gi])+'건'+(cs3[gi][2]?' · 방문당 평균 '+av(cs3[gi])+'분':''):'')+
       (repOf(gi).length?'<span class="tmrp">방문 많은 기관</span>'+repOf(gi).slice(0,3).map(x=>'<span class="tmrl">'+esc(cut(x[0],18))+' <i>'+fmt(x[1])+'건</i></span>').join(''):''); tip.setAttribute('style',pos(g.p,box)+';display:block');
     /* 가장자리 지역의 풍선말이 지도 칸 밖(휴대폰에서는 화면 밖)으로 나가 글자가 잘리지 않게 좌우로 당긴다(2026-11-20 검증에서 발견) */
     const tr=tip.getBoundingClientRect(), fr=fg.getBoundingClientRect(); let dx=0; if(tr.right>fr.right-2) dx=fr.right-2-tr.right; if(tr.left+dx<fr.left+2) dx=fr.left+2-tr.left; if(dx) tip.style.marginLeft=Math.round(dx)+'px'; };

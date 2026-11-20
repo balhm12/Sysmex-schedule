@@ -86,7 +86,7 @@ assert.ok(/const r=\{unit, vis, acc, voted, guess, located,/.test(html) && /repO
 assert.ok(/class="tmlb sm tmsg"/.test(html) && /const ok=on&&sz>=52&&/.test(html) && /el\.classList\.toggle\('rp',sz>=104\)/.test(html), '확대했을 때만 시군구 이름, 더 크면 대표 기관');
 assert.ok(/'<span class="tmrp">방문 많은 기관<\/span>'/.test(html) && /repOf\(gi\)\.slice\(0,3\)/.test(html), '풍선말에 방문 많은 기관 3곳');
 assert.ok(!/GEO\.acct\[[^\]]+\]\[[01]\][^\n]{0,80}<circle/.test(code), '기관 좌표로 점을 찍지 않는다');
-assert.ok(/disp:name\.replace\(/.test(html), '화면용 시군구 이름');
+assert.ok(/disp:al\?al\[1\]:name\.replace\(/.test(html), '화면용 시군구 이름');
 console.log('test_territory_map: 지역 이름·대표 기관 확인 통과');
 
 /* 이름표 겹침 (2026-11-20 「이름표 겹치는 것 해결」) — 글자 수 어림이 아니라 실제로 그려진 칸을 재서 정한다 */
@@ -100,3 +100,8 @@ console.log('test_territory_map: 이름표 겹침 확인 통과');
 /* 2026-11-20 통합 검증에서 나온 것 — 가장자리 풍선말이 지도 칸 밖으로 나가 잘리지 않게 */
 assert.ok(/if\(tr\.right>fr\.right-2\) dx=fr\.right-2-tr\.right; if\(tr\.left\+dx<fr\.left\+2\) dx=fr\.left\+2-tr\.left;/.test(html), '풍선말을 지도 칸 안으로 당긴다');
 console.log('test_territory_map: 풍선말 위치 확인 통과');
+
+/* 2026-11-20 코드 검토에서 나온 것 */
+{ const AL = eval('(' + /const MAP_ALIAS=(\{[^;]+\});/.exec(html)[1] + ')'); assert.deepStrictEqual(Object.keys(AL).filter(k => !keys.has(k)), [], '이름을 바로잡는 표의 시군구가 경계 자료에 없음'); assert.strictEqual(AL['인천 남구'][1], '미추홀구'); }
+assert.ok(/방문당 평균 \(분\)/.test(html) && !/<th class="num">지역 방문<\/th><th class="num">건당 평균/.test(html), '지도의 방문 평균은 「방문당 평균」(비교 지표 「건당 평균 시간」과 구분)');
+console.log('test_territory_map: 검토 반영 확인 통과');
