@@ -371,7 +371,8 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 :is(#prod,#ogMapCard,#ovMapCard) .tmsub{display:grid;grid-template-columns:minmax(0,250px) minmax(0,1fr);gap:24px;align-items:start;margin-top:22px}
 :is(#prod,#ogMapCard,#ovMapCard) .tmsub h4{margin:0 0 8px;font-size:13.5px;font-weight:700;color:var(--text)}
 :is(#prod,#ogMapCard,#ovMapCard) .tmsub h4 span{font-size:12px;font-weight:500;color:var(--muted);margin-left:6px}
-:is(#prod,#ogMapCard,#ovMapCard) .tmunk{margin-top:14px}:is(#prod,#ogMapCard,#ovMapCard) .tmunk summary{cursor:pointer;min-height:44px;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:13.5px;font-weight:700;color:var(--text)}:is(#prod,#ogMapCard,#ovMapCard) .tmunk summary span{font-size:12px;font-weight:500;color:var(--muted)}:is(#prod,#ogMapCard,#ovMapCard) .tmunk p{margin:4px 0 10px;font-size:12.5px;line-height:1.6;color:var(--text-muted)}
+:is(#prod,#ogMapCard,#ovMapCard) .tmunk{margin-top:14px}:is(#prod,#ogMapCard,#ovMapCard) .tmunk summary{cursor:pointer;min-height:44px;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:13.5px;font-weight:700;color:var(--text)}:is(#prod,#ogMapCard,#ovMapCard) .tmunk summary span{font-size:12px;font-weight:500;color:var(--muted)}:is(#prod,#ogMapCard,#ovMapCard) .tmuq{display:flex;align-items:center;gap:10px;margin:6px 0 4px}:is(#prod,#ogMapCard,#ovMapCard) .tmuq span{font-size:13px;color:var(--text-secondary);white-space:nowrap}:is(#prod,#ogMapCard,#ovMapCard) .tmuq input{flex:1;min-width:0;height:44px;padding:0 12px;font-size:16px;border:1px solid var(--border);border-radius:8px;background:var(--surface,#fff);color:var(--text)}:is(#prod,#ogMapCard,#ovMapCard) .tmuo ul{list-style:none;margin:6px 0 12px;padding:0}:is(#prod,#ogMapCard,#ovMapCard) .tmuo li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}:is(#prod,#ogMapCard,#ovMapCard) .tmuo li small{grid-column:1/-1;font-size:11.5px;color:var(--muted)}:is(#prod,#ogMapCard,#ovMapCard) .tmuo>small{display:block;margin:6px 0 10px;font-size:12px;color:var(--muted)}
+:is(#prod,#ogMapCard,#ovMapCard) .tmunk p{margin:4px 0 10px;font-size:12.5px;line-height:1.6;color:var(--text-muted)}
 :is(#prod,#ogMapCard,#ovMapCard) .tmnote{margin:14px 0 0;font-size:12.5px;line-height:1.65;color:var(--text-muted)}:is(#prod,#ogMapCard,#ovMapCard) .tmnote b{color:var(--text-secondary)}
 @media (max-width:1100px){:is(#prod,#ogMapCard,#ovMapCard) .tmsub{grid-template-columns:minmax(0,1fr)}:is(#prod,#ogMapCard,#ovMapCard) .tmzoom{max-width:300px}}
 @media (max-width:860px){:is(#prod,#ogMapCard,#ovMapCard) .tmcol{margin:0 auto}:is(#prod,#ogMapCard,#ovMapCard) .tmzb button{min-width:44px;height:44px}:is(#prod,#ogMapCard,#ovMapCard) .tmzseg button{min-height:40px}:is(#prod,#ogMapCard,#ovMapCard) .tmbody{grid-template-columns:minmax(0,1fr);gap:16px}:is(#prod,#ogMapCard,#ovMapCard) .tmsub{grid-template-columns:minmax(0,1fr)}:is(#prod,#ogMapCard,#ovMapCard) table.data-table.tmtab th,:is(#prod,#ogMapCard,#ovMapCard) table.data-table.tmtab td{padding-left:5px;padding-right:5px}:is(#prod,#ogMapCard,#ovMapCard) .tmsw{margin-right:5px}:is(#prod,#ogMapCard,#ovMapCard) .tmmain{margin:0 auto 16px}:is(#prod,#ogMapCard,#ovMapCard) .tmzoom{max-width:none}:is(#prod,#ogMapCard,#ovMapCard) .tmctl .segmented button{min-height:40px}:is(#prod,#ogMapCard,#ovMapCard) .tmchk{min-height:44px}}
@@ -4110,16 +4111,19 @@ function loadKLoc(K){ if(KLOC&&KLOC.K===K) return Promise.resolve(KLOC);
   return _klocP||(_klocP=fetch(MAP_LOC_URL).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }).then(t=>(KLOC=kmapLocDecode(t,K))).catch(e=>{ _klocP=null; throw e; })); }
 function kmapLocDecode(t, K){ const at={}; K.G.forEach((g,gi)=>{ at[g.code]=gi; }); const gi=t.k.map(c=>at[c]===undefined?-1:at[c]);
   return {K, d:t.d, g:t.g, c:t.c.map(c=>({lat:c[0]/1e4, lon:c[1]/1e4, city:c[2], gs:c[3].map(k=>gi[k]).filter(x=>x>=0)})), gi, src:t.src||''}; }
-function kmapLocate(K, L, g){
-  const lat=g[0], lon=g[1], lv=g[2], d2=(la,lo)=>{ const dy=(la-lat)*111, dx=(lo-lon)*88.6; return dx*dx+dy*dy; };
+function kmapLocate(K, L, g, why){
+  why=why||{}; const lat=g[0], lon=g[1], lv=g[2], d2=(la,lo)=>{ const dy=(la-lat)*111, dx=(lo-lon)*88.6; return dx*dx+dy*dy; };
   const near=a=>{ let bi=-1, bd=1e9; for(let i=0;i<a.length;i+=3){ const d=d2(a[i]/1e4,a[i+1]/1e4); if(d<bd){ bd=d; bi=i; } } return bi<0||bd>LOC_TOL2?-1:L.gi[a[bi+2]]; };
   const cityAt=()=>{ let bc=null, bd=1e9; L.c.forEach(c=>{ const d=d2(c.lat,c.lon); if(d<bd){ bd=d; bc=c; } }); if(!bc||bd>LOC_TOL2) return null;
     let gd=1e9; for(let i=0;i<L.g.length;i+=3) gd=Math.min(gd,d2(L.g[i]/1e4,L.g[i+1]/1e4)); return bd<=gd?{city:bc.city, gs:bc.gs}:null; };   /* 시 중심이 그 근처 시군구 중심보다 가까울 때만 */
-  if(L){ if(lv!=='구'&&lv!=='시'){ const x=near(L.d); if(x>=0) return x; }
-    if(lv!=='동'){ const c=cityAt(); if(c&&c.gs.length>1) return c; const x=near(L.g); if(x>=0) return x; } }
+  const cityOf=gi=>{ const m=gi>=0&&/^(.+?시).+구$/.exec(K.G[gi].name); if(!m) return null; const sd=K.G[gi].sd, gs=[]; K.G.forEach((h,j)=>{ if(h.sd===sd&&h.name.indexOf(m[1])===0) gs.push(j); }); return gs.length>1?{city:m[1], gs}:null; };
+  if(L){ if(lv!=='구'&&lv!=='시'){ const x=near(L.d); if(x>=0){ why.how='동'; return x; } }
+    if(lv!=='동'){ const c=cityAt(); if(c&&c.gs.length>1){ why.how='시중심'; return c; } const x=near(L.g); if(x>=0){ why.how='구중심'; return x; } } }
   const gi=kmapFind(K,lat,lon);
-  if(lv==='시'&&gi>=0){ const m=/^(.+?시).+구$/.exec(K.G[gi].name); if(m){ const sd=K.G[gi].sd, gs=[]; K.G.forEach((h,j)=>{ if(h.sd===sd&&h.name.indexOf(m[1])===0) gs.push(j); }); if(gs.length>1) return {city:m[1], gs}; } }
-  return gi;
+  /* 정밀도 「시」, 또는 「구」인데 어느 시군구 중심과도 맞지 않는 점이 구가 여럿인 시 안에 있으면 어느 구인지 모른다.
+     좌표 파일이 시 중심을 다른 방식(예: 구 중심의 평균)으로 냈을 수 있어 시 중심 표와 같은 점인지만으로는 다 못 잡는다(2026-11-20 실제 화면에서 0곳으로 나옴) */
+  if(lv==='시'||(lv==='구'&&L)){ const c=cityOf(gi); if(c){ why.how=lv==='시'?'시':'구중심아님'; return c; } }
+  why.how=gi>=0?'경계':'없음'; return gi;
 }
 /* 좌표(위도·경도) → 시군구 번호. 경계를 줄였기 때문에 바닷가 점은 어느 칸에도 안 들 수 있어 가까운 시군구로 보낸다 */
 function kmapFind(K, lat, lon){
@@ -4221,10 +4225,12 @@ function terrMapPaint(host, cfg, K){
   /* 구를 모르는 기관(주소에 구가 없어 시 중심 좌표만 있음) — 선택 기간·보기 범위 안 */
   const unkL=[]; let unkN=0; (D.unk||[]).forEach(U=>{ if(!U.gs.some(inTeam)) return; for(const a in U.acc){ let n=0; for(const mk in U.acc[a]){ if(!cfg.months||cfg.months.indexOf(mk)>=0) n+=U.acc[a][mk]; } if(n){ unkL.push([U.sd+' '+U.city,a,n]); unkN+=n; } } });
   unkL.sort((x,y)=>y[2]-x[2]||(x[1]<y[1]?-1:1));
-  const unk=hasVis&&unkL.length?'<details class="tmunk"><summary>구를 모르는 기관 '+fmt(unkL.length)+'곳 · 방문 '+fmt(unkN)+'건 <span>시·군·구 표와 원에서 뺌</span></summary>'+
-    '<p>주소에 구가 없어 <b>시 전체의 중심 좌표</b>만 있는 기관입니다. 그 점은 시의 한 구 안에 떨어져(고양시 → 일산동구 등) 그 구의 방문으로 잘못 세지므로 빼 두었습니다. 담당 팀 판단에는 그 시의 모든 구에 넣었습니다. 이동거리 좌표 파일을 주소의 구까지 넣어 다시 만들면 제자리에 들어갑니다.</p>'+
+  const unkTab=unkL.length?'<p>주소에 구가 없어 <b>시 단위 좌표</b>만 있는 기관입니다. 그 점은 시의 한 구 안에 떨어져(고양시 → 일산동구 등) 그 구의 방문으로 잘못 세지므로 빼 두었습니다. 담당 팀 판단에는 그 시의 모든 구에 넣었습니다. 이동거리 좌표 파일을 주소의 구까지 넣어 다시 만들면 제자리에 들어갑니다.</p>'+
     '<div class="tmscroll"><table class="data-table tmtab"><thead><tr><th>시</th><th>기관</th><th class="num">방문</th></tr></thead><tbody>'+
-    unkL.slice(0,30).map(x=>'<tr><td>'+esc(x[0])+'</td><td>'+esc(cut(x[1],18))+'</td><td class="num">'+fmt(x[2])+'<small>건</small></td></tr>').join('')+'</tbody></table></div>'+(unkL.length>30?'<p>외 '+fmt(unkL.length-30)+'곳</p>':'')+'</details>':'';
+    unkL.slice(0,30).map(x=>'<tr><td>'+esc(x[0])+'</td><td>'+esc(cut(x[1],18))+'</td><td class="num">'+fmt(x[2])+'<small>건</small></td></tr>').join('')+'</tbody></table></div>'+(unkL.length>30?'<p>외 '+fmt(unkL.length-30)+'곳</p>':''):'';
+  /* 기관 위치 확인(2026-11-20) — 기관 이름을 넣으면 좌표 정밀도와 어느 시·군·구로 잡혔는지 보여 준다. 좌표가 있는 화면에서만 */
+  const unk=hasVis?'<details class="tmunk"'+(host.__tmuOpen?' open':'')+'><summary>'+(unkL.length?'구를 모르는 기관 '+fmt(unkL.length)+'곳 · 방문 '+fmt(unkN)+'건 <span>시·군·구 표와 원에서 뺌 · 기관 위치 확인</span>':'기관 위치 확인 <span>어느 시·군·구로 잡혔는지</span>')+'</summary>'+
+    '<label class="tmuq"><span>기관 이름</span><input type="search" autocomplete="off" placeholder="이름 일부를 넣으세요" value="'+esc(host.__tmuQ||'')+'"></label><div class="tmuo" role="status"></div>'+unkTab+'</details>':'';
   const note='<p class="tmnote">'+(cfg.valNote||'<b>값</b> = 사무소 대상 인원(팀장·신입 제외)의 평균'+(M.name&&M.name!==M.label?' · '+esc(M.label)+' = '+esc(M.name):''))+'. <b>담당 지역</b> = 사무소 지역 기준표(2026-11-04 확정). '+
     (D.shared?'서울·경기는 WEST·EAST가 나눠 맡는데, 경계를 그릴 좌표 자료가 없어 나누지 않고 회색으로 두었습니다. '
       :'서울·경기의 WEST·EAST 경계는 기준표에 다 적혀 있지 않아 <b>CRM 방문이 더 많은 팀</b>으로 그렸고'+(D.guess?'(방문 기록이 없는 '+fmt(D.guess)+'곳은 가까운 곳과 같은 팀)':'')+', 실제 배정과 다를 수 있습니다. ')+
@@ -4236,6 +4242,17 @@ function terrMapPaint(host, cfg, K){
     '<div class="tmbody"><div class="tmcol"><div class="tmfig tmmain'+(zoomed?' zdet':'')+'">'+draw(main,zoomed?Math.max(0.2,main[2]/K.W*1.05):1,'사무소·팀 지도 — '+M.label+(Z?' · '+Z+' 확대':'')+'. 값은 옆 표와 같습니다.',zoomed,true)+sgLabs+labs+'<div class="tmtip" role="status"></div>'+
       '<div class="tmzb" role="group" aria-label="지도 확대"><button type="button" data-a="in" aria-label="확대">+</button><button type="button" data-a="out" aria-label="축소">−</button><button type="button" data-a="reset">원래대로</button></div></div>'+
       '<p class="tmhint">확대: 단추 · 두 손가락으로 오므리고 펴기 · Ctrl+휠. 확대한 뒤에는 끌어서 옮깁니다. 확대하면 시·군·구 이름'+(hasVis?'과 대표 기관':'')+'이 나옵니다.</p></div><div class="tmside">'+tab+leg+'<div class="tmsub'+(zoomed?' one':'')+'">'+(zoomed?'':zoom)+top+'</div>'+unk+'</div></div>'+note;
+  { const de=host.querySelector('.tmunk'), qi=de&&de.querySelector('input'), qo=de&&de.querySelector('.tmuo');
+    if(de){ de.addEventListener('toggle',()=>{ host.__tmuOpen=de.open; });
+      const L=KLOC&&KLOC.K===K?KLOC:null, LV={'동':'행정동','구':'시·군·구','시':'시'};
+      const nm=gi=>{ const g=K.G[gi]; return g.sdd+' '+g.disp; };
+      const run=()=>{ const q=String(qi.value||'').replace(/\s/g,'').toLowerCase(); host.__tmuQ=qi.value; if(!q){ qo.innerHTML=''; return; }
+        const hit=Object.keys(GEO.acct).filter(a=>a.replace(/\s/g,'').toLowerCase().indexOf(q)>=0).slice(0,6);
+        qo.innerHTML=hit.length?'<ul>'+hit.map(a=>{ const g=GEO.acct[a], w={}, r=kmapLocate(K,L,g,w);
+          const at=r&&r.gs?'<b>'+esc(K.G[r.gs[0]].sdd+' '+r.city)+' · 구 모름</b>':r>=0?'<b>'+esc(nm(r))+'</b>':'<b>지도 밖</b>';
+          const how={'동':'행정동 중심으로 찾음','구중심':'시·군·구 중심으로 찾음','시중심':'시 중심 좌표','구중심아님':'시 단위 좌표(어느 구 중심과도 맞지 않음)','시':'시 단위 좌표','경계':'지도 경계로 찾음','없음':''}[w.how]||'';
+          return '<li><span>'+esc(cut(a,22))+'</span>'+at+'<small>좌표 '+esc(LV[g[2]]||g[2]||'-')+' 단위'+(how?' · '+how:'')+'</small></li>'; }).join('')+'</ul>'+(Object.keys(GEO.acct).length&&hit.length===6?'<small>앞의 6곳만 보입니다. 이름을 더 넣으세요.</small>':''):'<small>좌표 파일에 그 이름의 기관이 없습니다.</small>'; };
+      qi.addEventListener('input',run); if(qi.value) run(); } }
   const figs=[].slice.call(host.querySelectorAll('.tmfig'));
   const hl=u=>{ figs.forEach(fg=>{ fg.classList.toggle('dim',!!u); fg.querySelectorAll('path.tma').forEach(p=>p.classList.toggle('on',!!u&&p.getAttribute('data-u')===u)); }); host.querySelectorAll('.tmtab tbody tr[data-u]').forEach(r=>r.classList.toggle('on',!!u&&r.getAttribute('data-u')===u)); };
   let pin=null, view=main.slice();   /* view = 지금 보이는 범위(자유 확대·이동) */
