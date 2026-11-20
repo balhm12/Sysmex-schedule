@@ -105,3 +105,38 @@ console.log('test_territory_map: 풍선말 위치 확인 통과');
 { const AL = eval('(' + /const MAP_ALIAS=(\{[^;]+\});/.exec(html)[1] + ')'); assert.deepStrictEqual(Object.keys(AL).filter(k => !keys.has(k)), [], '이름을 바로잡는 표의 시군구가 경계 자료에 없음'); assert.strictEqual(AL['인천 남구'][1], '미추홀구'); }
 assert.ok(/방문당 평균 \(분\)/.test(html) && !/<th class="num">지역 방문<\/th><th class="num">건당 평균/.test(html), '지도의 방문 평균은 「방문당 평균」(비교 지표 「건당 평균 시간」과 구분)');
 console.log('test_territory_map: 검토 반영 확인 통과');
+
+/* 2026-11-20 사용자 지적 「덕양구 병원이 일산동구에」 — 기관 위치 찾기 표(fsg-kpi-map-loc.json)로 시·군·구를 찾는지 실제로 돌려 본다 */
+{
+  const grab = (a, b) => { const x = html.indexOf(a), y = html.indexOf(b, x); assert.ok(x > 0 && y > x, '코드를 찾지 못함: ' + a); return html.slice(x, y); };
+  const lib = new Function(/const MAP_SD=\{[^\n]*\n/.exec(html)[0] + /const MAP_ALIAS=[^\n]*\n/.exec(html)[0] +
+    grab('function kmapDecode(t){', '/* 기관 위치 찾기 표') + grab('const MAP_LOC_URL=', 'let _mapC=null;') + '; return {kmapDecode, kmapFind, kmapLocDecode, kmapLocate};')();
+  const K = lib.kmapDecode(topo), locRaw = JSON.parse(fs.readFileSync(path.join(root, 'fsg-kpi-map-loc.json'), 'utf8')), L = lib.kmapLocDecode(locRaw, K);
+  assert.ok(fs.statSync(path.join(root, 'fsg-kpi-map-loc.json')).size < 100000, '찾기 표는 100KB 아래로');
+  assert.ok(L.d.length / 3 > 3400 && L.g.length / 3 > 240, '행정동·시군구 중심이 다 있어야 함');
+  assert.ok(L.gi.every(x => x >= 0), '찾기 표의 시군구 번호가 모두 지도에 있어야 함');
+  const name = gi => gi >= 0 ? K.G[gi].sd + ' ' + K.G[gi].name : String(gi);
+  /* 동 중심 → 그 동의 시군구. 줄인 경계로 찾으면 다른 곳이 나오는 동이 있다(그래서 표를 쓴다) */
+  let diff = 0; for (let i = 0; i < L.d.length; i += 3) { const p = [L.d[i] / 1e4, L.d[i + 1] / 1e4, '동'], want = L.gi[L.d[i + 2]];
+    assert.strictEqual(lib.kmapLocate(K, L, p), want, '동 중심을 표대로 찾아야 함: ' + p); if (lib.kmapFind(K, p[0], p[1]) !== want) diff++; }
+  assert.ok(diff >= 30, '줄인 경계만으로는 틀리는 동이 있어야 표를 쓰는 의미가 있음: ' + diff);
+  /* 시군구 중심(정밀도 「구」) → 그 시군구. 시 중심과 헷갈리지 않아야 함 */
+  for (let i = 0; i < L.g.length; i += 3) assert.strictEqual(lib.kmapLocate(K, L, [L.g[i] / 1e4, L.g[i + 1] / 1e4, '구']), L.gi[L.g[i + 2]], '시군구 중심을 그 시군구로');
+  /* 시 중심(주소에 구가 없음) → 어느 구인지 모름. 예전 방식은 고양시 중심을 일산동구에 넣었다 */
+  const cities = L.c.map(c => c.city).sort();
+  assert.deepStrictEqual(cities, ['고양시', '성남시', '수원시', '안산시', '안양시', '용인시', '전주시', '창원시', '천안시', '청주시', '포항시'].sort());
+  for (const c of L.c) { const r = lib.kmapLocate(K, L, [c.lat, c.lon, '구']); assert.ok(r && r.city === c.city && r.gs.length > 1, c.city + ' 중심은 구를 모르는 기관'); }
+  const gy = L.c.find(c => c.city === '고양시');
+  assert.strictEqual(name(lib.kmapFind(K, gy.lat, gy.lon)), '경기 고양시일산동구', '예전 방식이 틀리던 곳(재현)');
+  assert.deepStrictEqual(lib.kmapLocate(K, L, [gy.lat, gy.lon, '구']).gs.map(name).sort(), ['경기 고양시덕양구', '경기 고양시일산동구', '경기 고양시일산서구']);
+  /* 정밀도 「시」(좌표 파일을 새로 만들 때 구를 모르면 이렇게 표시) → 그 시의 구 전체 */
+  assert.strictEqual(lib.kmapLocate(K, L, [37.27, 127.01, '시']).city, '수원시');
+  /* 표에 없는 점(동 중심이 아닌 실제 위치) → 지도 경계로. 고양 화정동 근처 = 덕양구 */
+  assert.strictEqual(name(lib.kmapLocate(K, L, [37.6425, 126.8317, '동'])), '경기 고양시덕양구');
+  assert.strictEqual(name(lib.kmapLocate(K, null, [37.6425, 126.8317, '동'])), '경기 고양시덕양구', '표를 못 받으면 지도 경계로');
+  /* 화면: 구를 모르는 기관은 방문 표·원에서 빼고, 담당 팀 다수결에는 그 시의 모든 구에 넣는다 */
+  assert.ok(/if\(gi&&gi\.gs\)\{[\s\S]{0,400}?gi\.gs\.forEach\(x=>\{ const o=vote\[x\]/.test(html), '시 중심 기관의 방문은 그 시 모든 구의 다수결에');
+  assert.ok(/구를 모르는 기관 '\+fmt\(unkL\.length\)\+'곳/.test(html), '구를 모르는 기관 목록');
+  assert.ok(/GEO\?loadKLoc\(K\)/.test(html), '찾기 표는 좌표가 있는 화면에서만 받는다');
+  console.log('test_territory_map: 기관 위치 찾기 표 확인 통과 (줄인 경계로 틀리던 동 ' + diff + '곳)');
+}
