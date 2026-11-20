@@ -83,8 +83,16 @@ console.log('test_territory_map: 자유 확대·이동 확인 통과');
 
 /* 지역 이름·대표 기관 (2026-11-20 「지역이름과 대표 병원 이름도」) — 기관은 이름만, 위치는 찍지 않는다 */
 assert.ok(/const r=\{unit, vis, acc, voted, guess, located,/.test(html) && /repOf=gi=>\{/.test(html), '시군구별 기관 방문 건수와 대표 기관');
-assert.ok(/class="tmlb sm tmsg"/.test(html) && /on&&sz>=52&&/.test(html) && /rp=sz>=104&&/.test(html), '확대했을 때만 시군구 이름, 더 크면 대표 기관');
+assert.ok(/class="tmlb sm tmsg"/.test(html) && /const ok=on&&sz>=52&&/.test(html) && /el\.classList\.toggle\('rp',sz>=104\)/.test(html), '확대했을 때만 시군구 이름, 더 크면 대표 기관');
 assert.ok(/'<span class="tmrp">방문 많은 기관<\/span>'/.test(html) && /repOf\(gi\)\.slice\(0,3\)/.test(html), '풍선말에 방문 많은 기관 3곳');
 assert.ok(!/GEO\.acct\[[^\]]+\]\[[01]\][^\n]{0,80}<circle/.test(code), '기관 좌표로 점을 찍지 않는다');
 assert.ok(/disp:name\.replace\(/.test(html), '화면용 시군구 이름');
 console.log('test_territory_map: 지역 이름·대표 기관 확인 통과');
+
+/* 이름표 겹침 (2026-11-20 「이름표 겹치는 것 해결」) — 글자 수 어림이 아니라 실제로 그려진 칸을 재서 정한다 */
+assert.ok(/const put=labEls\.filter\(el=>el\.style\.display!=='none'\)\.map\(el=>el\.getBoundingClientRect\(\)\)\.concat\(\[zbt\.getBoundingClientRect\(\)\]\)/.test(html), '사무소 이름표·확대 단추가 먼저 자리를 잡는다');
+assert.ok(/circ\.forEach\(c=>\{ const q=c\.getBoundingClientRect\(\);[^\n]*put\.push/.test(html), '방문 원 위에도 이름표를 놓지 않는다');
+assert.ok(/slim\.forEach\(el=>el\.classList\.remove\('rp'\)\); drop\.forEach/.test(html), '닿으면 대표 기관 줄을 빼 보고, 그래도 닿으면 감춘다');
+assert.ok(/done=\[zbt\.getBoundingClientRect\(\)\]/.test(html), '사무소 이름표는 확대 단추·다른 사무소 이름표와 닿으면 아래로 내린다');
+assert.ok(!/nb=el\.firstChild\.textContent\.length/.test(html), '글자 수로 어림하던 옛 방식이 남아 있으면 안 됨');
+console.log('test_territory_map: 이름표 겹침 확인 통과');

@@ -4158,7 +4158,7 @@ function terrMapPaint(host, cfg, K){
     h+='</g><g fill="none" stroke-linejoin="round" stroke-linecap="round" pointer-events="none"><path d="'+coast+'" stroke="var(--tmcoast)" stroke-width=".7" vector-effect="non-scaling-stroke"/>'+
       (isMain?'<path class="tmsgl" d="'+sgl+'" stroke="var(--tmline)" stroke-width=".6" stroke-opacity=".45" vector-effect="non-scaling-stroke"/>':'')+'<path d="'+sdl+'" stroke="var(--tmline)" stroke-width=".8" stroke-opacity=".6" vector-effect="non-scaling-stroke"/><path d="'+ul+'" stroke="var(--tmline)" stroke-width="2.2" vector-effect="non-scaling-stroke"/></g>';
     if(bub){ h+='<g>'; order.forEach(x=>{ const q=K.G[x[0]].p, r=(1.3+Math.sqrt(x[1]/nMax)*7.2)*rk;
-        h+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+r.toFixed(2)+'" data-r="'+r.toFixed(2)+'" fill="var(--tmdot)" fill-opacity=".78" stroke="var(--tmring)" stroke-width=".9" vector-effect="non-scaling-stroke"/>'; }); h+='</g>'; }
+        h+='<circle data-g="'+x[0]+'" cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+r.toFixed(2)+'" data-r="'+r.toFixed(2)+'" fill="var(--tmdot)" fill-opacity=".78" stroke="var(--tmring)" stroke-width=".9" vector-effect="non-scaling-stroke"/>'; }); h+='</g>'; }
     return h+'</svg>'; };
   const full=[0,0,K.W,K.H], main=(Z&&zoomBox())||full, zoomed=main!==full, pos=(q,box)=>'left:'+((q[0]-box[0])/box[2]*100).toFixed(2)+'%;top:'+((q[1]-box[1])/box[3]*100).toFixed(2)+'%';
   /* 이름표 위치 = 그 단위 시군구 중심의 넓이 가중 평균(제주 제외). inBox 를 주면 그 안에 든 시군구만 */
@@ -4168,7 +4168,7 @@ function terrMapPaint(host, cfg, K){
   const _rep={}, repOf=gi=>{ if(_rep[gi]) return _rep[gi]; const A=D.acc[gi]||{}, L=[]; for(const a in A){ let n=0; for(const mk in A[a]){ if(!cfg.months||cfg.months.indexOf(mk)>=0) n+=A[a][mk]; } if(n) L.push([a,n]); } L.sort((x,y)=>y[1]-x[1]||(x[0]<y[0]?-1:1)); return (_rep[gi]=L); };
   const cut=(t,n)=>{ t=String(t||''); return t.length>n?t.slice(0,n-1)+'…':t; };
   /* 시군구 이름표 — 확대해서 그 시군구가 화면에서 충분히 커졌을 때만 보인다(apply 가 정함). 더 커지면 대표 기관 한 곳도 같이 */
-  let sgLabs=''; K.G.forEach((g,gi)=>{ if(!g.d||!g.area||!inTeam(gi)) return; const R=repOf(gi)[0];   /* 팀을 확대했을 때 옆 팀(흐린 곳)에는 이름을 달지 않는다 */ sgLabs+='<span class="tmlb sm tmsg" data-x="'+g.p[0].toFixed(2)+'" data-y="'+g.p[1].toFixed(2)+'" data-s="'+(Math.sqrt(g.area)*K.KY).toFixed(1)+'" style="display:none"><b>'+esc((/구$/.test(g.name)&&g.name.indexOf('시')<0?g.sd+' ':'')+g.disp)+'</b>'+(R?'<em>'+esc(cut(R[0],11))+'</em>':'')+'</span>'; });
+  let sgLabs=''; K.G.forEach((g,gi)=>{ if(!g.d||!g.area||!inTeam(gi)) return; const R=repOf(gi)[0];   /* 팀을 확대했을 때 옆 팀(흐린 곳)에는 이름을 달지 않는다 */ sgLabs+='<span class="tmlb sm tmsg" data-g="'+gi+'" data-x="'+g.p[0].toFixed(2)+'" data-y="'+g.p[1].toFixed(2)+'" data-s="'+(Math.sqrt(g.area)*K.KY).toFixed(1)+'" style="display:none"><b>'+esc((/구$/.test(g.name)&&g.name.indexOf('시')<0?g.sd+' ':'')+g.disp)+'</b>'+(R?'<em>'+esc(cut(R[0],11))+'</em>':'')+'</span>'; });
   const lab=(q,cls,html)=>'<span class="tmlb'+cls+'" data-x="'+q[0].toFixed(2)+'" data-y="'+q[1].toFixed(2)+'" style="'+pos(q,main)+'">'+html+'</span>';
   const cen=cenOf(zoomed?main:null); let labs='';
   cfg.units.forEach(u=>{ const o=cen[u.k]; if(!o||!o.a) return; const mine=!zoomed||teamOf(u.k)===Z;   /* 확대했을 때 옆 팀(흐리게 칠한 곳)에는 이름표를 달지 않는다 — 원·이름표와 겹친다 */
@@ -4221,19 +4221,29 @@ function terrMapPaint(host, cfg, K){
   /* 자유 확대·이동(2026-11-20 사용자 요청 「지도 확대 기능 — 모바일은 오므리고 펴기」) — 지금 「보기 범위」(main) 안에서 그림 범위(viewBox)만 바꾼다. 다시 그리지 않으므로 빠르다.
      휴대폰: 두 손가락으로 오므리고 펴기(확대·이동), 확대한 뒤에는 한 손가락으로 이동. 확대하지 않았을 때 한 손가락은 화면 스크롤 그대로(지도에 갇히지 않게).
      PC: 단추, Ctrl+휠(트랙패드 오므리기 포함), 두 번 누르기, 확대한 뒤 끌어서 이동. 그냥 휠은 화면 스크롤. 이름표·원 크기는 화면 기준으로 유지 */
-  const mfig=host.querySelector('.tmmain'), msvg=mfig.querySelector('svg'), labEls=[].slice.call(mfig.querySelectorAll('.tmlb:not(.tmsg)')), sgEls=[].slice.call(mfig.querySelectorAll('.tmsg')).sort((a,b)=>+b.getAttribute('data-s')-+a.getAttribute('data-s')), circ=[].slice.call(msvg.querySelectorAll('circle')), zbt=mfig.querySelector('.tmzb');
+  const mfig=host.querySelector('.tmmain'), msvg=mfig.querySelector('svg'), labEls=[].slice.call(mfig.querySelectorAll('.tmlb:not(.tmsg)')), sgEls=[].slice.call(mfig.querySelectorAll('.tmsg')).sort((a,b)=>+b.getAttribute('data-s')-+a.getAttribute('data-s')), circ=[].slice.call(msvg.querySelectorAll('circle')), zbt=mfig.querySelector('.tmzb'), cR={}; circ.forEach(c=>{ cR[c.getAttribute('data-g')]=+c.getAttribute('data-r'); });
   const vkey=Z+'|'+main.map(v=>Math.round(v)).join(','), minW=Math.max(K.W/14,main[2]/8); let moved=false;
   const clamp=()=>{ view[2]=Math.max(minW,Math.min(main[2],view[2])); view[3]=view[2]*main[3]/main[2]; view[0]=Math.max(main[0],Math.min(main[0]+main[2]-view[2],view[0])); view[1]=Math.max(main[1],Math.min(main[1]+main[3]-view[3],view[1])); };
   const apply=()=>{ const s=main[2]/view[2]; msvg.setAttribute('viewBox',view.map(v=>Math.round(v*100)/100).join(' '));
     labEls.forEach(el=>{ const x=+el.getAttribute('data-x'), y=+el.getAttribute('data-y'), zi=s>1.01, inb=zi?(x>=view[0]+view[2]*0.1&&x<=view[0]+view[2]*0.9&&y>=view[1]+view[3]*0.05&&y<=view[1]+view[3]*0.94):(x>=view[0]&&x<=view[0]+view[2]&&y>=view[1]&&y<=view[1]+view[3]+40);   /* 확대했을 때 가장자리에 걸친 이름표는 그림 밖으로 삐져나오므로 감춘다 */ el.style.display=inb?'':'none'; if(inb){ el.style.left=((x-view[0])/view[2]*100).toFixed(2)+'%'; el.style.top=((y-view[1])/view[3]*100).toFixed(2)+'%'; } });
     circ.forEach(c=>c.setAttribute('r',(+c.getAttribute('data-r')/s).toFixed(2)));
-    /* 시군구 이름표: 화면에서 52px 넘게 커진 시군구만 이름, 104px 넘으면 대표 기관도. 사무소 이름표와 겹치는 자리는 뺀다. 전국을 확대 없이 볼 때는 보이지 않는다 */
-    { const rw=msvg.getBoundingClientRect(), ppu=rw.width/view[2], on=zoomed||s>1.2, big=[]; labEls.forEach(el=>{ if(el.style.display!=='none'&&!el.classList.contains('sm')) big.push([(+el.getAttribute('data-x')-view[0])*ppu,(+el.getAttribute('data-y')-view[1])*ppu]); });
-      const put=[]; sgEls.forEach(el=>{ const x=+el.getAttribute('data-x'), y=+el.getAttribute('data-y'), sz=+el.getAttribute('data-s')*ppu, px=(x-view[0])*ppu, py=(y-view[1])*ppu;
-        let ok=on&&sz>=52&&x>=view[0]+view[2]*0.08&&x<=view[0]+view[2]*0.92&&y>=view[1]+view[3]*0.04&&y<=view[1]+view[3]*0.93&&!big.some(b=>Math.abs(b[0]-px)<64&&py>b[1]-34&&py<b[1]+26);
-        if(ok){ const rp=sz>=104&&!!el.querySelector('em'), nb=el.firstChild.textContent.length, ne=rp?el.querySelector('em').textContent.length:0, w=Math.max(nb,ne)*11.5+6, h=rp?31:17, cy=py+5+h/2;   /* 이름표 크기 어림(글자 수 × 글자 폭) */
-          if(put.some(q=>Math.abs(q[0]-px)<(q[2]+w)/2+3&&Math.abs(q[1]-cy)<(q[3]+h)/2+2)) ok=false; else { put.push([px,cy,w,h]); el.classList.toggle('rp',rp); } }
-        el.style.display=ok?'':'none'; if(ok){ el.style.left=(px/rw.width*100).toFixed(2)+'%'; el.style.top=(py/rw.height*100).toFixed(2)+'%'; } }); }
+    { const bigL=labEls.filter(el=>el.style.display!=='none'&&!el.classList.contains('sm')); bigL.forEach(el=>{ el.style.marginTop=''; }); const br=bigL.map(el=>el.getBoundingClientRect());   /* 사무소 이름표끼리, 또는 확대 단추와 닿으면 닿지 않을 만큼 아래로 내린다 */
+      const ord=br.map((r,i)=>i).sort((a,b)=>br[a].top-br[b].top), done=[zbt.getBoundingClientRect()]; ord.forEach(i=>{ let r=br[i], dy=0; done.forEach(q=>{ if(r.left<q.right+2&&q.left<r.right+2&&r.top+dy<q.bottom+2&&q.top<r.bottom+dy+2) dy=Math.max(dy,q.bottom+3-r.top); }); if(dy){ bigL[i].style.marginTop=Math.round(dy)+'px'; } done.push({left:r.left,right:r.right,top:r.top+dy,bottom:r.bottom+dy}); }); }
+    /* 시군구 이름표: 화면에서 52px 넘게 커진 시군구만 이름, 104px 넘으면 대표 기관도. 전국을 확대 없이 볼 때는 보이지 않는다.
+       겹침(2026-11-20 사용자 요청 「이름표 겹치는 것 해결」): 어림하지 않고 실제로 그려진 칸을 잰다 — 사무소 이름표·확대 단추가 먼저 자리를 잡고, 시군구 이름표는 큰 시군구부터 놓되
+       이미 놓인 칸과 닿으면 대표 기관 줄을 빼 보고 그래도 닿으면 감춘다. 방문 원이 있으면 이름표를 원 아래로 내린다. 읽기(칸 재기)와 쓰기(감추기)를 나눠 화면 계산을 한 번만 하게 한다 */
+    { const rw=msvg.getBoundingClientRect(), ppu=rw.width/view[2], on=zoomed||s>1.2, cand=[];
+      sgEls.forEach(el=>{ const x=+el.getAttribute('data-x'), y=+el.getAttribute('data-y'), sz=+el.getAttribute('data-s')*ppu;
+        const ok=on&&sz>=52&&x>=view[0]+view[2]*0.08&&x<=view[0]+view[2]*0.92&&y>=view[1]+view[3]*0.04&&y<=view[1]+view[3]*0.93;
+        if(!ok){ el.style.display='none'; return; }
+        const cr=cR[el.getAttribute('data-g')]; el.style.display=''; el.style.left=((x-view[0])/view[2]*100).toFixed(2)+'%'; el.style.top=((y-view[1])/view[3]*100).toFixed(2)+'%';
+        el.style.transform='translate(-50%,'+(cr?Math.round(cr/s*ppu)+3:5)+'px)'; el.classList.toggle('rp',sz>=104); cand.push(el); });
+      const hit=(a,b)=>a.left<b.right+3&&b.left<a.right+3&&a.top<b.bottom+2&&b.top<a.bottom+2;
+      const put=labEls.filter(el=>el.style.display!=='none').map(el=>el.getBoundingClientRect()).concat([zbt.getBoundingClientRect()]);
+      circ.forEach(c=>{ const q=c.getBoundingClientRect(); if(q.right>rw.left&&q.left<rw.right&&q.bottom>rw.top&&q.top<rw.bottom) put.push({left:q.left+1,right:q.right-1,top:q.top+1,bottom:q.bottom-1}); });   /* 방문 원(자기 원은 이름표를 그 아래로 내렸으므로 닿지 않는다) */
+      const rc=cand.map(el=>[el.getBoundingClientRect(), el.classList.contains('rp')&&el.querySelector('em')?el.firstChild.getBoundingClientRect():null]), drop=[], slim=[];
+      cand.forEach((el,i)=>{ const full=rc[i][0], name=rc[i][1]; if(!put.some(q=>hit(full,q))){ put.push(full); return; } if(name&&!put.some(q=>hit(name,q))){ put.push(name); slim.push(el); return; } drop.push(el); });
+      slim.forEach(el=>el.classList.remove('rp')); drop.forEach(el=>{ el.style.display='none'; }); }
     mfig.classList.toggle('zin',s>1.01); mfig.classList.toggle('zdet',zoomed||s>=1.8); hide();
     zbt.querySelector('[data-a=in]').disabled=view[2]<=minW*1.001; zbt.querySelector('[data-a=out]').disabled=zbt.querySelector('[data-a=reset]').disabled=s<=1.01;
     host.__tmv={k:vkey,v:view.slice()}; };
