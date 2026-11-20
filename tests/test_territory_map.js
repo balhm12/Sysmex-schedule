@@ -71,3 +71,12 @@ assert.ok(/function mapZoomOf\(st,cur\)\{ return st&&st\.f===cur\?st\.z:cur; \}/
 assert.ok(/zoom:mapZoomOf\(ORG\.mapZ,/.test(html) && /zoom:mapZoomOf\(OV\.mapZ,team\|\|''\)/.test(html) && /zoom:window\.mapZoomOf\(state\.tmZ\[tab\], cur\)/.test(html), '세 화면 모두');
 assert.ok(/\(zoomed\?'':zoom\)\+top/.test(html), '확대했을 때 수도권 확대 그림은 뺀다');
 console.log('test_territory_map: 팀별 확대 확인 통과');
+
+/* 지도 자유 확대·이동 (2026-11-20 「지도 확대 기능 — 모바일은 오므리고 펴기」) */
+assert.ok(/class="tmzb" role="group" aria-label="지도 확대"/.test(html) && /data-a="in"/.test(html) && /data-a="reset"/.test(html), '확대 단추');
+assert.ok(/msvg\.addEventListener\('touchmove',/.test(html) && /tg\.w\*tg\.d\/t\.d/.test(html), '두 손가락 오므리고 펴기');
+assert.ok(/else if\(e\.touches\.length===1&&view\[2\]<main\[2\]\*0\.995\)/.test(html), '확대하지 않았을 때 한 손가락은 화면 스크롤(지도가 가로채지 않음)');
+assert.ok(/if\(!e\.ctrlKey&&!e\.metaKey\) return; e\.preventDefault\(\);/.test(html), '그냥 휠은 화면 스크롤, Ctrl+휠만 확대');
+assert.ok(/if\(moved&&msvg\.contains\(e\.target\)\)/.test(html), '끈 뒤의 누름만 무시(단추 누름은 삼키지 않음)');
+assert.ok(/\.tmmain svg\{touch-action:pan-x pan-y\}/.test(html) && /\.tmmain\.zin svg\{touch-action:none\}/.test(html), '터치 동작 설정');
+console.log('test_territory_map: 자유 확대·이동 확인 통과');

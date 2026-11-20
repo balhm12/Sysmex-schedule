@@ -335,6 +335,14 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 :is(#prod,#ogMapCard,#ovMapCard) .tmfig.dim path.tma:not(.on){opacity:.3}
 :is(#prod,#ogMapCard,#ovMapCard) .tmfig path.tma.out{opacity:.38}:is(#prod,#ogMapCard,#ovMapCard) .tmzg{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px 10px;max-width:100%}
 :is(#prod,#ogMapCard,#ovMapCard) .tmsub.one{grid-template-columns:minmax(0,1fr)}
+/* 자유 확대·이동(2026-11-20) */
+:is(#prod,#ogMapCard,#ovMapCard) .tmcol{min-width:0;width:100%;max-width:390px}:is(#prod,#ogMapCard,#ovMapCard) .tmmain svg{touch-action:pan-x pan-y}
+:is(#prod,#ogMapCard,#ovMapCard) .tmmain.zin svg{touch-action:none}:is(#prod,#ogMapCard,#ovMapCard) .tmmain.zin path.tma{cursor:grab}
+:is(#prod,#ogMapCard,#ovMapCard) .tmfig .tmsgl{display:none}:is(#prod,#ogMapCard,#ovMapCard) .tmfig.zdet .tmsgl{display:inline}
+:is(#prod,#ogMapCard,#ovMapCard) .tmzb{position:absolute;top:6px;right:6px;display:flex;gap:4px;z-index:3}
+:is(#prod,#ogMapCard,#ovMapCard) .tmzb button{appearance:none;min-width:34px;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font:inherit;font-size:17px;font-weight:700;line-height:1;cursor:pointer}
+:is(#prod,#ogMapCard,#ovMapCard) .tmzb button[data-a=reset]{font-size:12px;font-weight:600}:is(#prod,#ogMapCard,#ovMapCard) .tmzb button:disabled{opacity:.4;cursor:default}
+:is(#prod,#ogMapCard,#ovMapCard) .tmhint{margin:0 0 12px;font-size:11.5px;line-height:1.5;color:var(--muted)}
 :is(#prod,#ogMapCard,#ovMapCard) .tmfig circle{pointer-events:none}
 :is(#prod,#ogMapCard,#ovMapCard) .tmlb{position:absolute;transform:translate(-50%,-50%);pointer-events:none;background:var(--surface);border:1px solid var(--tmcoast);padding:2px 8px 3px;font-size:12px;line-height:1.3;text-align:center;white-space:nowrap;color:var(--text)}
 :is(#prod,#ogMapCard,#ovMapCard) .tmlb b{display:block;font-weight:700}
@@ -361,7 +369,7 @@ footer{font-size:12px;color:var(--muted);margin-top:22px}
 :is(#prod,#ogMapCard,#ovMapCard) .tmsub h4 span{font-size:12px;font-weight:500;color:var(--muted);margin-left:6px}
 :is(#prod,#ogMapCard,#ovMapCard) .tmnote{margin:14px 0 0;font-size:12.5px;line-height:1.65;color:var(--text-muted)}:is(#prod,#ogMapCard,#ovMapCard) .tmnote b{color:var(--text-secondary)}
 @media (max-width:1100px){:is(#prod,#ogMapCard,#ovMapCard) .tmsub{grid-template-columns:minmax(0,1fr)}:is(#prod,#ogMapCard,#ovMapCard) .tmzoom{max-width:300px}}
-@media (max-width:860px){:is(#prod,#ogMapCard,#ovMapCard) .tmzseg button{min-height:40px}:is(#prod,#ogMapCard,#ovMapCard) .tmbody{grid-template-columns:minmax(0,1fr);gap:16px}:is(#prod,#ogMapCard,#ovMapCard) .tmsub{grid-template-columns:minmax(0,1fr)}:is(#prod,#ogMapCard,#ovMapCard) table.data-table.tmtab th,:is(#prod,#ogMapCard,#ovMapCard) table.data-table.tmtab td{padding-left:5px;padding-right:5px}:is(#prod,#ogMapCard,#ovMapCard) .tmsw{margin-right:5px}:is(#prod,#ogMapCard,#ovMapCard) .tmmain{margin:0 auto}:is(#prod,#ogMapCard,#ovMapCard) .tmzoom{max-width:none}:is(#prod,#ogMapCard,#ovMapCard) .tmctl .segmented button{min-height:40px}:is(#prod,#ogMapCard,#ovMapCard) .tmchk{min-height:44px}}
+@media (max-width:860px){:is(#prod,#ogMapCard,#ovMapCard) .tmcol{margin:0 auto}:is(#prod,#ogMapCard,#ovMapCard) .tmzb button{min-width:44px;height:44px}:is(#prod,#ogMapCard,#ovMapCard) .tmzseg button{min-height:40px}:is(#prod,#ogMapCard,#ovMapCard) .tmbody{grid-template-columns:minmax(0,1fr);gap:16px}:is(#prod,#ogMapCard,#ovMapCard) .tmsub{grid-template-columns:minmax(0,1fr)}:is(#prod,#ogMapCard,#ovMapCard) table.data-table.tmtab th,:is(#prod,#ogMapCard,#ovMapCard) table.data-table.tmtab td{padding-left:5px;padding-right:5px}:is(#prod,#ogMapCard,#ovMapCard) .tmsw{margin-right:5px}:is(#prod,#ogMapCard,#ovMapCard) .tmmain{margin:0 auto 16px}:is(#prod,#ogMapCard,#ovMapCard) .tmzoom{max-width:none}:is(#prod,#ogMapCard,#ovMapCard) .tmctl .segmented button{min-height:40px}:is(#prod,#ogMapCard,#ovMapCard) .tmchk{min-height:44px}}
 /* Organization 화면의 지도 카드(#ogMapCard, 2026-11-19 「지도를 조직·사무소 쪽에」) — #prod 밖이라 표·단추 기본 모양을 따로 준다 */
 :is(#ogMapCard,#ovMapCard) .tmap{padding:4px 0 0}:is(#ogMapCard,#ovMapCard) .tmctl .control-label{font-size:12px;color:var(--muted);font-weight:600}
 :is(#ogMapCard,#ovMapCard) .tmtab{border-collapse:collapse;font-size:13px}:is(#ogMapCard,#ovMapCard) .tmtab th{text-align:left;padding:8px 10px;font-size:12.5px;font-weight:700;color:var(--primary);background:var(--tint);border-bottom:1px solid var(--muted)}
@@ -4140,23 +4148,24 @@ function terrMapPaint(host, cfg, K){
     return [Math.max(0,Math.min(K.W-w,cx-w/2)), Math.max(0,Math.min(K.H-h,cy-h/2)), w, h]; };
   const order=K.G.map((g,gi)=>[gi,ns[gi]]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
   /* 같은 그림을 전국·수도권 두 번 쓴다. box=[x,y,w,h](그림 좌표), rk = 원 크기 배율. 선 굵기는 화면 기준(non-scaling-stroke) */
-  const draw=(box,rk,label,detail)=>{ let h='<svg viewBox="'+box.map(v=>Math.round(v*10)/10).join(' ')+'" role="img" aria-label="'+esc(label)+'"><g>';
+  const draw=(box,rk,label,detail,isMain)=>{ let h='<svg viewBox="'+box.map(v=>Math.round(v*10)/10).join(' ')+'" role="img" aria-label="'+esc(label)+'"><g>';
     K.G.forEach((g,gi)=>{ if(!g.d) return; const u=D.unit[gi], c=u?colOf(u):NONE; h+='<path class="tma'+(detail&&!inTeam(gi)?' out':'')+'" data-g="'+gi+'" data-u="'+esc(u||'')+'" d="'+g.d+'" fill="'+c+'" stroke="'+c+'" stroke-width=".7" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'; });
     h+='</g><g fill="none" stroke-linejoin="round" stroke-linecap="round" pointer-events="none"><path d="'+coast+'" stroke="var(--tmcoast)" stroke-width=".7" vector-effect="non-scaling-stroke"/>'+
-      (detail?'<path d="'+sgl+'" stroke="var(--tmline)" stroke-width=".6" stroke-opacity=".45" vector-effect="non-scaling-stroke"/>':'')+'<path d="'+sdl+'" stroke="var(--tmline)" stroke-width=".8" stroke-opacity=".6" vector-effect="non-scaling-stroke"/><path d="'+ul+'" stroke="var(--tmline)" stroke-width="2.2" vector-effect="non-scaling-stroke"/></g>';
+      (isMain?'<path class="tmsgl" d="'+sgl+'" stroke="var(--tmline)" stroke-width=".6" stroke-opacity=".45" vector-effect="non-scaling-stroke"/>':'')+'<path d="'+sdl+'" stroke="var(--tmline)" stroke-width=".8" stroke-opacity=".6" vector-effect="non-scaling-stroke"/><path d="'+ul+'" stroke="var(--tmline)" stroke-width="2.2" vector-effect="non-scaling-stroke"/></g>';
     if(bub){ h+='<g>'; order.forEach(x=>{ const q=K.G[x[0]].p, r=(1.3+Math.sqrt(x[1]/nMax)*7.2)*rk;
-        h+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+r.toFixed(2)+'" fill="var(--tmdot)" fill-opacity=".78" stroke="var(--tmring)" stroke-width=".9" vector-effect="non-scaling-stroke"/>'; }); h+='</g>'; }
+        h+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="'+r.toFixed(2)+'" data-r="'+r.toFixed(2)+'" fill="var(--tmdot)" fill-opacity=".78" stroke="var(--tmring)" stroke-width=".9" vector-effect="non-scaling-stroke"/>'; }); h+='</g>'; }
     return h+'</svg>'; };
   const full=[0,0,K.W,K.H], main=(Z&&zoomBox())||full, zoomed=main!==full, pos=(q,box)=>'left:'+((q[0]-box[0])/box[2]*100).toFixed(2)+'%;top:'+((q[1]-box[1])/box[3]*100).toFixed(2)+'%';
   /* 이름표 위치 = 그 단위 시군구 중심의 넓이 가중 평균(제주 제외). inBox 를 주면 그 안에 든 시군구만 */
   const cenOf=inBox=>{ const cen={}; K.G.forEach((g,gi)=>{ if(g.sd==='제주'||!g.d) return; if(inBox&&(g.p[0]<inBox[0]||g.p[0]>inBox[0]+inBox[2]||g.p[1]<inBox[1]||g.p[1]>inBox[1]+inBox[3])) return;
       const u=D.unit[gi]||'__shared', o=cen[u]||(cen[u]={a:0,x:0,y:0}); o.a+=g.area; o.x+=g.p[0]*g.area; o.y+=g.p[1]*g.area; }); return cen; };
+  const lab=(q,cls,html)=>'<span class="tmlb'+cls+'" data-x="'+q[0].toFixed(2)+'" data-y="'+q[1].toFixed(2)+'" style="'+pos(q,main)+'">'+html+'</span>';
   const cen=cenOf(zoomed?main:null); let labs='';
   cfg.units.forEach(u=>{ const o=cen[u.k]; if(!o||!o.a) return; const mine=!zoomed||teamOf(u.k)===Z;   /* 확대했을 때 옆 팀(흐리게 칠한 곳)에는 이름표를 달지 않는다 — 원·이름표와 겹친다 */
-    if(mine) labs+='<span class="tmlb" style="'+pos([o.x/o.a,o.y/o.a],main)+'"><b>'+esc(u.short)+'</b><i>'+f(M.val[u.k])+uv(M.val[u.k])+'</i></span>'; });
-  if(cen.__shared&&cen.__shared.a){ const o=cen.__shared; labs+='<span class="tmlb sm" style="'+pos([o.x/o.a,o.y/o.a],main)+'">서울·경기<br>WEST·EAST</span>'; }
+    if(mine) labs+=lab([o.x/o.a,o.y/o.a],'','<b>'+esc(u.short)+'</b><i>'+f(M.val[u.k])+uv(M.val[u.k])+'</i>'); });
+  if(cen.__shared&&cen.__shared.a){ const o=cen.__shared; labs+=lab([o.x/o.a,o.y/o.a],' sm','서울·경기<br>WEST·EAST'); }
   const jj=zoomed?[]:K.G.filter(g=>g.sd==='제주'); if(jj.length){ const ju=D.unit[K.G.indexOf(jj[0])]; let a=0,x=0,y=0; jj.forEach(g=>{ a+=g.area; x+=g.p[0]*g.area; y+=g.p[1]*g.area; });
-    labs+='<span class="tmlb sm" style="'+pos([x/a,y/a+27],full)+'">제주 · '+esc(short[ju]||'')+'</span>'; }
+    labs+=lab([x/a,y/a+27],' sm','제주 · '+esc(short[ju]||'')); }
   /* 수도권 확대 — 서울은 전국 그림에서 너무 작아 WEST·EAST 경계가 안 보인다 */
   const zb=[(126.52-K.LON0)*K.KX,(K.LAT1-37.86)*K.KY,(127.52-126.52)*K.KX,(37.86-37.18)*K.KY], zc=cenOf(zb); let zl='';
   ['FS WEST','FS EAST'].forEach(k=>{ const o=zc[k]; if(o&&o.a) zl+='<span class="tmlb sm tmzl" style="'+pos([o.x/o.a,o.y/o.a],zb)+'">'+esc(short[k]||k)+'</span>'; });
@@ -4177,12 +4186,14 @@ function terrMapPaint(host, cfg, K){
   host.innerHTML='<div class="tmctl"><span class="control-label">지도에 볼 값</span><div class="'+(cfg.segClass||'segmented')+' tmseg">'+cfg.metrics.map(m=>'<button type="button" data-k="'+m.k+'"'+(m.k===M.k?' class="active" aria-pressed="true"':' aria-pressed="false"')+'>'+esc(m.label)+'</button>').join('')+'</div>'+
     (teams.length>1?'<span class="tmzg"><span class="control-label">보기 범위</span><div class="'+(cfg.segClass||'segmented')+' tmzseg">'+[''].concat(teams).map(t=>'<button type="button" data-z="'+esc(t)+'"'+(t===Z?' class="active" aria-pressed="true"':' aria-pressed="false"')+'>'+(t?esc(t.replace(/^FS\s*/,'')):'전국')+'</button>').join('')+'</div></span>':'')+
     (hasVis?'<label class="tmchk"><input type="checkbox"'+(bub?' checked':'')+'>방문 분포 같이 보기</label>':'')+'</div>'+
-    '<div class="tmbody"><div class="tmfig tmmain">'+draw(main,zoomed?Math.max(0.2,main[2]/K.W*1.05):1,'사무소·팀 지도 — '+M.label+(Z?' · '+Z+' 확대':'')+'. 값은 옆 표와 같습니다.',zoomed)+labs+'<div class="tmtip" role="status"></div></div><div class="tmside">'+tab+leg+'<div class="tmsub'+(zoomed?' one':'')+'">'+(zoomed?'':zoom)+top+'</div></div></div>'+note;
+    '<div class="tmbody"><div class="tmcol"><div class="tmfig tmmain'+(zoomed?' zdet':'')+'">'+draw(main,zoomed?Math.max(0.2,main[2]/K.W*1.05):1,'사무소·팀 지도 — '+M.label+(Z?' · '+Z+' 확대':'')+'. 값은 옆 표와 같습니다.',zoomed,true)+labs+'<div class="tmtip" role="status"></div>'+
+      '<div class="tmzb" role="group" aria-label="지도 확대"><button type="button" data-a="in" aria-label="확대">+</button><button type="button" data-a="out" aria-label="축소">−</button><button type="button" data-a="reset">원래대로</button></div></div>'+
+      '<p class="tmhint">확대: 단추 · 두 손가락으로 오므리고 펴기 · Ctrl+휠. 확대한 뒤에는 끌어서 옮깁니다.</p></div><div class="tmside">'+tab+leg+'<div class="tmsub'+(zoomed?' one':'')+'">'+(zoomed?'':zoom)+top+'</div></div></div>'+note;
   const figs=[].slice.call(host.querySelectorAll('.tmfig'));
   const hl=u=>{ figs.forEach(fg=>{ fg.classList.toggle('dim',!!u); fg.querySelectorAll('path.tma').forEach(p=>p.classList.toggle('on',!!u&&p.getAttribute('data-u')===u)); }); host.querySelectorAll('.tmtab tbody tr[data-u]').forEach(r=>r.classList.toggle('on',!!u&&r.getAttribute('data-u')===u)); };
-  let pin=null;
+  let pin=null, view=main.slice();   /* view = 지금 보이는 범위(자유 확대·이동) */
   const hide=()=>figs.forEach(fg=>{ fg.querySelector('.tmtip').style.display='none'; });
-  const show=(fg,gi)=>{ hide(); const g=K.G[gi], u=D.unit[gi], tip=fg.querySelector('.tmtip'), box=fg.classList.contains('tmz')?zb:main;
+  const show=(fg,gi)=>{ hide(); const g=K.G[gi], u=D.unit[gi], tip=fg.querySelector('.tmtip'), box=fg.classList.contains('tmz')?zb:view;
     if(g.p[0]<box[0]||g.p[0]>box[0]+box[2]||g.p[1]<box[1]||g.p[1]>box[1]+box[3]) return;
     tip.innerHTML='<b>'+esc(g.sd+' '+g.name)+'</b> · '+(u?esc(short[u]||u):'WEST·EAST')+(hasVis?'<br>방문 '+fmt(ns[gi])+'건'+(cs3[gi][2]?' · 건당 평균 '+av(cs3[gi])+'분':''):''); tip.setAttribute('style',pos(g.p,box)+';display:block'); };
   figs.forEach(fg=>{ fg.querySelectorAll('path.tma').forEach(p=>{ const gi=+p.getAttribute('data-g'), u=p.getAttribute('data-u');
@@ -4196,6 +4207,41 @@ function terrMapPaint(host, cfg, K){
   host.querySelectorAll('.tmseg button').forEach(b=>b.addEventListener('click',()=>{ if(cfg.onSel) cfg.onSel(b.getAttribute('data-k')); }));
   host.querySelectorAll('.tmzseg button').forEach(b=>b.addEventListener('click',()=>{ if(cfg.onZoom) cfg.onZoom(b.getAttribute('data-z')); }));
   const cb=host.querySelector('.tmchk input'); if(cb) cb.addEventListener('change',()=>{ if(cfg.onBub) cfg.onBub(cb.checked); });
+  /* 자유 확대·이동(2026-11-20 사용자 요청 「지도 확대 기능 — 모바일은 오므리고 펴기」) — 지금 「보기 범위」(main) 안에서 그림 범위(viewBox)만 바꾼다. 다시 그리지 않으므로 빠르다.
+     휴대폰: 두 손가락으로 오므리고 펴기(확대·이동), 확대한 뒤에는 한 손가락으로 이동. 확대하지 않았을 때 한 손가락은 화면 스크롤 그대로(지도에 갇히지 않게).
+     PC: 단추, Ctrl+휠(트랙패드 오므리기 포함), 두 번 누르기, 확대한 뒤 끌어서 이동. 그냥 휠은 화면 스크롤. 이름표·원 크기는 화면 기준으로 유지 */
+  const mfig=host.querySelector('.tmmain'), msvg=mfig.querySelector('svg'), labEls=[].slice.call(mfig.querySelectorAll('.tmlb')), circ=[].slice.call(msvg.querySelectorAll('circle')), zbt=mfig.querySelector('.tmzb');
+  const vkey=Z+'|'+main.map(v=>Math.round(v)).join(','), minW=Math.max(K.W/14,main[2]/8); let moved=false;
+  const clamp=()=>{ view[2]=Math.max(minW,Math.min(main[2],view[2])); view[3]=view[2]*main[3]/main[2]; view[0]=Math.max(main[0],Math.min(main[0]+main[2]-view[2],view[0])); view[1]=Math.max(main[1],Math.min(main[1]+main[3]-view[3],view[1])); };
+  const apply=()=>{ const s=main[2]/view[2]; msvg.setAttribute('viewBox',view.map(v=>Math.round(v*100)/100).join(' '));
+    labEls.forEach(el=>{ const x=+el.getAttribute('data-x'), y=+el.getAttribute('data-y'), zi=s>1.01, inb=zi?(x>=view[0]+view[2]*0.1&&x<=view[0]+view[2]*0.9&&y>=view[1]+view[3]*0.05&&y<=view[1]+view[3]*0.94):(x>=view[0]&&x<=view[0]+view[2]&&y>=view[1]&&y<=view[1]+view[3]+40);   /* 확대했을 때 가장자리에 걸친 이름표는 그림 밖으로 삐져나오므로 감춘다 */ el.style.display=inb?'':'none'; if(inb){ el.style.left=((x-view[0])/view[2]*100).toFixed(2)+'%'; el.style.top=((y-view[1])/view[3]*100).toFixed(2)+'%'; } });
+    circ.forEach(c=>c.setAttribute('r',(+c.getAttribute('data-r')/s).toFixed(2)));
+    mfig.classList.toggle('zin',s>1.01); mfig.classList.toggle('zdet',zoomed||s>=1.8); hide();
+    zbt.querySelector('[data-a=in]').disabled=view[2]<=minW*1.001; zbt.querySelector('[data-a=out]').disabled=zbt.querySelector('[data-a=reset]').disabled=s<=1.01;
+    host.__tmv={k:vkey,v:view.slice()}; };
+  const toMap=(cx,cy)=>{ const r=msvg.getBoundingClientRect(); return [view[0]+(cx-r.left)/r.width*view[2], view[1]+(cy-r.top)/r.height*view[3]]; };
+  const zoomAt=(fz,mx,my)=>{ const w=Math.max(minW,Math.min(main[2],view[2]/fz)), k=w/view[2]; view[0]=mx-(mx-view[0])*k; view[1]=my-(my-view[1])*k; view[2]=w; clamp(); apply(); };
+  if(host.__tmv&&host.__tmv.k===vkey){ view=host.__tmv.v.slice(); clamp(); }   /* 지표만 바꿔 다시 그릴 때는 보던 자리 그대로 */
+  apply();
+  zbt.querySelectorAll('button').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); const a=b.getAttribute('data-a'); if(a==='reset'){ view=main.slice(); apply(); } else zoomAt(a==='in'?1.6:1/1.6, view[0]+view[2]/2, view[1]+view[3]/2); }));
+  msvg.addEventListener('wheel',e=>{ if(!e.ctrlKey&&!e.metaKey) return; e.preventDefault(); const q=toMap(e.clientX,e.clientY); zoomAt(Math.exp(-e.deltaY*0.0022),q[0],q[1]); },{passive:false});
+  msvg.addEventListener('dblclick',e=>{ e.preventDefault(); const q=toMap(e.clientX,e.clientY); zoomAt(2,q[0],q[1]); });
+  /* 끌거나 오므린 바로 뒤의 누름은 지역 선택으로 치지 않는다 — 그림 위에서만, 잠깐 동안만(단추 누름까지 삼키지 않게) */
+  let mvT=0; const settle=()=>{ clearTimeout(mvT); mvT=setTimeout(()=>{ moved=false; },350); };
+  mfig.addEventListener('click',e=>{ if(moved&&msvg.contains(e.target)){ moved=false; e.stopPropagation(); e.preventDefault(); } },true);
+  msvg.addEventListener('pointerdown',e=>{ if(e.pointerType!=='mouse'||e.button!==0) return; moved=false; if(view[2]>=main[2]*0.995) return; const sx=e.clientX, sy=e.clientY, v0=view.slice();
+    const mv=ev=>{ const r=msvg.getBoundingClientRect(); if(Math.abs(ev.clientX-sx)+Math.abs(ev.clientY-sy)>4) moved=true; view[0]=v0[0]-(ev.clientX-sx)/r.width*view[2]; view[1]=v0[1]-(ev.clientY-sy)/r.height*view[3]; clamp(); apply(); };
+    const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); window.removeEventListener('pointercancel',up); settle(); };
+    window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up); window.addEventListener('pointercancel',up); });
+  let tg=null; const two=e=>{ const a=e.touches[0], b=e.touches[1]; return {d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)||1, x:(a.clientX+b.clientX)/2, y:(a.clientY+b.clientY)/2}; };
+  const tstart=e=>{ if(e.touches.length===2){ const t=two(e), q=toMap(t.x,t.y); tg={n:2,d:t.d,w:view[2],mx:q[0],my:q[1]}; if(e.cancelable) e.preventDefault(); }
+    else if(e.touches.length===1&&view[2]<main[2]*0.995){ tg={n:1,x:e.touches[0].clientX,y:e.touches[0].clientY,v:view.slice()}; } else tg=null; };
+  msvg.addEventListener('touchstart',e=>{ moved=false; tstart(e); },{passive:false});
+  msvg.addEventListener('touchmove',e=>{ if(!tg) return; const r=msvg.getBoundingClientRect();
+    if(tg.n===2&&e.touches.length>=2){ const t=two(e); view[2]=Math.max(minW,Math.min(main[2],tg.w*tg.d/t.d)); view[3]=view[2]*main[3]/main[2]; view[0]=tg.mx-(t.x-r.left)/r.width*view[2]; view[1]=tg.my-(t.y-r.top)/r.height*view[3]; clamp(); apply(); moved=true; if(e.cancelable) e.preventDefault(); }
+    else if(tg.n===1&&e.touches.length===1){ const a=e.touches[0]; if(Math.abs(a.clientX-tg.x)+Math.abs(a.clientY-tg.y)>6) moved=true; view[0]=tg.v[0]-(a.clientX-tg.x)/r.width*view[2]; view[1]=tg.v[1]-(a.clientY-tg.y)/r.height*view[3]; clamp(); apply(); if(e.cancelable) e.preventDefault(); } },{passive:false});
+  msvg.addEventListener('touchend',e=>{ if(e.touches.length) tstart(e); else { tg=null; settle(); } });
+  msvg.addEventListener('touchcancel',()=>{ tg=null; settle(); });
   /* 가로로 넘기는 단추 줄이면 고른 단추가 보이게(화면 전체는 움직이지 않게 줄 안에서만) */
   const sg=host.querySelector('.tmseg'), ab=sg&&sg.querySelector('button.active'); if(sg&&ab&&sg.scrollWidth>sg.clientWidth) sg.scrollLeft=Math.max(0,ab.offsetLeft-(sg.clientWidth-ab.offsetWidth)/2);
 }
