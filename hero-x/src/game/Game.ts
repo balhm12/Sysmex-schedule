@@ -38,7 +38,7 @@ import { BossIntroUI } from '../ui/BossIntroUI';
 import { PwaInstaller } from '../pwa/registerPwa';
 import { INTRO_ENEMY_HP, INTRO_ORIGIN } from '../cinematic/introTimeline';
 import { ZoneSystem } from '../dungeon/ZoneSystem';
-import type { ZoneDef } from '../dungeon/journey';
+import { zoneSpawns, type ZoneDef } from '../dungeon/journey';
 import { IntroOverlay } from '../ui/IntroOverlay';
 import { soundRegistry } from '../assets/SoundRegistry';
 import type { Vec2 } from '../player/movement';
@@ -129,6 +129,11 @@ export interface GameDebugState {
   combo: number;
   /** 감전시킨 횟수·지금 감전 중인 적 수·화면의 번개 가닥 수 */
   shocks: number;
+  /** 미리 만든 적 모델 풀 크기·마지막 준비 시간, 마지막 프레임 시뮬레이션 단계 수, 떠 있는 피해 숫자 수 */
+  enemyPool: number;
+  prewarm: { ms: number; made: number };
+  lastSteps: number;
+  popups: number;
   shockedEnemies: number;
   bolts: number;
   /** 화면에 살아 있는 전투 효과 수 */
@@ -264,6 +269,8 @@ export class Game {
   private rafId = 0;
   private lastTime = 0;
   private frames = 0;
+  /** 마지막 프레임에 돌린 시뮬레이션 단계 수 (검증용) */
+  private lastSteps = 0;
   private fpsFrames = 0;
   private fpsTime = 0;
 
@@ -337,6 +344,7 @@ export class Game {
     this.spawner = new EnemySpawner(this.scene);
     this.applyDifficultyToSpawner();
     this.spawner.spawnFromConfig(this.dungeonDef.spawns);
+    this.prewarmDungeon();
     this.combat = new CombatSystem(
       this.player, this.input, () => this.spawner.getEnemies(), () => this.getAimPoint(), this.effects, this.projectiles,
       (enemy, damage, killed) => {
@@ -704,14 +712,69 @@ export class Game {
     this.dungeon.dispose();
     this.dungeonDef = def;
     this.bossCfg = resolveBossConfig(def);
+    // 던전이 바뀌면 보스 외형도 바뀌므로 미리 만든 보스 모델은 버린다 (적 모델 풀은 종류별이라 그대로 쓴다)
+    this.bossModelPool?.dispose();
+    this.bossModelPool = null;
     this.dungeon = new DungeonScene(this.scene, def, this.settings.quality);
     this.pipeline.setExposure(def.theme.exposure);
     this.chests = new ChestSystem(this.scene, def.chests);
     this.setupZones();
     this.dungeon.addCollisionBoxes(this.chests.getCollisionBoxes());
     this.hud.setDungeonName(def.name);
+    this.prewarmDungeon();
     Logger.info(`던전 '${def.name}' 을(를) 불러왔습니다 (적 ${def.spawns.length}마리, 상자 ${def.chests.length}개).`);
   }
+
+  /** 미리 만들어 둔 보스 모델 (던전마다 하나) */
+  private bossModelPool: EnemyModel | null = null;
+
+  /**
+   * 던전에 등장할 적·보스 모델을 미리 만들고(풀) 셰이더를 미리 컴파일한다.
+   * - 구역에 들어가 적이 나타나는 순간 모델 생성(마리당 수 ms~수십 ms)과 첫 그리기의 셰이더 컴파일(휴대폰에서 수백 ms)이 겹쳐 끊기던 것을
+   *   던전을 여는 순간(배너가 떠 있는 동안)으로 옮긴다. 이미 풀에 있는 만큼은 다시 만들지 않는다.
+   */
+  private prewarmDungeon(): void {
+    if (!GameConfig.performance.prewarm) return;
+    const t0 = performance.now();
+    const entries: Array<{ type: string; skin?: string }> = [];
+    const push = (type: string, skin?: string) => {
+      entries.push({ type, skin });
+      // 죽을 때 갈라지는 적(슬라임 → 슬라임 조각)의 조각도 미리
+      const split = GameConfig.enemies.types[type]?.splitInto;
+      if (split) for (let i = 0; i < split.count; i++) entries.push({ type: split.type });
+    };
+    for (const s of this.dungeonDef.spawns) push(s.type);
+    for (const z of this.dungeonDef.journey?.zones ?? []) for (const s of zoneSpawns(z)) push(s.type, s.skin);
+    const made = this.spawner.prewarm(entries);
+    if (!this.bossModelPool) this.bossModelPool = createBossModel(bossTypeConfig(this.bossCfg), this.bossCfg.model);
+    // 셰이더 미리 컴파일: 풀의 모델·보스·효과 재질을 바닥 아래에 잠깐 두고 compile 한 뒤 뺀다
+    const roots = [...this.spawner.pooledRoots(), this.bossModelPool.root];
+    const holder = new THREE.Group();
+    holder.position.y = -200;
+    for (const r of roots) holder.add(r);
+    this.scene.add(holder);
+    const far = new THREE.Vector3(0, -200, 0);
+    this.effects.slash(far, 0, 1, 90, 0.01, 0xffffff, 1);
+    this.effects.swing(far, 0, 1, 90, 0.01);
+    this.effects.flash(far, 0.5, 0.01, 0xffffff);
+    this.effects.shockwave(far, 1, 0.01);
+    this.effects.pillar(far, 0.5, 1, 0.01, 0xffffff);
+    this.effects.lightning(far, 0.5, 1, 1, 0.01, 0xffffff);
+    try {
+      this.renderer.compile(this.scene, this.camera);
+    } catch (e) {
+      Logger.warn(`셰이더 미리 컴파일 실패(계속 진행): ${(e as Error).message}`);
+    }
+    this.effects.update(1);
+    for (const r of roots) holder.remove(r);
+    this.scene.remove(holder);
+    this.prewarmMs = Math.round(performance.now() - t0);
+    this.prewarmCount = made;
+    Logger.info(`적 모델 ${made}개 미리 생성 + 셰이더 컴파일: ${this.prewarmMs}ms (풀 ${this.spawner.poolSize}개)`);
+  }
+  /** 마지막 미리 준비에 걸린 시간·만든 수 (검증용) */
+  private prewarmMs = 0;
+  private prewarmCount = 0;
 
   openDungeons(): void {
     if (!this.runActive && !this.hasSavedProgress) return;
@@ -1130,6 +1193,7 @@ export class Game {
   restart(): void {
     this.spawner.clear();
     this.spawner.spawnFromConfig(this.dungeonDef.spawns);
+    this.prewarmDungeon();
     this.unlockedNow = null;
     this.projectiles.clear();
     this.damageNumbers.clear();
@@ -1366,6 +1430,10 @@ export class Game {
       attacks: this.combat.attacks,
       combo: this.combat.comboStep,
       shocks: this.combat.shocks,
+      enemyPool: this.spawner.poolSize,
+      prewarm: { ms: this.prewarmMs, made: this.prewarmCount },
+      lastSteps: this.lastSteps,
+      popups: this.damageNumbers.count,
       shockedEnemies: this.spawner.getEnemies().filter((e) => e.shocked).length,
       bolts: this.effects.boltCount,
       effects: this.effects.activeCount,
@@ -1537,7 +1605,8 @@ export class Game {
   private spawnBoss(): void {
     const b = this.bossCfg;
     const mul = this.spawner.multipliers;
-    this.boss = new Boss({ x: b.spawn.x, z: b.spawn.z }, { hp: mul.hp, speed: mul.speed }, b);
+    this.boss = new Boss({ x: b.spawn.x, z: b.spawn.z }, { hp: mul.hp, speed: mul.speed }, b, this.bossModelPool ?? undefined);
+    this.bossModelPool = null;
     this.spawner.addEnemy(this.boss);
     this.hud.showBanner(`${b.name} 등장!`);
     this.audio.play('bossAppear');
@@ -1748,11 +1817,15 @@ export class Game {
       this.hitStopTime = Math.max(0, this.hitStopTime - elapsed);
       remaining = elapsed * GameConfig.juice.hitStop.timeScale;
     }
-    while (remaining > 1e-6 && this.mode === 'play') {
+    // 단계 수 상한: 느린 기기에서 한 프레임에 4단계씩 돌면 더 느려지는 악순환이 생긴다 → 넘치는 시간은 버린다(게임이 잠시 느려짐)
+    let steps = 0;
+    while (remaining > 1e-6 && this.mode === 'play' && steps < GameConfig.performance.maxStepsPerFrame) {
       const dt = Math.min(GameConfig.performance.maxStep, remaining);
       remaining -= dt;
       this.simulate(dt);
+      steps++;
     }
+    this.lastSteps = steps;
 
     this.hud.update({
       hp: this.player.health.hp,

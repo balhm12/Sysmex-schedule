@@ -56,8 +56,10 @@ export class Boss extends Enemy {
     mul: { hp: number; speed: number },
     /** 이 보스의 설정 (던전마다 다르다) */
     readonly cfg: BossConfig = GameConfig.boss,
+    /** 미리 만들어 둔 모델 (없으면 지금 만든다) */
+    model?: EnemyModel,
   ) {
-    super('boss', bossTypeConfig(cfg), pos, mul, (_type, def) => createBossModel(def, cfg.model));
+    super('boss', bossTypeConfig(cfg), pos, mul, (_type, def) => model ?? createBossModel(def, cfg.model));
   }
 
   get phase2(): boolean {

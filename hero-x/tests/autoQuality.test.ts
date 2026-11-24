@@ -8,7 +8,7 @@ describe('자동 화질 조절 (decideQuality)', () => {
     expect(r.message).toBeNull();
     expect(decideQuality([], { quality: 'high', shadows: true, resolution: 1 }).message).toBeNull();
   });
-  it('낮으면 높음→중간, 그림자 끄기, 그 다음 해상도를 0.2 씩 낮추되 0.5 아래로는 안 간다', () => {
+  it('낮으면 높음→중간, 그림자 끄기, 중간→낮음, 그 다음 해상도를 0.2 씩 낮추되 0.5 아래로는 안 간다', () => {
     const q = decideQuality([20, 25], { quality: 'high', shadows: true, resolution: 1 });
     expect(q.next.quality).toBe('medium');
     expect(q.message).toContain('중간');
@@ -16,7 +16,11 @@ describe('자동 화질 조절 (decideQuality)', () => {
     expect(a.next.shadows).toBe(false);
     expect(a.next.resolution).toBe(1);
     expect(a.message).toContain('그림자');
-    const b = decideQuality([20, 25], a.next);
+    const l = decideQuality([20, 25], a.next);
+    expect(l.next.quality).toBe('low');
+    expect(l.next.resolution).toBe(1);
+    expect(l.message).toContain('낮음');
+    const b = decideQuality([20, 25], l.next);
     expect(b.next.resolution).toBe(0.8);
     expect(b.message).toContain('0.8');
     let s = b.next;

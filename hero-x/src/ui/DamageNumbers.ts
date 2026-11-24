@@ -17,6 +17,8 @@ interface Popup {
 export class DamageNumbers {
   private readonly root: HTMLDivElement;
   private readonly popups: Popup[] = [];
+  /** 다 쓴 글자 상자를 모아 두고 다시 쓴다 (매 타격마다 DOM 을 만들고 지우면 휴대폰에서 끊긴다) */
+  private readonly free: HTMLDivElement[] = [];
 
   constructor(parent: HTMLElement, private readonly project: ProjectFn) {
     this.root = document.createElement('div');
@@ -25,23 +27,29 @@ export class DamageNumbers {
   }
 
   /** 숫자 띄우기. kind: enemy(적 피해) | player(플레이어 피해) | kill(처치 점수) | heal(회복) | levelup(레벨) */
+  private take(className: string): HTMLDivElement {
+    const el = this.free.pop() ?? document.createElement('div');
+    el.className = className;
+    el.style.color = '';
+    el.style.opacity = '0';
+    if (!el.isConnected) this.root.appendChild(el);
+    el.hidden = false;
+    return el;
+  }
+
   show(pos: THREE.Vector3, amount: number, kind: 'enemy' | 'player' | 'kill' | 'heal' | 'levelup' = 'enemy'): void {
-    const el = document.createElement('div');
-    el.className = `dmg ${kind}`;
+    const el = this.take(`dmg ${kind}`);
     const n = Math.round(amount);
     el.textContent = kind === 'kill' ? `${n} 처치!` : kind === 'heal' ? `+${n}` : kind === 'levelup' ? `레벨 ${n}!` : String(n);
-    this.root.appendChild(el);
     this.popups.push({ el, pos: pos.clone(), t: 0 });
     if (this.popups.length > 40) this.remove(0);
   }
 
   /** 글자 띄우기 (장비 획득 안내 등) */
   showText(pos: THREE.Vector3, text: string, color?: string): void {
-    const el = document.createElement('div');
-    el.className = 'dmg text';
+    const el = this.take('dmg text');
     el.textContent = text;
     if (color) el.style.color = color;
-    this.root.appendChild(el);
     this.popups.push({ el, pos: pos.clone(), t: -0.6 });
     if (this.popups.length > 40) this.remove(0);
   }
@@ -67,7 +75,15 @@ export class DamageNumbers {
   }
 
   private remove(i: number): void {
-    this.popups[i].el.remove();
+    const el = this.popups[i].el;
     this.popups.splice(i, 1);
+    el.hidden = true;
+    if (this.free.length < 48) this.free.push(el);
+    else el.remove();
+  }
+
+  /** 보이는 글자 수 (검증용) */
+  get count(): number {
+    return this.popups.length;
   }
 }

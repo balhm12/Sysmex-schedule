@@ -24,6 +24,8 @@ export function decideQuality(fpsSamples: number[], current: QualityState, thres
   if (avg >= threshold) return { next: current, message: null };
   if (current.quality === 'high') return { next: { ...current, quality: 'medium' }, message: `화면이 끊겨(평균 ${Math.round(avg)} FPS) 화질을 '중간'으로 낮췄습니다` };
   if (current.shadows) return { next: { ...current, shadows: false }, message: `화면이 끊겨(평균 ${Math.round(avg)} FPS) 그림자를 껐습니다` };
+  // 외곽선·림 라이트를 끄는 '낮음'이 해상도를 깎는 것보다 보기에 덜 아프다
+  if (current.quality === 'medium') return { next: { ...current, quality: 'low' }, message: `화면이 끊겨(평균 ${Math.round(avg)} FPS) 화질을 '낮음'으로 낮췄습니다` };
   const lowered = Math.round(Math.max(minResolution, current.resolution - 0.2) * 10) / 10;
   if (lowered < current.resolution) return { next: { ...current, resolution: lowered }, message: `화면이 끊겨(평균 ${Math.round(avg)} FPS) 해상도를 ${lowered.toFixed(1)}× 로 낮췄습니다` };
   return { next: current, message: null };

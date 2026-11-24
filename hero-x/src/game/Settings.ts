@@ -94,7 +94,7 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: 'hitFlash', kind: 'toggle', group: '화면', label: '피격 시 화면 번쩍임', description: '맞았을 때 화면 테두리를 붉게 비춥니다.' },
   { key: 'shadows', kind: 'toggle', group: '화면', label: '그림자', description: '느린 PC·휴대폰에서는 끄면 부드러워집니다.' },
   { key: 'resolution', kind: 'range', group: '화면', label: '렌더 해상도', description: '1.0 이 기기 기본. 휴대폰에서 끊기면 0.6~0.8 로 낮추세요.', min: 0.5, max: 1.5, step: 0.1, unit: '×' },
-  { key: 'autoQuality', kind: 'toggle', group: '화면', label: '자동 화질 조절', description: '플레이 중 평균 30 FPS 아래면 그림자를 끄고 해상도를 한 단계씩 낮춥니다. 직접 정하려면 끄세요.' },
+  { key: 'autoQuality', kind: 'toggle', group: '화면', label: '자동 화질 조절', description: '플레이 중 평균 30 FPS 아래면 화질 → 그림자 → 화질 낮음 → 해상도 순으로 한 단계씩 낮춥니다. 직접 정하려면 끄세요.' },
   { key: 'showFps', kind: 'toggle', group: '화면', label: 'FPS 표시', description: '왼쪽 아래에 초당 프레임을 보여줍니다.' },
 ];
 

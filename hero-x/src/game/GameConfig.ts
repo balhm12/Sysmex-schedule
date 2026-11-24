@@ -498,6 +498,10 @@ export interface GameConfigType {
     autoQualityFps: number;
     /** 시뮬레이션 한 단계의 최대 시간(초). 프레임이 느리면 이 단위로 여러 번 돌린다 */
     maxStep: number;
+    /** 한 프레임에 돌리는 시뮬레이션 단계 상한. 느린 기기에서 단계가 쌓여 더 느려지는 악순환을 막는다(넘치면 게임 시간이 잠시 느려진다) */
+    maxStepsPerFrame: number;
+    /** 던전을 열 때 등장할 적 모델을 미리 만들고 셰이더를 미리 컴파일한다 (전투 중 끊김 방지) */
+    prewarm: boolean;
   };
   /** 저장 */
   save: {
@@ -512,7 +516,7 @@ export interface GameConfigType {
 }
 
 export const GameConfig: GameConfigType = {
-  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.31.1', school: '창릉초등학교' },
+  meta: { title: 'HERO X', subtitle: '모험의 던전', version: '1.31.2', school: '창릉초등학교' },
 
   controls: {
     up: ['KeyW', 'ArrowUp'],
@@ -1023,6 +1027,8 @@ export const GameConfig: GameConfigType = {
     autoQualityInterval: 6,
     autoQualityFps: 30,
     maxStep: 0.05,
+    maxStepsPerFrame: 2,
+    prewarm: true,
   },
   save: {
     autoSaveInterval: 3,
@@ -1140,6 +1146,7 @@ export const CONFIG_LIMITS: Record<string, { min: number; max: number }> = {
   'performance.autoQualityInterval': { min: 2, max: 60 },
   'performance.autoQualityFps': { min: 10, max: 60 },
   'performance.maxStep': { min: 0.01, max: 0.1 },
+  'performance.maxStepsPerFrame': { min: 1, max: 10 },
   'juice.hitShake.amp': { min: 0, max: 2 },
   'juice.slamShake.amp': { min: 0, max: 3 },
   'juice.hitStop.duration': { min: 0, max: 0.5 },

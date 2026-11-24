@@ -418,6 +418,8 @@
 | `world.arenaHalfSize` | 28 | 10 ~ 200 | 이동 가능 영역 크기 |
 | `world.obstacles` | 10개 | 자유 | 장애물 목록 (x, z, w, d, h, color) |
 | `graphics.shadows` | true | 켜기/끄기 | 그림자 (설정 화면의 기본값) |
+| `performance.maxStepsPerFrame` | 2 | 1 ~ 10 | 한 프레임에 돌리는 시뮬레이션 단계 상한. 느린 기기에서 단계가 쌓여 더 느려지는 악순환 방지(넘치면 게임 시간이 잠시 느려짐) |
+| `performance.prewarm` | 켬 | 켜기/끄기 | 던전을 열 때 등장할 적·보스 모델을 미리 만들고 셰이더를 컴파일 |
 | `save.autoSaveInterval` | 3 | 0.5 ~ 600 | 바뀐 것이 있을 때 자동 저장까지 기다리는 초 |
 | `debug.showFps` | true | 켜기/끄기 | FPS 표시 (설정 화면의 기본값) |
 
