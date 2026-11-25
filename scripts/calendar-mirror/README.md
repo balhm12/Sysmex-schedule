@@ -1,5 +1,8 @@
 # 근무일정표 → Google 캘린더 「FSG 근무일정 거울」 (설정 절차)
 
+
+> **2026-11-25 — 매일 실행은 Apps Script 판으로 옮겼습니다** (`apps-script-calendar/mirror.gs`, 설치는 `apps-script-calendar/README.md` 「거울 캘린더」). GitHub 예약 실행이 4~8시간 밀리고 시크릿 4개·서비스 계정이 필요했기 때문입니다. 이 워크플로는 예약을 끄고 손으로 돌리는 것만 남겼습니다. 아래는 GitHub 판을 다시 쓸 때의 절차입니다(그때 `FIREBASE_API_KEY` 는 서버용 키 — `firebase/README.md` 「웹 API 키 정리」).
+
 매일 05:30(한국 시간)에 GitHub Actions 가 근무일정표의 **오늘부터 7일치**를 읽어, 기본 근무가 아닌
 상태(내근·회의·휴가·당직 등)를 Google 캘린더 하나에 종일 일정으로 복사합니다.
 아침 브리핑(Google Calendar 를 읽는 예약 작업)이 이 캘린더를 보면 근무 상태가 같이 나옵니다.
