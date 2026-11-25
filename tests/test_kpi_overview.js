@@ -160,3 +160,21 @@ assert(/function mPred\(months\)/.test(html) && /전월 동기간\(/.test(html) 
   a(/x\.f90L=/.test(h)&&/x\.f90=x\.sn\?x\.f90L\.length/.test(h),'90일 고장 수는 목록 길이와 같음');
   a(/function goTo\(/.test(h)&&/function goSqChr\(/.test(h)&&/sk:o\.k/.test(h)&&/id="insEF"/.test(h)&&/class="ovkc st inslink"/.test(h),'전체/초기 고장만 전환·KPI 칸 누르기');
   console.log('early fail ok'); }
+
+/* 2026-11-26 Overview 처리 건수 · 업무 유형(총 건수 + 유형별 건수·비율) */
+{ const h=require('fs').readFileSync(require('path').join(__dirname,'..','fsg-kpi.html'),'utf8'), a=require('assert');
+  const i=h.indexOf('function ovMixCard('), j=h.indexOf('function renderOv(');
+  a(i>0&&j>i,'ovMixCard 위치');
+  const oa=h.slice(h.indexOf('const OV_ACT='), h.indexOf('\n',h.indexOf('const OV_ACT=')));
+  const f=new Function('fmt','esc','dsDelta', oa.replace('const OV_ACT=','var OV_ACT=')+';'+h.slice(i,j)+';return ovMixCard;')(
+    n=>Number(n).toLocaleString('ko-KR'), s=>String(s), (c,v,u,d,l)=>l+' 대비 '+(c-v));
+  const act={'고장수리':400,'PM':300,'설치이전':100,'Cal평가':150,'기타':50}, actP={'고장수리':380,'PM':320,'설치이전':90,'Cal평가':140,'기타':70};
+  const out=f(act,actP,1000,1000,1000,'전월','',{label:'2026-10'});
+  a(/1,000<small>건/.test(out),'총 건수');
+  a(/40\.0%/.test(out)&&/30\.0%/.test(out)&&/15\.0%/.test(out)&&/5\.0%/.test(out),'유형별 비율');
+  a(/▲ 20/.test(out)&&/▼ 20/.test(out),'유형별 증감');
+  a(!/데이터 점검 필요/.test(out),'합계 = 서비스 활동이면 경고 없음');
+  a(/데이터 점검 필요/.test(f(act,actP,1000,1000,1003,'전월','',{label:'x'})),'합계가 다르면 알림');
+  a(/처리 건수가 없습니다/.test(f({},{},0,0,0,'전월','',{label:'x'})),'빈 상태');
+  a(/ovMixCard\(act,actP,aTot,aTotP,cur\.total/.test(h)&&/body\.rpt #ov \.ovmix\{display:none/.test(h),'renderOv 가 이미 센 값을 쓰고 보고용 보기에서는 숨김');
+  console.log('ov mix ok'); }
