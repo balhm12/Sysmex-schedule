@@ -52,6 +52,10 @@ FS Portal 서버(Apps Script)가 Slack 학술요청 접수 건수(날짜·시간
 - **처음 한 번(사용자)**: ① Firebase 콘솔(sysmex-system-schedule) → Authentication → 사용자 추가(이메일·비밀번호, 서버 전용) → UID 복사 ② 규칙 탭에 `database.rules.stage3.json` 붙여넣고 게시 ③ Realtime Database → `kpi-dashboard/acadBots` 아래에 키 = UID, 값 = true(불리언) 추가 ④ FS Portal Apps Script 「프로젝트 설정 → 스크립트 속성」에 `KPI_BOT_EMAIL`·`KPI_BOT_PW` 추가(채팅·저장소에 쓰지 않음).
 - 확인: FS Portal 요청함 「연결 시험」 또는 3시간 안에 KPI Workload 학술 응대 「수집 범위」가 「FS Portal 서버 자동 반영」으로 바뀌는지. 계정을 바꾸면 `acadBots` 의 UID 만 바꾸면 된다(규칙 수정 불필요).
 
+## 쓰는 곳 표와 만족도 쓰기 막기(2026-11-25)
+
+화면·서버가 이 DB 어디에 쓰는지, 쓰기를 더 묶으면 무엇이 멈추는지는 `write-paths.md`. 같은 날 `database.rules.stage3.json` 의 `voc-dashboard` 쓰기를 `false` 로 바꿨다(쓰는 곳은 보안 비밀을 쓰는 만족도 Apps Script 뿐) — **콘솔에 다시 게시해야 적용된다.**
+
 ## 웹 API 키 정리 — 화면용·서버용 나누기(2026-11-25)
 
 Firebase 웹 API 키는 화면이 떠야 하므로 공개 HTML 에 있을 수밖에 없다(지워도·재발급해도 같은 이유로 다시 노출). 통제는 **키 제한 + 위 DB 규칙**으로 한다. 이 프로젝트(sysmex-system-schedule) 키는 브라우저와 서버가 같이 쓰고 있어, 화면용 키에 HTTP 리퍼러 제한만 걸면 서버 쪽 호출이 막힌다. 그래서 서버용 키를 따로 만든다.
