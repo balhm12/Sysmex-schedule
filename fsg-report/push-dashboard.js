@@ -8,6 +8,7 @@
  *   환경변수  FSG_KPI_CODE(접근 코드)  FSG_ADMIN_EMAIL / FSG_ADMIN_PW(관리자 계정)  — 어디에도 기록하지 않는다
  *   --activity / --serial 파일 직접 지정 · --token 관리자 idToken 직접(로그인 생략) · --dry-run 올리지 않고 포맷만 만들어 --out 에 저장
  *   --firebase-url / --api-key / --data-path  기본값은 fsg-kpi.html 안의 상수(대시보드와 항상 같게)
+ *   환경변수 FSG_FB_SERVER_KEY 가 있으면 키는 그것(서버용 키 — 화면용 키에 리퍼러 제한을 건 뒤에 필요, server-key.js)
  *   --force-code  기존 데이터의 접근 코드와 달라도 올린다(팀장들이 새 코드를 입력해야 함)
  *   --no-staff    직원용 자료를 갱신하지 않는다(기본은 갱신)
  *   --allow-older 대시보드에 이미 올라간 활동 파일보다 오래된 파일도 올린다(기본은 막는다 — 여러 PC를 번갈아 쓸 때 예전 다운로드 파일로 덮어쓰는 사고 방지).
@@ -147,7 +148,7 @@ async function main() {
     return;
   }
   if (!code) throw new Error('접근 코드가 없습니다 — 환경변수 FSG_KPI_CODE');
-  const baseUrl = o['firebase-url'] || dashConst('FIREBASE_URL', ''), apiKey = o['api-key'] || dashConst('FIREBASE_API_KEY', ''), dataPath = o['data-path'] || dashConst('DATA_PATH', 'kpi-dashboard');
+  const baseUrl = o['firebase-url'] || dashConst('FIREBASE_URL', ''), apiKey = o['api-key'] || require('./server-key').serverKey(dashConst('FIREBASE_API_KEY', '')), dataPath = o['data-path'] || dashConst('DATA_PATH', 'kpi-dashboard');
   if (!baseUrl) throw new Error('FIREBASE_URL을 찾지 못했습니다(fsg-kpi.html 또는 --firebase-url)');
   let token = o.token; if (!token) { if (!email || !pw) throw new Error('관리자 계정이 없습니다 — 환경변수 FSG_ADMIN_EMAIL / FSG_ADMIN_PW (또는 --token)'); token = await adminLogin(email, pw, apiKey); }
   const fb = makeFb(baseUrl, dataPath, token);
