@@ -618,6 +618,17 @@ body:has(.wdlg[open]){overflow:hidden}   /* 창이 열려 있는 동안 뒤쪽 �
 #ov .ovhl b,.dsx .ovhl b{display:block;font-size:14px;color:var(--text)}#ov .ovhl .ovs,.dsx .ovhl .ovs{font-size:12px;color:var(--muted)}
 #ov .ovhl button,.dsx .ovhl button{border:1px solid var(--border);background:var(--surface);border-radius:6px;height:36px;padding:0 12px;font:inherit;font-size:13px;font-weight:700;color:var(--ovp);cursor:pointer;white-space:nowrap}
 #ov .ovdw,.dsx .ovdw{display:grid;grid-template-columns:190px 1fr;gap:16px;align-items:center}
+#ov .ovmix{margin-top:14px}
+#ov .ovmxw{display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:start}
+#ov .ovmxt{display:flex;flex-direction:column;gap:4px;padding-top:4px}
+#ov .ovmxt .ovv{font-size:34px;font-weight:300;color:var(--ovp,#005BAC);line-height:1.1}#ov .ovmxt .ovv small{font-size:14px;margin-left:2px}
+#ov .ovmxt .ovd{font-size:12px;color:var(--muted)}
+#ov .ovmxbar{display:flex;height:22px;border-radius:4px;overflow:hidden;background:var(--border);margin:2px 0 10px}
+#ov .ovmxbar i{display:flex;align-items:center;justify-content:center;font-style:normal;font-size:11px;font-weight:700;min-width:0}
+#ov .ovmxtb th{font-size:12px;font-weight:500;color:var(--muted);text-align:right;padding:5px 6px;border-bottom:1px solid var(--border)}#ov .ovmxtb th:first-child{text-align:left}
+#ov .ovmxtb td.num{font-variant-numeric:tabular-nums}#ov .ovmxd{color:var(--muted)}#ov .ovmxp{color:var(--muted)}
+body.rpt #ov .ovmix{display:none!important}
+@media (max-width:760px){#ov .ovmxw{grid-template-columns:1fr;gap:8px}#ov .ovmxt{flex-direction:row;align-items:baseline;flex-wrap:wrap;gap:4px 10px}#ov .ovmxt .ovv{font-size:28px}#ov .ovmxtb .ovmxp{display:none}#ov .ovmxtb td,#ov .ovmxtb th{padding:6px 4px}}
 #ov .ovlg,.dsx .ovlg{width:100%;border-collapse:collapse;font-size:13px}
 #ov .ovlg td,.dsx .ovlg td{padding:7px 6px;border-bottom:1px solid var(--border);text-align:right}
 #ov .ovlg td:first-child,.dsx .ovlg td:first-child{text-align:left;font-weight:700;color:var(--text)}
@@ -5578,6 +5589,20 @@ function rptOps(p,pp,team,cur,prv,act){
     <p class="ovnote">처리 건수 = 담당자·필수 참석자 각 1건 · 방문 = 같은 병원·같은 날 이어진 활동 1건 · 정규근무 외 = 평일 18~08시·주말·공휴일 CRM 작업(이동 제외)</p></section>
   <div class="rptops2"><section class="ovrpt rptops"><h3 class="ovrh"><i>SECTION 05</i>Organization <span>4팀 · 처리 건수 기준</span></h3>${org}</section>
   <section class="ovrpt rptops"><h3 class="ovrh"><i>SECTION 06</i>Work Mix <span>구성비 100% · 단위를 각 줄에 표시</span></h3>${mixA}${mixB}${mixC}${eq}</section></div>`; }
+/* Overview 「처리 건수 · 업무 유형」(2026-11-26 사용자 요청 「총 건수와 세부 건의 수와 비율」) — renderOv 가 이미 센 act·actP(OV_ACT 5분류)를 보이기만 한다. 새 계산 없음.
+   합계 = 서비스 활동(stats().total)과 같아야 한다. 다르면 그 사실을 적는다(값을 맞추지 않는다). 보고용 보기는 2쪽 Work Mix 가 있어 숨김 */
+function ovMixCard(act,actP,tot,totP,svc,lab,SB,p){
+  const pct=v=>tot?(v*100/tot):0, f1=x=>x.toFixed(1)+'%';
+  const dN=(c,v)=>{ if(!v) return '<span class="ovmxd">–</span>'; const d=c-v; return `<span class="ovmxd">${d===0?'같음':(d>0?'▲ ':'▼ ')+fmt(Math.abs(d))}</span>`; };
+  const bar=tot?OV_ACT.filter(([k])=>act[k]).map(([k,n,c],i)=>{ const w=pct(act[k]); return `<i style="width:${w}%;background:${c}" title="${esc(n)} ${fmt(act[k])}건 · ${f1(w)}">${w>=9?`<span style="color:${OV_ACT.findIndex(x=>x[0]===k)>=3?'#1F2A36':'#fff'}">${Math.round(w)}%</span>`:''}</i>`; }).join(''):'';
+  const rows=OV_ACT.map(([k,n,c])=>`<tr><td><span class="ovsw" style="background:${c}"></span>${esc(n)}</td><td class="num">${fmt(act[k])}</td><td class="num">${tot?f1(pct(act[k])):'-'}</td><td class="num ovmxp">${totP?f1(actP[k]*100/totP):'-'}</td><td class="num">${dN(act[k],actP[k])}</td></tr>`).join('');
+  const miss=svc!=null&&svc!==tot?`<p class="ovnote">서비스 활동 ${fmt(svc)}건과 ${fmt(Math.abs(svc-tot))}건 차이 — 데이터 점검 필요</p>`:'';
+  return `<section class="ovcard ovmix" aria-labelledby="ovmxh"><h3 id="ovmxh">처리 건수 · 업무 유형 ${SB}<span class="ovsub">${esc(p.label)} · 비교 ${esc(lab)}</span></h3>
+  ${tot?`<div class="ovmxw"><div class="ovmxt"><span class="ovl">총 처리 건수</span><span class="ovv">${fmt(tot)}<small>건</small></span><span class="ovd">${totP?dsDelta(tot,totP,'건',0,lab):lab+' 비교 자료 없음'}</span></div>
+  <div class="ovmxr"><div class="ovmxbar" role="img" aria-label="업무 유형 구성비 ${OV_ACT.map(([k,n])=>n+' '+f1(pct(act[k]))).join(', ')}">${bar}</div>
+  <table class="ovlg ovmxtb"><thead><tr><th>업무 유형</th><th class="num">건수</th><th class="num">비율</th><th class="num ovmxp">${esc(lab)} 비율</th><th class="num">증감</th></tr></thead><tbody>${rows}<tr class="tot"><td>합계</td><td class="num">${fmt(tot)}</td><td class="num">100%</td><td class="num ovmxp">${totP?'100%':'-'}</td><td class="num">${dN(tot,totP)}</td></tr></tbody></table></div></div>${miss}
+  <p class="ovnote">처리 건수 = 담당자·필수 참석자 각 1건(서비스 활동과 같은 값) · 비율 = 유형 건수 ÷ 합계 · 증감은 ${esc(lab)} 대비 건수</p>`
+  :'<p class="empty-note">선택한 기간에 처리 건수가 없습니다.</p>'}</section>`; }
 function renderOv(){
   const root=$('ov'); if(!D||!root) return;
   const p=curPeriod(), team=$('fTeam').value||null, pp=prevPeriod(p), cur=stats(p.months,team), prv=stats(pp.months,team), prov=isProvisional(p.months);
@@ -5613,6 +5638,7 @@ function renderOv(){
     const tip=o.n+' = '+o.h+(o.t()==null?' · 목표 없음':' · 목표 '+o.tl()+' · '+ovGap(o,v));   /* v3.8: 설명·산식·목표 차이는 마우스 설명으로 */
     return `<button class="ovkc" role="tab" aria-selected="${o.k===OV.metric}" data-k="${o.k}" title="${esc(tip)}"><span class="ovl">${o.n}<span class="wlinfo" aria-hidden="true">ⓘ</span>${st.chip?`<span class="ovchip ${st.st}">${st.chip}</span>`:''}</span>
       <span class="ovv">${ovF(o,v)}<small>${o.u}</small></span><span class="ovt">${o.t()==null?'목표 없음':'목표 '+o.tl()}</span><span class="ovd">${ovDelta(o,v,prv[o.k],lab)}</span><span class="ovh" hidden>${esc(o.h)}</span></button>`; }).join('')}</section>
+  ${ovMixCard(act,actP,aTot,aTotP,cur.total,lab,SB,p)}
   <section class="ovrpt"><h3 class="ovrh"><i>SECTION 02</i>Service Quality Trend ${SB} <span>최근 12개월 · 점선은 목표</span></h3><div class="ovrcs">${rptTr}</div></section>
   <section class="ovrpt"><h3 class="ovrh"><i>SECTION 03</i>Management Issues <span>「확인이 필요한 곳」 상위 ${Math.min(5,al.length)}건 · 중요한 순</span></h3>${al.length?`<table class="rptiss"><thead><tr><th>상태</th><th>팀 · 조직</th><th>KPI · 이슈</th><th class="num">현재</th><th>목표 대비 · 판정 기준</th></tr></thead><tbody>${al.slice(0,5).map(a=>`<tr><td><span class="ovchip ${a.cc}">${esc(a.chip)}</span></td><td>${esc(a.team||'FSG 전체')}</td><td>${esc(a.nm||a.t)}</td><td class="num">${esc(a.val||'-')}</td><td>${esc(a.gap||a.s)}</td></tr>`).join('')}</tbody></table>`:'<p class="ovnote">지금 확인이 필요한 항목이 없습니다.</p>'}</section>
   <div class="ovgrid ovg-a">
