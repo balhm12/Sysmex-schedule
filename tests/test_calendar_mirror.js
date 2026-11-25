@@ -134,7 +134,7 @@ const titles = w => live(w).map(e => e.summary).sort();
   console.log('1) 워크플로');
   const yml = fs.readFileSync('.github/workflows/calendar-mirror.yml', 'utf8');
   const crons = yml.match(/cron:\s*"[^"]+"/g) || [];
-  ok(crons.length === 1 && /"30 20 \* \* \*"/.test(crons[0]), '예약은 하루 한 번, UTC 20:30(한국 05:30)');
+  ok(crons.length === 1 && /#\s*-\s*cron:\s*"30 20 \* \* \*"/.test(yml) && !/^\s*schedule:/m.test(yml), '예약은 꺼 둠(2026-11-25 Apps Script 판으로 옮김) — 되살릴 때 쓸 한 줄은 주석으로 남김');
   ok(/workflow_dispatch/.test(yml), '수동 실행(workflow_dispatch)');
   ok(/node scripts\/calendar-mirror\/mirror\.js/.test(yml), '동기화 스크립트를 실행');
   ['FIREBASE_API_KEY', 'FIREBASE_DB_URL', 'GOOGLE_SERVICE_ACCOUNT_KEY', 'MIRROR_CALENDAR_ID'].forEach(k =>
