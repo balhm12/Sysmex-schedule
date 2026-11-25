@@ -125,6 +125,10 @@ ok(!w3(WADM, '/kpi-dashboard', null), '가중치 관리자는 KPI 전체 삭제 
 /* 직원용 자료(2026-11-18, kpi-dashboard/staff — 이름 없는 사본): 올리는 것은 기존 관리자만, 규칙 변경 없이 되는지 */
 ok(w3(ADMIN, '/kpi-dashboard/staff/data', { v: 1, data: 'x' }) && w3(ADMIN, '/kpi-dashboard/staff/meta', { v: 1, updatedAt: 'x' }), '관리자는 직원용 자료 저장');
 ok(!w3(anon, '/kpi-dashboard/staff/data', { v: 1 }) && !w3(WADM, '/kpi-dashboard/staff/meta', { v: 1 }) && !w3(null, '/kpi-dashboard/staff/data', { v: 1 }), '익명·가중치 관리자·비로그인은 직원용 자료 쓰기 거부');
+/* 만족도 대시보드(2026-11-25): 쓰는 곳은 만족도 Apps Script 하나뿐이고 데이터베이스 보안 비밀로 쓴다(규칙을 거치지 않음).
+   그래서 규칙 쓰기는 막는다 — 예전엔 익명 방문자도 대시보드 자료를 덮어쓰거나 지울 수 있었다. 읽기(공개 대시보드)는 그대로 */
+ok(!w3(anon, '/voc-dashboard/data', { a: 1 }) && !w3(anon, '/voc-dashboard', null) && !w3(ADMIN, '/voc-dashboard/data', { a: 1 }), '만족도 대시보드 쓰기는 규칙으로 막음(Apps Script 는 보안 비밀로 씀)');
+ok(r3(anon, '/voc-dashboard/data'), '만족도 대시보드 읽기는 그대로');
 ok(!w3(WADM, '/kpi-dashboard/weights', { rev: 'x' }), '가중치 전체 덮어쓰기 거부(한 묶음 단위로만)');
 ok(!w3(WADM, '/kpi-dashboard/weights/items', null), '묶음 전체 삭제 거부');
 ok(!w3(anon, '/kpi-dashboard/weights/items/2026-12', wItem()), '익명은 가중치 쓰기 거부');

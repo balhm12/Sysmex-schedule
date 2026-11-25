@@ -335,7 +335,7 @@
     },
     "voc-dashboard": {
       ".read": "auth != null",
-      ".write": "auth != null"
+      ".write": false
     },
     "kpi-dashboard": {
       ".read": "auth != null",
