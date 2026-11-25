@@ -33,7 +33,7 @@ async function main() {
   trustSystemCerts();
   const period = parsePeriod(o.period), months = period.months.map(ym => ym.y + '-' + String(ym.m).padStart(2, '0'));
   const data = o.file ? JSON.parse(fs.readFileSync(o.file, 'utf8'))
-    : await fetchData(o['firebase-url'] || vocConst('FIREBASE_URL', ''), o['api-key'] || vocConst('FIREBASE_API_KEY', ''), vocConst('DATA_PATH', '/voc-dashboard/data.json'));
+    : await fetchData(o['firebase-url'] || vocConst('FIREBASE_URL', ''), o['api-key'] || require('./server-key').serverKey(vocConst('FIREBASE_API_KEY', '')), vocConst('DATA_PATH', '/voc-dashboard/data.json'));
   const sat = summarizeVoc(data, months, { keywords: o.keywords ? String(o.keywords).split(',') : DEFAULT_KEYWORDS });
   const out = path.resolve(o.out || path.join(__dirname, 'out')); fs.mkdirSync(out, { recursive: true });
   const stem = period.key.replace(/[^\w가-힣~-]/g, '_');

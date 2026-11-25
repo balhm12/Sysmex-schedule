@@ -51,3 +51,34 @@ FS Portal 서버(Apps Script)가 Slack 학술요청 접수 건수(날짜·시간
 - **쓰기**: `kpi-dashboard/acadBots/{UID}` 가 `true` 인 계정만(서버 전용 계정). 지정(`acadBots`)은 기존 관리자만. 값 검사: kind = fsportal-acad, src = slack, made = YYYY-MM-DD, at = 숫자.
 - **처음 한 번(사용자)**: ① Firebase 콘솔(sysmex-system-schedule) → Authentication → 사용자 추가(이메일·비밀번호, 서버 전용) → UID 복사 ② 규칙 탭에 `database.rules.stage3.json` 붙여넣고 게시 ③ Realtime Database → `kpi-dashboard/acadBots` 아래에 키 = UID, 값 = true(불리언) 추가 ④ FS Portal Apps Script 「프로젝트 설정 → 스크립트 속성」에 `KPI_BOT_EMAIL`·`KPI_BOT_PW` 추가(채팅·저장소에 쓰지 않음).
 - 확인: FS Portal 요청함 「연결 시험」 또는 3시간 안에 KPI Workload 학술 응대 「수집 범위」가 「FS Portal 서버 자동 반영」으로 바뀌는지. 계정을 바꾸면 `acadBots` 의 UID 만 바꾸면 된다(규칙 수정 불필요).
+
+## 웹 API 키 정리 — 화면용·서버용 나누기(2026-11-25)
+
+Firebase 웹 API 키는 화면이 떠야 하므로 공개 HTML 에 있을 수밖에 없다(지워도·재발급해도 같은 이유로 다시 노출). 통제는 **키 제한 + 위 DB 규칙**으로 한다. 이 프로젝트(sysmex-system-schedule) 키는 브라우저와 서버가 같이 쓰고 있어, 화면용 키에 HTTP 리퍼러 제한만 걸면 서버 쪽 호출이 막힌다. 그래서 서버용 키를 따로 만든다.
+
+**이 키를 쓰는 곳**
+
+| 쓰는 곳 | 종류 | 키를 읽는 곳 |
+|---|---|---|
+| `index.html`·`work-schedule.html`·`voc-dashboard.html`·`fsg-kpi.html`·`bulk_*_tool.html` | 브라우저 | 파일 안 `FIREBASE_API_KEY`(그대로 둔다) |
+| FS 포털 `fs-talk/index.html` (근무일정·설치·만족도 읽기·근무일정 본인 칸 쓰기) | 브라우저 | 포털 파일 안(그대로 둔다) |
+| FS 포털 `apps-script/notify.gs` (아침 브리핑·학술 자동 반영) | 서버(Apps Script) | 스크립트 속성 `SCH_KEY`(없으면 코드 안 값) |
+| 설치 캘린더 구독 `apps-script-calendar/calendar_ics.gs` | 서버(Apps Script) | 스크립트 속성 `FB_API_KEY` |
+| `fsg-report/push-dashboard.js`(「FSG 대시보드 올리기」·Colab)·`report-data.js`·`voc-summary.js` | 서버(PC·Colab Node) | 환경변수 `FSG_FB_SERVER_KEY`(없으면 HTML 안 값, `server-key.js`) |
+| 근무일정 거울 캘린더(GitHub Actions `calendar-mirror`) | 서버 | 시크릿 `FIREBASE_API_KEY` |
+
+**순서(콘솔은 사용자)**
+1. Google Cloud 콘솔 → API 및 서비스 → 사용자 인증 정보 → 키 만들기. 이름 「서버용(Apps Script·PC)」. **애플리케이션 제한 없음, API 제한 = Identity Toolkit API · Token Service API** 두 개만(이 키로는 로그인만 하고, DB 읽기·쓰기는 로그인 토큰으로 한다).
+2. 새 키를 넣는다 — 키 값은 저장소·채팅에 적지 않는다.
+   - FS 포털 Apps Script(「FS TALK 알림」) → 프로젝트 설정 → 스크립트 속성 `SCH_KEY`
+   - 설치 캘린더 Apps Script → 스크립트 속성 `FB_API_KEY`
+   - 올리기 PC: PowerShell `setx FSG_FB_SERVER_KEY "새 키"` 후 새 창에서 실행(여러 사람이 쓰는 PC 도 이 값은 로그인 정보가 아니라 괜찮다 — 관리자 비밀번호·접근 코드는 따로)
+   - Colab: 노트북 첫 칸에 `import os; os.environ['FSG_FB_SERVER_KEY']='새 키'`(노트북을 공유하면 그 줄은 지운다)
+   - 거울 캘린더를 GitHub Actions 로 쓸 때만: 저장소 시크릿 `FIREBASE_API_KEY`
+3. 각각 한 번씩 돌려 본다: 포털 아침 브리핑(`morningDigest` 수동 실행), 설치 캘린더 `.ics` 주소 열기, PC 「FSG 대시보드 올리기」(또는 `--dry-run` 아닌 실제 올리기 1회), `report-data` 가중치 읽기(로그에 「Firebase kpi-dashboard/weights」).
+4. 그다음 기존 키(화면용)에 **HTTP 리퍼러 제한**: `https://balhm12.github.io/Sysmex-schedule/*`, `https://balhm12.github.io/fs-talk/*`, `http://localhost/*`, `http://localhost:*/*`. API 제한은 걸지 않는다(브라우저 SDK 가 여러 API 를 쓴다).
+5. 확인: 설치일정·근무일정·만족도·KPI(관리자 올리기 포함)·포털(근무일정 칸 저장, 홈 일정 카드). 막히면 4번 제한을 지우면 바로 원래대로.
+6. 3번까지 했는데 서버 쪽이 실패하면 그 곳의 속성·환경변수를 지우면 예전 키로 돌아간다(코드가 예전 값으로 되돌아감) — 단, 4번을 건 뒤에는 서버 쪽이 다시 막힌다.
+
+**GitHub Security 알림(「Possible valid secrets detected」) 닫을 때 남길 사유** — 사유 「Won't fix」, 설명:
+> Firebase 웹 API 키는 브라우저 앱에 공개되도록 설계된 값입니다. 접근은 HTTP 리퍼러 제한과 Realtime Database 보안 규칙으로 통제하며, 키를 재발급해도 같은 방식으로 다시 공개됩니다. 서버용 키는 저장소에 두지 않습니다(2026-11-25 화면용·서버용 분리).

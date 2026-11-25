@@ -66,7 +66,7 @@ async function loadWeightSettings(o) {
     catch (e) { throw new Error('--weights 파일을 읽지 못했습니다: ' + e.message); }
   }
   const html = fs.readFileSync(path.join(__dirname, '..', 'fsg-kpi.html'), 'utf8'), g = k => (html.match(new RegExp("const " + k + " = '([^']*)'")) || [])[1];
-  const url = g('FIREBASE_URL'), key = g('FIREBASE_API_KEY'), dp = g('DATA_PATH') || 'kpi-dashboard';
+  const url = g('FIREBASE_URL'), key = require('./server-key').serverKey(g('FIREBASE_API_KEY')), dp = g('DATA_PATH') || 'kpi-dashboard';
   try {
     const a = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + key, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ returnSecureToken: true }), signal: AbortSignal.timeout(15000) });
     if (!a.ok) throw new Error('익명 로그인 ' + a.status);
